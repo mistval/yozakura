@@ -176,7 +176,7 @@ const scenarioExecutionContextSchema = globalExecutionContextSchema
   )
   .meta({
     description:
-      'This is the context that is available to all prompts that run in the scope of a scenario (as opposed to being on the main menu, in the character creator, etc)',
+      'This GlobalExecutionContext is available to all prompts that run in the scope of a scenario (as opposed to being on the main menu, in the character creator, etc)',
   });
 
 export type ScenarioExecutionContext = z.infer<typeof scenarioExecutionContextSchema>;
@@ -197,7 +197,7 @@ const conversationExecutionContextSchema = scenarioExecutionContextSchema
   )
   .meta({
     description:
-      'This is the context that is available to all prompts that run in the scope of a conversation between two or more characters.',
+      'This ScenarioExecutionContext is available to all prompts that run in the scope of a conversation between two or more characters.',
   });
 
 export type ConversationExecutionContext = z.infer<typeof conversationExecutionContextSchema>;
@@ -213,7 +213,7 @@ export const focusedConversationExecutionContextSchema = conversationExecutionCo
   )
   .meta({
     description:
-      'This is the context that is available to all prompts that run in the scope of a conversation between two or more characters, and where one of those characters is currently the subject of focus. The meaning of "subject of focus" depends on the specific prompt, but it means things like "the character who is currently speaking", "the character we are currently generating an image of", etc.',
+      'This ConversationExecutionContext is available to all prompts that run in the scope of a conversation between two or more characters, and where one of those characters is currently the subject of focus. The meaning of "subject of focus" depends on the specific prompt, but it means things like "the character who is currently speaking", "the character we are currently generating an image of", etc.',
   });
 
 export type FocusedConversationExecutionContext = z.infer<typeof focusedConversationExecutionContextSchema>;
@@ -227,7 +227,7 @@ export const characterEditorExecutionContextSchema = globalExecutionContextSchem
   )
   .meta({
     description:
-      'This is the context that is available when a character is being edited in the character editor.',
+      'This FocusedConversationExecutionContext is available when a character is being edited in the character editor.',
   });
 
 export type CharacterEditorContext = z.infer<typeof characterEditorExecutionContextSchema>;
@@ -242,7 +242,7 @@ export const targetedConversationExecutionContextSchema = focusedConversationExe
   )
   .meta({
     description:
-      'This is the context that is available to all prompts that run in the scope of a conversation between two or more characters, and where in addition to a "focused character", there is also a target character who is the target of the focused character. The target character would be the character towards whom the focused character is generating memories, etc.',
+      'This CharacterEditorContext is available to all prompts that run in the scope of a conversation between two or more characters, and where in addition to a "focused character", there is also a target character who is the target of the focused character. The target character would be the character towards whom the focused character is generating memories, etc.',
   });
 
 export type TargetedConversationContext = z.infer<typeof targetedConversationExecutionContextSchema>;
@@ -255,23 +255,34 @@ export const memoryRagExecutionContext = targetedConversationExecutionContextSch
   )
   .meta({
     description:
-      "This is the context that is available to templates to format memories of mentioned characters to inject into prompt histories. The output of this prompt isn't sent directly to an LLM (and thus there is no parser). Rather, the output is used to add an additional system message to the prompt history, to bring in the focused character's memories towards the target character.",
+      "This TargetedConversationContext is available to templates to format memories of mentioned characters to inject into prompt histories. The output of this prompt isn't sent directly to an LLM (and thus there is no parser). Rather, the output is used to add an additional system message to the prompt history, to bring in the focused character's memories towards the target character.",
   });
 
-export const offscreenMemoryExtractionExecutionContextSchema = targetedConversationExecutionContextSchema.and(
-  contextSchemaFields.pick({
-    candidateInformation: true,
-  })
-);
+export const offscreenMemoryUpdateConversationGoalContextSchema =
+  targetedConversationExecutionContextSchema.and(
+    contextSchemaFields
+      .pick({
+        candidateInformation: true,
+      })
+      .meta({
+        description:
+          'This OffscreenMemoryUpdateConversationGoalContext is available to the Offscreen Conversation Goal Updat prompt, and is identical to TargetedConversationContext except for adding the speakerCandidates field',
+      })
+  );
 
-type OffscreenMemoryExtractionExecutionContext = z.infer<
-  typeof offscreenMemoryExtractionExecutionContextSchema
+type OffscreenMemoryUpdateConversationGoalContext = z.infer<
+  typeof offscreenMemoryUpdateConversationGoalContextSchema
 >;
 
 export const moderationNextSpeakerExecutionContextSchema = conversationExecutionContextSchema.and(
-  contextSchemaFields.pick({
-    speakerCandidates: true,
-  })
+  contextSchemaFields
+    .pick({
+      speakerCandidates: true,
+    })
+    .meta({
+      description:
+        'This ModerationNextSpeakerExecutionContext is available to the Next Speaker Selection prompt, and is identical to ConversationExecutionContext except for adding the speakerCandidates field',
+    })
 );
 
 type ModerationNextSpeakerExecutionContext = z.infer<typeof moderationNextSpeakerExecutionContextSchema>;
@@ -283,5 +294,5 @@ export type PromptExecutionContext =
   | FocusedConversationExecutionContext
   | CharacterEditorContext
   | TargetedConversationContext
-  | OffscreenMemoryExtractionExecutionContext
+  | OffscreenMemoryUpdateConversationGoalContext
   | ModerationNextSpeakerExecutionContext;

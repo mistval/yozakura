@@ -52,7 +52,6 @@ function normalizeSchema(
 
   if (typeof normalizedSchema.title !== 'string' || normalizedSchema.title.length === 0) {
     normalizedSchema.title = `${templateChainTitle} Context`;
-    console.log('ADDED TITLE');
   }
 
   if (typeof normalizedSchema.description !== 'string' || normalizedSchema.description.length === 0) {
@@ -484,7 +483,6 @@ export function getUsabilityProcessedJSONSchema(
   promptChainTitle: string,
   promptChainDescription: string
 ): JsonObject {
-  console.log(promptChainTitle);
   return extractSharedDefs(
     stripProperties(
       collapseTopLevelAllOfObjectSchema(normalizeSchema(schema, promptChainTitle, promptChainDescription))

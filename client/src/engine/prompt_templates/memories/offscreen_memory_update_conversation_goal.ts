@@ -2,10 +2,10 @@ import { z } from 'zod';
 import { PromptTemplateBase } from '../prompt_template';
 import { PromptOutputParser } from '../prompt_output_parser';
 import { PromptTemplateChain } from '../prompt_template_chain';
-import { offscreenMemoryExtractionExecutionContextSchema } from '../prompt_template_context_fields';
+import { offscreenMemoryUpdateConversationGoalContextSchema } from '../prompt_template_context_fields';
 
 class OffscreenMemoryUpdateConversationGoalSystemTemplate extends PromptTemplateBase<
-  z.infer<typeof offscreenMemoryExtractionExecutionContextSchema>
+  z.infer<typeof offscreenMemoryUpdateConversationGoalContextSchema>
 > {
   public readonly defaultTemplateString = `Your job is to decide whether newly learned information should change <%= it.focusedCharacter.firstName %>'s next conversation goal with <%= it.targetCharacter.firstName %>. You will be given <%= it.focusedCharacter.firstName %>'s current memories of <%= it.targetCharacter.firstName %>, their existing goal towards them (if any), and one new piece of information that <%= it.focusedCharacter.firstName %> just learned about <%= it.targetCharacter.firstName %>.
 
@@ -18,7 +18,7 @@ If you decide to write a new goal for <%= it.focusedCharacter.firstName %> to pu
 - Write a goal that provides strong narrative momentum.
 - Be specific and provide sufficient context.
 - Output only the updated goal and nothing else`;
-  public readonly contextSchema = offscreenMemoryExtractionExecutionContextSchema;
+  public readonly contextSchema = offscreenMemoryUpdateConversationGoalContextSchema;
 
   public readonly templateName = 'Offscreen Conversation Goal Update (System)';
   public readonly templateDescription =
@@ -29,7 +29,7 @@ If you decide to write a new goal for <%= it.focusedCharacter.firstName %> to pu
 }
 
 class OffscreenMemoryUpdateConversationGoalUserTemplate extends PromptTemplateBase<
-  z.infer<typeof offscreenMemoryExtractionExecutionContextSchema>
+  z.infer<typeof offscreenMemoryUpdateConversationGoalContextSchema>
 > {
   public readonly defaultTemplateString = `<%= it.focusedCharacter.firstName %>'s current aggregate memories about <%= it.targetCharacter.firstName %>:
 <current_aggregate_memories>
@@ -50,7 +50,7 @@ Newly learned information about <%= it.targetCharacter.firstName %>:
 </new_information>
 
 Output either KEEP_OLD_GOAL or a replacement goal string.`;
-  public readonly contextSchema = offscreenMemoryExtractionExecutionContextSchema;
+  public readonly contextSchema = offscreenMemoryUpdateConversationGoalContextSchema;
 
   public readonly templateName = 'Offscreen Conversation Goal Update (User)';
   public readonly templateDescription =
@@ -70,13 +70,13 @@ export const offscreenMemoryUpdateConversationGoalChainGroup = new PromptTemplat
   templateChainTitle: 'Offscreen Conversation Goal Update',
   templateChainDescription:
     'Two-message chain for deciding whether to keep the existing next-conversation goal or replace it with a new one.',
-  contextSchema: offscreenMemoryExtractionExecutionContextSchema,
+  contextSchema: offscreenMemoryUpdateConversationGoalContextSchema,
   templates: [
     { template: offscreenMemoryUpdateConversationGoalSystemTemplate },
     { template: offscreenMemoryUpdateConversationGoalUserTemplate },
   ],
   parser: new PromptOutputParser<
-    z.infer<typeof offscreenMemoryExtractionExecutionContextSchema>,
+    z.infer<typeof offscreenMemoryUpdateConversationGoalContextSchema>,
     string | null
   >(
     `(response) => {

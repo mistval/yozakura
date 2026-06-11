@@ -29,6 +29,11 @@ function generateSection(chains: ChainManifestEntry[]): string {
 
   const lines: string[] = [SECTION_HEADING, ''];
 
+  lines.push(
+    'If you want to get your hands dirty, you can find the documentation for the context object of each prompt group below.',
+    ''
+  );
+
   for (const groupTitle of groupOrder) {
     const groupChains = groups.get(groupTitle)!;
     lines.push(`### ${groupTitle}`, '');
