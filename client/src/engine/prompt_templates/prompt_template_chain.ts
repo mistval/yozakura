@@ -9,6 +9,7 @@ import { assertNonNullish } from '../../errors/application_error';
 import { useTemplateRenderLogStore } from '../../state/template_render_log_store';
 import { newId } from '../../util/id';
 import type { PromptExecutionContext } from './prompt_template_context_fields';
+import { getUsabilityProcessedJSONSchema } from './prompt_chain_documentation_helper';
 
 type PromptTemplateChainTemplateEntry<TContextType extends object> = {
   template: PromptTemplateBase<TContextType>;
@@ -123,7 +124,11 @@ export class PromptTemplateChain<TContextType extends PromptExecutionContext, TO
         templateDescription: entry.template.templateDescription,
         templateString: entry.template.getTemplateString(),
       })),
-      contextSchema: this.contextSchema.toJSONSchema(),
+      contextSchema: getUsabilityProcessedJSONSchema(
+        this.contextSchema.toJSONSchema() as any,
+        this.templateChainTitle,
+        this.templateChainDescription
+      ),
       parserOutputSchema: this.parser?.parserOutputSchema.toJSONSchema(),
       parserSource: this.parser?.getParserSource(),
     });

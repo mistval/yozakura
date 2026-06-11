@@ -26,6 +26,7 @@ export default function PromptTemplateChainEditor({ chain }: PromptTemplateChain
   const setSettings = useSettingsStore((s) => s.setSettings);
   const [documentationOpen, setDocumentationOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [documentation, setDocumentation] = useState('');
 
   const parserSource = promptParserOverrides[chain.parser?.parserOverrideSettingId ?? '']?.source;
   const resolvedParserSource = parserSource ?? chain.parser?.defaultParserSource ?? '';
@@ -68,8 +69,6 @@ export default function PromptTemplateChainEditor({ chain }: PromptTemplateChain
 
     return next;
   }, [chain]);
-
-  const documentation = chain.getDocumentation();
 
   const handleSave = (draftValues: Record<string, string>) => {
     setSettings((previous) => {
@@ -147,7 +146,11 @@ export default function PromptTemplateChainEditor({ chain }: PromptTemplateChain
           <button
             type="button"
             className="px-3 py-1 border rounded-sm w-full h-12 button-emphasized"
-            onClick={() => setDocumentationOpen(true)}
+            onClick={() => {
+              const documentation = chain.getDocumentation();
+              setDocumentation(documentation);
+              setDocumentationOpen(true);
+            }}
           >
             🤖 AI Assistant Instructions 🗒️
           </button>
