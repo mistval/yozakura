@@ -35,9 +35,17 @@ Each group of related prompts has an "AI Assistant Instructions" button right up
 
 ## Format
 
-Yozakura prompts are rendered by [Eta](https://www.npmjs.com/package/eta) which is essentially equivalent to [EJS](https://www.npmjs.com/package/ejs) except faster. All EJS syntax is supported, and `await` is also supported inside of templates.
+Yozakura prompts are rendered by [Eta](https://www.npmjs.com/package/eta) which is essentially equivalent to [EJS](https://www.npmjs.com/package/ejs) except faster. All EJS syntax is supported, and `await` is also supported inside of templates. This means you can write JavaScript code in your templates and use browser APIs (including `fetch`, as the example above did).
 
-## Prompt Template Chain Context Docs
+## Parser
+
+Each prompt group can also be given a custom parser function to do custom processing on the response returned from the LLM before returning it to Yozakura. The Next Speaker Selection prompt group's default parser is a good example of this: the prompt templates ask the LLM to output the name of the next speaker, but Yozakura wants a character ID, not name. The default parser function performs the necessary mapping. The parser also receives the same context object as the prompt templates, and can be asynchronous.
+
+## Security
+
+Since Yozakura templates and parsers can execute arbitrary JavaScript code, it is necessary to be careful about where you're copying and pasting from. Malicious code in your templates can steal your LLM API tokens, spy on you, or perform other malign activity. There's an in-app warning mentioning this as well when you paste. Generally speaking, anything you get from a frontier LLM is pretty likely to be safe, but random code from sketchy people on Discord may not be.
+
+## Prompt Template Group Context Docs
 
 If you want to get your hands dirty, you can find the documentation for the context object of each prompt group below.
 

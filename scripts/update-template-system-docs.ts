@@ -11,7 +11,7 @@ type ChainManifestEntry = {
   htmlFileName: string;
 };
 
-const SECTION_HEADING = '## Prompt Template Chain Context Docs';
+const SECTION_HEADING = '## Prompt Template Group Context Docs';
 const HTML_BASE_PATH = 'pathname:///prompt_docs/template_chain_context_schemas';
 
 function generateSection(chains: ChainManifestEntry[]): string {

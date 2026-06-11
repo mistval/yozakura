@@ -122,7 +122,7 @@ export const chatSystemPromptChain = new PromptTemplateChain({
   templateChainId: 'gen_npc_response',
   templateChainTitle: 'Chat System Prompt',
   templateChainDescription:
-    'This template group controls the leading and trailing system prompts for NPC chat responses',
+    'This template group controls the leading and trailing system prompts for NPC chat responses.',
   contextSchema: focusedConversationExecutionContextSchema,
   templates: [{ template: chatSystemPromptTemplate }, { template: finalInstructionsPromptTemplate }],
   parser: new PromptOutputParser<z.infer<typeof focusedConversationExecutionContextSchema>, string>(
