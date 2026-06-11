@@ -16,8 +16,7 @@
     "electron:make": "electron-forge make",
     "docs:dev": "npm run start --prefix docs",
     "docs:build": "npm run build --prefix docs",
-    "prompt-schemas:export": "node.exe --import tsx ./scripts/export-prompt-template-context-schemas.ts",
-    "prompt-schemas:docs": "bash ./scripts/generate-prompt-template-context-docs.sh",
+    "prompt-schemas:docs": "node --import tsx ./scripts/export-prompt-template-context-schemas.ts && bash ./scripts/generate-prompt-template-context-docs.sh",
     "check:all": "npm run typecheck --prefix client && npm run typecheck --prefix server && npm run typecheck --prefix docs && npm run format:check && npm run build:web && npm run build:server"
   },
   "devDependencies": {

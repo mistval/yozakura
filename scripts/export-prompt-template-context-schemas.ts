@@ -161,56 +161,62 @@ function mergePropertySchema(existing: unknown, incoming: unknown): unknown {
   };
 }
 
-function collapseTopLevelAllOfObjectSchema(schema: JsonObject): JsonObject {
-  const allOf = schema.allOf;
-  if (!Array.isArray(allOf) || allOf.length === 0) {
-    return schema;
+function isMergeableObjectFragment(value: unknown): value is JsonObject {
+  return (
+    isJsonObject(value) &&
+    (value.type === undefined || value.type === 'object') &&
+    (value.properties === undefined || isJsonObject(value.properties)) &&
+    (value.required === undefined ||
+      (Array.isArray(value.required) &&
+        value.required.every((requiredKey) => typeof requiredKey === 'string')))
+  );
+}
+
+/**
+ * Recursively flattens `allOf` chains into a single object schema. Wherever a node
+ * is an `allOf` made up entirely of object fragments, the fragments' `properties` and
+ * `required` are merged into one object and the `allOf` (and the wrapper's description /
+ * additionalProperties) is discarded. Runs bottom-up, so an arbitrarily deep chain of
+ * nested `allOf` wrappers collapses into a single merged object.
+ *
+ * Nodes that aren't a mergeable `allOf` are returned unchanged (but still recursed into,
+ * so property values are reconstructed without mutating the input).
+ */
+function collapseAllOfDeep(node: unknown): unknown {
+  if (Array.isArray(node)) {
+    return node.map((entry) => collapseAllOfDeep(entry));
   }
 
-  if (
-    !allOf.every(
-      (entry) =>
-        isJsonObject(entry) &&
-        (entry.type === undefined || entry.type === 'object') &&
-        (entry.properties === undefined || isJsonObject(entry.properties)) &&
-        (entry.required === undefined ||
-          (Array.isArray(entry.required) &&
-            entry.required.every((requiredKey) => typeof requiredKey === 'string')))
-    )
-  ) {
-    return schema;
+  if (!isJsonObject(node)) {
+    return node;
   }
 
-  const collapsedSchema: JsonObject = { ...schema };
-  delete collapsedSchema.allOf;
-  collapsedSchema.type = 'object';
+  const collapsed: JsonObject = {};
+  for (const [key, value] of Object.entries(node)) {
+    collapsed[key] = collapseAllOfDeep(value);
+  }
 
-  const mergedProperties: JsonObject = isJsonObject(collapsedSchema.properties)
-    ? { ...collapsedSchema.properties }
+  const allOf = collapsed.allOf;
+  if (!Array.isArray(allOf) || allOf.length === 0 || !allOf.every(isMergeableObjectFragment)) {
+    return collapsed;
+  }
+
+  const mergedProperties: JsonObject = isJsonObject(collapsed.properties)
+    ? { ...collapsed.properties }
     : {};
   const mergedRequired = new Set<string>(
-    Array.isArray(collapsedSchema.required)
-      ? collapsedSchema.required.filter(
-          (requiredKey): requiredKey is string => typeof requiredKey === 'string'
-        )
+    Array.isArray(collapsed.required)
+      ? collapsed.required.filter((key): key is string => typeof key === 'string')
       : []
   );
 
-  let mergedAdditionalProperties: unknown = collapsedSchema.additionalProperties;
-  let hasAdditionalProperties = Object.hasOwn(collapsedSchema, 'additionalProperties');
-
-  for (const entry of allOf) {
-    const fragment = entry as JsonObject;
-
+  for (const fragment of allOf) {
     if (isJsonObject(fragment.properties)) {
       for (const [propertyName, propertySchema] of Object.entries(fragment.properties)) {
-        const existingPropertySchema = mergedProperties[propertyName];
-        if (existingPropertySchema === undefined) {
-          mergedProperties[propertyName] = propertySchema;
-          continue;
-        }
-
-        mergedProperties[propertyName] = mergePropertySchema(existingPropertySchema, propertySchema);
+        mergedProperties[propertyName] =
+          propertyName in mergedProperties
+            ? mergePropertySchema(mergedProperties[propertyName], propertySchema)
+            : propertySchema;
       }
     }
 
@@ -221,44 +227,56 @@ function collapseTopLevelAllOfObjectSchema(schema: JsonObject): JsonObject {
         }
       }
     }
+  }
 
-    if (Object.hasOwn(fragment, 'additionalProperties')) {
-      if (!hasAdditionalProperties) {
-        mergedAdditionalProperties = fragment.additionalProperties;
-        hasAdditionalProperties = true;
-      } else if (!isDeepStrictEqual(mergedAdditionalProperties, fragment.additionalProperties)) {
-        mergedAdditionalProperties =
-          mergedAdditionalProperties === false || fragment.additionalProperties === false
-            ? false
-            : mergedAdditionalProperties;
-      }
+  const merged: JsonObject = { type: 'object' };
+  if (Object.keys(mergedProperties).length > 0) {
+    merged.properties = mergedProperties;
+  }
+  if (mergedRequired.size > 0) {
+    merged.required = Array.from(mergedRequired);
+  }
+
+  return merged;
+}
+
+function collapseTopLevelAllOfObjectSchema(schema: JsonObject): JsonObject {
+  if (!Array.isArray(schema.allOf)) {
+    return schema;
+  }
+
+  const collapsed = collapseAllOfDeep(schema);
+  if (!isJsonObject(collapsed) || collapsed.type !== 'object') {
+    // The chain wasn't a mergeable object schema; leave it untouched.
+    return schema;
+  }
+
+  // The merge intentionally drops everything but type/properties/required, so re-attach
+  // the top-level metadata and present the keys in a readable order.
+  const result: JsonObject = {};
+  for (const key of ['$schema', 'title', 'description'] as const) {
+    if (schema[key] !== undefined) {
+      result[key] = schema[key];
+    }
+  }
+  result.type = 'object';
+
+  const properties = isJsonObject(collapsed.properties) ? { ...collapsed.properties } : {};
+  delete properties.settings;
+  if (Object.keys(properties).length > 0) {
+    result.properties = properties;
+  }
+
+  if (Array.isArray(collapsed.required)) {
+    const required = collapsed.required.filter(
+      (key): key is string => typeof key === 'string' && key !== 'settings'
+    );
+    if (required.length > 0) {
+      result.required = required;
     }
   }
 
-  if (Object.keys(mergedProperties).length > 0) {
-    collapsedSchema.properties = mergedProperties;
-  } else {
-    delete collapsedSchema.properties;
-  }
-
-  if (mergedRequired.size > 0) {
-    collapsedSchema.required = Array.from(mergedRequired).sort();
-  } else {
-    delete collapsedSchema.required;
-  }
-
-  if (hasAdditionalProperties) {
-    collapsedSchema.additionalProperties = mergedAdditionalProperties;
-  } else {
-    delete collapsedSchema.additionalProperties;
-  }
-
-  delete (collapsedSchema as any).properties['settings'];
-  collapsedSchema.required = (collapsedSchema.required as string[] | undefined)?.filter(
-    (key) => key !== 'settings'
-  );
-
-  return collapsedSchema;
+  return result;
 }
 
 function collectChainsFromGroup(

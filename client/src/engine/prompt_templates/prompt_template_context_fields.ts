@@ -1,13 +1,29 @@
 import z from 'zod';
 import {
   characterRelationshipSchema,
-  characterSchema,
+  characterSchema as internalCharacterSchema,
   chatMediumSchema,
   chatMessageSchema,
   scenarioSchema,
   worldMapLocationSchema,
   worldMapSchema,
 } from '../types';
+
+const characterSchema = internalCharacterSchema.pick({
+  id: true,
+  firstName: true,
+  lastName: true,
+  internalDescription: true,
+  externalDescription: true,
+  baseAppearanceTags: true,
+  wardrobes: true,
+  globalMemories: true,
+  locationId: true,
+  exampleDialogue: true,
+  rollingConversationSummaries: true,
+});
+
+export type ContextCharacter = z.infer<typeof characterSchema>;
 
 const contextSchemaFields = z.object({
   focusedCharacter: characterSchema.meta({
@@ -44,7 +60,7 @@ const contextSchemaFields = z.object({
   }),
   currentLocation: worldMapLocationSchema.meta({
     description:
-      'The current location of the focused character within the world map. For conversations with chatMedium "in_person", this is the location of the conversation. For conversations with chatMedium "remote", this is the location of the focused character only (other participants may be elsewhere).',
+      'The current location of the focused character within the world map. For conversations with chatMedium "in_person", this is the location of the conversation. For conversations with chatMedium "remote", this is the location of the focused character only (other participants may be elsewhere). This can be an ephemeral location, if the user modified the location in chat settings during the conversation.',
   }),
   raggedCharacters: z.array(characterSchema).meta({
     description:
@@ -70,7 +86,7 @@ const contextSchemaFields = z.object({
   }),
   getRelationship: z.any().meta({
     description:
-      'An async function that takes in two character IDs and returns the relationship between the two, from the perspective of the first character.',
+      'An async function that takes in two arguments, the "from" character ID, and the "to" character ID (both strings), and returns the relationship between the two, from the perspective of the first character.',
     relationshipFunctionSignature:
       '(characterIdA: string, characterIdB: string) => Promise<CharacterRelationship>',
   }),

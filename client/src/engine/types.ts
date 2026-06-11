@@ -165,6 +165,7 @@ export const worldMapLocationSchema = basePersistedObjectSchema.extend({
   description: z.string().meta({
     description:
       'A detailed description of the location, which can be used in prompts to help set the scene and inspire relevant details in generated content.',
+    examples: ['A small coffee shop on the outside of town.'],
   }),
   adjacency: z.array(z.string()).meta({
     description: 'An array of IDs of other locations that are directly accessible from this location',
@@ -197,8 +198,14 @@ export const scenarioSchema = basePersistedObjectSchema.extend({
   turnNumber: z.number(),
   mapOverrides: z
     .object({
-      name: z.string().optional(),
-      description: z.string().optional(),
+      name: z.string().optional().meta({
+        description:
+          "If this scenario is overriding the name of the map it's taking place on, this field will exist and be non-empty.",
+      }),
+      description: z.string().optional().meta({
+        description:
+          'If this scenario is overriding the description of the map it\'s taking place on, this field will exist and be non-empty. This field is a good place for the user to inject temporary narrative state, for example "it\'s Winter now and everybody is trying to find food"',
+      }),
     })
     .optional(),
 });
