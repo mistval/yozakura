@@ -1,4 +1,8 @@
-import { useSettingsStore, type SettingsPatch, type SpeakerSelectionMode } from '../../state/settings_store.js';
+import {
+  useSettingsStore,
+  type SettingsPatch,
+  type SpeakerSelectionMode,
+} from '../../state/settings_store.js';
 import { useEffect, useState } from 'react';
 import CheckboxSettingRow from './ui/CheckboxSettingRow.js';
 import NumericSettingRow from './ui/NumericSettingRow.js';
@@ -12,7 +16,9 @@ export default function BehaviorSettingsSection() {
   const groupChatMessageLimit = useSettingsStore((s) => s.groupChatMessageLimit);
   const familiarityGain = useSettingsStore((s) => s.familiarityGain);
   const familiarityDecay = useSettingsStore((s) => s.familiarityDecay);
-  const userFamiliarityInteractionMultiplier = useSettingsStore((s) => s.userFamiliarityInteractionMultiplier);
+  const userFamiliarityInteractionMultiplier = useSettingsStore(
+    (s) => s.userFamiliarityInteractionMultiplier
+  );
   const familiarityWeightMultiplier = useSettingsStore((s) => s.familiarityWeightMultiplier);
   const userGossipChanceMultiplier = useSettingsStore((s) => s.userGossipChanceMultiplier);
   const npcOnlyChatDelay = useSettingsStore((s) => s.npcOnlyChatDelay);
@@ -34,12 +40,26 @@ export default function BehaviorSettingsSection() {
   useEffect(() => {
     setDrafts({});
   }, [
-    richNpcMessageCount, groupChatMessageLimit, familiarityGain, familiarityDecay,
-    userFamiliarityInteractionMultiplier, familiarityWeightMultiplier, userGossipChanceMultiplier,
-    npcOnlyChatDelay, offscreenMentionLimit, npcGroupChatAdditionalParticipants,
-    rollingConversationSummaryLimit, offscreenLearnedInformationLimit, richNpcInteractionRate,
-    gossipRate, npcChatRate, npcTriggeredGroupChatRate, npcRemoteChatRate,
-    freedomOfMovement, npcGroupChatSpeakerSelectionMode, userChatSpeakerSelectionMode,
+    richNpcMessageCount,
+    groupChatMessageLimit,
+    familiarityGain,
+    familiarityDecay,
+    userFamiliarityInteractionMultiplier,
+    familiarityWeightMultiplier,
+    userGossipChanceMultiplier,
+    npcOnlyChatDelay,
+    offscreenMentionLimit,
+    npcGroupChatAdditionalParticipants,
+    rollingConversationSummaryLimit,
+    offscreenLearnedInformationLimit,
+    richNpcInteractionRate,
+    gossipRate,
+    npcChatRate,
+    npcTriggeredGroupChatRate,
+    npcRemoteChatRate,
+    freedomOfMovement,
+    npcGroupChatSpeakerSelectionMode,
+    userChatSpeakerSelectionMode,
   ]);
 
   const numericSettingRows: Array<{

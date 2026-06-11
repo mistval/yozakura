@@ -462,9 +462,7 @@ function extractSharedDefs(schema: JsonObject): JsonObject {
   }
 
   function inlineRefSite(refSite: JsonObject, body: JsonObject): JsonObject {
-    return typeof refSite.description === 'string'
-      ? { ...body, description: refSite.description }
-      : body;
+    return typeof refSite.description === 'string' ? { ...body, description: refSite.description } : body;
   }
 
   function inlineSingleRef(node: unknown, refPath: string, body: JsonObject): boolean {
