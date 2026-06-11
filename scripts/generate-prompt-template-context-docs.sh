@@ -46,3 +46,5 @@ cp -f "${HTML_DIR}/schema_doc.css" "${DOCS_STATIC_DIR}/"
 cp -f "${HTML_DIR}/schema_doc.min.js" "${DOCS_STATIC_DIR}/"
 
 echo "Copied schema docs to ${DOCS_STATIC_DIR}"
+
+"${NODE_BIN}" --import tsx "${REPO_ROOT}/scripts/update-template-system-docs.ts" "${SCHEMA_DIR}"

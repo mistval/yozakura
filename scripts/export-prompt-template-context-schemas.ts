@@ -25,11 +25,16 @@ type TemplateNodePredicateModule = {
   isTemplateChain: (node: unknown) => boolean;
 };
 
+type GroupPathEntry = {
+  id: string;
+  title: string;
+};
+
 type ChainDescriptor = {
   templateChainId: string;
   templateChainTitle: string;
   templateChainDescription: string;
-  groupPath: string[];
+  groupPath: GroupPathEntry[];
   schemaFileName: string;
   htmlFileName: string;
   schema: JsonObject;
@@ -590,11 +595,11 @@ function extractSharedDefs(schema: JsonObject): JsonObject {
 
 function collectChainsFromGroup(
   group: TemplateGroupLike,
-  ancestry: string[],
+  ancestry: GroupPathEntry[],
   predicateModule: TemplateNodePredicateModule,
   seenFileNames: Set<string>
 ): ChainDescriptor[] {
-  const nextAncestry = [...ancestry, group.groupId];
+  const nextAncestry = [...ancestry, { id: group.groupId, title: group.title }];
   const chains: ChainDescriptor[] = [];
 
   for (const child of group.children) {
@@ -697,6 +702,15 @@ async function main(): Promise<void> {
     const schemaPath = path.join(outputDirectory, chain.schemaFileName);
     await writeFile(schemaPath, `${JSON.stringify(chain.schema, null, 2)}\n`, 'utf8');
   }
+
+  const manifest = chains.map(({ templateChainId, templateChainTitle, templateChainDescription, groupPath, htmlFileName }) => ({
+    templateChainId,
+    templateChainTitle,
+    templateChainDescription,
+    groupPath,
+    htmlFileName,
+  }));
+  await writeFile(path.join(outputDirectory, 'chains.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
   console.log(`Wrote ${chains.length} prompt template context schemas to ${outputDirectory}`);
   for (const chain of chains) {

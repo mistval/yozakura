@@ -109,8 +109,6 @@ Yozakura prompts are rendered by [Eta](https://www.npmjs.com/package/eta) which 
 
 ## Prompt Template Chain Context Docs
 
-If you want to understand the context available to each prompt group, visit the below documentation.
-
 ### Conversation Templates
 
 1. [Chat System Prompt (`gen_npc_response`)](pathname:///prompt_docs/template_chain_context_schemas/gen_npc_response.context.schema.html)
@@ -121,21 +119,21 @@ If you want to understand the context available to each prompt group, visit the 
 ### Memory Processing
 
 1. [Conversation Summarization (`gen_convo_summary`)](pathname:///prompt_docs/template_chain_context_schemas/gen_convo_summary.context.schema.html)
-2. [Global Memory Rewrite (`rolling_global_memory_rewrite_chain`)](pathname:///prompt_docs/template_chain_context_schemas/rolling_global_memory_rewrite_chain.context.schema.html)
+2. [Global Memory Rewrite (`gen_global_memory`)](pathname:///prompt_docs/template_chain_context_schemas/gen_global_memory.context.schema.html)
 3. [Pairwise Memory Rewrite (`gen_pairwise_memory`)](pathname:///prompt_docs/template_chain_context_schemas/gen_pairwise_memory.context.schema.html)
 4. [Next Conversation Goal (`gen_convo_goal`)](pathname:///prompt_docs/template_chain_context_schemas/gen_convo_goal.context.schema.html)
-5. [Relationship Tag Update (`gen_relationship_descriptor`)](pathname:///prompt_docs/template_chain_context_schemas/gen_relationship_descriptor.context.schema.html)
+5. [Relationship Descriptor Update (`gen_relationship_descriptor`)](pathname:///prompt_docs/template_chain_context_schemas/gen_relationship_descriptor.context.schema.html)
 6. [Offscreen Memory Extraction (`gen_offscreen_learned_information`)](pathname:///prompt_docs/template_chain_context_schemas/gen_offscreen_learned_information.context.schema.html)
-7. [Offscreen Approach Reason Update (`gen_offscreen_character_binary_update_next_convo_goal`)](pathname:///prompt_docs/template_chain_context_schemas/gen_offscreen_character_binary_update_next_convo_goal.context.schema.html)
+7. [Offscreen Conversation Goal Update (`gen_offscreen_character_binary_update_next_convo_goal`)](pathname:///prompt_docs/template_chain_context_schemas/gen_offscreen_character_binary_update_next_convo_goal.context.schema.html)
 
 ### Character Generation Templates
 
-1. [Extract Character Description (`extract_character_description`)](pathname:///prompt_docs/template_chain_context_schemas/extract_character_description.context.schema.html)
-2. [Example Dialogue Generation (`example_dialogue`)](pathname:///prompt_docs/template_chain_context_schemas/example_dialogue.context.schema.html)
-3. [Character Description Generation (`character_description_generation`)](pathname:///prompt_docs/template_chain_context_schemas/character_description_generation.context.schema.html)
-4. [External Description Generation (`external_description_generation`)](pathname:///prompt_docs/template_chain_context_schemas/external_description_generation.context.schema.html)
-5. [Base Appearance Generation (`base_appearance_generation`)](pathname:///prompt_docs/template_chain_context_schemas/base_appearance_generation.context.schema.html)
-6. [Wardrobe Generation (`wardrobe_generation`)](pathname:///prompt_docs/template_chain_context_schemas/wardrobe_generation.context.schema.html)
+1. [Extract Character Description (`gen_extract_character_description`)](pathname:///prompt_docs/template_chain_context_schemas/gen_extract_character_description.context.schema.html)
+2. [Example Dialogue Generation (`gen_character_example_dialog`)](pathname:///prompt_docs/template_chain_context_schemas/gen_character_example_dialog.context.schema.html)
+3. [Character Description Generation (`gen_character_internal_description`)](pathname:///prompt_docs/template_chain_context_schemas/gen_character_internal_description.context.schema.html)
+4. [External Description Generation (`gen_character_external_description`)](pathname:///prompt_docs/template_chain_context_schemas/gen_character_external_description.context.schema.html)
+5. [Base Appearance Generation (`gen_character_base_appearance`)](pathname:///prompt_docs/template_chain_context_schemas/gen_character_base_appearance.context.schema.html)
+6. [Wardrobe Generation (`gen_character_wardrobe`)](pathname:///prompt_docs/template_chain_context_schemas/gen_character_wardrobe.context.schema.html)
 
 ## Validation Checklist After Template Edits
 
