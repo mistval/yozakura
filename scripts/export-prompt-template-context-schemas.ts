@@ -279,6 +279,40 @@ function collapseTopLevelAllOfObjectSchema(schema: JsonObject): JsonObject {
   return result;
 }
 
+const STRIP_PROPERTIES = new Set(['createdAt', 'updatedAt']);
+
+function stripProperties(node: unknown): unknown {
+  if (Array.isArray(node)) {
+    return node.map(stripProperties);
+  }
+
+  if (!isJsonObject(node)) {
+    return node;
+  }
+
+  const result: JsonObject = {};
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'properties' && isJsonObject(value)) {
+      const stripped: JsonObject = {};
+      for (const [propName, propSchema] of Object.entries(value)) {
+        if (!STRIP_PROPERTIES.has(propName)) {
+          stripped[propName] = stripProperties(propSchema);
+        }
+      }
+      result[key] = stripped;
+    } else if (key === 'required' && Array.isArray(value)) {
+      const filtered = value.filter((k) => !STRIP_PROPERTIES.has(k as string));
+      if (filtered.length > 0) {
+        result[key] = filtered;
+      }
+    } else {
+      result[key] = stripProperties(value);
+    }
+  }
+
+  return result;
+}
+
 // Keywords whose values are themselves schemas, in the three shapes they come in.
 // Only these positions are traversed/rewritten, so non-schema objects (a `properties`
 // map, an `examples` entry, etc.) are never hoisted or replaced with a $ref.
@@ -589,13 +623,15 @@ function collectChainsFromGroup(
         schemaFileName,
         htmlFileName: schemaFileName.replace(/\.json$/, '.html'),
         schema: extractSharedDefs(
-          collapseTopLevelAllOfObjectSchema(
-            normalizeSchema(
-              child.contextSchema.toJSONSchema(),
-              child.templateChainTitle,
-              child.templateChainDescription
+          stripProperties(
+            collapseTopLevelAllOfObjectSchema(
+              normalizeSchema(
+                child.contextSchema.toJSONSchema(),
+                child.templateChainTitle,
+                child.templateChainDescription
+              )
             )
-          )
+          ) as JsonObject
         ),
       });
 
