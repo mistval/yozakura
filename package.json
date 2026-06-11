@@ -1,0 +1,36 @@
+{
+  "name": "yozakura",
+  "private": true,
+  "version": "0.1.0",
+  "main": "electron/main.mjs",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build:server": "npm run build --prefix server",
+    "build:web": "npm run build --prefix client",
+    "format:check": "prettier --check .",
+    "install:server": "npm ci --prefix server",
+    "install:web": "npm ci --prefix client",
+    "electron:start": "electron-forge start",
+    "electron:package": "electron-forge package",
+    "electron:make": "electron-forge make",
+    "docs:dev": "npm run start --prefix docs",
+    "docs:build": "npm run build --prefix docs",
+    "prompt-schemas:export": "node.exe --import tsx ./scripts/export-prompt-template-context-schemas.ts",
+    "prompt-schemas:docs": "bash ./scripts/generate-prompt-template-context-docs.sh",
+    "check:all": "npm run typecheck --prefix client && npm run typecheck --prefix server && npm run typecheck --prefix docs && npm run format:check && npm run build:web && npm run build:server"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.2",
+    "@electron-forge/maker-squirrel": "^7.11.2",
+    "@electron-forge/maker-zip": "^7.11.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.11.2",
+    "concurrently": "^9.1.2",
+    "electron": "^41.7.2",
+    "prettier": "3.8.1",
+    "tsx": "^4.22.4"
+  },
+  "dependencies": {
+    "@types/express": "^4.17.25"
+  }
+}

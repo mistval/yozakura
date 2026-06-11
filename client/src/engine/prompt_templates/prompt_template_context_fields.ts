@@ -1,0 +1,271 @@
+import z from 'zod';
+import {
+  characterRelationshipSchema,
+  characterSchema,
+  chatMediumSchema,
+  chatMessageSchema,
+  scenarioSchema,
+  worldMapLocationSchema,
+  worldMapSchema,
+} from '../types';
+
+const contextSchemaFields = z.object({
+  focusedCharacter: characterSchema.meta({
+    description: `The character who is in focus for this prompt (maybe they are the speaker, maybe they are having memories generated, etc. The exact meaning of "in focus" depends on the specific prompt template.).`,
+  }),
+  focusedCharacterAppearance: z.string().meta({
+    description: `The concatenation of the focused character's baseAppearanceTags with all of their enabled wardrobes. This is a convenience field and doesn't encode any information beyond what is already available in focusedCharacter.wardrobes.`,
+  }),
+  targetCharacter: characterSchema.meta({
+    description:
+      'The characters towards whom the focused character is directing their attention (generally when generating pairwise memories post-conversation).',
+  }),
+  targetCharacterRelationship: characterRelationshipSchema.meta({
+    description:
+      'The relationship between the focusedCharacter and targetCharacter. This field is provided when the prompt template is focused on generating pairwise memories or otherwise needs to reason about the relationship between these two characters.',
+  }),
+  allCharacters: z.array(characterSchema).meta({
+    description:
+      'All characters in the wider scenario, including those not taking part in or otherwise relevant to the current conversation so far.',
+  }),
+  participants: z.array(characterSchema).meta({
+    description: 'All characters who are participating in the current conversation.',
+  }),
+  userCharacter: characterSchema.meta({
+    description:
+      'The character controlled by the user (might or might not be participating in the current conversation).',
+  }),
+  scenario: scenarioSchema.meta({
+    description: 'The overall scenario that the current conversation is taking place within.',
+  }),
+  chatMedium: chatMediumSchema,
+  worldMap: worldMapSchema.meta({
+    description: 'The world map that scenario takes place in, including all locations and their connections.',
+  }),
+  currentLocation: worldMapLocationSchema.meta({
+    description:
+      'The current location of the focused character within the world map. For conversations with chatMedium "in_person", this is the location of the conversation. For conversations with chatMedium "remote", this is the location of the focused character only (other participants may be elsewhere).',
+  }),
+  raggedCharacters: z.array(characterSchema).meta({
+    description:
+      'Characters who are not participating in the conversation but who appear to have been mentioned in the conversation so far (via simple string matching against their names).',
+  }),
+  gossipTargetCharacter: characterSchema.optional().meta({
+    description:
+      'A character the system has chosen to nudge the chat participants to consider talking about. Generally they are not taking part in the current conversation, but on rare occasions they can join after the conversation begins. This field is only provided when certain conditions are met.',
+  }),
+  gossipTargetRelationship: characterRelationshipSchema.optional().meta({
+    description:
+      'The relationship between focusedCharacter and gossipTargetCharacter, including any relevant memories. This field is provided along with gossipTargetCharacter to give the system material to talk about.',
+  }),
+  transcript: z.string().meta({
+    description: `A string transcript of the conversation so far. Each line has the speaker's name, a colon, and then their message.`,
+  }),
+  conversationMessages: z.array(chatMessageSchema).meta({
+    description:
+      'All messages exchanged in the current conversation. This can enable more advanced use cases than the plain text transcript, such as referencing message types or metadata.',
+  }),
+  settings: z.record(z.string(), z.unknown()).meta({
+    description: "The current user settings. This won't be documented in detail, but is available.",
+  }),
+  getRelationship: z.any().meta({
+    description:
+      'An async function that takes in two character IDs and returns the relationship between the two, from the perspective of the first character.',
+    relationshipFunctionSignature:
+      '(characterIdA: string, characterIdB: string) => Promise<CharacterRelationship>',
+  }),
+  targetCharacterFormattedRollingMemoriesText: z.string().meta({
+    description:
+      'Contains the rollingPairwiseSummaries and rollingOffscreenLearnedInformation from the focusedCharacter towards the targetCharacter, formatted in a way that is convenient for injection into prompt templates, and ordered oldest-first. This field is provided for convenience to avoid having to write complex formatting code inside of the template, although that remains an option for advanced use cases.',
+    examples: [
+      `<informations>
+<information>
+Type: Conversation Summary (summary of a conversation between Alice and Bob, possibly including other participants as well)
+Conversation medium: in_person
+Summary:
+Alice and Bob had a conversation about the upcoming school dance. Alice is excited but also nervous about asking someone to be her date. Bob is supportive and encourages Alice to ask someone she likes.
+</information>
+<information>
+Type: Secondhand Information (information that Alice learned about Bob without Bob's being present)
+Information: Bob recently got a new job at a cafe downtown. He seems to really enjoy it and has been talking about it a lot.
+Source: A conversation between Alice and Charlie
+</information>
+</informations>`,
+    ],
+  }),
+  rollingConversationSummariesText: z.string().meta({
+    description:
+      "Contains the focusedCharacter's rollingConversationSummaries, formatted in a way that is convenient for injection into prompt templates, and ordered oldest-first. This field is provided for convenience to avoid having to write complex formatting code inside of the template, although that remains an option for advanced use cases.",
+    examples: [
+      `<summaries>
+<summary>
+Conversation participants: Alice, Bob
+Conversation medium: in_person
+Conversation summary:
+Alice and Bob had a conversation about the upcoming school dance. Alice is excited but also nervous about asking someone to be her date. Bob is supportive and encourages Alice to ask someone she likes.
+</summary>
+
+<summary>
+Conversation participants: Alice, Charlie
+Conversation medium: remote
+Conversation summary:
+Alice and Charlie chatted online about their weekend plans. Charlie mentioned that he might go hiking if the weather is nice. Alice said she might join him if she can finish her homework.
+</summary>
+</summaries>`,
+    ],
+  }),
+  globalWritableContext: z.record(z.string(), z.unknown()).meta({
+    description:
+      'This object can be written to by templates, and it is shared among all templates across the entire lifetime of the application. The Yozakura system never reads, writes, or replaces this object. It is entirely managed by templates. It does not persist between full application shutdowns. If such persistence is necessary, browser localStorage can be used. This can be used for passing information between templates, caching, or other suitable purposes.',
+  }),
+  randomPersonalityTraits: z.array(z.string()).meta({
+    description:
+      'A short array of random personality traits that may be used as inputs for generating character information, to keep things interesting. Using these attributes is optional, there is no requirement for the prompt to respect these suggested attributes.',
+    examples: [
+      ['friendly', 'outgoing', 'introverted', 'adventurous', 'cautious'],
+      ['sarcastic', 'witty', 'serious', 'playful', 'stoic'],
+    ],
+  }),
+  mentionedByCharacter: characterSchema.meta({
+    description: 'The character who mentioned the mentionedCharacter in the conversation.',
+  }),
+  candidateInformation: z.string().meta({
+    description: `Newly learned information about the target character. Decide whether this implies a better next conversation goal than the current one.`,
+  }),
+  speakerCandidates: z.array(characterSchema).meta({
+    description: 'The list of characters who are eligible to speak next in the conversation.',
+  }),
+});
+
+const globalExecutionContextSchema = contextSchemaFields
+  .pick({
+    settings: true,
+    globalWritableContext: true,
+  })
+  .meta({
+    description: 'This is the context that is available to every single prompt in Yozakura.',
+  });
+
+export type GlobalExecutionContext = z.infer<typeof globalExecutionContextSchema>;
+
+const scenarioExecutionContextSchema = globalExecutionContextSchema
+  .and(
+    contextSchemaFields.pick({
+      allCharacters: true,
+      userCharacter: true,
+      scenario: true,
+      worldMap: true,
+      getRelationship: true,
+    })
+  )
+  .meta({
+    description:
+      'This is the context that is available to all prompts that run in the scope of a scenario (as opposed to being on the main menu, in the character creator, etc)',
+  });
+
+export type ScenarioExecutionContext = z.infer<typeof scenarioExecutionContextSchema>;
+
+const conversationExecutionContextSchema = scenarioExecutionContextSchema
+  .and(
+    contextSchemaFields.pick({
+      allCharacters: true,
+      participants: true,
+      userCharacter: true,
+      chatMedium: true,
+      raggedCharacters: true,
+      gossipTargetCharacter: true,
+      gossipTargetRelationship: true,
+      transcript: true,
+      conversationMessages: true,
+    })
+  )
+  .meta({
+    description:
+      'This is the context that is available to all prompts that run in the scope of a conversation between two or more characters.',
+  });
+
+export type ConversationExecutionContext = z.infer<typeof conversationExecutionContextSchema>;
+
+export const focusedConversationExecutionContextSchema = conversationExecutionContextSchema
+  .and(
+    contextSchemaFields.pick({
+      currentLocation: true,
+      focusedCharacter: true,
+      focusedCharacterAppearance: true,
+      rollingConversationSummariesText: true,
+    })
+  )
+  .meta({
+    description:
+      'This is the context that is available to all prompts that run in the scope of a conversation between two or more characters, and where one of those characters is currently the subject of focus. The meaning of "subject of focus" depends on the specific prompt, but it means things like "the character who is currently speaking", "the character we are currently generating an image of", etc.',
+  });
+
+export type FocusedConversationExecutionContext = z.infer<typeof focusedConversationExecutionContextSchema>;
+
+export const characterEditorExecutionContextSchema = globalExecutionContextSchema
+  .and(
+    contextSchemaFields.pick({
+      focusedCharacter: true,
+      randomPersonalityTraits: true,
+    })
+  )
+  .meta({
+    description:
+      'This is the context that is available when a character is being edited in the character editor.',
+  });
+
+export type CharacterEditorContext = z.infer<typeof characterEditorExecutionContextSchema>;
+
+export const targetedConversationExecutionContextSchema = focusedConversationExecutionContextSchema
+  .and(
+    contextSchemaFields.pick({
+      targetCharacter: true,
+      targetCharacterRelationship: true,
+      targetCharacterFormattedRollingMemoriesText: true,
+    })
+  )
+  .meta({
+    description:
+      'This is the context that is available to all prompts that run in the scope of a conversation between two or more characters, and where in addition to a "focused character", there is also a target character who is the target of the focused character. The target character would be the character towards whom the focused character is generating memories, etc.',
+  });
+
+export type TargetedConversationContext = z.infer<typeof targetedConversationExecutionContextSchema>;
+
+export const memoryRagExecutionContext = targetedConversationExecutionContextSchema
+  .and(
+    contextSchemaFields.pick({
+      mentionedByCharacter: true,
+    })
+  )
+  .meta({
+    description:
+      "This is the context that is available to templates to format memories of mentioned characters to inject into prompt histories. The output of this prompt isn't sent directly to an LLM (and thus there is no parser). Rather, the output is used to add an additional system message to the prompt history, to bring in the focused character's memories towards the target character.",
+  });
+
+export const offscreenMemoryExtractionExecutionContextSchema = targetedConversationExecutionContextSchema.and(
+  contextSchemaFields.pick({
+    candidateInformation: true,
+  })
+);
+
+type OffscreenMemoryExtractionExecutionContext = z.infer<
+  typeof offscreenMemoryExtractionExecutionContextSchema
+>;
+
+export const moderationNextSpeakerExecutionContextSchema = conversationExecutionContextSchema.and(
+  contextSchemaFields.pick({
+    speakerCandidates: true,
+  })
+);
+
+type ModerationNextSpeakerExecutionContext = z.infer<typeof moderationNextSpeakerExecutionContextSchema>;
+
+export type PromptExecutionContext =
+  | GlobalExecutionContext
+  | ScenarioExecutionContext
+  | ConversationExecutionContext
+  | FocusedConversationExecutionContext
+  | CharacterEditorContext
+  | TargetedConversationContext
+  | OffscreenMemoryExtractionExecutionContext
+  | ModerationNextSpeakerExecutionContext;

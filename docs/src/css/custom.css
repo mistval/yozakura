@@ -1,0 +1,182 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --ifm-color-primary: #2e8555;
+  --ifm-color-primary-dark: #29784c;
+  --ifm-color-primary-darker: #277148;
+  --ifm-color-primary-darkest: #205d3b;
+  --ifm-color-primary-light: #33925d;
+  --ifm-color-primary-lighter: #359962;
+  --ifm-color-primary-lightest: #3cad6e;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --yoz-bg: #0d101a;
+  --yoz-surface: #151a2c;
+  --yoz-surface-inset: #101527;
+  --yoz-surface-subtle: #1a2136;
+  --yoz-surface-hover: #232b44;
+  --yoz-surface-hover-strong: #2e3857;
+  --yoz-text-primary: #dbe3f5;
+  --yoz-text-secondary: #b5c1da;
+  --yoz-text-muted: #98a4bf;
+  --yoz-border: #36435e;
+  --yoz-border-strong: #475676;
+  --yoz-accent: #9a6388;
+  --yoz-accent-hover: #b882a5;
+
+  --ifm-background-color: var(--yoz-bg);
+  --ifm-background-surface-color: var(--yoz-surface);
+  --ifm-navbar-background-color: rgb(13 16 26 / 0.86);
+  --ifm-footer-background-color: var(--yoz-surface-inset);
+  --ifm-color-content: var(--yoz-text-primary);
+  --ifm-color-content-secondary: var(--yoz-text-secondary);
+  --ifm-font-color-base: var(--yoz-text-primary);
+  --ifm-font-color-secondary: var(--yoz-text-secondary);
+  --ifm-heading-color: #e9efff;
+  --ifm-link-color: var(--yoz-accent-hover);
+  --ifm-link-hover-color: #cc9ab4;
+
+  --ifm-color-primary: #946183;
+  --ifm-color-primary-dark: #855572;
+  --ifm-color-primary-darker: #7b4f6a;
+  --ifm-color-primary-darkest: #663f57;
+  --ifm-color-primary-light: #a17392;
+  --ifm-color-primary-lighter: #ac7f9d;
+  --ifm-color-primary-lightest: #c4a5b8;
+
+  --ifm-menu-color: var(--yoz-text-secondary);
+  --ifm-menu-color-active: var(--yoz-text-primary);
+  --ifm-menu-color-background-active: var(--yoz-surface-hover);
+  --ifm-menu-color-background-hover: var(--yoz-surface-subtle);
+  --ifm-toc-border-color: var(--yoz-border);
+  --ifm-hr-border-color: var(--yoz-border);
+  --ifm-table-border-color: var(--yoz-border);
+  --ifm-blockquote-border-color: var(--yoz-accent);
+  --ifm-code-background: #1a2238;
+  --ifm-pre-background: var(--yoz-surface-inset);
+  --ifm-global-shadow-lw: 0 12px 30px rgb(4 6 12 / 0.45);
+  --docusaurus-highlighted-code-line-bg: rgb(136 118 172 / 0.22);
+}
+
+html[data-theme='dark'],
+[data-theme='dark'] body {
+  background-color: #0d101a;
+}
+
+[data-theme='dark'] .main-wrapper {
+  background-image:
+    radial-gradient(1200px 500px at 50% -220px, rgb(116 126 196 / 0.14), transparent 70%),
+    linear-gradient(180deg, #1a2239 0%, #121a2d 38%, #0d101a 100%);
+  background-repeat: no-repeat;
+}
+
+[data-theme='dark'] .navbar {
+  border-bottom: 1px solid var(--yoz-border);
+  backdrop-filter: blur(12px);
+}
+
+[data-theme='dark'] .navbar__brand,
+[data-theme='dark'] .navbar__link,
+[data-theme='dark'] .navbar__title {
+  color: #c3cde4;
+}
+
+[data-theme='dark'] .navbar__link:hover,
+[data-theme='dark'] .navbar__link--active {
+  color: var(--yoz-accent-hover);
+}
+
+[data-theme='dark'] .hero--primary {
+  background: linear-gradient(
+    180deg,
+    rgb(23 27 45 / 0.72) 0%,
+    rgb(17 20 35 / 0.48) 55%,
+    rgb(13 16 26 / 0) 100%
+  );
+}
+
+[data-theme='dark'] .theme-doc-markdown {
+  background: linear-gradient(180deg, rgb(23 27 45 / 0.72), rgb(17 20 35 / 0.88));
+  border: 1px solid var(--yoz-border);
+  border-radius: 14px;
+  padding: clamp(1rem, 1.8vw, 1.8rem);
+  box-shadow: 0 12px 30px rgb(4 6 12 / 0.35);
+}
+
+[data-theme='dark'] .theme-doc-sidebar-container {
+  border-right: 1px solid var(--yoz-border);
+  background: rgb(17 20 35 / 0.55);
+}
+
+[data-theme='dark'] .menu__link {
+  border-radius: 8px;
+}
+
+[data-theme='dark'] .table-of-contents {
+  background: rgb(23 27 45 / 0.72);
+  border: 1px solid var(--yoz-border);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+[data-theme='dark'] .card,
+[data-theme='dark'] .pagination-nav__link,
+[data-theme='dark'] .theme-admonition {
+  background: rgb(22 22 38 / 0.9);
+  border: 1px solid var(--yoz-border);
+  box-shadow: 0 10px 24px rgb(4 6 12 / 0.3);
+}
+
+[data-theme='dark'] .pagination-nav__link:hover,
+[data-theme='dark'] .card:hover {
+  border-color: var(--yoz-border-strong);
+}
+
+[data-theme='dark'] pre {
+  border: 1px solid var(--yoz-border);
+  box-shadow: inset 0 1px 0 rgb(219 227 245 / 0.08);
+}
+
+[data-theme='dark'] :not(pre) > code {
+  color: #e0e6f7;
+  background: #1a2238;
+  border: 1px solid var(--yoz-border-strong);
+}
+
+[data-theme='dark'] table th {
+  background: rgb(23 27 45 / 0.9);
+  color: #e9efff;
+}
+
+[data-theme='dark'] table tr:nth-child(2n) {
+  background: rgb(24 29 46 / 0.55);
+}
+
+[data-theme='dark'] .footer {
+  border-top: 1px solid var(--yoz-border);
+}
+
+[data-theme='dark'] .footer__title,
+[data-theme='dark'] .footer__link-item,
+[data-theme='dark'] .footer__copyright {
+  color: #b5c1da;
+}
+
+[data-theme='dark'] .footer__link-item:hover {
+  color: #cc9ab4;
+}
+
+@media screen and (max-width: 996px) {
+  [data-theme='dark'] .theme-doc-markdown {
+    border-radius: 10px;
+    padding: 1rem;
+  }
+}

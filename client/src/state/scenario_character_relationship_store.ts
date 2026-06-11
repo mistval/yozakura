@@ -1,0 +1,172 @@
+import { LRUCache } from 'lru-cache';
+import { create } from 'zustand';
+import * as Database from '../backend_bridge/database.js';
+import {
+  type CharacterPair,
+  type CharacterRelationship,
+  type CharacterRelationships,
+  type ConversationSummary,
+  type OffscreenLearnedInformation,
+} from '../engine/types.js';
+import { applyLazyFamiliarityDecay, createRelationship, relationshipKey } from '../engine/relationship.js';
+import { trimNewestByCreatedAt } from '../util/array.js';
+import { getRequiredActiveScenario } from './scenario_store.js';
+
+type RelationshipSaveKey = Pick<CharacterRelationship, 'fromId' | 'toId'>;
+
+type ScenarioCharacterRelationshipStoreState = {
+  getCharacterRelationships: (pairs: CharacterPair[]) => Promise<CharacterRelationships>;
+  getCharacterRelationship: (fromId: string, toId: string) => Promise<CharacterRelationship>;
+  saveRelationshipFields: (
+    saveKey: RelationshipSaveKey,
+    fields: Partial<CharacterRelationship>
+  ) => Promise<CharacterRelationship>;
+  addPairwiseConversationSummary: (
+    saveKey: RelationshipSaveKey,
+    summary: ConversationSummary
+  ) => Promise<CharacterRelationship>;
+  addPairwiseLearnedInformation: (
+    saveKey: RelationshipSaveKey,
+    information: OffscreenLearnedInformation
+  ) => Promise<CharacterRelationship>;
+};
+
+const RELATIONSHIP_CACHE_MAX = 10_000;
+const relationshipCache = new LRUCache<string, CharacterRelationship>({
+  max: RELATIONSHIP_CACHE_MAX,
+});
+
+function getUniquePairs(pairs: CharacterPair[]): CharacterPair[] {
+  const uniquePairByKey = new Map<string, CharacterPair>();
+
+  for (const pair of pairs) {
+    const fromId = pair.fromId?.trim();
+    const toId = pair.toId?.trim();
+    if (!fromId || !toId) {
+      continue;
+    }
+
+    uniquePairByKey.set(relationshipKey(fromId, toId), {
+      fromId,
+      toId,
+    });
+  }
+
+  return [...uniquePairByKey.values()];
+}
+
+function createDefaultRelationship(fromId: string, toId: string, currentTurn: number): CharacterRelationship {
+  return createRelationship(fromId, toId, { lastProcessedTurn: currentTurn });
+}
+
+export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRelationshipStoreState>(
+  (_set, get) => ({
+    getCharacterRelationships: async (pairs) => {
+      const uniquePairs = getUniquePairs(pairs);
+      if (uniquePairs.length === 0) {
+        return {};
+      }
+
+      const scenario = getRequiredActiveScenario();
+      const resolved: CharacterRelationships = {};
+      const misses: CharacterPair[] = [];
+
+      for (const pair of uniquePairs) {
+        const key = relationshipKey(pair.fromId, pair.toId);
+        const cached = relationshipCache.get(key);
+        if (cached) {
+          const decayed = applyLazyFamiliarityDecay(cached, scenario.turnNumber);
+          relationshipCache.set(key, decayed);
+          resolved[key] = decayed;
+          continue;
+        }
+
+        misses.push(pair);
+      }
+
+      if (misses.length > 0) {
+        const fetchedPairs = await Database.doAsDataRead(async () => {
+          return Database.loadCharacterRelationshipsByPairs(misses);
+        }, 'character_relationship');
+
+        const fetchedByKey = Object.fromEntries(
+          fetchedPairs.map((relationship) => [
+            relationshipKey(relationship.fromId, relationship.toId),
+            relationship,
+          ])
+        );
+
+        for (const pair of misses) {
+          const key = relationshipKey(pair.fromId, pair.toId);
+          const loaded =
+            fetchedByKey[key] || createDefaultRelationship(pair.fromId, pair.toId, scenario.turnNumber);
+          const decayed = applyLazyFamiliarityDecay(loaded, scenario.turnNumber);
+          relationshipCache.set(key, decayed);
+          resolved[key] = decayed;
+        }
+      }
+
+      return resolved;
+    },
+
+    getCharacterRelationship: async (fromId, toId) => {
+      const scenario = getRequiredActiveScenario();
+      const relationships = await get().getCharacterRelationships([{ fromId, toId }]);
+      const resolved = relationships[relationshipKey(fromId, toId)];
+
+      if (resolved) {
+        return resolved;
+      }
+
+      return createDefaultRelationship(fromId, toId, scenario.turnNumber);
+    },
+
+    saveRelationshipFields: async (saveKey, fields) => {
+      const existing = await get().getCharacterRelationship(saveKey.fromId, saveKey.toId);
+      const updated = {
+        ...existing,
+        ...fields,
+      };
+
+      const key = relationshipKey(updated.fromId, updated.toId);
+      relationshipCache.set(key, updated);
+
+      void Database.doAsDataWrite(
+        async () => {
+          const latest = relationshipCache.get(key);
+          if (!latest) {
+            throw new Error('Character relationship was lost from cache before it could be saved.');
+          }
+
+          await Database.storeCharacterRelationship(latest);
+        },
+        'scenario_character_relationship',
+        {
+          debouncerKey: key,
+        }
+      );
+
+      return updated;
+    },
+
+    addPairwiseConversationSummary: async (saveKey, summary) => {
+      const relationship = await get().getCharacterRelationship(saveKey.fromId, saveKey.toId);
+
+      return get().saveRelationshipFields(relationship, {
+        rollingPairwiseSummaries: trimNewestByCreatedAt(
+          relationship.rollingPairwiseSummaries.concat(summary)
+        ),
+      });
+    },
+
+    addPairwiseLearnedInformation: async (saveKey, information) => {
+      const relationship = await get().getCharacterRelationship(saveKey.fromId, saveKey.toId);
+
+      return get().saveRelationshipFields(relationship, {
+        rollingOffscreenLearnedInformation: trimNewestByCreatedAt(
+          relationship.rollingOffscreenLearnedInformation.concat(information)
+        ),
+      });
+    },
+  })
+);

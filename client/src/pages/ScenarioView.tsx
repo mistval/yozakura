@@ -1,0 +1,324 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import CharacterCard from '../components/CharacterCard';
+import ChatPane from '../components/ChatPane';
+import LocationPanel from '../components/LocationPanel';
+import { useCharacterOverview } from '../components/character_overview/CharacterOverviewContext';
+import { useConversationLog } from '../components/conversation_log/ConversationLogContext';
+import { useMapModal } from '../components/MapModalContext';
+import { useSettingsModal } from '../components/settings/SettingsModalContext';
+import { getDirectedRelationship } from '../engine/relationship';
+import { getDayNumber, getTimePeriod, getTimePeriodLabel } from '../engine/schedule';
+import type { Character, CharacterPair, CharacterRelationships, WorldMapLocation } from '../engine/types';
+import { assertNonNullish } from '../errors/application_error';
+import { useActiveChatParticipants, useActiveChatStore } from '../state/active_chat_store';
+import { useScenarioStore } from '../state/scenario_store.js';
+import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store';
+import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
+import { useScenarioCharacterRelationshipStore } from '../state/scenario_character_relationship_store.js';
+import { ChatCoordinator } from '../engine/chat/chat_coordinator';
+import { startScenarioLoop } from '../engine/scenario_loop/scenario_loop';
+
+export default function ScenarioView() {
+  const navigate = useNavigate();
+  const { scenarioId } = useParams<{ scenarioId: string }>();
+  const scenario = useScenarioStore((state) => state.activeScenario);
+  const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
+  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const loadScenarioState = useScenarioStore((state) => state.refreshScenario);
+  const getCharacterRelationships = useScenarioCharacterRelationshipStore(
+    (state) => state.getCharacterRelationships
+  );
+  const { showCharacterOverview } = useCharacterOverview();
+  const { showConversationLog } = useConversationLog();
+  const { showMap } = useMapModal();
+  const { openSettings } = useSettingsModal();
+  const activeParticipants = useActiveChatParticipants();
+  const hasActiveChatSession = useActiveChatStore((state) => state.chatState !== 'inactive');
+  const currentPhase = useScenarioLoopStateStore((state) => state.currentPhase);
+  const submitUserWait = useScenarioLoopStateStore((state) => state.submitUserWait);
+  const submitUserMove = useScenarioLoopStateStore((state) => state.submitUserMove);
+  const submitUserChatAction = useScenarioLoopStateStore((state) => state.submitUserChatAction);
+  const autoModeEnabled = useScenarioLoopStateStore((state) => state.autoMode);
+  const setAutoModeEnabled = useScenarioLoopStateStore((state) => state.setAutoMode);
+  const npcPhaseBusy = currentPhase === 'npc';
+  const canSubmitUserTurn = currentPhase === 'user' && !hasActiveChatSession;
+  const previousUserIdRef = useRef<string | null>(null);
+  const [visibleRelationships, setVisibleRelationships] = useState<CharacterRelationships>({});
+
+  useEffect(() => {
+    if (!scenarioId) {
+      return;
+    }
+
+    const run = async () => {
+      await loadScenarioState(scenarioId);
+    };
+
+    void run();
+  }, [scenarioId, loadScenarioState]);
+
+  useEffect(() => {
+    if (scenario) {
+      void startScenarioLoop();
+    }
+  }, [scenario?.id]);
+
+  useEffect(() => {
+    if (!scenario) {
+      previousUserIdRef.current = null;
+      return;
+    }
+
+    if (!previousUserIdRef.current) {
+      previousUserIdRef.current = scenario.userCharacterId;
+      return;
+    }
+
+    if (previousUserIdRef.current !== scenario.userCharacterId) {
+      closeActiveChatSession();
+      previousUserIdRef.current = scenario.userCharacterId;
+    }
+  }, [scenario?.userCharacterId]);
+
+  const user: Character | undefined = scenario
+    ? (charactersById[scenario.userCharacterId] ?? undefined)
+    : undefined;
+  const activeChatIncludesUser = scenario
+    ? activeParticipants.some((participant) => participant.id === scenario.userCharacterId)
+    : false;
+  const perspectiveCharacterId =
+    npcPhaseBusy && hasActiveChatSession && !activeChatIncludesUser
+      ? activeParticipants[0]?.id || scenario?.userCharacterId
+      : scenario?.userCharacterId;
+  const perspectiveCharacter: Character | undefined = perspectiveCharacterId
+    ? (charactersById[perspectiveCharacterId] ?? user)
+    : user;
+  const perspectiveLocationId: string | undefined = perspectiveCharacter
+    ? charactersById[perspectiveCharacter.id]?.locationId
+    : undefined;
+  const dayNumber = scenario ? getDayNumber(scenario.turnNumber) : 1;
+  const currentTimePeriod = scenario ? getTimePeriod(scenario.turnNumber) : 'morning';
+  const locationById = useMemo(
+    () =>
+      Object.fromEntries((activeMap?.locations || []).map((location) => [location.id, location] as const)),
+    [activeMap]
+  );
+  const locationAdjacenyById = useMemo(
+    () =>
+      Object.fromEntries(
+        (activeMap?.locations || []).map(
+          (location) => [location.id, [...new Set(location.adjacency || [])]] as const
+        )
+      ) as Record<string, string[]>,
+    [activeMap]
+  );
+  const location = perspectiveLocationId ? locationById[perspectiveLocationId] : activeMap?.locations[0];
+
+  const closeActiveChatSession = () => {
+    ChatCoordinator.deactivate();
+  };
+
+  const charactersHere = useMemo(() => {
+    if (!scenario) return [];
+    return Object.values(charactersById)
+      .filter((character): character is Character => Boolean(character))
+      .filter((character) => character.locationId === perspectiveLocationId)
+      .sort((a, b) => (a.id === scenario.userCharacterId ? 1 : b.id === scenario.userCharacterId ? -1 : 0));
+  }, [scenario, perspectiveLocationId, charactersById]);
+
+  useEffect(() => {
+    if (!scenario || !perspectiveCharacter || charactersHere.length === 0) {
+      setVisibleRelationships({});
+      return;
+    }
+
+    const pairs: CharacterPair[] = charactersHere.map((npc) => ({
+      fromId: npc.id,
+      toId: perspectiveCharacter.id,
+    }));
+
+    let cancelled = false;
+    const run = async () => {
+      const loaded = await getCharacterRelationships(pairs);
+      if (cancelled) {
+        return;
+      }
+
+      setVisibleRelationships(loaded);
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    scenario?.id,
+    scenario?.turnNumber,
+    perspectiveCharacter?.id,
+    charactersHere,
+    getCharacterRelationships,
+  ]);
+
+  const adjacentLocations = useMemo(() => {
+    const ids: string[] = perspectiveLocationId ? locationAdjacenyById[perspectiveLocationId] || [] : [];
+    return ids
+      .map((id) => {
+        const location = locationById[id];
+        return location;
+      })
+      .filter((l): l is WorldMapLocation => Boolean(l));
+  }, [perspectiveLocationId, locationAdjacenyById, locationById]);
+
+  const addCharacterToActiveChat = (npcId: string) => {
+    if (!hasActiveChatSession || !scenario) {
+      return;
+    }
+
+    const chatIncludesUser = activeParticipants.some(
+      (participant) => participant.id === scenario.userCharacterId
+    );
+    if (!chatIncludesUser) {
+      return;
+    }
+
+    const npc = charactersById[npcId];
+    assertNonNullish(npc, `addCharacterToActiveChat called with unknown npcId: ${npcId}`);
+
+    if (activeParticipants.length > 2 && activeParticipants.some((participant) => participant.id === npcId)) {
+      ChatCoordinator.removeParticipant(npcId);
+      return;
+    }
+
+    ChatCoordinator.addParticipant(npcId);
+  };
+
+  const toggleAutoMode = () => {
+    if (autoModeEnabled) {
+      setAutoModeEnabled(false);
+      return;
+    }
+
+    setAutoModeEnabled(true);
+    submitUserWait();
+  };
+
+  if (!scenario || !user || !perspectiveCharacter || !activeMap) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 space-y-3">
+        <h1 className="text-2xl font-semibold">Loading...</h1>
+        <button type="button" onClick={() => navigate('/')}>
+          Main Menu
+        </button>
+      </div>
+    );
+  }
+
+  const resolvedLocation = location || activeMap.locations[0];
+  assertNonNullish(resolvedLocation, 'No valid current location available for user location.');
+
+  const renderSessionHeader = ({ includeMenu = false }: { includeMenu?: boolean } = {}) => (
+    <div className="flex justify-between items-center">
+      <div className="font-semibold">
+        Day {dayNumber} · Turn: {scenario.turnNumber} · {getTimePeriodLabel(currentTimePeriod)}
+      </div>
+      <div className="flex gap-2">
+        <button type="button" onClick={() => showCharacterOverview()}>
+          Character Overview
+        </button>
+        <button type="button" onClick={() => showConversationLog()}>
+          Conversation Log
+        </button>
+        <button type="button" onClick={() => showMap()}>
+          Map
+        </button>
+        {includeMenu && (
+          <button type="button" onClick={() => navigate('/')}>
+            Main Menu
+          </button>
+        )}
+        <button type="button" onClick={() => openSettings()} aria-label="Settings" title="Settings">
+          ⚙
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="max-w-6xl mx-auto p-6 space-y-4">
+      {renderSessionHeader({ includeMenu: true })}
+      <div className="flex gap-3 min-h-0">
+        <div className="flex-1 min-w-0 space-y-4">
+          <LocationPanel
+            location={resolvedLocation}
+            adjacentLocationIds={adjacentLocations}
+            onMove={(locationId) => {
+              submitUserMove(locationId);
+            }}
+            onWait={() => {
+              submitUserWait();
+            }}
+            disabled={!canSubmitUserTurn}
+          />
+
+          {hasActiveChatSession && (
+            <div className="mx-auto py-6 space-y-3">
+              <ChatPane />
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold">Characters here</h3>
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              {charactersHere.map((char) => {
+                const rel = getDirectedRelationship(visibleRelationships, char.id, perspectiveCharacter.id);
+                const isSelected = Boolean(
+                  activeParticipants.some((participant) => participant.id === char.id)
+                );
+                return (
+                  <CharacterCard
+                    key={char.id}
+                    character={char}
+                    subtitle={rel.descriptor}
+                    onClick={() => {
+                      if (hasActiveChatSession) {
+                        addCharacterToActiveChat(char.id);
+                        return;
+                      }
+                      submitUserChatAction(char.id);
+                    }}
+                    selected={isSelected}
+                    disabled={
+                      (!hasActiveChatSession && !canSubmitUserTurn) ||
+                      (npcPhaseBusy && !activeChatIncludesUser) ||
+                      char.id === scenario.userCharacterId
+                    }
+                  />
+                );
+              })}
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={toggleAutoMode}
+                  className={
+                    autoModeEnabled
+                      ? 'border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover'
+                      : undefined
+                  }
+                >
+                  {autoModeEnabled ? '■ Stop Auto Mode' : '▶ Auto Mode'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,133 @@
+import { z } from 'zod';
+import { PromptTemplateBase } from '../prompt_template';
+import { PromptOutputParser } from '../prompt_output_parser';
+import { PromptTemplateChain } from '../prompt_template_chain';
+import { focusedConversationExecutionContextSchema } from '../prompt_template_context_fields';
+
+class ChatSystemPromptTemplate extends PromptTemplateBase<
+  z.infer<typeof focusedConversationExecutionContextSchema>
+> {
+  public defaultTemplateString = `<% const otherParticipants = it.participants.filter((p) => p.id !== it.focusedCharacter.id); %>
+<% if (otherParticipants.length > 1) { %>
+<%= it.focusedCharacter.firstName %> is currently having a group chat with several other characters: <%= otherParticipants.map((p) => p.firstName + ' ' + p.lastName).join(', ') %>.
+<% } else if (otherParticipants.length) { %>
+<%= it.focusedCharacter.firstName %> is currently having a one-on-one chat with <%= otherParticipants[0].firstName + ' ' + otherParticipants[0].lastName %>.
+<% } %>
+  
+You are roleplaying as <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> in a <%= it.chatMedium === 'in_person' ? 'conversation' : 'text messaging chat' %>. <%= it.focusedCharacter.firstName %>'s persona description:
+<persona>
+<%= it.focusedCharacter.internalDescription %>
+
+</persona>
+
+<% if (it.focusedCharacter.exampleDialogue) { %>
+<%= it.focusedCharacter.firstName %>'s example dialogue:
+<example_dialogue>
+<%= it.focusedCharacter.exampleDialogue %>
+
+</example_dialogue>
+<% } %>
+
+<% if (it.focusedCharacter.globalMemories) { %>
+<%= it.focusedCharacter.firstName %>'s personal memories and goals:
+<personal_memories_and_goals>
+<%= it.focusedCharacter.globalMemories %>
+
+</personal_memories_and_goals>
+<% } %>
+
+<% for (const p of it.participants) { %>
+<% if (p.id !== it.focusedCharacter.id) { %>
+<%= it.focusedCharacter.firstName %>'s memories about <%= p.firstName %> <%= p.lastName %>:
+<memories_of_<%= p.id %>>
+<%= p.externalDescription %>
+
+<%= (await it.getRelationship(it.focusedCharacter.id, p.id))?.memory || it.focusedCharacter.firstName + ' has not met ' + p.firstName + ' yet.' %>
+
+</memories_of_<%= p.id %>>
+<% } %>
+<% } %>
+
+<% if (otherParticipants.length === 1) { %>
+<% const relationship = await it.getRelationship(it.focusedCharacter.id, otherParticipants[0].id); %>
+Here is a goal that <%= it.focusedCharacter.firstName %> wants to discuss with <%= otherParticipants[0].firstName %> if the opportunity arises:
+<goal>
+<%= relationship?.nextConversationGoal || it.focusedCharacter.firstName + ' is interested in meeting ' + otherParticipants[0].firstName + '.' %>
+
+</goal>
+<% } %>
+
+<setting>
+<%= it.worldMap.description %>
+
+<%= it.focusedCharacter.firstName %> is currently located in "<%= it.currentLocation.name %>": "<%= it.currentLocation.description %>"
+</setting>
+
+<% const gossipTargetHasBeenRagged = it.raggedCharacters.some((c) => c.id === it.gossipTargetCharacter?.id); %>
+<% const shouldIncludeGossipMemory = !gossipTargetHasBeenRagged && it.gossipTargetCharacter && it.gossipTargetRelationship?.memory; %>
+<% if (shouldIncludeGossipMemory) { %>
+<%= it.focusedCharacter.firstName %> also knows another character named <%= it.gossipTargetCharacter.firstName %> <%= it.gossipTargetCharacter.lastName %>. <%= it.gossipTargetCharacter.firstName %> is not taking part in this conversation, but <%= it.focusedCharacter.firstName %> can mention <%= it.gossipTargetCharacter.firstName %> if it adds to the conversation. Here is <%= it.focusedCharacter.firstName %>'s relationship with <%= it.gossipTargetCharacter.firstName %>:
+<memories_of_<%= it.gossipTargetCharacter.id %>>
+<%= it.gossipTargetRelationship.memory %>
+
+</memories_of_<%= it.gossipTargetCharacter.id %>>
+<% } %>
+
+<% const isInitialMessage = it.conversationMessages.length === 0; %>
+<instructions>
+- <%= isInitialMessage ? 'Write a proactive first message in the conversation as ' + it.focusedCharacter.firstName + ' in first person perspective' : 'Write the next response as ' + it.focusedCharacter.firstName + ' in first person perspective' %>
+
+- Be concise. Write no more than three sentences.
+- Use quotes for speech and asterisks for actions and internal speech.
+- Be aware that other characters' internal speech is not directly known to your character.
+- Avoid repetition.
+</instructions>`;
+
+  public readonly contextSchema = focusedConversationExecutionContextSchema;
+  public readonly templateName = 'Chat System Prompt';
+  public readonly templateId = 'chat_system_prompt';
+  public readonly templateSettings = [];
+  public readonly templateDescription =
+    'This template controls the initial system prompt for the speaker. This prompt sits at the top of the completions prompt chain and is re-computed for every message, so it can change dynamically as the conversation evolves. ';
+  public readonly role = 'system';
+}
+
+class FinalInstructionsPromptTemplate extends PromptTemplateBase<
+  z.infer<typeof focusedConversationExecutionContextSchema>
+> {
+  public readonly defaultTemplateString = `Your instructions:
+<instructions>
+- <%= it.conversationMessages.length === 0
+  ? 'Write a proactive first message in the conversation as ' + it.focusedCharacter.firstName + ' in first person perspective.'
+  : 'Write the next response as ' + it.focusedCharacter.firstName + ' in first person perspective.' %>
+- <%= it.chatMedium === 'in_person'
+  ? 'Be concise. Write no more than three sentences.'
+  : 'Text messaging style (concise, casual, abbreviated, use emojis if consistent with ' + it.focusedCharacter.firstName + "'s persona). Be concise. Write no more than three sentences." %>
+- Use quotes for speech and asterisks for actions and internal speech.
+- Be aware that other characters' internal speech is not directly known to your character.
+- Avoid repetition.
+</instructions>`;
+  public readonly contextSchema = focusedConversationExecutionContextSchema;
+  public readonly templateName = 'Final Instructions Prompt';
+  public readonly templateDescription =
+    'Final system instruction block appended at the end of the completions prompt chain before generating a character reply. If no message has been sent in the chat yet, this is NOT appended.';
+  public readonly templateId = 'final_instructions_prompt';
+  public readonly templateSettings = [];
+  public readonly role = 'system';
+}
+
+const finalInstructionsPromptTemplate = new FinalInstructionsPromptTemplate();
+const chatSystemPromptTemplate = new ChatSystemPromptTemplate();
+export const chatSystemPromptChain = new PromptTemplateChain({
+  templateChainId: 'gen_npc_response',
+  templateChainTitle: 'Chat System Prompt',
+  templateChainDescription:
+    'This template group controls the leading and trailing system prompts for NPC chat responses',
+  contextSchema: focusedConversationExecutionContextSchema,
+  templates: [{ template: chatSystemPromptTemplate }, { template: finalInstructionsPromptTemplate }],
+  parser: new PromptOutputParser<z.infer<typeof focusedConversationExecutionContextSchema>, string>(
+    'async (response, it) => response',
+    'chat_system_prompt_parser',
+    z.string()
+  ),
+});

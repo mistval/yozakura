@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+            server/package-lock.json
+            docs/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install client dependencies
+        run: npm ci --prefix client
+
+      - name: Install server dependencies
+        run: npm ci --prefix server
+
+      - name: Install docs dependencies
+        run: npm ci --prefix docs
+
+      - name: Run typecheck
+        run: |
+          npm run typecheck --prefix client
+          npm run typecheck --prefix server
+          npm run typecheck --prefix docs
+
+      - name: Collect changed files for prettier
+        id: changed
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            **/*.{js,jsx,ts,tsx,mjs,cjs,json,css,md,yml,yaml}
+          files_ignore: |
+            docs/.docusaurus/**
+            docs/build/**
+            client/dist/**
+            server/dist/**
+            out/**
+            data/**
+
+      - name: Run prettier check on changed files
+        if: steps.changed.outputs.any_changed == 'true'
+        run: npx prettier --check ${{ steps.changed.outputs.all_changed_files }}
+
+      - name: Build frontend
+        run: npm run build --prefix client
+
+      - name: Build backend
+        run: npm run build --prefix server

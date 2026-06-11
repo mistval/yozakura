@@ -1,0 +1,37 @@
+import YozakuraLogo from '../../theme_backdrops/yozakura_logo';
+
+const APP_RELEASE_TAG = import.meta.env.VITE_GITHUB_RELEASE_TAG?.trim() ?? '';
+const APP_VERSION_LABEL = APP_RELEASE_TAG || 'Development Version';
+
+// TODO: Replace these with actual links
+const LINKS = {
+  github: 'https://github.com/your-org/your-repo',
+  wiki: 'https://example.com/wiki',
+  discord: 'https://discord.gg/example',
+};
+
+export default function AboutSettingsSection() {
+  return (
+    <div className="flex flex-col items-center space-y-4 justify-center">
+      <YozakuraLogo className="w-96" />
+
+      <div className="bordered-section space-y-3 w-full flex flex-col items-center">
+        <div className="text-sm text-secondary">
+          Version: <span className="font-medium text-primary">{APP_VERSION_LABEL}</span>
+        </div>
+
+        <div className="flex flex-wrap gap-3 text-sm">
+          <a href={LINKS.github} target="_blank" rel="noreferrer" className="underline hover:text-primary">
+            GitHub
+          </a>
+          <a href={LINKS.wiki} target="_blank" rel="noreferrer" className="underline hover:text-primary">
+            Wiki
+          </a>
+          <a href={LINKS.discord} target="_blank" rel="noreferrer" className="underline hover:text-primary">
+            Discord Server
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
