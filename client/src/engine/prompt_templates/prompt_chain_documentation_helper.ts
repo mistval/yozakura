@@ -75,8 +75,23 @@ function toPascalCase(value: string): string {
   return words.map((word) => word[0]!.toUpperCase() + word.slice(1)).join('');
 }
 
+// Ref sites may carry a per-occurrence description alongside the $ref.
 function isRefTo(value: unknown, refPath: string): value is JsonObject {
-  return isJsonObject(value) && value.$ref === refPath && Object.keys(value).length === 1;
+  return (
+    isJsonObject(value) &&
+    value.$ref === refPath &&
+    Object.keys(value).every((key) => key === '$ref' || key === 'description')
+  );
+}
+
+function withoutDescription(node: JsonObject): JsonObject {
+  if (!('description' in node)) {
+    return node;
+  }
+
+  const result = { ...node };
+  delete result.description;
+  return result;
 }
 
 function canonicalJson(value: unknown): string {
@@ -280,7 +295,16 @@ function collapseTopLevelAllOfObjectSchema(schema: JsonObject): JsonObject {
  * are derived from the first property key each subtree was seen under.
  */
 function extractSharedDefs(schema: JsonObject): JsonObject {
-  type Occurrence = { count: number; hint: string | undefined };
+  // Identity deliberately excludes the node's own description, so copies that differ
+  // only in how they're described share a single def. `descriptions`/`missingDescription`
+  // record what was seen so the rewrite can tell whether the description is uniform
+  // (keep it in the def body) or per-occurrence (carry it at each ref site).
+  type Occurrence = {
+    count: number;
+    hint: string | undefined;
+    descriptions: Set<string>;
+    missingDescription: boolean;
+  };
   const occurrences = new Map<string, Occurrence>();
 
   function countNode(node: unknown, hint: string | undefined, isRoot: boolean): void {
@@ -289,14 +313,21 @@ function extractSharedDefs(schema: JsonObject): JsonObject {
     }
 
     if (!isRoot && isDefWorthySchema(node)) {
-      const key = canonicalJson(node);
+      const key = canonicalJson(withoutDescription(node));
       if (key.length >= MIN_DEF_CANONICAL_LENGTH) {
-        const existing = occurrences.get(key);
-        if (existing) {
-          existing.count += 1;
-          existing.hint ??= hint;
+        let occurrence = occurrences.get(key);
+        if (occurrence) {
+          occurrence.count += 1;
+          occurrence.hint ??= hint;
         } else {
-          occurrences.set(key, { count: 1, hint });
+          occurrence = { count: 1, hint, descriptions: new Set(), missingDescription: false };
+          occurrences.set(key, occurrence);
+        }
+
+        if (typeof node.description === 'string') {
+          occurrence.descriptions.add(node.description);
+        } else {
+          occurrence.missingDescription = true;
         }
       }
     }
@@ -380,13 +411,23 @@ function extractSharedDefs(schema: JsonObject): JsonObject {
       return node;
     }
 
-    const name = defNames.get(canonicalJson(node));
+    const key = canonicalJson(withoutDescription(node));
+    const name = defNames.get(key);
     if (name === undefined) {
       return rewriteChildren(node);
     }
 
+    // A description shared verbatim by every occurrence lives in the def body;
+    // otherwise the def is description-free and each ref site keeps its own.
+    const occurrence = occurrences.get(key)!;
+    const uniformDescription = occurrence.descriptions.size === 1 && !occurrence.missingDescription;
+
     if (!Object.hasOwn(defs, name)) {
-      defs[name] = rewriteChildren(node);
+      defs[name] = rewriteChildren(uniformDescription ? node : withoutDescription(node));
+    }
+
+    if (!uniformDescription && typeof node.description === 'string') {
+      return { $ref: `#/$defs/${name}`, description: node.description };
     }
 
     return { $ref: `#/$defs/${name}` };
@@ -420,14 +461,21 @@ function extractSharedDefs(schema: JsonObject): JsonObject {
     }
   }
 
+  function inlineRefSite(refSite: JsonObject, body: JsonObject): JsonObject {
+    return typeof refSite.description === 'string'
+      ? { ...body, description: refSite.description }
+      : body;
+  }
+
   function inlineSingleRef(node: unknown, refPath: string, body: JsonObject): boolean {
     if (Array.isArray(node)) {
       for (let index = 0; index < node.length; index += 1) {
-        if (isRefTo(node[index], refPath)) {
-          node[index] = body;
+        const entry = node[index];
+        if (isRefTo(entry, refPath)) {
+          node[index] = inlineRefSite(entry, body);
           return true;
         }
-        if (inlineSingleRef(node[index], refPath, body)) {
+        if (inlineSingleRef(entry, refPath, body)) {
           return true;
         }
       }
@@ -440,7 +488,7 @@ function extractSharedDefs(schema: JsonObject): JsonObject {
 
     for (const [key, value] of Object.entries(node)) {
       if (isRefTo(value, refPath)) {
-        node[key] = body;
+        node[key] = inlineRefSite(value, body);
         return true;
       }
       if (inlineSingleRef(value, refPath, body)) {

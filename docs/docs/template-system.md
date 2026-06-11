@@ -39,7 +39,7 @@ Yozakura prompts are rendered by [Eta](https://www.npmjs.com/package/eta) which 
 
 ## Prompt Template Chain Context Docs
 
-If you want to get your hands dirty, you find the documentation for the context object of each prompt group below.
+If you want to get your hands dirty, you can find the documentation for the context object of each prompt group below.
 
 ### Conversation Templates
 
