@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
 import { GraphCanvas } from 'reagraph';
-import { useGraphTheme } from '../graph_themes.js';
+import { useGraphTheme } from '../theme/graph_themes.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.js';
 import type { WorldMap, WorldMapLocation } from '../engine/types.js';
 import { getConnectivityIslands, validateWorldMap } from '../engine/map/world_map.js';

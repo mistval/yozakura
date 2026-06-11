@@ -1,17 +1,17 @@
 import { useEffect } from 'react';
 import { useSettingsStore, type Settings } from '../state/settings_store.js';
-import ChristmasBackground from '../theme_backdrops/christmas.js';
-import SmokiesBackground from '../theme_backdrops/smokies.js';
-import LunarBackground from '../theme_backdrops/lunar.js';
-import LittoralBackground from '../theme_backdrops/littoral.js';
-import OceanBackground from '../theme_backdrops/ocean.js';
-import AgapeBackground from '../theme_backdrops/agape.js';
-import SakuraBackground from '../theme_backdrops/sakura.js';
-import StormyBackground from '../theme_backdrops/storm.js';
-import TempestBackground from '../theme_backdrops/tempest.js';
-import WinnipesaukeeBackground from '../theme_backdrops/winnipesaukee.js';
-import YozakuraBackground from '../theme_backdrops/yozakura.js';
-import MpkBackground from '../theme_backdrops/mpk.js';
+import ChristmasBackground from '../theme/christmas.js';
+import SmokiesBackground from '../theme/smokies.js';
+import LunarBackground from '../theme/lunar.js';
+import LittoralBackground from '../theme/littoral.js';
+import OceanBackground from '../theme/ocean.js';
+import AgapeBackground from '../theme/agape.js';
+import SakuraBackground from '../theme/sakura.js';
+import StormyBackground from '../theme/storm.js';
+import TempestBackground from '../theme/tempest.js';
+import WinnipesaukeeBackground from '../theme/winnipesaukee.js';
+import YozakuraBackground from '../theme/yozakura.js';
+import MpkBackground from '../theme/mpk.js';
 
 type ResolvedTheme = Exclude<Settings['theme'], 'system'>;
 type ThemeSetting = Settings['theme'];
@@ -55,7 +55,10 @@ function getSystemPrefersDark() {
 }
 
 export function useResolvedTheme() {
-  return resolveTheme(useSettingsStore((s) => s.theme), getSystemPrefersDark());
+  return resolveTheme(
+    useSettingsStore((s) => s.theme),
+    getSystemPrefersDark()
+  );
 }
 
 function useThemeClasses() {

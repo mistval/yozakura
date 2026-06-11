@@ -3,7 +3,7 @@ import { useStateRef } from '../hooks/useStateRef.js';
 import { useDraft } from '../hooks/useDraft.js';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { DEMO_CHARACTERS } from '../engine/demo_characters.js';
-import YozakuraLogo from '../theme_backdrops/yozakura_logo.js';
+import YozakuraLogo from '../theme/yozakura_logo.js';
 import { useSettingsStore, type ImageApiShape, type Settings } from '../state/settings_store.js';
 import Modal from './ui/Modal.js';
 import InfoTooltip from './ui/InfoTooltip.js';
@@ -81,10 +81,7 @@ export default function MainMenuFtueModal() {
     testConnection: testImageConnectionFromHook,
   } = useImageConnectionTest();
 
-  const baseDefaultsConfig = useMemo(
-    () => findBaseDefaultsLLMConfig(llmConfigs),
-    [llmConfigs]
-  );
+  const baseDefaultsConfig = useMemo(() => findBaseDefaultsLLMConfig(llmConfigs), [llmConfigs]);
   const llmModelSource = useMemo(() => {
     const meta = baseDefaultsConfig
       ? (JSON.parse(baseDefaultsConfig.llmMetaOptions) as Record<string, unknown>)
