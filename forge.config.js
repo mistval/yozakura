@@ -42,5 +42,23 @@ module.exports = {
         await fs.cp(clientDist, path.join(outputPath, 'yozakura_client'), { recursive: true });
       }
     },
+    postMake: async (_forgeConfig, makeResults) => {
+      for (const result of makeResults) {
+        result.artifacts = await Promise.all(
+          result.artifacts.map(async (artifact) => {
+            let base = path.basename(artifact).replace('win32', 'windows').replace('darwin', 'macos');
+            if (base.includes('macos')) {
+              base = base.replace('arm64', 'apple-silicon');
+            }
+            const renamed = path.join(path.dirname(artifact), base);
+            if (renamed !== artifact) {
+              await fs.rename(artifact, renamed);
+            }
+            return renamed;
+          }),
+        );
+      }
+      return makeResults;
+    },
   },
 };
