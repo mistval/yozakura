@@ -227,7 +227,7 @@ export async function parseJSONResponse<TZodType>(
   response: Response
 ): Promise<TZodType> {
   if (!response.ok) {
-    throw ApplicationError.fromFetchResponse(response);
+    throw await ApplicationError.fromFetchResponse(response);
   }
 
   const contentType = response.headers.get('content-type') || '';

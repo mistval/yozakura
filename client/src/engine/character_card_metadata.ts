@@ -1,6 +1,7 @@
 import { addMetadata, getMetadata } from 'meta-png';
 import { characterSchema, wardrobeSchema } from './types.js';
 import z from 'zod';
+import { safeParseJson } from '../util/json.js';
 
 const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
 const YOZAKURA_METADATA_KEY = 'yozakura_character';
@@ -108,14 +109,6 @@ function collectPngMetadataTextCandidates(pngBytes: Uint8Array): string[] {
   }
 
   return values;
-}
-
-function safeParseJson(value: string): unknown | undefined {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return undefined;
-  }
 }
 
 function tryDecodeBase64(value: string): string | undefined {
