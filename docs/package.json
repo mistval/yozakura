@@ -2,6 +2,8 @@
   "name": "docs",
   "version": "0.0.0",
   "private": true,
+  "author": "mistval",
+  "description": "Yozakura is an AI-powered social simulation engine.",
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",

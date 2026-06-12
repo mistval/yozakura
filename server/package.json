@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-only",
+  "author": "mistval",
+  "description": "Yozakura is an AI-powered social simulation engine.",
   "scripts": {
     "dev": "tsx watch index.ts",
     "start": "tsx index.ts",

@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "main": "electron/main.mjs",
   "license": "AGPL-3.0-only",
+  "author": "mistval",
+  "description": "Yozakura is an AI-powered social simulation engine.",
   "scripts": {
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "build:server": "npm run build --prefix server",
