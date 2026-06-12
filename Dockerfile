@@ -19,12 +19,13 @@ COPY --from=web-builder /app/client/dist ./client/dist
 
 RUN mkdir -p /app/data
 
-ENV PORT=3001
-ENV DATA_DIR=/app/data
+ENV PORT=4396
+ENV YOZAKURA_DATA_DIR=/app/data
+ENV YOZAKURA_FRONTEND_DIST_DIR=/app/client/dist
 
-EXPOSE 3001
+EXPOSE 4396
 VOLUME ["/app/data"]
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 CMD node -e "fetch('http://127.0.0.1:3001/health').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"
 
-CMD ["node", "server/index.js"]
+CMD ["node", "server/dist/index.js"]

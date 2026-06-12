@@ -11,28 +11,48 @@ If you have the Yozakura electron app, some of the links in this document will o
 
 ## Chat
 
-During the user turn, choose one or more characters to chat with.
+During the user turn, choose one or more characters to chat with (Gus is the user in the screenshot).
+
+![group chat image](/img/group_chat.png)
 
 ## Memories
 
-After each chat, NPC memories are updated. The memory system is designed for continuity and narrative momentum, and several different types of memory are maintained. You can read more about the memory system here.
+After each chat, NPC memories are updated. The memory system is designed for continuity and narrative momentum, and several different types of memory are maintained. You can read more about the memory system [here](memory-system.md).
+
+![group chat memories](/img/memories.png)
 
 ## NPC Chat
 
-Once the user's turn is finished, NPCs each get a chance to move around the map or talk to other characters (potentially including the user). If an image API is configured, images can be generated automatically as NPCs converse with each other.
+Once the user's turn is finished, NPCs each get a chance to move around the map or talk to other characters (including the user). If an image API is configured, images can be generated automatically as NPCs converse with each other. NPC chats appear in the UI while NPCs each take their turn. You can control how often NPCs chats happen and how long they last.
 
-The user character is not privileged (unless you tweak certain settings). It's possible to play without a user character too, by running Yozakura in auto mode. You could sleep with it running and you might wake up to an entirely different world.
+The user character is not privileged (unless you tweak certain settings). It's possible to play without a user character too, by running Yozakura in auto mode. You could sleep with it running and you might wake up with an interesting tale to read.
 
-## Prompt templates
+![group chat memories](/img/npc_chat.png)
 
-Yozakura prompt templates can be edited and the templating system is very powerful. Context documents are generated automatically so you can upload them to a frontier LLM (Claude, ChatGPT, Gemini, etc...) to do the edits for you, which may be complex, depending on what you're going for. Read more about the templating system here.
+## Import Characters
 
-## Import characters
+The character editor supports importing CharacterTavern/SillyTavern style character cards. Upload the card image and for best results, select "Convert" when it asks you what you want to do with it. It will use your LLM to re-write the character information to work better in Yozakura, while remaining true to the character's basic personality.
 
-The character editor supports importing CharacterTavern/SillyTavern style character cards. Upload the card image and for best results, select "Convert".
+You can also of course create new characters from scratch.
 
-You can also create new characters from scratch.
+![character create dialogue](/img/char_create.png)
 
-## Create your own worlds
+The wardrobe system can automatically enable different combinations of image model tags each day.
 
-Maps in Yozakura are just a list of locations, their names, descriptions, and which other locations they are connected to. It's the character interactions that add all the color. You can create your own map in no time in the map editor.
+## Create Your Own Worlds
+
+Maps in Yozakura are just a list of locations, their names, descriptions, and which other locations they are connected to. It's the character interactions that add all the color. You can create your own map in no time with the map editor.
+
+![map visualization](/img/map.png)
+
+## Prompt Templates
+
+Yozakura prompt templates can be edited and the templating system is very powerful. Context documents are generated automatically so you can upload them to a frontier LLM (Claude, ChatGPT, Gemini, etc...) to do the edits for you, which may be complex, depending on what you're going for. Read more about the templating system [here](template-system.md).
+
+![prompt template](/img/template.png)
+
+![AI context doc for prompt templates](/img/ai_assist.png)
+
+## Get Started
+
+Continue to the [getting started guide](getting-started.md) for installation instructions.

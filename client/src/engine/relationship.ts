@@ -46,7 +46,10 @@ export function applyLazyFamiliarityDecay(
 
   return {
     ...relationship,
-    familiarity: relationship.familiarity - Number(useSettingsStore.getState().familiarityDecay) * turnDelta,
+    familiarity: Math.max(
+      0,
+      relationship.familiarity - Number(useSettingsStore.getState().familiarityDecay) * turnDelta
+    ),
     lastProcessedTurn: currentTurnNumber,
   };
 }
