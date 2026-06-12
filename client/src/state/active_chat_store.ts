@@ -411,7 +411,7 @@ function activeChatShouldPersist(state: BaseChatStoreState): boolean {
     return false;
   }
 
-  return state.transcript.hasAtLeastOneCharacterMessage();
+  return state.transcript.hasMessagesFromCharacter(scenario.userCharacterId);
 }
 
 function persistActiveChat() {
