@@ -125,7 +125,7 @@ const DEFAULT_SETTINGS: Settings = {
   userGossipChanceMultiplier: 1,
   familiarityWeightMultiplier: 1,
   familiarityGain: 10,
-  familiarityDecay: 1,
+  familiarityDecay: 0.5,
   npcRemoteChatRate: 0.15,
   npcTriggeredGroupChatRate: 0.07,
   npcGroupChatAdditionalParticipants: 2,
