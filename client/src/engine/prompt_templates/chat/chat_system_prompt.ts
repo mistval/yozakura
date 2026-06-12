@@ -9,12 +9,12 @@ class ChatSystemPromptTemplate extends PromptTemplateBase<
 > {
   public defaultTemplateString = `<% const otherParticipants = it.participants.filter((p) => p.id !== it.focusedCharacter.id); %>
 <% if (otherParticipants.length > 1) { %>
-<%= it.focusedCharacter.firstName %> is currently having a group chat with several other characters: <%= otherParticipants.map((p) => p.firstName + ' ' + p.lastName).join(', ') %>.
+<%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> is currently having a group chat with several other characters: <%= otherParticipants.map((p) => p.firstName + ' ' + p.lastName).join(', ') %>.
 <% } else if (otherParticipants.length) { %>
-<%= it.focusedCharacter.firstName %> is currently having a one-on-one chat with <%= otherParticipants[0].firstName + ' ' + otherParticipants[0].lastName %>.
+<%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> is currently having a one-on-one chat with <%= otherParticipants[0].firstName + ' ' + otherParticipants[0].lastName %>.
 <% } %>
   
-You are roleplaying as <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> in a <%= it.chatMedium === 'in_person' ? 'conversation' : 'text messaging chat' %>. <%= it.focusedCharacter.firstName %>'s persona description:
+You are roleplaying as <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> in a <%= it.chatMedium === 'in_person' ? 'conversation' : 'text messaging chat (the participants are in different physical locations)' %>. <%= it.focusedCharacter.firstName %>'s persona description:
 <persona>
 <%= it.focusedCharacter.internalDescription %>
 
@@ -100,6 +100,7 @@ class FinalInstructionsPromptTemplate extends PromptTemplateBase<
 - <%= it.conversationMessages.length === 0
   ? 'Write a proactive first message in the conversation as ' + it.focusedCharacter.firstName + ' in first person perspective.'
   : 'Write the next response as ' + it.focusedCharacter.firstName + ' in first person perspective.' %>
+
 - <%= it.chatMedium === 'in_person'
   ? 'Be concise. Write no more than three sentences.'
   : 'Text messaging style (concise, casual, abbreviated, use emojis if consistent with ' + it.focusedCharacter.firstName + "'s persona). Be concise. Write no more than three sentences." %>
