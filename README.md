@@ -1,6 +1,6 @@
-<div style="display: flex; justify-content: center;">
+<p align="center" style="display: flex; justify-content: center;">
 <img src="./docs/static/img/yozakura_logo_horizontal.svg" width="420" />
-</div>
+</p>
 
 Yozakura is an AI-powered social simulation engine.
 
