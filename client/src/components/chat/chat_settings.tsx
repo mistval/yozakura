@@ -123,8 +123,12 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
             />
           </label>
 
-          <label className="flex items-center gap-3">
-            <button onClick={() => submitChatRequestEnd({ forceNoEffect: true })} disabled={!canEndChat}>
+          <label className="gap-3">
+            <button
+              onClick={() => submitChatRequestEnd({ forceNoEffect: true })}
+              disabled={!canEndChat}
+              className="mr-3"
+            >
               End chat without memories
             </button>
             <InfoTooltip
