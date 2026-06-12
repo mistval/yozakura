@@ -15,10 +15,12 @@ For each non-user participant, the flow looks like this:
 
 1. **Summarize the conversation** from that character's perspective. The summary is appended to the character's rolling list of conversation summaries.
 2. **Update pairwise memories** towards each other participant: append the conversation summary to the list of conversations they've had with that participant, generate a new goal for their next conversation, rewrite their consolidated memory of that character, update the relationship descriptor, and bump their familiarity score.
-3. **Handle offscreen mentions**: if a character who wasn't present got talked about during the chat, extract what was learned about them secondhand and fold it into the listener's memories of that character.
-4. **Rewrite the character's global memory**: the personal memories, beliefs, and goals they carry into every conversation.
+3. **Handle offscreen mentions**: if a character who wasn't present got talked about during the chat, extract what was learned about them secondhand and fold it into the listener's memories of that character. Offscreen mentions are designed to produce more limited, but still meaningful, memory updates compared to actual conversations with that character.
+4. **Rewrite the character's global memory**: the personal memories, beliefs, and goals they carry into every conversation, which is another way for information to cross-polinate between different sets of characters.
 
 Each of these steps is its own LLM call with its own editable prompt template (see [the prompt template system](template-system.md)).
+
+![post-conversation memories image](/img/memories.png)
 
 ## Memory types
 
@@ -38,13 +40,13 @@ Alongside the memory, each relationship stores a goal: something the "from" char
 
 A short label (usually 1-3 words) for what the "to" character means to the "from" character: "best friend", "rival", "distant acquaintance". It's regenerated after each interaction and you can watch relationships evolve through it.
 
-### Familiarity
-
-A numeric score for how well the "from" character knows the "to" character. Unlike the other fields, this one isn't LLM-generated: it goes up by a fixed amount per interaction and decays a little each turn the characters don't interact. Familiarity influences how likely characters are to speak to each other. Notably, familiarity has nothing to do with whether two characters like each other. They may hate each other. Regardless, as they interact more, their chance to interact even more goes higher, but with diminishing returns.
-
 ### Global memory
 
 Each character also carries a single block of personal memories, beliefs, and goals that follows them into every conversation, regardless of who they're talking to. It's rewritten by the LLM after each conversation, using the same rolling-compression approach as pairwise memory, but includes their recent conversations with _all_ characters.
+
+### Familiarity
+
+A numeric score for how well two characters know each other character. Unlike the other fields, this one isn't LLM-generated: it goes up by a fixed amount per interaction and decays a little each turn the characters don't interact. Familiarity influences how likely characters are to speak to each other. Notably, familiarity has nothing to do with whether two characters like each other. They may hate each other. Regardless, as they interact more, their chance to interact even more goes higher, but with diminishing returns.
 
 ### Offscreen learned information
 
@@ -61,13 +63,13 @@ When a character speaks, their system prompt (by default) includes:
 
 - Their global memory.
 - Their consolidated pairwise memory of each other participant.
-- Their next conversation goal towards the other participant (in one-on-one conversations).
-- Optionally, their memory of a "gossip target". At the start of a chat, the system sometimes chooses a non-participating character, and injects into the participating characters' prompts their memories about the gossip target, and gently encourages them to talk about the gossip target. The rate at which this happens can be controlled via settings, and it's intended to create more information sharing between characters about other characters.
+- Their next conversation goal towards the other participant (in one-on-one conversations, the default template omits this for group chats).
+- Optionally, their memory of a "gossip target". At the start of a chat, the system sometimes chooses a non-participating character, and injects into the participating characters' system prompts their memories about the gossip target, gently encouraging them to talk about the gossip target. The rate at which this happens can be controlled via settings, and it's intended to create more information sharing between characters about other characters.
 
 ## Watching it happen
 
-After each conversation, all of the memory updates are recorded in the conversation log, so you can expand them and see exactly how the conversation changed each character's head. You can also edit memories in the character overview.
+After each conversation, all of the memory updates are recorded in the conversation log, so you can expand them and see exactly how the conversation changed each character's head. You can also edit memories by hand in the character overview.
 
 ## Customizing it
 
-Every LLM-driven step here is a prompt template you can edit. See [the prompt template system](template-system.md) for more info.
+Every LLM-driven step here is a prompt template you can edit, which can change how the system works significantly (though there are no custom memory fields - yet). See [the prompt template system](template-system.md) for more info.

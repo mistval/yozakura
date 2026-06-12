@@ -9,9 +9,9 @@ This article gives a brief peek at the main features of Yozakura via screenshots
 
 ## Chat
 
-During the user turn, choose one or more characters to chat with (Gus is the user in the screenshot).
+During the user turn, choose one or more characters to chat with (Beatrix is the user in the screenshot).
 
-![group chat image](/img/group_chat.png)
+![group chat image](/img/in_chat_image.png)
 
 ## Memories
 
