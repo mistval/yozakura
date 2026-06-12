@@ -2,7 +2,6 @@ import { useTemplateRenderLogStore } from '../../../state/template_render_log_st
 
 export default function TemplateRenderLogSettingsSection() {
   const entries = useTemplateRenderLogStore((state) => state.entries);
-  const clear = useTemplateRenderLogStore((state) => state.clear);
 
   return (
     <div className="space-y-4">
@@ -12,18 +11,6 @@ export default function TemplateRenderLogSettingsSection() {
       </div>
 
       <div className="bordered-section">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-secondary">Entries: {entries.length}</p>
-          <button
-            type="button"
-            onClick={clear}
-            disabled={entries.length === 0}
-            className="px-3 py-1 border rounded-sm disabled:opacity-50"
-          >
-            Clear Log
-          </button>
-        </div>
-
         {entries.length === 0 ? (
           <p className="text-sm text-secondary">No template render log entries yet.</p>
         ) : (
