@@ -4,21 +4,25 @@ WORKDIR /app
 COPY client/package*.json ./client/
 RUN npm ci --prefix client
 
-COPY client ./client
+COPY client/index.html client/postcss.config.js client/tsconfig.json client/tsconfig.node.json client/vite.config.ts ./client/
+COPY client/src ./client/src
 RUN npm run build --prefix client
 
 FROM node:24-bookworm-slim AS runtime
-ENV NODE_ENV=production
 WORKDIR /app
 
 COPY server/package*.json ./server/
-RUN npm ci --omit=dev --prefix server
+RUN npm ci --prefix server
 
-COPY server ./server
+COPY server/app.ts server/index.ts server/tsconfig.json ./server/
+COPY server/routes ./server/routes
+RUN npm run build --prefix server
+
 COPY --from=web-builder /app/client/dist ./client/dist
 
 RUN mkdir -p /app/data
 
+ENV NODE_ENV=production
 ENV PORT=4396
 ENV YOZAKURA_DATA_DIR=/app/data
 ENV YOZAKURA_FRONTEND_DIST_DIR=/app/client/dist
