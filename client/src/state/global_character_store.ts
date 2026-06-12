@@ -5,6 +5,7 @@ import type { Character } from '../engine/types.js';
 import { assert } from '../errors/application_error.js';
 import { DEMO_CHARACTERS } from '../engine/demo_characters.js';
 import { concatUniqueById } from '../util/array.js';
+import { addOrReplaceVersionQueryParam } from '../util/id.js';
 
 export const useGlobalCharactersStore = create<{
   globalCharacters: Character[];
@@ -48,24 +49,32 @@ export const useGlobalCharactersStore = create<{
 
     get().setGlobalCharacters(concatUniqueById(get().globalCharacters, withUpdatedFields));
 
-    let savedFile = false;
     void Database.doAsDataWrite(
       async () => {
-        const latestCharacter = get().globalCharactersById[withUpdatedFields.id];
+        let latestCharacter = get().globalCharactersById[withUpdatedFields.id];
         if (!latestCharacter) {
           return;
         }
 
-        if (imageFile && !savedFile) {
+        await Database.storeGlobalCharacters([latestCharacter]);
+
+        if (imageFile) {
           await Files.upload(
             withUpdatedFields.imagePath,
             imageFile,
             imageFile.type || 'application/octet-stream'
           );
-          savedFile = true;
-        }
 
-        await Database.storeGlobalCharacters([latestCharacter]);
+          latestCharacter = get().globalCharactersById[withUpdatedFields.id];
+          if (!latestCharacter) {
+            return;
+          }
+
+          get().saveGlobalCharacter({
+            ...latestCharacter,
+            imagePath: addOrReplaceVersionQueryParam(latestCharacter.imagePath),
+          });
+        }
       },
       'global_character',
       {

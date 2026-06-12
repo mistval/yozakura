@@ -339,7 +339,7 @@ export function CharacterEditorModalProvider({
       if (isGlobalMode) {
         await useGlobalCharactersStore.getState().saveGlobalCharacter(character, selectedImageFile);
       } else {
-        await saveScenarioCharacter(character);
+        await saveScenarioCharacter(character, selectedImageFile);
       }
 
       onClose({ deleted: false });
