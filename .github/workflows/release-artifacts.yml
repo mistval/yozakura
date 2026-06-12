@@ -108,6 +108,23 @@ jobs:
       - name: Build Electron distributables
         run: npm run electron:make
 
+      - name: Debug - list build output
+        if: always()
+        shell: bash
+        run: |
+          echo "=== working directory: $(pwd) ==="
+          ls -la
+          echo "=== electron_out contents ==="
+          if [ -d electron_out ]; then
+            find electron_out -maxdepth 4
+          else
+            echo "electron_out/ DOES NOT EXIST"
+          fi
+          echo "=== any out/make dirs elsewhere (excluding node_modules) ==="
+          find . -maxdepth 3 -name node_modules -prune -o -type d \( -name make -o -name out -o -name electron_out \) -print
+          echo "=== any zip files (excluding node_modules) ==="
+          find . -maxdepth 5 -name node_modules -prune -o -name "*.zip" -print
+
       - name: Upload build artifacts to workflow
         uses: actions/upload-artifact@v4
         with:
