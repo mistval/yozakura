@@ -68,10 +68,12 @@ One note on privacy: OpenRouter routes your prompts to the underlying model prov
 
 ## Cloud Image Generation (OpenRouter)
 
-OpenRouter can also handle image generation, and it works through the same chat completions endpoint as text. In the initial setup popup under `Image Generation Setup` (or the settings cog -> Image Generation):
+OpenRouter can also handle image generation, and it works through the same chat completions endpoint as text. However, local image models will generally give you better results, especially if you're looking for animated style images, and they have somewhat more modest system requirements than text models. Using a local image model is recommended if at all possible. If not, then:
 
-1. Change **API Shape** to `OpenAI Completions Compatible`. The AUTOMATIC1111 shape is for local software; cloud providers including OpenRouter use the OpenAI shape.
-2. **Image API URL**: `https://openrouter.ai/api/v1/chat/completions` (yes, the same URL as the text API)
+In the initial setup popup under `Image Generation Setup` (or the settings cog -> Image Generation):
+
+1. Change **API Shape** to `OpenAI Completions Compatible`.
+2. **Image API URL**: `https://openrouter.ai/api/v1/chat/completions` (the same URL as the text API)
 3. **Bearer/Auth Token**: the same OpenRouter API key
 4. **Model**: an image-capable model, for example `google/gemini-2.5-flash-image`. On the OpenRouter models page you can filter by image output to see what's available.
 5. Click `Test Connection`.

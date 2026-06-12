@@ -1,9 +1,9 @@
 import z from 'zod';
 
 const DEFAULT_AUTOMATIC1111_IMAGE_API_URL = 'http://127.0.0.1:7860/sdapi/v1/txt2img';
-const DEFAULT_OPENAI_COMPLETIONS_IMAGE_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const DEFAULT_OPENROUTER_COMPLETIONS_IMAGE_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-export const imageApiShapeSchema = z.enum(['automatic1111', 'openai']);
+export const imageApiShapeSchema = z.enum(['automatic1111', 'openRouter']);
 export type ImageApiShape = z.infer<typeof imageApiShapeSchema>;
 
 export const automatic1111SettingsSchema = z.object({
@@ -20,7 +20,7 @@ export const automatic1111SettingsSchema = z.object({
 
 export type Automatic1111ImageAPISettings = z.infer<typeof automatic1111SettingsSchema>;
 
-export const openaiSettingsSchema = z.object({
+export const openRouterSettingsSchema = z.object({
   url: z.string(),
   authToken: z.string(),
   metaOptions: z.string(),
@@ -32,7 +32,7 @@ export const openaiSettingsSchema = z.object({
   }),
 });
 
-export type OpenAIImageAPISettings = z.infer<typeof openaiSettingsSchema>;
+export type OpenRouterImageAPISettings = z.infer<typeof openRouterSettingsSchema>;
 
 export const imageApiShapes = [
   {
@@ -62,10 +62,10 @@ export const imageApiShapes = [
     } satisfies Automatic1111ImageAPISettings,
   },
   {
-    shape: 'openai',
-    label: 'OpenAI Compatible Completions (incl. OpenRouter)',
+    shape: 'openRouter',
+    label: 'OpenRouter',
     defaultSettings: {
-      url: DEFAULT_OPENAI_COMPLETIONS_IMAGE_API_URL,
+      url: DEFAULT_OPENROUTER_COMPLETIONS_IMAGE_API_URL,
       authToken: '',
       metaOptions: JSON.stringify(
         {
@@ -81,6 +81,6 @@ export const imageApiShapes = [
         cardImageSize: '1K',
         cardImageAspectRatio: '2:3',
       },
-    } satisfies OpenAIImageAPISettings,
+    } satisfies OpenRouterImageAPISettings,
   },
 ] as const;

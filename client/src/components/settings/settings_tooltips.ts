@@ -8,13 +8,13 @@ export const settingsTooltips = {
     'Select a theme. <strong>System</strong> chooses either Sakura or Yozakura based on your system light/dark setting.',
   'image.promptPrefix': 'This text is prepended to all image generation prompts.',
   'image.apiUrl':
-    'Image API endpoint URL. For AUTOMATIC1111, typically you should use the <code>/sdapi/v1/txt2img</code> endpoint. For OpenAI Compatible, use the <code>/v1/chat/completions</code> endpoint.',
+    'Image API endpoint URL. For AUTOMATIC1111, typically you should use the <code>/sdapi/v1/txt2img</code> endpoint. For OpenRouter (or similar), use the <code>/v1/chat/completions</code> endpoint.',
   'image.apiShape':
-    '<strong>AUTOMATIC1111</strong> is the most common API shape for local software. <strong>OpenAI Compatible</strong> supports cloud providers such as OpenRouter or any API that implements image generation via an OpenAI compatible completions endpoint.',
+    '<strong>AUTOMATIC1111</strong> is the most common API shape for local software. <strong>OpenRouter</strong> supports OpenRouter and possibly other similar providers, depending on the details of the provider API.',
   'image.authToken':
-    'Optional bearer token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Required for most cloud OpenAI-compatible providers.',
+    'Optional bearer token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Required for most cloud  providers.',
   'image.metaOptions':
-    'Extra JSON fields merged into every image generation request. For OpenAI Compatible, this is where you set <code>model</code>, <code>size</code>, <code>n</code>, etc. For AUTOMATIC1111, this controls diffusion parameters such as <code>steps</code>, <code>sampler_name</code>, <code>cfg_scale</code>.',
+    'Extra JSON fields merged into every image generation request. For OpenRouter, this is where you set <code>model</code>, <code>size</code>, <code>n</code>, etc. For AUTOMATIC1111, this controls diffusion parameters such as <code>steps</code>, <code>sampler_name</code>, <code>cfg_scale</code>.',
   'image.negativePrompt':
     'This text is appended as a <strong>negative prompt</strong> to discourage unwanted visual artifacts.',
   'image.editPromptBeforeDispatch':

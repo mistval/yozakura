@@ -27,7 +27,7 @@ function buildImagePayload(prompt: string, style: 'chat' | 'card', saveTo?: stri
           : shapeSettings.sizeOptions.chatImageHeight,
     };
   } else {
-    const shapeSettings = settings.imageSettingsForShape.openai;
+    const shapeSettings = settings.imageSettingsForShape.openRouter;
     const metaOptions = JSON.parse(shapeSettings.metaOptions) as Record<string, unknown>;
 
     return {

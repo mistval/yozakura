@@ -9,14 +9,14 @@ import { settingsTooltips } from './settings_tooltips.js';
 
 import { clampUnitRate, toPercent } from '../../util/numeric.js';
 
-const OPENAI_SIZE_OPTIONS = [
+const OPENROUTER_SIZE_OPTIONS = [
   { label: '0.5K (Gemini Only)', value: '0.5K' },
   { label: '1K (Standard Res)', value: '1K' },
   { label: '2K (High Res)', value: '2K' },
   { label: '4K (Ultra Res)', value: '4K' },
 ];
 
-const OPENAI_ASPECT_OPTIONS = [
+const OPENROUTER_ASPECT_OPTIONS = [
   { label: '1:1', value: '1:1' },
   { label: '2:3', value: '2:3' },
   { label: '3:2', value: '3:2' },
@@ -33,15 +33,15 @@ const OPENAI_ASPECT_OPTIONS = [
   { label: '8:1 (Gemini Only)', value: '8:1' },
 ];
 
-function OpenAISizeSettings() {
+function OpenRouterSizeSettings() {
   const imageApiShape = useSettingsStore((s) => s.imageApiShape);
   const imageSettingsForShape = useSettingsStore((s) => s.imageSettingsForShape);
   const setSettings = useSettingsStore((s) => s.setSettings);
 
   const currentSettings = useMemo(() => {
     return (
-      imageSettingsForShape.openai ||
-      imageApiShapes.find((config) => config.shape === 'openai')!.defaultSettings
+      imageSettingsForShape.openRouter ||
+      imageApiShapes.find((config) => config.shape === 'openRouter')!.defaultSettings
     );
   }, [imageApiShape, imageSettingsForShape]);
 
@@ -50,7 +50,7 @@ function OpenAISizeSettings() {
 
     setSettings({
       imageSettingsForShape: {
-        openai: {
+        openRouter: {
           sizeOptions: nextSize,
         },
       },
@@ -61,14 +61,14 @@ function OpenAISizeSettings() {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
       <div className="space-y-2">
         <div className="text-xs text-muted flex items-center justify-between gap-3">
-          <SettingFieldLabel text="Chat Image Size" htmlFor="openai-chat-size" />
+          <SettingFieldLabel text="Chat Image Size" htmlFor="openrouter-chat-size" />
           <select
-            id="openai-chat-size"
+            id="openrouter-chat-size"
             value={currentSettings.sizeOptions.chatImageSize}
             onChange={(e) => updateSizeOptions({ chatImageSize: e.target.value })}
             className="w-36 rounded-input"
           >
-            {OPENAI_SIZE_OPTIONS.map((opt) => (
+            {OPENROUTER_SIZE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
@@ -77,14 +77,14 @@ function OpenAISizeSettings() {
         </div>
 
         <div className="text-xs text-muted flex items-center justify-between gap-3">
-          <SettingFieldLabel text="Chat Image Aspect Ratio" htmlFor="openai-chat-aspect" />
+          <SettingFieldLabel text="Chat Image Aspect Ratio" htmlFor="openrouter-chat-aspect" />
           <select
-            id="openai-chat-aspect"
+            id="openrouter-chat-aspect"
             value={currentSettings.sizeOptions.chatImageAspectRatio}
             onChange={(e) => updateSizeOptions({ chatImageAspectRatio: e.target.value })}
             className="w-32 rounded-input"
           >
-            {OPENAI_ASPECT_OPTIONS.map((opt) => (
+            {OPENROUTER_ASPECT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
@@ -95,14 +95,14 @@ function OpenAISizeSettings() {
 
       <div className="space-y-2">
         <div className="text-xs text-muted flex items-center justify-between gap-3">
-          <SettingFieldLabel text="Card Image Size" htmlFor="openai-card-size" />
+          <SettingFieldLabel text="Card Image Size" htmlFor="openrouter-card-size" />
           <select
-            id="openai-card-size"
+            id="openrouter-card-size"
             value={currentSettings.sizeOptions.cardImageSize}
             onChange={(e) => updateSizeOptions({ cardImageSize: e.target.value })}
             className="w-36 rounded-input"
           >
-            {OPENAI_SIZE_OPTIONS.map((opt) => (
+            {OPENROUTER_SIZE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
@@ -111,14 +111,14 @@ function OpenAISizeSettings() {
         </div>
 
         <div className="text-xs text-muted flex items-center justify-between gap-3">
-          <SettingFieldLabel text="Card Image Aspect Ratio" htmlFor="openai-card-aspect" />
+          <SettingFieldLabel text="Card Image Aspect Ratio" htmlFor="openrouter-card-aspect" />
           <select
-            id="openai-card-aspect"
+            id="openrouter-card-aspect"
             value={currentSettings.sizeOptions.cardImageAspectRatio}
             onChange={(e) => updateSizeOptions({ cardImageAspectRatio: e.target.value })}
             className="w-32 rounded-input"
           >
-            {OPENAI_ASPECT_OPTIONS.map((opt) => (
+            {OPENROUTER_ASPECT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
@@ -364,7 +364,7 @@ export default function ImageGenerationSettingsSection() {
             className="rounded-input font-mono text-sm"
           />
 
-          {imageApiShape === 'openai' ? <OpenAISizeSettings /> : <Automatic1111SizeSettings />}
+          {imageApiShape === 'openRouter' ? <OpenRouterSizeSettings /> : <Automatic1111SizeSettings />}
 
           <div className="flex justify-end gap-2 mt-5">
             <div className="flex items-center justify-end gap-3 pt-1">

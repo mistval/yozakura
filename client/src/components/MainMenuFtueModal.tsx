@@ -38,7 +38,7 @@ const FTUE_TOKEN_STREAMING_TOOLTIP_HTML =
 const FTUE_IMAGE_API_URL_TOOLTIP_HTML_AUTOMATIC1111 =
   'URL for your image generation API. Usually, it should end with <code>/sdapi/v1/txt2img</code>.';
 
-const FTUE_IMAGE_API_URL_TOOLTIP_HTML_OPENAI =
+const FTUE_IMAGE_API_URL_TOOLTIP_HTML_OPENROUTER =
   'URL for your image generation API. Usually, it should end with <code>/v1/chat/completions</code>, just like the completions endpoint.';
 
 const FTUE_IMAGE_AUTH_TOKEN_TOOLTIP_HTML =
@@ -47,11 +47,11 @@ const FTUE_IMAGE_AUTH_TOKEN_TOOLTIP_HTML =
 const FTUE_IMAGE_MODEL_TOOLTIP_HTML =
   'The image model to request (e.g. <code>dall-e-3</code>, <code>openai/dall-e-3</code> on OpenRouter).';
 
-const API_SHAPE_TOOLTIP_HTML = `The AUTOMATIC1111 shape is supported by most local image generation software (including, of course, <a href="https://github.com/automatic1111/stable-diffusion-webui">AUTOMATIC1111</a>). The OpenAI Completions shape is more commonly supported by cloud providers, including OpenRouter.`;
+const API_SHAPE_TOOLTIP_HTML = `The AUTOMATIC1111 shape is supported by most local image generation software (including, of course, <a href="https://github.com/automatic1111/stable-diffusion-webui">AUTOMATIC1111</a>). The OpenRouter shape is for OpenRouter and might work with other providers that have similar APIs.`;
 
 const IMAGE_SHAPE_LABELS: Record<ImageApiShape, string> = {
   automatic1111: 'AUTOMATIC1111',
-  openai: 'OpenAI Completions Compatible',
+  openRouter: 'OpenRouter',
 };
 
 export default function MainMenuFtueModal() {
@@ -368,7 +368,7 @@ export default function MainMenuFtueModal() {
                   html={
                     imageApiShape === 'automatic1111'
                       ? FTUE_IMAGE_API_URL_TOOLTIP_HTML_AUTOMATIC1111
-                      : FTUE_IMAGE_API_URL_TOOLTIP_HTML_OPENAI
+                      : FTUE_IMAGE_API_URL_TOOLTIP_HTML_OPENROUTER
                   }
                   align="center"
                 />
@@ -379,7 +379,7 @@ export default function MainMenuFtueModal() {
                 onChange={(event) => setImageUrlDraft(event.target.value)}
                 onBlur={saveImageConnectionDetails}
                 placeholder={
-                  imageApiShape === 'openai'
+                  imageApiShape === 'openRouter'
                     ? 'https://openrouter.ai/api/v1/chat/completions'
                     : 'http://127.0.0.1:7860/sdapi/v1/txt2img'
                 }
@@ -409,7 +409,7 @@ export default function MainMenuFtueModal() {
               />
             </div>
 
-            {imageApiShape === 'openai' && (
+            {imageApiShape === 'openRouter' && (
               <div className="space-y-1">
                 <div className="flex items-center gap-3">
                   <label className="block text-sm font-medium" htmlFor="ftue-image-model">
