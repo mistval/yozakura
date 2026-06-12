@@ -3,7 +3,7 @@ import type { ImageApiShape } from '../state/settings_store.js';
 
 const AUTOMATIC1111_TXT2IMG_PATH = '/sdapi/v1/txt2img';
 const OPENAI_IMAGES_PATH = '/v1/chat/completions';
-const OPENAI_MODELS_PATH = '/models';
+const OPENAI_MODELS_PATH = '/v1/models';
 
 type UrlRewriteResult =
   | { ok: true; testUrl: string }

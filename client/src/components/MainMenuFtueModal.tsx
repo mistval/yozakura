@@ -380,7 +380,7 @@ export default function MainMenuFtueModal() {
                 onBlur={saveImageConnectionDetails}
                 placeholder={
                   imageApiShape === 'openai'
-                    ? 'https://openrouter.ai/api/v1/images/generations'
+                    ? 'https://openrouter.ai/api/v1/chat/completions'
                     : 'http://127.0.0.1:7860/sdapi/v1/txt2img'
                 }
                 className="w-full rounded-sm border px-3 py-2"

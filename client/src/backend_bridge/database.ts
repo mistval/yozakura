@@ -33,20 +33,24 @@ function buildSqlPlaceholders(count: number): string {
   return new Array(count).fill('?').join(', ');
 }
 
+function sqlDatetimeNow() {
+  return `CONCAT(datetime('now'), 'Z')`;
+}
+
 const CREATE_MULTI_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS ${TABLE_CHARACTER} (
     id TEXT PRIMARY KEY,
     data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
+    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()})
   );
 
   CREATE TABLE IF NOT EXISTS ${TABLE_SCENARIO_CHARACTER} (
     id TEXT PRIMARY KEY,
     scenario_id TEXT NOT NULL,
     data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
+    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
     FOREIGN KEY (scenario_id) REFERENCES ${TABLE_SCENARIO}(id) ON DELETE CASCADE
   );
 
@@ -56,8 +60,8 @@ const CREATE_MULTI_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS ${TABLE_SCENARIO} (
     id TEXT PRIMARY KEY,
     data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
+    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()})
   );
 
   CREATE TABLE IF NOT EXISTS ${TABLE_CHARACTER_RELATIONSHIP} (
@@ -65,8 +69,8 @@ const CREATE_MULTI_TABLES_SQL = `
     from_id TEXT NOT NULL,
     to_id TEXT NOT NULL,
     data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
+    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
     UNIQUE(from_id, to_id),
     FOREIGN KEY (from_id) REFERENCES ${TABLE_SCENARIO_CHARACTER}(id) ON DELETE CASCADE,
     FOREIGN KEY (to_id) REFERENCES ${TABLE_SCENARIO_CHARACTER}(id) ON DELETE CASCADE
@@ -82,8 +86,8 @@ const CREATE_MULTI_TABLES_SQL = `
     id TEXT PRIMARY KEY,
     scenario_id TEXT NOT NULL,
     data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
+    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
     FOREIGN KEY (scenario_id) REFERENCES ${TABLE_SCENARIO}(id) ON DELETE CASCADE
   );
 
@@ -94,8 +98,8 @@ const CREATE_MULTI_TABLES_SQL = `
     id TEXT PRIMARY KEY,
     character_id TEXT NOT NULL,
     conversation_id TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
+    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
     UNIQUE(character_id, conversation_id),
     FOREIGN KEY (conversation_id) REFERENCES ${TABLE_CONVERSATION}(id) ON DELETE CASCADE
   );
@@ -109,15 +113,15 @@ const CREATE_MULTI_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS ${TABLE_MAP} (
     id TEXT PRIMARY KEY,
     data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
+    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()})
   );
 
   CREATE TABLE IF NOT EXISTS ${TABLE_KEY_VALUE} (
     key TEXT PRIMARY KEY,
     data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
+    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()})
   );
 `;
 
@@ -126,14 +130,14 @@ const UPSERT_CHARACTER_SQL = `
   SELECT
     json_extract(value, '$[0]'),
     json_extract(value, '$[1]'),
-    datetime('now'),
-    datetime('now')
+    ${sqlDatetimeNow()},
+    ${sqlDatetimeNow()}
   FROM json_each(?)
   WHERE TRUE
   ON CONFLICT(id)
   DO UPDATE SET
     data = excluded.data,
-    updated_at = datetime('now')
+    updated_at = ${sqlDatetimeNow()}
 `;
 
 const UPSERT_SCENARIO_CHARACTER_SQL = `
@@ -142,23 +146,23 @@ const UPSERT_SCENARIO_CHARACTER_SQL = `
     json_extract(value, '$[0]'),
     json_extract(value, '$[1]'),
     json_extract(value, '$[2]'),
-    datetime('now'),
-    datetime('now')
+    ${sqlDatetimeNow()},
+    ${sqlDatetimeNow()}
   FROM json_each(?)
   WHERE TRUE
   ON CONFLICT(id)
   DO UPDATE SET
     data = excluded.data,
-    updated_at = datetime('now')
+    updated_at = ${sqlDatetimeNow()}
 `;
 
 const UPSERT_SCENARIO_SQL = `
   INSERT INTO ${TABLE_SCENARIO} (id, data, created_at, updated_at)
-  VALUES (?, ?, datetime('now'), datetime('now'))
+  VALUES (?, ?, ${sqlDatetimeNow()}, ${sqlDatetimeNow()})
   ON CONFLICT(id)
   DO UPDATE SET
     data = excluded.data,
-    updated_at = datetime('now')
+    updated_at = ${sqlDatetimeNow()}
 `;
 
 const UPSERT_CHARACTER_RELATIONSHIP_SQL = `
@@ -168,8 +172,8 @@ const UPSERT_CHARACTER_RELATIONSHIP_SQL = `
     json_extract(value, '$[1]'),
     json_extract(value, '$[2]'),
     json_extract(value, '$[3]'),
-    datetime('now'),
-    datetime('now')
+    ${sqlDatetimeNow()},
+    ${sqlDatetimeNow()}
   FROM json_each(?)
   WHERE TRUE
   ON CONFLICT(id)
@@ -177,17 +181,17 @@ const UPSERT_CHARACTER_RELATIONSHIP_SQL = `
     from_id = excluded.from_id,
     to_id = excluded.to_id,
     data = excluded.data,
-    updated_at = datetime('now')
+    updated_at = ${sqlDatetimeNow()}
 `;
 
 const UPSERT_CONVERSATION_SQL = `
   INSERT INTO ${TABLE_CONVERSATION} (id, scenario_id, data, created_at, updated_at)
-  VALUES (?, ?, ?, datetime('now'), datetime('now'))
+  VALUES (?, ?, ?, ${sqlDatetimeNow()}, ${sqlDatetimeNow()})
   ON CONFLICT(id)
   DO UPDATE SET
     data = excluded.data,
     scenario_id = excluded.scenario_id,
-    updated_at = datetime('now')
+    updated_at = ${sqlDatetimeNow()}
 `;
 
 const UPSERT_CONVERSATION_PARTICIPANT_SQL = `
@@ -196,15 +200,15 @@ const UPSERT_CONVERSATION_PARTICIPANT_SQL = `
     json_extract(value, '$[0]'),
     json_extract(value, '$[1]'),
     json_extract(value, '$[2]'),
-    datetime('now'),
-    datetime('now')
+    ${sqlDatetimeNow()},
+    ${sqlDatetimeNow()}
   FROM json_each(?)
   WHERE TRUE
   ON CONFLICT(id)
   DO UPDATE SET
     character_id = excluded.character_id,
     conversation_id = excluded.conversation_id,
-    updated_at = datetime('now')
+    updated_at = ${sqlDatetimeNow()}
 `;
 
 const UPSERT_MAP_SQL = `
@@ -212,23 +216,23 @@ const UPSERT_MAP_SQL = `
   SELECT
     json_extract(value, '$[0]'),
     json_extract(value, '$[1]'),
-    datetime('now'),
-    datetime('now')
+    ${sqlDatetimeNow()},
+    ${sqlDatetimeNow()}
   FROM json_each(?)
   WHERE TRUE
   ON CONFLICT(id)
   DO UPDATE SET
     data = excluded.data,
-    updated_at = datetime('now')
+    updated_at = ${sqlDatetimeNow()}
 `;
 
 const UPSERT_KEY_VALUE_SQL = `
   INSERT INTO ${TABLE_KEY_VALUE} (key, data, created_at, updated_at)
-  VALUES (?, ?, datetime('now'), datetime('now'))
+  VALUES (?, ?, ${sqlDatetimeNow()}, ${sqlDatetimeNow()})
   ON CONFLICT(key)
   DO UPDATE SET
     data = excluded.data,
-    updated_at = datetime('now')
+    updated_at = ${sqlDatetimeNow()}
 `;
 
 const SELECT_KEY_VALUE_SQL = `

@@ -7,8 +7,6 @@ Yozakura is an AI-powered social simulation in which characters (including the u
 
 This article gives a brief peek at the main features of Yozakura via screenshots. Alternatively, this YouTube video covers most of the same material (and a little more). TODO
 
-If you have the Yozakura electron app, some of the links in this document will open the mentioned windows in the app.
-
 ## Chat
 
 During the user turn, choose one or more characters to chat with (Gus is the user in the screenshot).

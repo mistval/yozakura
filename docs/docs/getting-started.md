@@ -3,7 +3,7 @@ title: Getting Started
 sidebar_position: 3
 ---
 
-There are three main ways to run Yozakura. The native electron application is the fastest to set up for most users. The Docker image has some advantages for more advanced users who are familiar with Docker. Cloning from GitHub is mainly for development and modifications.
+There are three main ways to run Yozakura. The native electron application is the fastest to set up for most users and is dead easy. The Docker image has some advantages for more advanced users who are familiar with Docker, especially on Linux or MacOS. Cloning from GitHub is mainly for development and modifications.
 
 ## Electron
 
@@ -13,10 +13,10 @@ Prerequisites:
 
 Installation:
 
-1. Download the latest version for your operating system from TODO
-2. Extract the zip file anywhere on your machine
-3. Run the `yozakura` executable file inside then follow the in-app instructions
-4. Note that a `yozakura_data` folder will be created next to `yozakura.exe`, this is where generated images live if you want to access those directly
+1. Find the latest release on [GitHub](https://github.com/mistval/yozakura/releases) and download the zip file for your operating system.
+2. Extract the zip file anywhere on your machine.
+3. Run the `yozakura` executable file inside. You might have to click through a warning about running an unsigned executable. Then follow the in-app instructions.
+4. Note that a `yozakura_data` folder will be created next to `yozakura.exe`, this is where generated images live if you want to access those directly.
 
 ## Docker
 
@@ -27,11 +27,11 @@ Prerequisites:
 
 Installation:
 
-1. Run `docker run -p 4396:4396 -d TODO image tag`
+1. Run `docker run -p 4396:4396 -d ghcr.io/mistval/yozakura:latest`
 
 If you want to use local models, you generally need to add `--network=host` to your Docker command, which **might not work at all on Windows**. As a workaround, you could create a Docker network, run your models inside Docker containers too, and network them together, but that's beyond the scope of this article.
 
-If you want to put your yozakura_data directory somewhere easily accessible, add a volume option to the command like: `docker run -p 4396:4396 -d -v /d/yozakura_data:/app/data (TODO)` TODO
+If you want to put your yozakura_data directory somewhere easily accessible, add a volume option to the command like: `docker run -p 4396:4396 -d -v /d/yozakura_data:/app/data ghcr.io/mistval/yozakura:latest`
 
 Give it just a few moments to start, then visit `http://localhost:4396` in your web browser.
 

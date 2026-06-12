@@ -1,5 +1,4 @@
 import * as Api from './api';
-import defaultCharacterImage from '../public/images/character/default_character.png';
 import type { Character } from '../engine/types';
 
 const CHARACTER_IMAGE_FOLDER = 'character_cards';
@@ -36,7 +35,7 @@ async function fetchDataImageBlob(imagePath: string): Promise<Blob | undefined> 
 }
 
 async function fetchDefaultCharacterImageBlob(): Promise<Blob> {
-  const response = await fetch(defaultCharacterImage);
+  const response = await fetch('/images/character/default_character.png');
   if (!response.ok) {
     throw new Error('Default character image is unavailable');
   }

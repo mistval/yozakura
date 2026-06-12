@@ -9,7 +9,7 @@ const bodySchema = z.looseObject({
   imageApiUrl: z.string(),
   imageApiShape: z.enum(['openai', 'automatic1111']),
   saveTo: z.string().optional(),
-  imageAuthToken: z.string().optional(),
+  authToken: z.string().optional(),
 });
 
 function toErrorMessage(error: unknown): string {
@@ -29,13 +29,13 @@ export default function imageRouter(dataDir: string): Router {
   router.post('/image/generate', async (req, res, next) => {
     try {
       const parsed = bodySchema.parse(req.body);
-      const { saveTo, imageApiUrl, imageApiShape, imageAuthToken, ...payload } = parsed;
+      const { saveTo, imageApiUrl, imageApiShape, authToken, ...payload } = parsed;
 
       const isOpenAI = imageApiShape === 'openai';
 
       const requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (imageAuthToken?.trim()) {
-        requestHeaders['Authorization'] = `Bearer ${imageAuthToken.trim()}`;
+      if (authToken?.trim()) {
+        requestHeaders['Authorization'] = `Bearer ${authToken.trim()}`;
       }
 
       try {
