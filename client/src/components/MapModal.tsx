@@ -2,7 +2,7 @@ import _ from 'lodash';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GraphCanvas, type GraphCanvasRef } from 'reagraph';
 import Modal from './ui/Modal.js';
-import { useGraphTheme } from '../graph_themes.js';
+import { useGraphTheme } from '../theme/graph_themes.js';
 import type { Character } from '../engine/types.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';

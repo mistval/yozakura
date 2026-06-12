@@ -1,5 +1,5 @@
 import type { Theme } from 'reagraph';
-import { useResolvedTheme } from './hooks/Theme.js';
+import { useResolvedTheme } from '../hooks/Theme.js';
 
 function makeTheme(
   bg: string,

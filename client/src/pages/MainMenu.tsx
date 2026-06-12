@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmDialog from '../components/ui/ConfirmDialog.js';
 import MainMenuFtueModal from '../components/MainMenuFtueModal.js';
-import YozakuraLogo from '../theme_backdrops/yozakura_logo.js';
+import YozakuraLogo from '../theme/yozakura_logo.js';
 import { useSettingsStore } from '../state/settings_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import type { ScenarioSummary } from '../engine/types.js';

@@ -1,7 +1,6 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isDeepStrictEqual } from 'node:util';
 
 type JsonObject = Record<string, unknown>;
 
@@ -25,11 +24,16 @@ type TemplateNodePredicateModule = {
   isTemplateChain: (node: unknown) => boolean;
 };
 
+type GroupPathEntry = {
+  id: string;
+  title: string;
+};
+
 type ChainDescriptor = {
   templateChainId: string;
   templateChainTitle: string;
   templateChainDescription: string;
-  groupPath: string[];
+  groupPath: GroupPathEntry[];
   schemaFileName: string;
   htmlFileName: string;
   schema: JsonObject;
@@ -115,165 +119,19 @@ function sanitizeFileBaseName(value: string): string {
   return sanitized.toLowerCase();
 }
 
-function normalizeSchema(
-  schema: unknown,
-  templateChainTitle: string,
-  templateChainDescription: string
-): JsonObject {
-  if (!isJsonObject(schema)) {
-    throw new Error(`Expected context schema JSON to be an object for chain "${templateChainTitle}".`);
-  }
-
-  const normalizedSchema = { ...schema };
-  if (typeof normalizedSchema.$schema !== 'string' || normalizedSchema.$schema.length === 0) {
-    normalizedSchema.$schema = 'https://json-schema.org/draft/2020-12/schema';
-  }
-
-  if (typeof normalizedSchema.title !== 'string' || normalizedSchema.title.length === 0) {
-    normalizedSchema.title = `${templateChainTitle} Context`;
-  }
-
-  if (typeof normalizedSchema.description !== 'string' || normalizedSchema.description.length === 0) {
-    normalizedSchema.description = templateChainDescription;
-  }
-
-  return normalizedSchema;
-}
-
-function mergePropertySchema(existing: unknown, incoming: unknown): unknown {
-  if (isDeepStrictEqual(existing, incoming)) {
-    return existing;
-  }
-
-  if (isJsonObject(existing) && Array.isArray(existing.allOf)) {
-    if (existing.allOf.some((entry) => isDeepStrictEqual(entry, incoming))) {
-      return existing;
-    }
-
-    return {
-      ...existing,
-      allOf: [...existing.allOf, incoming],
-    };
-  }
-
-  return {
-    allOf: [existing, incoming],
-  };
-}
-
-function collapseTopLevelAllOfObjectSchema(schema: JsonObject): JsonObject {
-  const allOf = schema.allOf;
-  if (!Array.isArray(allOf) || allOf.length === 0) {
-    return schema;
-  }
-
-  if (
-    !allOf.every(
-      (entry) =>
-        isJsonObject(entry) &&
-        (entry.type === undefined || entry.type === 'object') &&
-        (entry.properties === undefined || isJsonObject(entry.properties)) &&
-        (entry.required === undefined ||
-          (Array.isArray(entry.required) &&
-            entry.required.every((requiredKey) => typeof requiredKey === 'string')))
-    )
-  ) {
-    return schema;
-  }
-
-  const collapsedSchema: JsonObject = { ...schema };
-  delete collapsedSchema.allOf;
-  collapsedSchema.type = 'object';
-
-  const mergedProperties: JsonObject = isJsonObject(collapsedSchema.properties)
-    ? { ...collapsedSchema.properties }
-    : {};
-  const mergedRequired = new Set<string>(
-    Array.isArray(collapsedSchema.required)
-      ? collapsedSchema.required.filter(
-          (requiredKey): requiredKey is string => typeof requiredKey === 'string'
-        )
-      : []
-  );
-
-  let mergedAdditionalProperties: unknown = collapsedSchema.additionalProperties;
-  let hasAdditionalProperties = Object.hasOwn(collapsedSchema, 'additionalProperties');
-
-  for (const entry of allOf) {
-    const fragment = entry as JsonObject;
-
-    if (isJsonObject(fragment.properties)) {
-      for (const [propertyName, propertySchema] of Object.entries(fragment.properties)) {
-        const existingPropertySchema = mergedProperties[propertyName];
-        if (existingPropertySchema === undefined) {
-          mergedProperties[propertyName] = propertySchema;
-          continue;
-        }
-
-        mergedProperties[propertyName] = mergePropertySchema(existingPropertySchema, propertySchema);
-      }
-    }
-
-    if (Array.isArray(fragment.required)) {
-      for (const requiredKey of fragment.required) {
-        if (typeof requiredKey === 'string') {
-          mergedRequired.add(requiredKey);
-        }
-      }
-    }
-
-    if (Object.hasOwn(fragment, 'additionalProperties')) {
-      if (!hasAdditionalProperties) {
-        mergedAdditionalProperties = fragment.additionalProperties;
-        hasAdditionalProperties = true;
-      } else if (!isDeepStrictEqual(mergedAdditionalProperties, fragment.additionalProperties)) {
-        mergedAdditionalProperties =
-          mergedAdditionalProperties === false || fragment.additionalProperties === false
-            ? false
-            : mergedAdditionalProperties;
-      }
-    }
-  }
-
-  if (Object.keys(mergedProperties).length > 0) {
-    collapsedSchema.properties = mergedProperties;
-  } else {
-    delete collapsedSchema.properties;
-  }
-
-  if (mergedRequired.size > 0) {
-    collapsedSchema.required = Array.from(mergedRequired).sort();
-  } else {
-    delete collapsedSchema.required;
-  }
-
-  if (hasAdditionalProperties) {
-    collapsedSchema.additionalProperties = mergedAdditionalProperties;
-  } else {
-    delete collapsedSchema.additionalProperties;
-  }
-
-  delete (collapsedSchema as any).properties['settings'];
-  collapsedSchema.required = (collapsedSchema.required as string[] | undefined)?.filter(
-    (key) => key !== 'settings'
-  );
-
-  return collapsedSchema;
-}
-
-function collectChainsFromGroup(
+async function collectChainsFromGroup(
   group: TemplateGroupLike,
-  ancestry: string[],
+  ancestry: GroupPathEntry[],
   predicateModule: TemplateNodePredicateModule,
   seenFileNames: Set<string>
 ): ChainDescriptor[] {
-  const nextAncestry = [...ancestry, group.groupId];
+  const nextAncestry = [...ancestry, { id: group.groupId, title: group.title }];
   const chains: ChainDescriptor[] = [];
 
   for (const child of group.children) {
     if (predicateModule.isTemplateGroup(child)) {
       assertTemplateGroup(child);
-      chains.push(...collectChainsFromGroup(child, nextAncestry, predicateModule, seenFileNames));
+      chains.push(...(await collectChainsFromGroup(child, nextAncestry, predicateModule, seenFileNames)));
       continue;
     }
 
@@ -288,6 +146,9 @@ function collectChainsFromGroup(
 
       seenFileNames.add(schemaFileName);
 
+      const documentationHelper =
+        await import('../client/src/engine/prompt_templates/prompt_chain_documentation_helper.ts');
+
       chains.push({
         templateChainId: child.templateChainId,
         templateChainTitle: child.templateChainTitle,
@@ -295,13 +156,11 @@ function collectChainsFromGroup(
         groupPath: nextAncestry,
         schemaFileName,
         htmlFileName: schemaFileName.replace(/\.json$/, '.html'),
-        schema: collapseTopLevelAllOfObjectSchema(
-          normalizeSchema(
-            child.contextSchema.toJSONSchema(),
-            child.templateChainTitle,
-            child.templateChainDescription
-          )
-        ),
+        schema: documentationHelper.getUsabilityProcessedJSONSchema(
+          child.contextSchema.toJSONSchema() as any,
+          child.templateChainTitle,
+          child.templateChainDescription
+        ) as JsonObject,
       });
 
       continue;
@@ -352,7 +211,7 @@ async function main(): Promise<void> {
   const rootGroup = (rootGroupModule as { promptTemplatesRootGroup: unknown }).promptTemplatesRootGroup;
   assertTemplateGroup(rootGroup);
 
-  const chains = collectChainsFromGroup(
+  const chains = await collectChainsFromGroup(
     rootGroup,
     [],
     predicateModule as TemplateNodePredicateModule,
@@ -366,6 +225,21 @@ async function main(): Promise<void> {
     const schemaPath = path.join(outputDirectory, chain.schemaFileName);
     await writeFile(schemaPath, `${JSON.stringify(chain.schema, null, 2)}\n`, 'utf8');
   }
+
+  const manifest = chains.map(
+    ({ templateChainId, templateChainTitle, templateChainDescription, groupPath, htmlFileName }) => ({
+      templateChainId,
+      templateChainTitle,
+      templateChainDescription,
+      groupPath,
+      htmlFileName,
+    })
+  );
+  await writeFile(
+    path.join(outputDirectory, 'chains.json'),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    'utf8'
+  );
 
   console.log(`Wrote ${chains.length} prompt template context schemas to ${outputDirectory}`);
   for (const chain of chains) {

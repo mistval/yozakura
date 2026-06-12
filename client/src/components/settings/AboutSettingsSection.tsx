@@ -1,4 +1,4 @@
-import YozakuraLogo from '../../theme_backdrops/yozakura_logo';
+import YozakuraLogo from '../../theme/yozakura_logo';
 
 const APP_RELEASE_TAG = import.meta.env.VITE_GITHUB_RELEASE_TAG?.trim() ?? '';
 const APP_VERSION_LABEL = APP_RELEASE_TAG || 'Development Version';

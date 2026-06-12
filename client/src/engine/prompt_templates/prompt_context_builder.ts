@@ -12,6 +12,7 @@ import {
 import { useScenarioStore } from '../../state/scenario_store.js';
 import type {
   CharacterEditorContext,
+  ContextCharacter,
   ConversationExecutionContext,
   FocusedConversationExecutionContext,
   GlobalExecutionContext,
@@ -26,9 +27,9 @@ const globalWritableContext = {};
 
 function formatPairwiseMemoriesForPrompt(
   relationship: CharacterRelationship,
-  focusedCharacter: Character,
-  targetCharacter: Character,
-  allCharacters: Character[]
+  focusedCharacter: ContextCharacter,
+  targetCharacter: ContextCharacter,
+  allCharacters: ContextCharacter[]
 ): string {
   const informationText = relationship.rollingPairwiseSummaries
     .map((summaryEntry) => {
@@ -65,7 +66,10 @@ ${informationText}
 </informations>`;
 }
 
-function formatGlobalMemoriesForPrompt(focusedCharacter: Character, allCharacters: Character[]): string {
+function formatGlobalMemoriesForPrompt(
+  focusedCharacter: ContextCharacter,
+  allCharacters: ContextCharacter[]
+): string {
   const summariesText = Array.from(focusedCharacter.rollingConversationSummaries)
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map((entry) => {

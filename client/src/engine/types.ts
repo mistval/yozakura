@@ -66,14 +66,14 @@ export const wardrobeSchema = basePersistedObjectSchema
           'A comma-separated list of tags describing this wardrobe entry. These should be concise and focused on visual details relevant for automatic image generation.',
         examples: ['red dress, elegant, evening wear', 'blue jeans, casual, modern'],
       }),
-    enabled: z.boolean().default(false).meta({
+    enabled: z.boolean().meta({
       description:
         "Whether this wardrobe entry is currently enabled for the character. Enabled wardrobes are included in the character description for image generation and can influence the character's appearance in generated content. ",
     }),
-    autoSelectGroup: z.string().default('').meta({
+    autoSelectGroup: z.string().meta({
       description: `An optional identifier for grouping wardrobe entries. If multiple wardrobe entries share the same non-empty autoSelectGroup value, only one of them will be enabled at a time by the system (though the user can still enable multiple if they wish to). This is useful for mutually exclusive options like different outfits or facial expressions.`,
     }),
-    autoRevert: z.boolean().default(false).meta({
+    autoRevert: z.boolean().meta({
       description: `If true, changes to the enabled state of this wardrobe during a chat will be reverted after the chat ends. This is useful for temporary states like "surprised expression" that should be turned off again after the conversation.`,
     }),
   })
@@ -89,7 +89,10 @@ export const characterSchema = basePersistedObjectSchema.extend({
     examples: ['char_123'],
     description: 'Unique identifier for the character.',
   }),
-  globalCharacterId: z.string(),
+  globalCharacterId: z.string().meta({
+    description:
+      'This is the ID of the globally available character that this scenario character was instantiated from.',
+  }),
   scenarioId: z.string(),
   firstName: z
     .string()
@@ -122,34 +125,28 @@ export const characterSchema = basePersistedObjectSchema.extend({
     examples: ['brown hair, green eyes, tall, athletic build'],
   }),
   imagePath: z.string(),
-  wardrobes: z.array(wardrobeSchema).default([]),
-  globalMemories: z
-    .string()
-    .default('')
-    .meta({
-      description:
-        'Important memories, beliefs, or goals that the character carries with them across all conversations (with all other characters). These memories are updated via LLM after each conversation. This may be an empty string if the character has not formed any memories yet.',
-      examples: [
-        "Alice's goal is to find her long-lost sibling. Alice recently met Evan at a coffee shop and they had a great conversation about travel.",
-      ],
-    }),
+  wardrobes: z.array(wardrobeSchema),
+  globalMemories: z.string().meta({
+    description:
+      'Important memories, beliefs, or goals that the character carries with them across all conversations (with all other characters). These memories are updated via LLM after each conversation. This may be an empty string if the character has not formed any memories yet.',
+    examples: [
+      "Alice's goal is to find her long-lost sibling. Alice recently met Evan at a coffee shop and they had a great conversation about travel.",
+    ],
+  }),
   locationId: z.string().meta({
     description: 'The ID of the world map location where the character is currently located.',
     examples: ['loc_123'],
   }),
   nextConversationWithCharacterId: z.string(),
-  exampleDialogue: z
-    .string()
-    .default('')
-    .meta({
-      description:
-        "Example dialogue for the character that can be used in system prompts to help ground the character's voice and manner of speaking. This should ideally be a snippet of dialogue in first person perspective, so the model can more easily mimic the style and content. May be an empty string.",
-      examples: [
-        `Alice: Hi I'm Alice!
+  exampleDialogue: z.string().meta({
+    description:
+      "Example dialogue for the character that can be used in system prompts to help ground the character's voice and manner of speaking. This should ideally be a snippet of dialogue in first person perspective, so the model can more easily mimic the style and content. May be an empty string.",
+    examples: [
+      `Alice: Hi I'm Alice!
 Alice: I love going on adventures and exploring new places.
 Alice: I have a pet cat named Whiskers who is very mischievous.`,
-      ],
-    }),
+    ],
+  }),
   rollingConversationSummaries: z.array(conversationSummarySchema).meta({
     description:
       'Brief summaries of past conversations involving this character, used to help the model keep track of important past events and relationships. A new conversation is added after every conversation the character is involved in, and only the most recent ten (by default) summaries are kept in this array.',
@@ -168,6 +165,7 @@ export const worldMapLocationSchema = basePersistedObjectSchema.extend({
   description: z.string().meta({
     description:
       'A detailed description of the location, which can be used in prompts to help set the scene and inspire relevant details in generated content.',
+    examples: ['A small coffee shop on the outside of town.'],
   }),
   adjacency: z.array(z.string()).meta({
     description: 'An array of IDs of other locations that are directly accessible from this location',
@@ -200,8 +198,14 @@ export const scenarioSchema = basePersistedObjectSchema.extend({
   turnNumber: z.number(),
   mapOverrides: z
     .object({
-      name: z.string().optional(),
-      description: z.string().optional(),
+      name: z.string().optional().meta({
+        description:
+          "If this scenario is overriding the name of the map it's taking place on, this field will exist and be non-empty.",
+      }),
+      description: z.string().optional().meta({
+        description:
+          'If this scenario is overriding the description of the map it\'s taking place on, this field will exist and be non-empty. This field is a good place for the user to inject temporary narrative state, for example "it\'s Winter now and everybody is trying to find food"',
+      }),
     })
     .optional(),
 });

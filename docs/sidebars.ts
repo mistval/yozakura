@@ -11,7 +11,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Core Systems',
-      items: ['template-system'],
+      items: ['memory-system', 'template-system'],
     },
   ],
 };

@@ -1,13 +1,29 @@
 import z from 'zod';
 import {
   characterRelationshipSchema,
-  characterSchema,
+  characterSchema as internalCharacterSchema,
   chatMediumSchema,
   chatMessageSchema,
   scenarioSchema,
   worldMapLocationSchema,
   worldMapSchema,
 } from '../types';
+
+const characterSchema = internalCharacterSchema.pick({
+  id: true,
+  firstName: true,
+  lastName: true,
+  internalDescription: true,
+  externalDescription: true,
+  baseAppearanceTags: true,
+  wardrobes: true,
+  globalMemories: true,
+  locationId: true,
+  exampleDialogue: true,
+  rollingConversationSummaries: true,
+});
+
+export type ContextCharacter = z.infer<typeof characterSchema>;
 
 const contextSchemaFields = z.object({
   focusedCharacter: characterSchema.meta({
@@ -44,7 +60,7 @@ const contextSchemaFields = z.object({
   }),
   currentLocation: worldMapLocationSchema.meta({
     description:
-      'The current location of the focused character within the world map. For conversations with chatMedium "in_person", this is the location of the conversation. For conversations with chatMedium "remote", this is the location of the focused character only (other participants may be elsewhere).',
+      'The current location of the focused character within the world map. For conversations with chatMedium "in_person", this is the location of the conversation. For conversations with chatMedium "remote", this is the location of the focused character only (other participants may be elsewhere). This can be an ephemeral location, if the user modified the location in chat settings during the conversation.',
   }),
   raggedCharacters: z.array(characterSchema).meta({
     description:
@@ -70,7 +86,7 @@ const contextSchemaFields = z.object({
   }),
   getRelationship: z.any().meta({
     description:
-      'An async function that takes in two character IDs and returns the relationship between the two, from the perspective of the first character.',
+      'An async function that takes in two arguments, the "from" character ID, and the "to" character ID (both strings), and returns the relationship between the two, from the perspective of the first character.',
     relationshipFunctionSignature:
       '(characterIdA: string, characterIdB: string) => Promise<CharacterRelationship>',
   }),
@@ -148,114 +164,94 @@ const globalExecutionContextSchema = contextSchemaFields
 
 export type GlobalExecutionContext = z.infer<typeof globalExecutionContextSchema>;
 
-const scenarioExecutionContextSchema = globalExecutionContextSchema
-  .and(
-    contextSchemaFields.pick({
-      allCharacters: true,
-      userCharacter: true,
-      scenario: true,
-      worldMap: true,
-      getRelationship: true,
-    })
-  )
-  .meta({
-    description:
-      'This is the context that is available to all prompts that run in the scope of a scenario (as opposed to being on the main menu, in the character creator, etc)',
-  });
-
-export type ScenarioExecutionContext = z.infer<typeof scenarioExecutionContextSchema>;
-
-const conversationExecutionContextSchema = scenarioExecutionContextSchema
-  .and(
-    contextSchemaFields.pick({
-      allCharacters: true,
-      participants: true,
-      userCharacter: true,
-      chatMedium: true,
-      raggedCharacters: true,
-      gossipTargetCharacter: true,
-      gossipTargetRelationship: true,
-      transcript: true,
-      conversationMessages: true,
-    })
-  )
-  .meta({
-    description:
-      'This is the context that is available to all prompts that run in the scope of a conversation between two or more characters.',
-  });
-
-export type ConversationExecutionContext = z.infer<typeof conversationExecutionContextSchema>;
-
-export const focusedConversationExecutionContextSchema = conversationExecutionContextSchema
-  .and(
-    contextSchemaFields.pick({
-      currentLocation: true,
-      focusedCharacter: true,
-      focusedCharacterAppearance: true,
-      rollingConversationSummariesText: true,
-    })
-  )
-  .meta({
-    description:
-      'This is the context that is available to all prompts that run in the scope of a conversation between two or more characters, and where one of those characters is currently the subject of focus. The meaning of "subject of focus" depends on the specific prompt, but it means things like "the character who is currently speaking", "the character we are currently generating an image of", etc.',
-  });
-
-export type FocusedConversationExecutionContext = z.infer<typeof focusedConversationExecutionContextSchema>;
-
-export const characterEditorExecutionContextSchema = globalExecutionContextSchema
-  .and(
-    contextSchemaFields.pick({
-      focusedCharacter: true,
-      randomPersonalityTraits: true,
-    })
-  )
-  .meta({
-    description:
-      'This is the context that is available when a character is being edited in the character editor.',
-  });
-
-export type CharacterEditorContext = z.infer<typeof characterEditorExecutionContextSchema>;
-
-export const targetedConversationExecutionContextSchema = focusedConversationExecutionContextSchema
-  .and(
-    contextSchemaFields.pick({
-      targetCharacter: true,
-      targetCharacterRelationship: true,
-      targetCharacterFormattedRollingMemoriesText: true,
-    })
-  )
-  .meta({
-    description:
-      'This is the context that is available to all prompts that run in the scope of a conversation between two or more characters, and where in addition to a "focused character", there is also a target character who is the target of the focused character. The target character would be the character towards whom the focused character is generating memories, etc.',
-  });
-
-export type TargetedConversationContext = z.infer<typeof targetedConversationExecutionContextSchema>;
-
-export const memoryRagExecutionContext = targetedConversationExecutionContextSchema
-  .and(
-    contextSchemaFields.pick({
-      mentionedByCharacter: true,
-    })
-  )
-  .meta({
-    description:
-      "This is the context that is available to templates to format memories of mentioned characters to inject into prompt histories. The output of this prompt isn't sent directly to an LLM (and thus there is no parser). Rather, the output is used to add an additional system message to the prompt history, to bring in the focused character's memories towards the target character.",
-  });
-
-export const offscreenMemoryExtractionExecutionContextSchema = targetedConversationExecutionContextSchema.and(
+const scenarioExecutionContextSchema = globalExecutionContextSchema.and(
   contextSchemaFields.pick({
-    candidateInformation: true,
+    allCharacters: true,
+    userCharacter: true,
+    scenario: true,
+    worldMap: true,
+    getRelationship: true,
   })
 );
 
-type OffscreenMemoryExtractionExecutionContext = z.infer<
-  typeof offscreenMemoryExtractionExecutionContextSchema
+export type ScenarioExecutionContext = z.infer<typeof scenarioExecutionContextSchema>;
+
+const conversationExecutionContextSchema = scenarioExecutionContextSchema.and(
+  contextSchemaFields.pick({
+    allCharacters: true,
+    participants: true,
+    userCharacter: true,
+    chatMedium: true,
+    raggedCharacters: true,
+    gossipTargetCharacter: true,
+    gossipTargetRelationship: true,
+    transcript: true,
+    conversationMessages: true,
+  })
+);
+
+export type ConversationExecutionContext = z.infer<typeof conversationExecutionContextSchema>;
+
+export const focusedConversationExecutionContextSchema = conversationExecutionContextSchema.and(
+  contextSchemaFields.pick({
+    currentLocation: true,
+    focusedCharacter: true,
+    focusedCharacterAppearance: true,
+    rollingConversationSummariesText: true,
+  })
+);
+
+export type FocusedConversationExecutionContext = z.infer<typeof focusedConversationExecutionContextSchema>;
+
+export const characterEditorExecutionContextSchema = globalExecutionContextSchema.and(
+  contextSchemaFields.pick({
+    focusedCharacter: true,
+    randomPersonalityTraits: true,
+  })
+);
+
+export type CharacterEditorContext = z.infer<typeof characterEditorExecutionContextSchema>;
+
+export const targetedConversationExecutionContextSchema = focusedConversationExecutionContextSchema.and(
+  contextSchemaFields.pick({
+    targetCharacter: true,
+    targetCharacterRelationship: true,
+    targetCharacterFormattedRollingMemoriesText: true,
+  })
+);
+export type TargetedConversationContext = z.infer<typeof targetedConversationExecutionContextSchema>;
+
+export const memoryRagExecutionContext = targetedConversationExecutionContextSchema.and(
+  contextSchemaFields.pick({
+    mentionedByCharacter: true,
+  })
+);
+
+export const offscreenMemoryUpdateConversationGoalContextSchema =
+  targetedConversationExecutionContextSchema.and(
+    contextSchemaFields
+      .pick({
+        candidateInformation: true,
+      })
+      .meta({
+        description:
+          'This OffscreenMemoryUpdateConversationGoalContext is available to the Offscreen Conversation Goal Updat prompt, and is identical to TargetedConversationContext except for adding the speakerCandidates field',
+      })
+  );
+
+type OffscreenMemoryUpdateConversationGoalContext = z.infer<
+  typeof offscreenMemoryUpdateConversationGoalContextSchema
 >;
 
 export const moderationNextSpeakerExecutionContextSchema = conversationExecutionContextSchema.and(
-  contextSchemaFields.pick({
-    speakerCandidates: true,
-  })
+  contextSchemaFields
+    .pick({
+      speakerCandidates: true,
+    })
+    .meta({
+      description:
+        'This ModerationNextSpeakerExecutionContext is available to the Next Speaker Selection prompt, and is identical to ConversationExecutionContext except for adding the speakerCandidates field',
+    })
 );
 
 type ModerationNextSpeakerExecutionContext = z.infer<typeof moderationNextSpeakerExecutionContextSchema>;
@@ -267,5 +263,5 @@ export type PromptExecutionContext =
   | FocusedConversationExecutionContext
   | CharacterEditorContext
   | TargetedConversationContext
-  | OffscreenMemoryExtractionExecutionContext
+  | OffscreenMemoryUpdateConversationGoalContext
   | ModerationNextSpeakerExecutionContext;
