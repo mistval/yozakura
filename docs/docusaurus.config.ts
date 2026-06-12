@@ -76,7 +76,6 @@ const config: Config = {
           label: 'Documentation',
         },
         { to: '/docs/getting-started', label: 'Get Started', position: 'left' },
-        { to: '/docs/what-is-yozakura', label: 'What This Is', position: 'left' },
       ],
     },
     footer: {
@@ -105,23 +104,6 @@ const config: Config = {
             {
               label: 'Getting Started',
               to: '/docs/getting-started',
-            },
-            {
-              label: 'Suggested Models',
-              to: '/docs/suggested-models',
-            },
-            {
-              label: 'Configuration and Troubleshooting',
-              to: '/docs/configuration-and-troubleshooting',
-            },
-          ],
-        },
-        {
-          title: 'More',
-          items: [
-            {
-              label: 'Feature Highlights',
-              to: '/docs/feature-highlights',
             },
           ],
         },
