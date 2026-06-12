@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 360" width="360" height="146.12" role="img"
+  aria-label="yozakura" class="mx-auto w-96">
+  <title>yozakura</title>
+  <defs>
+    <linearGradient id="_r_0_-petal" gradientUnits="userSpaceOnUse" x1="200" y1="12" x2="200"
+      y2="358">
+      <stop offset="0%" style="stop-color: var(--yz-petal-from, #e8a3bd);"></stop>
+      <stop offset="100%" style="stop-color: var(--yz-petal-to, #934b74);"></stop>
+    </linearGradient>
+    <linearGradient id="_r_0_-text" gradientUnits="userSpaceOnUse" x1="200" y1="384" x2="200"
+      y2="418">
+      <stop offset="0%" style="stop-color: var(--yz-text-from, #c97d9f);"></stop>
+      <stop offset="100%" style="stop-color: var(--yz-text-to, #7c4360);"></stop>
+    </linearGradient>
+  </defs>
+  <g fill="url(#_r_0_-petal)">
+    <circle cx="200" cy="182" r="14"></circle>
+    <path
+      d="M200.00,26.00 L217.50,7.00 A100.00 100.00 0 0 1 226.00,147.00 C216.00,166.00 207.00,176.00 200.00,179.00 C193.00,176.00 184.00,166.00 174.00,147.00 A100.00 100.00 0 0 1 182.50,7.00 L200.00,26.00 Z"></path>
+    <path
+      d="M348.36,133.79 L371.84,144.57 A100.00 100.00 0 0 1 241.32,195.91 C220.16,192.27 207.87,186.80 202.85,181.07 C203.54,173.49 210.27,161.84 225.25,146.46 A100.00 100.00 0 0 1 361.03,111.28 L348.36,133.79 Z"></path>
+    <path
+      d="M291.69,308.21 L288.70,333.86 A100.00 100.00 0 0 1 199.54,225.60 C196.46,204.35 197.86,190.97 201.76,184.43 C209.19,182.74 222.35,185.54 241.61,195.03 A100.00 100.00 0 0 1 317.02,313.29 L291.69,308.21 Z"></path>
+    <path
+      d="M108.31,308.21 L82.98,313.29 A100.00 100.00 0 0 1 158.39,195.03 C177.65,185.54 190.81,182.74 198.24,184.43 C202.14,190.97 203.54,204.35 200.46,225.60 A100.00 100.00 0 0 1 111.30,333.86 L108.31,308.21 Z"></path>
+    <path
+      d="M51.64,133.79 L38.97,111.28 A100.00 100.00 0 0 1 174.75,146.46 C189.73,161.84 196.46,173.49 197.15,181.07 C192.13,186.80 179.84,192.27 158.68,195.91 A100.00 100.00 0 0 1 28.16,144.57 L51.64,133.79 Z"></path>
+  </g>
+  <g style="fill: var(--yz-stamen, #1e1426); stroke: var(--yz-stamen, #1e1426);"
+    stroke-linecap="round">
+    <line x1="200" y1="182" x2="200" y2="112" stroke-width="2.4"></line>
+    <line x1="200" y1="182" x2="223.76" y2="139.14" stroke-width="2.4"></line>
+    <line x1="200" y1="182" x2="263.98" y2="156.15" stroke-width="2.4"></line>
+    <line x1="200" y1="182" x2="136.02" y2="156.15" stroke-width="2.4"></line>
+    <line x1="200" y1="182" x2="175.5" y2="139.56" stroke-width="2.4"></line>
+    <line x1="200" y1="182" x2="247.41" y2="189.51" stroke-width="2.4"></line>
+    <line x1="200" y1="182" x2="251.32" y2="226.61" stroke-width="2.4"></line>
+    <line x1="200" y1="182" x2="217.79" y2="230.86" stroke-width="2.4"></line>
+    <line x1="200" y1="182" x2="182.21" y2="230.86" stroke-width="2.4"></line>
+    <line x1="200" y1="182" x2="147.93" y2="227.27" stroke-width="2.4"></line>
+    <line x1="200" y1="182" x2="151.48" y2="188.82" stroke-width="2.4"></line>
+    <circle cx="200" cy="112" r="3.8"></circle>
+    <circle cx="223.76" cy="139.14" r="3.8"></circle>
+    <circle cx="263.98" cy="156.15" r="3.8"></circle>
+    <circle cx="136.02" cy="156.15" r="3.8"></circle>
+    <circle cx="175.5" cy="139.56" r="3.8"></circle>
+    <circle cx="247.41" cy="189.51" r="3.8"></circle>
+    <circle cx="251.32" cy="226.61" r="3.8"></circle>
+    <circle cx="217.79" cy="230.86" r="3.8"></circle>
+    <circle cx="182.21" cy="230.86" r="3.8"></circle>
+    <circle cx="147.93" cy="227.27" r="3.8"></circle>
+    <circle cx="151.48" cy="188.82" r="3.8"></circle>
+    <circle cx="200" cy="182" r="7"></circle>
+  </g>
+  <g fill="url(#_r_0_-text)">
+    <text x="650" y="200" text-anchor="middle"
+      font-family="'Cormorant Garamond', 'EB Garamond', 'Cormorant', Georgia, serif"
+      font-weight="500" font-size="88" letter-spacing="10">yozakura</text>
+  </g>
+</svg>

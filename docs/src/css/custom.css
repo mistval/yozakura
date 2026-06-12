@@ -197,3 +197,17 @@ html[data-theme='dark'],
     padding: 1rem;
   }
 }
+
+.yozakura-logo-holder {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 40px;
+
+  img {
+    width: 420px;
+    border-radius: 0px !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: none !important;
+  }
+}

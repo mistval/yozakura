@@ -1,4 +1,6 @@
-# Yozakura
+<div style="display: flex; justify-content: center;">
+<img src="./docs/static/img/yozakura_logo_horizontal.svg" width="420" />
+</div>
 
 Yozakura is an AI-powered social simulation engine.
 
@@ -14,7 +16,7 @@ The rest of this document is for developers interested in contributing to or mod
 
 ### Requirements
 
-- [Node.js v24](https://nodejs.org/) (see [.nvmrc](.nvmrc) for the exact version)
+- [Node.js v24](https://nodejs.org/) (see [.nvmrc](.nvmrc) for the exact recommended version)
 
 Yozakura is split into two workspaces, each with its own dependencies. Install them both before doing anything else:
 
