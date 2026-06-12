@@ -227,7 +227,11 @@ export class ChatCoordinator {
           promptContext,
         });
 
-        await this.addCharacterMessage(speaker.id, response);
+        const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
+          completionRequestId,
+        });
+
+        await this.addCharacterMessage(speaker.id, parsedResponse);
         await this.pauseAfterNpcOnlyMessage();
 
         return this.transcript;
@@ -245,11 +249,15 @@ export class ChatCoordinator {
           },
         });
 
-        await this.pauseAfterNpcOnlyMessage();
+        const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
+          completionRequestId,
+        });
 
         // We delete and re-add in order to trigger certain effects like memory RAG
         this.deleteMessageById(draftMessage.id);
-        await this.addCharacterMessage(speaker.id, response);
+        await this.addCharacterMessage(speaker.id, parsedResponse);
+
+        await this.pauseAfterNpcOnlyMessage();
       } catch (error) {
         this.editMessageById(draftMessage.id, (error as Error).message);
         throw error;
@@ -423,7 +431,7 @@ export class ChatCoordinator {
   private static getPastTenseLabel() {
     const participants = getActiveChatParticipants();
     if (participants.length === 2) {
-      const verb = getActiveChatMedium() === 'in_person' ? 'spoke to' : 'remot chatted with';
+      const verb = getActiveChatMedium() === 'in_person' ? 'spoke to' : 'remote chatted with';
       return `${participants[0]!.firstName} ${verb} ${participants[1]!.firstName}`;
     } else {
       const textPart = getActiveChatMedium() === 'in_person' ? '' : 'text ';
