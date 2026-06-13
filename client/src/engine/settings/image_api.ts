@@ -1,6 +1,6 @@
 import z from 'zod';
 
-const DEFAULT_AUTOMATIC1111_IMAGE_API_URL = 'http://127.0.0.1:7860/sdapi/v1/txt2img';
+const DEFAULT_AUTOMATIC1111_IMAGE_API_URL = 'http://127.0.0.1:5001/sdui/sdapi/v1/txt2img';
 const DEFAULT_OPENROUTER_COMPLETIONS_IMAGE_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export const imageApiShapeSchema = z.enum(['automatic1111', 'openRouter']);
