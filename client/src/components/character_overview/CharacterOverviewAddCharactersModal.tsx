@@ -4,12 +4,12 @@ import { useCharacterOverview } from './CharacterOverviewContext.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import CharacterSelectionGrid from '../CharacterSelectionGrid.js';
-import Modal from '../ui/Modal.js';
+import RoutedModalFrame from '../ui/RoutedModalFrame.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
 
 export default function CharacterOverviewAddCharactersModal() {
-  const { routeAddCharacterOpen, backToCharacterOverview } = useCharacterOverview();
+  const { backToCharacterOverview } = useCharacterOverview();
   const scenario = useScenarioStore((state) => state.activeScenario);
   const activeMap = useScenarioStore((state) => state.activeScenarioMap);
   const scenarioCharactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
@@ -67,63 +67,49 @@ export default function CharacterOverviewAddCharactersModal() {
   };
 
   return (
-    <Modal open={routeAddCharacterOpen} onClose={backToCharacterOverview}>
-      <div className="max-w-6xl mx-auto p-4 md:p-6">
-        <div className="bg-emphasized rounded-sm border shadow-xs p-4 md:p-6 space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Add Characters</h2>
-            <button
-              type="button"
-              className="button-emphasized"
-              onClick={backToCharacterOverview}
-              disabled={addCharacterSaving}
-            >
-              Close
-            </button>
-          </div>
-          {!globalCharactersAreLoaded ? (
-            <div className="text-sm text-muted">Loading characters...</div>
-          ) : (
-            <CharacterSelectionGrid
-              userCharacterId={''}
-              characters={sortedCharacters}
-              selectedCharacterIds={gridSelectedCharacterGlobalIds}
-              onSelectedCharacterIdsChange={(newSelection) => {
-                setAddCharacterSelectedGlobalIds(
-                  newSelection.filter((cid) => !currentScenarioCharacterGlobalIdsSet.has(cid))
-                );
-              }}
-              lockedCharacterIds={currentScenarioCharacterGlobalIds}
-              allowChangeUserCharacter={false}
-            />
-          )}
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={backToCharacterOverview} disabled={addCharacterSaving}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                void (async () => {
-                  if (!globalCharactersAreLoaded || addCharacterSavingRef.current) {
-                    return;
-                  }
+    <RoutedModalFrame queryParam="co_add" onClose={backToCharacterOverview} maxWidthClassName="max-w-6xl">
+      <h2 className="text-xl font-semibold">Add Characters</h2>
+      {!globalCharactersAreLoaded ? (
+        <div className="text-sm text-muted">Loading characters...</div>
+      ) : (
+        <CharacterSelectionGrid
+          userCharacterId={''}
+          characters={sortedCharacters}
+          selectedCharacterIds={gridSelectedCharacterGlobalIds}
+          onSelectedCharacterIdsChange={(newSelection) => {
+            setAddCharacterSelectedGlobalIds(
+              newSelection.filter((cid) => !currentScenarioCharacterGlobalIdsSet.has(cid))
+            );
+          }}
+          lockedCharacterIds={currentScenarioCharacterGlobalIds}
+          allowChangeUserCharacter={false}
+        />
+      )}
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={backToCharacterOverview} disabled={addCharacterSaving}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            void (async () => {
+              if (!globalCharactersAreLoaded || addCharacterSavingRef.current) {
+                return;
+              }
 
-                  setAddCharacterSaving(true);
-                  try {
-                    await confirmAddCharacters();
-                  } finally {
-                    setAddCharacterSaving(false);
-                  }
-                })();
-              }}
-              disabled={!scenario || !globalCharactersAreLoaded || addCharacterSaving}
-            >
-              {addCharacterSaving ? 'Adding...' : 'Add Selected'}
-            </button>
-          </div>
-        </div>
+              setAddCharacterSaving(true);
+              try {
+                await confirmAddCharacters();
+              } finally {
+                setAddCharacterSaving(false);
+              }
+            })();
+          }}
+          disabled={!scenario || !globalCharactersAreLoaded || addCharacterSaving}
+        >
+          {addCharacterSaving ? 'Adding...' : 'Add Selected'}
+        </button>
       </div>
-    </Modal>
+    </RoutedModalFrame>
   );
 }
