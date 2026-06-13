@@ -14,11 +14,7 @@ keywords:
   - ai sandbox
 ---
 
-#
-
-<div class="yozakura-logo-holder">
-![yozakura logo](/img/yozakura_logo_horizontal.svg)
-</div>
+# ![Yozakura — an AI-powered social simulation](/img/yozakura_logo_horizontal.svg)
 
 Yozakura is an AI-powered social simulation in which characters (including the user) move around a map, interact with each other via the user's LLM of choice, and form memories and intentions towards each other, creating a dynamically evolving narrative with up to dozens or even hundreds of characters.
 

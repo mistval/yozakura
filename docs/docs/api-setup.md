@@ -20,7 +20,7 @@ You can run these models on your own machine if it's powerful enough, or use a c
 
 Running an LLM on your machine generally requires at least 8 GB of graphics card VRAM for the smaller models.
 
-First you need a model to run. A decent baseline that fits on many modern consumer GPUs is [Llama 3.1 8B Q4_K_M which you can download from Hugging Face](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF?show_file_info=Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf) (though it's nowhere near as powerful as commonly available cloud models).
+First you need a model to run. A decent baseline that fits on many modern consumer GPUs is [Llama 3.1 8B Q4_K_M which you can download from Hugging Face](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF?show_file_info=Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf) (though it's nowhere near as powerful as commonly available cloud models). Mistral Nemo 12B finetunes like [NemoMix](https://huggingface.co/bartowski/NemoMix-Unleashed-12B-GGUF) and [Mag-Mell](https://huggingface.co/mradermacher/MN-12B-Mag-Mell-R1-GGUF) are a step up that can also run on a lot of consumer hardware.
 
 The suggested software for running a local LLM is [KoboldCpp](https://github.com/lostruins/koboldcpp), but any other application that exposes an OpenAI compatible completions endpoint will do.
 

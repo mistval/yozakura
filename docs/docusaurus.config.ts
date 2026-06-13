@@ -74,10 +74,9 @@ const config: Config = {
   ],
 
   themeConfig: {
-    // Default social card used for OpenGraph/Twitter previews. Replace
-    // img/docusaurus-social-card.jpg with a branded 1200x630 Yozakura card
-    // for nicer link previews; pages can override via front matter `image`.
-    image: 'img/docusaurus-social-card.jpg',
+    // Branded 1200x630 social card used for OpenGraph/Twitter link previews.
+    // Pages can override it per-page via front matter `image`.
+    image: 'img/yozakura-social-card.png',
     // Site-wide metadata. Per-page `description`/`keywords` front matter
     // overrides these defaults. Docusaurus already emits og:title,
     // og:description, og:image, og:url, og:locale and the twitter:image tags;
