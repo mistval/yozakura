@@ -157,18 +157,23 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     const baseMap = maps.find((map) => map.id === scenario.mapId);
     assert(baseMap, 'could not find map');
 
+    const newOverrides = {
+      ...scenario.mapOverrides,
+      ...overrides,
+    };
+
     get().updateScenario((prev) => ({
       ...prev,
-      mapOverrides: {
-        ...prev.mapOverrides,
-        ...overrides,
-      },
+      mapOverrides: newOverrides,
+    }));
+
+    set({
       activeScenarioMap: {
         ...baseMap,
-        name: overrides?.name ?? baseMap.name,
-        description: overrides?.description ?? baseMap.description,
+        name: newOverrides?.name ?? baseMap.name,
+        description: newOverrides?.description ?? baseMap.description,
       },
-    }));
+    });
   },
 
   saveImmediateBlankInactiveScenario: async (mapId) => {
