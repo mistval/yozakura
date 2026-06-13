@@ -51,7 +51,7 @@ class ModerationNextSpeakerUserTemplate extends PromptTemplateBase<
 </transcript>
 
 <eligible_candidates>
-<%= it.speakerCandidates.map(c => c.firstName).join('\n') %>
+<%= it.speakerCandidates.map(c => c.firstName).join('\\n') %>
 </eligible_candidates>
 
 Analyze the flow of the conversation and decide who speaks next. Output the next speaker's first name only.`;

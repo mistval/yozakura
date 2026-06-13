@@ -45,9 +45,10 @@ class RollingPairwiseMemoryRewriteUserTemplate extends PromptTemplateBase<
 Recent specific interactions with and information about <%= it.targetCharacter.firstName %> that <%= it.focusedCharacter.firstName %> remembers (oldest first):
 <%= it.targetCharacterFormattedRollingMemoriesText %>
 
+
 <%= it.focusedCharacter.firstName %> goal towards <%= it.targetCharacter.firstName %> in their next interaction:
 <goal>
-<% it.targetCharacterRelationship.nextConversationGoal || 'No goal is set' %>
+<%= it.targetCharacterRelationship.nextConversationGoal || 'No goal is set' %>
 
 </goal>
 

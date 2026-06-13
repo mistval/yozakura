@@ -35,6 +35,7 @@ export default function CharacterOverviewSingleData({
   );
   const requestDirectNpcChat = useScenarioLoopStateStore((state) => state.submitUserChatAction);
   const chatSessionIsActive = useActiveChatStore((state) => state.chatState !== 'inactive');
+  const activeChatParticipants = useActiveChatStore((state) => state.participantIds);
   const { closeCharacterOverview, openCharacterOverviewEditor } = useCharacterOverview();
   const [relationshipToUser, setRelationshipToUser] = useState<CharacterRelationship | undefined>(undefined);
 
@@ -52,6 +53,8 @@ export default function CharacterOverviewSingleData({
   assertNonNullish(activeMap, 'CharacterOverviewSingleData rendered without active map');
 
   const isUser = selectedSingleCharacter.id === scenario.userCharacterId;
+  const activeChatWithoutUser =
+    chatSessionIsActive && !activeChatParticipants.some((p) => p === scenario.userCharacterId);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,6 +113,7 @@ export default function CharacterOverviewSingleData({
         {canRemoteChat && (
           <button
             type="button"
+            disabled={activeChatWithoutUser}
             onClick={() => {
               if (chatSessionIsActive) {
                 ChatCoordinator.addParticipant(selectedSingleCharacter.id);
@@ -155,7 +159,7 @@ export default function CharacterOverviewSingleData({
                 <span>Next conversation with</span>
                 <InfoTooltip
                   label="Next conversation with"
-                  html="If this is set, this character will speak with the specified other character on their next turn, and it will be a rich interaction."
+                  html="If this is set, this character will speak with the specified other character at the next opportunity, and it will be a rich interaction."
                 />
               </div>
               <select

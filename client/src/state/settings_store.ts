@@ -148,7 +148,7 @@ const DEFAULT_SETTINGS: Settings = {
   editImagePromptsBeforeDispatch: false,
   autoImageRate: 0,
   autoImageNpcOnly: false,
-  groupChatMessageLimit: 25,
+  groupChatMessageLimit: 20,
   offscreenMentionLimit: 2,
   rollingConversationSummaryLimit: 10,
   offscreenLearnedInformationLimit: 10,
