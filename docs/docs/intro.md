@@ -15,7 +15,7 @@ This article gives a brief peek at the main features of Yozakura via screenshots
 
 ## Chat
 
-During the user turn, choose one or more characters to chat with (below, Beatrix is the user).
+During the user turn, choose one or more characters to chat with (below, Beatrix is the user in a three-way chat).
 
 ![group chat image](/img/in_chat_image.png)
 
@@ -41,7 +41,7 @@ You can also of course create new characters from scratch.
 
 ![character create dialogue](/img/char_create.png)
 
-The wardrobe system can automatically enable different combinations of image model tags each day.
+The [wardrobe](chat.md#wardrobes) system can automatically enable different combinations of image model tags each day.
 
 ## Create Your Own Worlds
 

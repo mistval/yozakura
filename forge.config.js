@@ -6,6 +6,7 @@ module.exports = {
   outDir: 'electron_out',
   packagerConfig: {
     asar: true,
+    icon: './electron/electron_icon',
     ignore: [
       /^\/docs($|\/)/,
       /^\/client($|\/)/,
@@ -55,7 +56,7 @@ module.exports = {
               await fs.rename(artifact, renamed);
             }
             return renamed;
-          }),
+          })
         );
       }
       return makeResults;
