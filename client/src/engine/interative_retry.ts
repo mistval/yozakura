@@ -223,6 +223,10 @@ export async function runWithInteractiveRetry<T>(options: RunWithInteractiveRetr
         const result = await options.run(attempt);
         return result;
       } catch (error) {
+        if (error instanceof InteractiveRetryError) {
+          throw error;
+        }
+
         lastOriginalError = error;
         const hint = resolveHint(options.hint, error, attempt);
 

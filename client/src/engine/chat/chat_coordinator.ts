@@ -239,31 +239,34 @@ export class ChatCoordinator {
 
       const draftMessage = this.startStreamingNpcDraftMessage(speaker);
 
-      try {
-        const response = await chatCompletion(prompts, {
-          promptTemplateGroup: 'gen_npc_response',
-          promptContext,
-          completionRequestId,
-          onTokens: (fullText: string) => {
-            this.setTranscript(this.transcript().editLatestMessage(fullText).updatedTranscript);
-          },
-        });
+      const response = await chatCompletion(prompts, {
+        promptTemplateGroup: 'gen_npc_response',
+        promptContext,
+        completionRequestId,
+        onTokens: (fullText: string) => {
+          this.setTranscript(this.transcript().editLatestMessage(fullText).updatedTranscript);
+        },
+      });
 
-        const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
-          completionRequestId,
-        });
+      const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
+        completionRequestId,
+      });
 
-        // We delete and re-add in order to trigger certain effects like memory RAG
-        this.deleteMessageById(draftMessage.id);
-        await this.addCharacterMessage(speaker.id, parsedResponse);
+      // We delete and re-add in order to trigger certain effects like memory RAG
+      this.deleteMessageById(draftMessage.id);
+      await this.addCharacterMessage(speaker.id, parsedResponse);
 
-        await this.pauseAfterNpcOnlyMessage();
-      } catch (error) {
-        this.editMessageById(draftMessage.id, (error as Error).message);
-        throw error;
-      }
+      await this.pauseAfterNpcOnlyMessage();
     } catch (err) {
-      await this.addCharacterMessage(speaker.id, (err as Error).message);
+      const mostRecentMessage = this.transcript().getMostRecentMessage();
+      if (mostRecentMessage && !mostRecentMessage.getContent()) {
+        this.setTranscript(this.transcript().deleteMessageById(mostRecentMessage.getId()).updatedTranscript);
+      }
+
+      await showNonRetriableErrorCardIfNeeded({
+        error: err,
+        operationType: 'chat.npc.speak',
+      });
     }
 
     return this.transcript;
