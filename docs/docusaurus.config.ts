@@ -6,7 +6,8 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'Yozakura Docs',
-  tagline: '',
+  tagline:
+    'An AI-powered social simulation where LLM-driven characters live on a map, chat, and form lasting memories.',
   favicon: 'img/favicon.svg',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -29,6 +30,22 @@ const config: Config = {
       onBrokenMarkdownLinks: 'warn',
     },
   },
+
+  // OpenGraph tags that must use the `property` attribute (the OG spec and
+  // Facebook/LinkedIn parsers ignore `name="og:*"`). Docusaurus emits its
+  // `metadata` entries with `name`, so these site-wide OG defaults are set
+  // here instead. og:title/description/image/url/locale are generated
+  // per-page by Docusaurus automatically.
+  headTags: [
+    {
+      tagName: 'meta',
+      attributes: { property: 'og:type', content: 'website' },
+    },
+    {
+      tagName: 'meta',
+      attributes: { property: 'og:site_name', content: 'Yozakura Docs' },
+    },
+  ],
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -57,8 +74,29 @@ const config: Config = {
   ],
 
   themeConfig: {
-    // Replace with your project's social card
+    // Default social card used for OpenGraph/Twitter previews. Replace
+    // img/docusaurus-social-card.jpg with a branded 1200x630 Yozakura card
+    // for nicer link previews; pages can override via front matter `image`.
     image: 'img/docusaurus-social-card.jpg',
+    // Site-wide metadata. Per-page `description`/`keywords` front matter
+    // overrides these defaults. Docusaurus already emits og:title,
+    // og:description, og:image, og:url, og:locale and the twitter:image tags;
+    // the entries below add the pieces it doesn't generate on its own.
+    // og:* tags that must use the `property` attribute live in `headTags`
+    // below, because Docusaurus emits `metadata` entries with `name`.
+    metadata: [
+      {
+        name: 'description',
+        content:
+          'Documentation for Yozakura, an AI-powered social simulation where dozens of LLM-driven characters move around a map, chat, generate images, and form evolving memories and relationships.',
+      },
+      {
+        name: 'keywords',
+        content:
+          'yozakura, ai social simulation, llm characters, ai roleplay, generative agents, npc simulation, character ai, ai sandbox, ai memory, sillytavern alternative, koboldcpp, openrouter',
+      },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ],
     colorMode: {
       respectPrefersColorScheme: true,
     },

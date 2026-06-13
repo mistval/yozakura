@@ -1,6 +1,15 @@
 ---
 title: Chat Features
 sidebar_position: 3
+description: Explore Yozakura's chat features — on-demand and automatic AI image generation, wardrobes, group chats, speaker selection modes, temporary locations, remote chat, and editable messages.
+keywords:
+  - yozakura chat
+  - group chat
+  - ai image generation
+  - wardrobes
+  - character chat
+  - remote chat
+  - speaker selection
 ---
 
 ## Images on Demand

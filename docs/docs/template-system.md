@@ -1,6 +1,14 @@
 ---
 title: Prompt Template System
 sidebar_position: 5
+description: Customize Yozakura's prompts with the Eta-powered template system. Edit prompt templates and parsers, use AI assistant context docs, and reference per-prompt context schemas.
+keywords:
+  - yozakura prompt templates
+  - prompt engineering
+  - eta templates
+  - ejs templates
+  - llm prompts
+  - customization
 ---
 
 The prompt template system controls the wording used for prompts, and the dynamic scenario state information that's injected into prompts. The template system is very flexible and has access to practically the entire scenario state. On the other hand, it's a pain to read and write. The suggested workflow is to have a frontier LLM do significant changes for you.
@@ -43,7 +51,7 @@ Each prompt group can also be given a custom parser function to do custom proces
 
 ## Template Render Log
 
-The `Prompt Templates` section in the settings contains a `Template Render Log` item, where you can view recent template renders to make sure they're doing what you want. The `LLM Settings` section also contains a `Prompt Log` which shows the raw JSON requests send to the completions API.
+The `Prompt Templates` section in the settings contains a `Template Render Log` item, where you can view recent template renders to make sure they're doing what you want. The `LLM Settings` section also contains a `Prompt Log` which shows the raw JSON requests sent to the completions API.
 
 ![render log image](/img/render_log.png)
 

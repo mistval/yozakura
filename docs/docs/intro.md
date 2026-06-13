@@ -1,6 +1,17 @@
 ---
-title: Intro
+title: Introduction to Yozakura
+sidebar_label: Intro
 sidebar_position: 8
+description: Yozakura is an AI-powered social simulation where dozens of LLM-driven characters move around a map, chat, generate images, and form evolving memories. Take a tour of the main features.
+keywords:
+  - yozakura
+  - ai social simulation
+  - llm characters
+  - ai roleplay
+  - generative agents
+  - npc simulation
+  - character ai
+  - ai sandbox
 ---
 
 #

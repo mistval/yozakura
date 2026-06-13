@@ -1,6 +1,13 @@
 ---
 title: Links & Help
 sidebar_position: 3
+description: Get help with Yozakura or share feedback and feature requests through GitHub Discussions and the community Discord server.
+keywords:
+  - yozakura help
+  - yozakura support
+  - discord
+  - github discussions
+  - feedback
 ---
 
 There are a few ways to get help or give feedback for Yozakura.

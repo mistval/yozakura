@@ -1,6 +1,14 @@
 ---
 title: Getting Started
 sidebar_position: 3
+description: Install and run Yozakura via the native Electron app, Docker, or by cloning from GitHub. Step-by-step setup instructions to get your AI social simulation running.
+keywords:
+  - yozakura install
+  - yozakura setup
+  - getting started
+  - electron app
+  - docker
+  - ai simulation
 ---
 
 There are three main ways to run Yozakura. The native electron application is the fastest to set up for most users and is dead easy. The Docker image has some advantages for more advanced users who are familiar with Docker, especially on Linux or MacOS. Cloning from GitHub is mainly for development and modifications.
