@@ -410,7 +410,6 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
     assertNonNullish(activeScenarioMap, 'no active scenario map');
     const location = activeScenarioMap.locations.find((l) => l.id === character.locationId);
 
-    assertNonNullish(location, 'Character in non-existent location');
     return location;
   },
 }));

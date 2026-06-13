@@ -335,7 +335,7 @@ useScenarioStore.subscribe(async (newScenario, prevScenario) => {
 
   if (
     newScenario.activeScenarioMap &&
-    newScenario.activeScenarioMap.id !== prevScenario.activeScenario?.mapId
+    newScenario.activeScenarioMap?.id !== prevScenario.activeScenarioMap?.id
   ) {
     updateCharacterLocationsForMapChange(newScenario.activeScenarioMap);
   }
