@@ -5,7 +5,6 @@ import {
   applyPatch,
   computeOverrides,
   isRecord,
-  loadStoredRecord,
   type DeepPartial,
 } from '../util/settings_merge';
 import {
@@ -21,11 +20,10 @@ import {
   type LLMConfig,
 } from '../engine/settings/cascading_llm_configs.js';
 import _ from 'lodash';
+import * as Database from '../backend_bridge/database.js';
 
 export type { ImageApiShape, LLMConfig as LLMOptionsGroup };
 export { imageApiShapes };
-
-const STORAGE_KEY = 'yozakura_settings';
 
 export type PromptTemplateOverride = {
   templateString?: string | undefined;
@@ -112,6 +110,7 @@ type SettingsOverrides = DeepPartial<Settings>;
 type SettingsUpdate = SettingsPatch | ((previous: Settings) => SettingsPatch);
 
 type SettingsStoreState = Settings & {
+  hydrated: boolean;
   setSettings: (update: SettingsUpdate) => void;
   resetSettings: () => void;
 };
@@ -177,16 +176,27 @@ function sanitizedSettings(input: unknown, fallback: Settings = DEFAULT_SETTINGS
   return fallback;
 }
 
-function loadStoredOverrides(): SettingsOverrides {
-  return loadStoredRecord(STORAGE_KEY) as SettingsOverrides;
-}
+const SETTINGS_KV_KEY = 'settings';
 
-function loadInitialSettings(): Settings {
-  return sanitizedSettings(applySettingsOverrides(loadStoredOverrides()));
+const overridesStorageSchema = z.record(z.string(), z.unknown());
+
+function persistSettingsOverrides(overrides: SettingsOverrides) {
+  void Database.doAsDataWrite(
+    async () => {
+      await Database.storeKeyValue(
+        SETTINGS_KV_KEY,
+        overrides as Record<string, unknown>,
+        overridesStorageSchema
+      );
+    },
+    'settings',
+    { debouncerKey: SETTINGS_KV_KEY }
+  );
 }
 
 export const useSettingsStore = create<SettingsStoreState>((set, get) => ({
-  ...loadInitialSettings(),
+  ...DEFAULT_SETTINGS,
+  hydrated: false,
   setSettings: (update) => {
     const nextValue = typeof update === 'function' ? update(get()) : update;
     const safePatch = isRecord(nextValue) ? (nextValue as SettingsPatch) : {};
@@ -196,13 +206,39 @@ export const useSettingsStore = create<SettingsStoreState>((set, get) => ({
     const stateApply = _.pickBy(nextSettings, (_, key) => key in safePatch);
 
     set(stateApply);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextOverrides));
+
+    if (get().hydrated) {
+      persistSettingsOverrides(nextOverrides);
+    }
   },
   resetSettings: () => {
-    localStorage.removeItem(STORAGE_KEY);
     set(DEFAULT_SETTINGS);
+    void Database.doAsDataWrite(
+      async () => {
+        await Database.deleteKeyValue(SETTINGS_KV_KEY);
+      },
+      'settings',
+      { debouncerKey: SETTINGS_KV_KEY }
+    );
   },
 }));
+
+async function loadOverridesFromBackend(): Promise<SettingsOverrides> {
+  const stored = await Database.doAsDataRead(
+    () => Database.loadKeyValue(SETTINGS_KV_KEY, overridesStorageSchema),
+    'settings',
+    { debouncerKey: SETTINGS_KV_KEY }
+  );
+  return (stored as SettingsOverrides | undefined) ?? {};
+}
+
+export async function hydrateSettings(): Promise<void> {
+  const overrides = await loadOverridesFromBackend();
+  useSettingsStore.setState({
+    ...sanitizedSettings(applySettingsOverrides(overrides)),
+    hydrated: true,
+  });
+}
 
 export const settingsStore = {
   setSettings: (update: SettingsUpdate) => useSettingsStore.getState().setSettings(update),

@@ -3,7 +3,6 @@ import YozakuraLogo from '../../theme/yozakura_logo';
 const APP_RELEASE_TAG = import.meta.env.VITE_GITHUB_RELEASE_TAG?.trim() ?? '';
 const APP_VERSION_LABEL = APP_RELEASE_TAG || 'Development Version';
 
-// TODO: Replace these with actual links
 const LINKS = {
   github: 'https://github.com/mistval/yozakura',
   wiki: 'https://mistval.github.io/yozakura/docs/intro',

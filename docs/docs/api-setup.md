@@ -38,7 +38,7 @@ Since we're already using KoboldCpp to run the text model, we can use it for the
 
 For an image model, [WAI Illustrious SDXL](https://civitai.red/models/827184/wai-illustrious-sdxl) is a good baseline model for manga/anime style images that follows prompts well.
 
-In KoboldCpp, go to the Image Gen tab and browse to your model under `Image Gen. Model`. If you intend to use LoRAs, enable the "Runtime LoRAs" checkbox, and browse to your LoRA folder next to `LoRA Dir`. Consider enabling `Compress Weights` if you need a small memory footprint
+In KoboldCpp, go to the Image Gen tab and browse to your model under `Image Gen. Model`. If you intend to use LoRAs, enable the "Runtime LoRAs" checkbox, and browse to your LoRA folder next to `LoRA Dir`. Consider enabling `Compress Weights` if you need a smaller memory footprint.
 
 Click launch, then you can start Yozakura and you're good to go. When the initial setup popup appears, the `Image Generation Setup` section will already have the correct values for KoboldCpp, so you don't need to change anything there.
 

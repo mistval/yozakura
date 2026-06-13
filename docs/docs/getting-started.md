@@ -39,7 +39,7 @@ Installation:
 
 If you want to use local models, you generally need to add `--network=host` to your Docker command, which **might not work at all on Windows**. As a workaround, you could create a Docker network, run your models inside Docker containers too, and network them together, but that's beyond the scope of this article.
 
-If you want to put your yozakura_data directory somewhere easily accessible, add a volume option to the command like: `docker run -p 4396:4396 -d -v /d/yozakura_data:/app/data ghcr.io/mistval/yozakura:latest`
+If you want to put your yozakura_data directory somewhere easily accessible, add a volume option to the command like: `docker run -p 4396:4396 -d -v /d/yozakura_data:/app/data ghcr.io/mistval/yozakura:latest`. If you don't do this, yozakura will create an anonymous volume, but you'll have to deal with re-attaching it to the new container if you ever pull a new image.
 
 Give it just a few moments to start, then visit `http://localhost:4396` in your web browser.
 
