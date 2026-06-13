@@ -17,7 +17,7 @@ This article gives a brief peek at the main features of Yozakura via screenshots
 
 During the user turn, choose one or more characters to chat with (below, Beatrix is the user in a three-way chat).
 
-![group chat image](/img/in_chat_image.png)
+![group chat image](/img/in_chat_image_2.png)
 
 ## Memories
 

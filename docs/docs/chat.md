@@ -7,7 +7,7 @@ sidebar_position: 3
 
 After setting up an image model, use the Gen Image button to generate an image.
 
-![in chat image](/img/in_chat_image.png)
+![in chat image](/img/in_chat_image_2.png)
 
 If you want to edit image prompts, you can enable the `Edit image prompts before dispatch` setting, though the system tends to be pretty good at generating relevant images on its own, and wardrobes are often a better way to influence image generation (more on that below).
 
