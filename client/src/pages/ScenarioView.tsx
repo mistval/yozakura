@@ -208,7 +208,7 @@ export default function ScenarioView() {
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-3">
         <h1 className="text-2xl font-semibold">Loading...</h1>
-        <button type="button" onClick={() => navigate('/')}>
+        <button type="button" onClick={() => navigate('/')} disabled={!canSubmitUserTurn}>
           Main Menu
         </button>
       </div>
@@ -234,7 +234,7 @@ export default function ScenarioView() {
           Map
         </button>
         {includeMenu && (
-          <button type="button" onClick={() => navigate('/')}>
+          <button type="button" onClick={() => navigate('/')} disabled={!canSubmitUserTurn}>
             Main Menu
           </button>
         )}
