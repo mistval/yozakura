@@ -17,7 +17,12 @@ else
   NODE_BIN="node"
 fi
 
-VENV_ACTIVATE="${REPO_ROOT}/venv/Scripts/activate"
+if [[ "${OS:-}" == "Windows_NT" ]]; then
+  VENV_ACTIVATE="${REPO_ROOT}/venv/Scripts/activate"
+else
+  VENV_ACTIVATE="${REPO_ROOT}/venv/bin/activate"
+fi
+
 if [[ ! -f "${VENV_ACTIVATE}" ]]; then
   echo "Creating Python venv at ${REPO_ROOT}/venv..."
   python -m venv "${REPO_ROOT}/venv"
