@@ -210,10 +210,14 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     const scenarioId = getRequiredActiveScenario().id;
     const map = getRequiredActiveScenarioMap();
 
-    const scenarioCharacter = await copyGlobalCharacterForScenario(character, scenarioId, map);
-    await get().saveScenarioCharacter(scenarioCharacter, undefined, () => scenarioCharacter);
+    let returnChar: Character;
+    await Database.doAsDataWrite(async () => {
+      const scenarioCharacter = await copyGlobalCharacterForScenario(character, scenarioId, map);
+      get().saveScenarioCharacter(scenarioCharacter, undefined, () => scenarioCharacter);
+      returnChar = scenarioCharacter;
+    }, 'add_scenario_character');
 
-    return scenarioCharacter;
+    return returnChar!;
   },
 
   saveScenarioCharacters(characters: Character[]) {
@@ -331,7 +335,7 @@ useScenarioStore.subscribe(async (newScenario, prevScenario) => {
 
   if (
     newScenario.activeScenarioMap &&
-    newScenario.activeScenarioMap.id !== prevScenario.activeScenario?.mapId
+    newScenario.activeScenarioMap?.id !== prevScenario.activeScenarioMap?.id
   ) {
     updateCharacterLocationsForMapChange(newScenario.activeScenarioMap);
   }

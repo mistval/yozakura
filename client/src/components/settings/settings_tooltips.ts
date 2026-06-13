@@ -73,13 +73,13 @@ export const settingsTooltips = {
   'llm.tokenStreaming':
     'When enabled, NPC responses stream token-by-token. This requires your OpenAI-compatible API provider to support streaming (SSE).',
   'llm.responsePreParser':
-    'Optional JavaScript function source that pre-processes raw model responses for this option group. Leave blank to inherit from earlier matching groups. It must evaluate to a function like <code>(response) => string</code>.',
+    'Optional JavaScript function source that pre-processes raw model responses for this option group. Leave blank to inherit from earlier matching groups. It must evaluate to a function like <code>(response) => string</code>. The parser runs before any parsers configured for prompt templates',
   'llm.model':
     'If your API accepts a <code>model</code> field in request bodies to select the model, set it here. This is saved as the <code>model</code> field of the meta options below.',
   'llm.metaOptions':
     'JSON object merged into LLM payload for this group, for example <code>{ "max_tokens": 220 }</code>.',
   'llm.rule':
-    "Optional JavaScript expression that will be evaluated to determine if these settings should be used. Example: <code>context.promptTemplateGroup === 'gen_intelligent_next_speaker_select'</code>.",
+    'Optional JavaScript expression that will be evaluated to determine if these settings should be used. Example: <code>context.promptTemplateGroup === \'gen_intelligent_next_speaker_select\'</code>. The context object contains the fields <a href="https://mistval.github.io/yozakura/docs/template-system#prompt-template-group-context-docs">documented here</a>, which is different for each prompt group',
   'promptTemplates.templateBody':
     'Template Body uses <a href="https://eta.js.org/docs/syntax">Eta/EJS-style templating syntax</a>. Use tags like <code>&lt;% ... %&gt;</code> and <code>&lt;%= ... %&gt;</code> to compute dynamic text.',
 } as const;

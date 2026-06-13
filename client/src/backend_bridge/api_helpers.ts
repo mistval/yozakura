@@ -163,7 +163,7 @@ async function parseLlmStreamingResponse(response: Response, onTokens: LlmTokenC
   return combinedText;
 }
 
-async function executeLlmChat(payload: Record<string, unknown>, options: LlmChatOptions = {}) {
+export async function executeLlmChat(payload: Record<string, unknown>, options: LlmChatOptions = {}) {
   const { targetUrl, authToken, onTokens } = options;
   const streamingRequested = typeof onTokens === 'function';
 
@@ -197,18 +197,6 @@ async function executeLlmChat(payload: Record<string, unknown>, options: LlmChat
 
   const completion = await parseJSONResponse(openAIChatCompletionSchema, response);
   return completion?.choices?.[0]?.message?.content || '';
-}
-
-export async function runRetriedLlmChat(
-  payload: Record<string, unknown>,
-  options: LlmChatOptions = {}
-): Promise<string> {
-  return runWithInteractiveRetry<string>({
-    operationType: 'api.llm_completion',
-    maxRetries: Number.POSITIVE_INFINITY,
-    hint: DEFAULT_API_RETRY_HINT,
-    run: () => executeLlmChat(payload, options),
-  });
 }
 
 export function withInfiniteRetry<TArgs extends unknown[], TResult>(

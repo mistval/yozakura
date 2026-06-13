@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { parseJSONResponse, runRetriedLlmChat, type LlmChatOptions, withInfiniteRetry } from './api_helpers';
+import { parseJSONResponse, type LlmChatOptions, withInfiniteRetry, executeLlmChat } from './api_helpers';
 import { assert } from '../errors/application_error';
 
 const zodEmpty = z.object({});
@@ -55,7 +55,7 @@ export const deleteFile = withInfiniteRetry({
 });
 
 export const llmChat = (payload: Record<string, unknown>, options: LlmChatOptions = {}) =>
-  runRetriedLlmChat(payload, options);
+  executeLlmChat(payload, options);
 
 export const generateImage = withInfiniteRetry({
   operationType: 'api.generate_image',

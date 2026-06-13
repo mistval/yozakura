@@ -36,7 +36,7 @@ class NextConversationGoalUpdatesUserTemplate extends PromptTemplateBase<
   
 Here are <%= it.focusedCharacter.firstName %>'s current consolidated memories about <%= it.targetCharacter.firstName %>:
 <memories>
-<%= it.targetCharacterRelationship.memory %>
+<%= it.targetCharacterRelationship.memory || it.focusedCharacter.firstName + ' has no memories about ' + it.targetCharacter.firstName + ' yet' %>
 
 </memories>
 

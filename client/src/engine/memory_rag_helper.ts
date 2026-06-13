@@ -1,5 +1,5 @@
 import { assertNonNullish } from '../errors/application_error';
-import { useActiveChatStore } from '../state/active_chat_store';
+import { getActiveChatParticipants, useActiveChatStore } from '../state/active_chat_store';
 import { useScenarioCharacterStore } from '../state/scenario_character_store';
 import { useSettingsStore } from '../state/settings_store.js';
 import { buildCharacterNameIndex, matchStringToIndex } from './tokenization';
@@ -71,8 +71,8 @@ export class MemoryRAGHelper {
 
   private rebuildMentionIndex() {
     const allCharacters = Object.values(useScenarioCharacterStore.getState().scenarioCharactersById);
-    const participantIds = useActiveChatStore.getState().participantIds;
-    const participantIdSet = new Set(participantIds);
+    const participants = getActiveChatParticipants({ includeRemoved: true });
+    const participantIdSet = new Set(participants.map((p) => p.id));
     const nonParticipantCharacters = allCharacters.filter((character) => !participantIdSet.has(character.id));
     this.mentionKeyToCharacterIds = buildCharacterNameIndex(nonParticipantCharacters);
   }

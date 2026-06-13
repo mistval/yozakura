@@ -1,6 +1,15 @@
 ---
 title: API Setup
 sidebar_position: 4
+description: Connect Yozakura to a local or cloud LLM and image model. Setup guides for KoboldCpp, OpenRouter, and any OpenAI-compatible completions API.
+keywords:
+  - yozakura api setup
+  - local llm
+  - koboldcpp
+  - openrouter
+  - image generation
+  - openai compatible api
+  - stable diffusion
 ---
 
 Yozakura requires you to bring your own AI LLM model/subscription (and optionally image generation model).
@@ -11,7 +20,7 @@ You can run these models on your own machine if it's powerful enough, or use a c
 
 Running an LLM on your machine generally requires at least 8 GB of graphics card VRAM for the smaller models.
 
-First you need a model to run. A decent baseline that fits on many modern consumer GPUs is [Llama 3.1 8B Q4_K_M which you can download from Hugging Face](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF?show_file_info=Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf).
+First you need a model to run. A decent baseline that fits on many modern consumer GPUs is [Llama 3.1 8B Q4_K_M which you can download from Hugging Face](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF?show_file_info=Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf) (though it's nowhere near as powerful as commonly available cloud models). Mistral Nemo 12B finetunes like [NemoMix](https://huggingface.co/bartowski/NemoMix-Unleashed-12B-GGUF) and [Mag-Mell](https://huggingface.co/mradermacher/MN-12B-Mag-Mell-R1-GGUF) are a step up that can also run on a lot of consumer hardware.
 
 The suggested software for running a local LLM is [KoboldCpp](https://github.com/lostruins/koboldcpp), but any other application that exposes an OpenAI compatible completions endpoint will do.
 
@@ -19,31 +28,19 @@ The suggested software for running a local LLM is [KoboldCpp](https://github.com
 
 In KoboldCpp select the "Browse" button and choose your model file, then click Launch. If it's successful, a browser window will pop up with a chat interface. You can just close that, or type some messages to test it out.
 
-Then you can start Yozakura and you're good to go. When the initial setup popup appears, the `Completions API Setup` section will already have the correct values for KoboldCpp, so you don't need to change anything there, if you launched KobolCpp as described above.
+Then you can start Yozakura and you're good to go. When the initial setup popup appears, the `Completions API Setup` section will already have the correct values for KoboldCpp, so you don't need to change anything there, if you launched KoboldCpp as described above.
 
 In KoboldCpp, you may want to consider increasing Context Size if you want to have longer chats. The default of 8192 is generally enough, but doubling that adds headroom for longer chats. I expect very few people would need higher than 16384, as the nature of Yozakura tends to keep chats shorter than those you might have in SillyTavern or similar. If, during a longer chat, the quality of responses suddenly degrades severely, you may be exceeding the limits of your context size. At the time of this writing, Yozakura won't detect that for you.
 
 ## Local Image Model
 
-For running an image model on your machine, [AUTOMATIC1111/stable-diffusion-webui](https://github.com/automatic1111/stable-diffusion-webui) is the suggested software, but anything exposing an image generation API with the same shape will do.
+You can also use KoboldCpp to run a local image model on your machine, but anything else that exposes an AUTOMATIC1111-shape API will also work (and you might get better performance and lower VRAM usage with [Forge](https://github.com/lllyasviel/stable-diffusion-webui-forge) or [AUTOMATIC1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui), at the cost of a bit more setup pain).
 
-Follow the setup instructions there (which are more involved than KoboldCpp and can be temperamental in my experience).
+For an image model, [WAI Illustrious SDXL](https://civitai.red/models/827184/wai-illustrious-sdxl) is a good baseline model for manga/anime style images that follows prompts well.
 
-For an image model, [WAI Illustrious SDXL](https://civitai.red/models/827184/wai-illustrious-sdxl) is a good baseline model for manga/anime style images that follows prompts well. Put it, or any other models, into the `webui/models/Stable-diffusion` folder inside of the AUTOMATIC1111 installation directory.
+In KoboldCpp, go to the Image Gen tab and browse to your model under `Image Gen. Model`. If you intend to use LoRAs, enable the "Runtime LoRAs" checkbox, and browse to your LoRA folder next to `LoRA Dir`.
 
-You need to make a change in order to have AUTOMATIC1111 launch its image API:
-
-1. Open the `webui/webui-user.bat` file on Windows
-2. Change this line: `COMMANDLINE_ARGS=` to `set COMMANDLINE_ARGS=--api`
-3. (Optional) For better performance on weaker hardware, change it to `set COMMANDLINE_ARGS=--xformers --medvram --api` instead.
-
-For MacOS or Linux, edit the `webui/webui.user.sh` file instead, and change the `#export COMMANDLINE_ARGS=""` line to `export COMMANDLINE_ARGS="--api"` or `export COMMANDLINE_ARGS="--xformers --medvram --api"`
-
-Then you can run the `run.bat` file (on Windows, or `webui.sh` on MacOS/Linux) to start the application, which should open in a browser window after up to several minutes.
-
-Inside the browser window, select your preferred model in the top left under `Stable Diffusion checkpoint`, trying putting in some prompts and clicking Generate if you want to test it out.
-
-Then you can start Yozakura and you're good to go. When the initial setup popup appears, the `Image Generation Setup` section will already have the correct values for AUTOMATIC1111, so you don't need to change anything there, if you launched AUTOMATIC1111 as described above.
+Click launch, then you can start Yozakura and you're good to go. When the initial setup popup appears, the `Image Generation Setup` section will already have the correct values for KoboldCpp, so you don't need to change anything there.
 
 ## Cloud LLM (OpenRouter)
 

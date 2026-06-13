@@ -16,7 +16,6 @@ type ShowCharacterOverviewParams = {
 type CharacterOverviewContextType = {
   open: boolean;
   routeEditingCharacterId: string | undefined;
-  routeAddCharacterOpen: boolean;
   validSelectedIds: string[];
   setSelectedIds: (ids: string[]) => void;
   closeCharacterOverview: () => void;
@@ -43,7 +42,6 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
   const rawCharacterId = params.co_character ?? undefined;
   const hasValidCharacterId = Boolean(rawCharacterId && rawCharacterId in charactersById);
   const routeEditingCharacterId = hasValidCharacterId ? rawCharacterId : undefined;
-  const routeAddCharacterOpen = params.co_add ?? false;
 
   const validSelectedIds = useMemo(() => {
     return (Array.isArray(params.selected_ids) ? params.selected_ids : []).filter(
@@ -102,7 +100,6 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
     () => ({
       open,
       routeEditingCharacterId,
-      routeAddCharacterOpen,
       validSelectedIds,
       setSelectedIds,
       showCharacterOverview,
@@ -111,7 +108,7 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
       openCharacterOverviewEditor,
       openCharacterOverviewAddCharacters,
     }),
-    [open, routeEditingCharacterId, routeAddCharacterOpen, validSelectedIds]
+    [open, routeEditingCharacterId, validSelectedIds]
   );
 
   return <CharacterOverviewContext.Provider value={value}>{children}</CharacterOverviewContext.Provider>;

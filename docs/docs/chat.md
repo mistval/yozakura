@@ -1,13 +1,22 @@
 ---
 title: Chat Features
 sidebar_position: 3
+description: Explore Yozakura's chat features — on-demand and automatic AI image generation, wardrobes, group chats, speaker selection modes, temporary locations, remote chat, and editable messages.
+keywords:
+  - yozakura chat
+  - group chat
+  - ai image generation
+  - wardrobes
+  - character chat
+  - remote chat
+  - speaker selection
 ---
 
 ## Images on Demand
 
 After setting up an image model, use the Gen Image button to generate an image.
 
-![in chat image](/img/in_chat_image.png)
+![in chat image](/img/in_chat_image_2.png)
 
 If you want to edit image prompts, you can enable the `Edit image prompts before dispatch` setting, though the system tends to be pretty good at generating relevant images on its own, and wardrobes are often a better way to influence image generation (more on that below).
 

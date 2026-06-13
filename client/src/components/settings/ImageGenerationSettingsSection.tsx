@@ -163,7 +163,7 @@ function Automatic1111SizeSettings() {
         tooltipHtml={settingsTooltips['image.width']}
         min={1}
         value={currentSettings.sizeOptions.chatImageWidth}
-        onChange={(nextValue) => updateSizeOptions({ chatImageWidth: Math.max(1, nextValue || 1) })}
+        onChange={(nextValue) => updateSizeOptions({ chatImageWidth: Math.max(0, nextValue) })}
         inputClassName="w-28 border rounded-sm px-2 py-1"
       />
       <NumericSettingRow
@@ -172,7 +172,7 @@ function Automatic1111SizeSettings() {
         tooltipHtml={settingsTooltips['image.height']}
         min={1}
         value={currentSettings.sizeOptions.chatImageHeight}
-        onChange={(nextValue) => updateSizeOptions({ chatImageHeight: Math.max(1, nextValue || 1) })}
+        onChange={(nextValue) => updateSizeOptions({ chatImageHeight: Math.max(0, nextValue) })}
         inputClassName="w-28 border rounded-sm px-2 py-1"
       />
       <NumericSettingRow
@@ -181,7 +181,7 @@ function Automatic1111SizeSettings() {
         tooltipHtml={settingsTooltips['image.cardWidth']}
         min={1}
         value={currentSettings.sizeOptions.cardImageWidth}
-        onChange={(nextValue) => updateSizeOptions({ cardImageWidth: Math.max(1, nextValue || 1) })}
+        onChange={(nextValue) => updateSizeOptions({ cardImageWidth: Math.max(0, nextValue) })}
         inputClassName="w-28 border rounded-sm px-2 py-1"
       />
       <NumericSettingRow
@@ -190,7 +190,7 @@ function Automatic1111SizeSettings() {
         tooltipHtml={settingsTooltips['image.cardHeight']}
         min={1}
         value={currentSettings.sizeOptions.cardImageHeight}
-        onChange={(nextValue) => updateSizeOptions({ cardImageHeight: Math.max(1, nextValue || 1) })}
+        onChange={(nextValue) => updateSizeOptions({ cardImageHeight: Math.max(0, nextValue) })}
         inputClassName="w-28 border rounded-sm px-2 py-1"
       />
     </div>

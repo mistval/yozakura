@@ -14,7 +14,9 @@ type ScenarioLoopStateStoreState = {
   currentPhase: ScenarioLoopPhase;
   autoMode: boolean;
   runState: ScenarioLoopRunState;
+  runningForScenario: string | undefined;
 
+  setScenario: (scenarioId: string | undefined) => void;
   setPhase: (phase: ScenarioLoopPhase) => void;
   setAutoMode: (enabled: boolean) => void;
   setRunState: (runState: ScenarioLoopRunState) => void;
@@ -58,6 +60,7 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
   currentPhase: 'user',
   autoMode: false,
   runState: 'idle',
+  runningForScenario: undefined,
 
   setPhase(phase: ScenarioLoopPhase) {
     set({
@@ -127,5 +130,9 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
       actionType: 'initiate_chat',
       characterId,
     });
+  },
+
+  setScenario: (scenarioId) => {
+    set({ runningForScenario: scenarioId });
   },
 }));

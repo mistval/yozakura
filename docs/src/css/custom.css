@@ -198,16 +198,23 @@ html[data-theme='dark'],
   }
 }
 
-.yozakura-logo-holder {
-  display: flex;
-  justify-content: center;
+/*
+ * Intro page: the logo is the page's <h1> (a markdown image-heading), so the
+ * page keeps a single, semantic, crawlable heading while showing only the
+ * logo. Center it and strip the screenshot framing applied to other images.
+ */
+.theme-doc-markdown h1:has(img) {
+  text-align: center;
   margin-bottom: 40px;
+}
 
-  img {
-    width: 420px;
-    border-radius: 0px !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: none !important;
-  }
+.theme-doc-markdown h1 img {
+  display: block;
+  width: 420px;
+  max-width: 100%;
+  margin: 0 auto;
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: none !important;
 }

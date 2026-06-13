@@ -1,13 +1,20 @@
 ---
-title: Intro
+title: Introduction to Yozakura
+sidebar_label: Intro
 sidebar_position: 8
+description: Yozakura is an AI-powered social simulation where dozens of LLM-driven characters move around a map, chat, generate images, and form evolving memories. Take a tour of the main features.
+keywords:
+  - yozakura
+  - ai social simulation
+  - llm characters
+  - ai roleplay
+  - generative agents
+  - npc simulation
+  - character ai
+  - ai sandbox
 ---
 
-#
-
-<div class="yozakura-logo-holder">
-![yozakura logo](/img/yozakura_logo_horizontal.svg)
-</div>
+# ![Yozakura — an AI-powered social simulation](/img/yozakura_logo_horizontal.svg)
 
 Yozakura is an AI-powered social simulation in which characters (including the user) move around a map, interact with each other via the user's LLM of choice, and form memories and intentions towards each other, creating a dynamically evolving narrative with up to dozens or even hundreds of characters.
 
@@ -17,7 +24,7 @@ This article gives a brief peek at the main features of Yozakura via screenshots
 
 During the user turn, choose one or more characters to chat with (below, Beatrix is the user in a three-way chat).
 
-![group chat image](/img/in_chat_image.png)
+![group chat image](/img/in_chat_image_2.png)
 
 ## Memories
 

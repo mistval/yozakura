@@ -129,6 +129,7 @@ export default function ChatPane() {
   };
 
   const generateImageNow = async () => {
+    setShowImagePrompt(false);
     await ChatCoordinator.generateImageFromPrompt(imagePrompt);
   };
 
