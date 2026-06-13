@@ -14,7 +14,7 @@ export function readModelFromMetaOptions(source: string): string {
 }
 
 export function writeModelToMetaOptions(source: string, model: string): string {
-  const next = { ...asMetaOptionsObject(source), model };
+  const next = { ...asMetaOptionsObject(source), model: model || undefined };
 
   return JSON.stringify(next, null, 2);
 }
