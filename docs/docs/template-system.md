@@ -41,9 +41,15 @@ Yozakura prompts are rendered by [Eta](https://www.npmjs.com/package/eta) which 
 
 Each prompt group can also be given a custom parser function to do custom processing on the response returned from the LLM before returning it to Yozakura. The Next Speaker Selection prompt group's default parser is a good example of this: the prompt templates ask the LLM to output the name of the next speaker, but Yozakura wants a character ID, not name. The default parser function performs the necessary mapping. The parser also receives the same context object as the prompt templates, and can be asynchronous.
 
+## Template Render Log
+
+The `Prompt Templates` section in the settings contains a `Template Render Log` item, where you can view recent template renders to make sure they're doing what you want. The `LLM Settings` section also contains a `Prompt Log` which shows the raw JSON requests send to the completions API.
+
+![render log image](/img/render_log.png)
+
 ## Security
 
-Since Yozakura templates and parsers can execute arbitrary JavaScript code, it is necessary to be careful about where you're copying and pasting from. Malicious code in your templates can steal your LLM API tokens, spy on you, or perform other malign activity. There's an in-app warning mentioning this as well when you paste. Generally speaking, anything you get from a frontier LLM is pretty likely to be safe, but random code from sketchy people on Discord may not be.
+Since Yozakura templates and parsers can execute arbitrary JavaScript code, it is necessary to be careful about where you're copying and pasting from. Malicious code in your templates can steal your LLM API tokens, spy on you, or perform other malign activity. There's an in-app warning mentioning this as well when you paste. Generally speaking, anything you get from a frontier LLM is pretty likely to be safe, but random obfuscated-looking code from random sketchy people on Discord with implausibly sexy avatars who randomly send you a wave sticker out of nowhere may not be as safe.
 
 ## Prompt Template Group Context Docs
 

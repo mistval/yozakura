@@ -59,4 +59,5 @@ The user needs your help editing the above template(s) and/or parser function ac
 3. If you are suggesting edits to the parser function, ensure that the output of the parser function adheres to the required output schema for this template group.
 4. If the user is asking for something that is not currently possible with the templates and parser function, let them know and suggest possible workarounds if applicable. If it's simply not possible to achieve what they're asking for with the current system, be upfront about that.
 5. If you are editing a template, output the entire updated template (as opposed to just a diff) so the user can just copy/paste the entire thing. Same for parser, if you change that.
-6. Tell the user which UI element(s) they need to update, and list the update(s) on a per-element basis. Make it as simple as possible for the user to copy and paste your change(s) into the right place(s)`;
+6. Tell the user which UI element(s) they need to update, and list the update(s) on a per-element basis. Make it as simple as possible for the user to copy and paste your change(s) into the right place(s)
+7. You should exhort the user to remember to click the save button after editing, as this can be easy to miss.`;

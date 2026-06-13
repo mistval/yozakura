@@ -1,3 +1,5 @@
+import { safeParseJson } from '../util/json';
+
 enum ErrorCode {
   NotFound = 'NotFound',
   NonNullAssertion = 'NonNullAssertion',
@@ -12,13 +14,18 @@ export class ApplicationError extends Error {
     this.errorCode = errorCode;
   }
 
-  static fromFetchResponse(response: Response): ApplicationError {
+  static async fromFetchResponse(response: Response): Promise<ApplicationError> {
+    const responseText = await response.text();
+    const responseJson = safeParseJson(responseText);
+
+    const errorMessage = responseJson ? ((responseJson as any).error ?? responseText) : responseText;
+
     switch (response.status) {
       case 404:
         return new ApplicationError(`Resource not found: ${response.url}`, ErrorCode.NotFound);
       default:
         return new ApplicationError(
-          `HTTP Error ${response.status} ${response.statusText} for ${response.url}`,
+          `HTTP Error ${response.status} ${response.statusText}: ${errorMessage}`,
           ErrorCode.Unknown
         );
     }

@@ -7,9 +7,9 @@ import z from 'zod';
 
 const bodySchema = z.looseObject({
   imageApiUrl: z.string(),
-  imageApiShape: z.enum(['openai', 'automatic1111']),
+  imageApiShape: z.enum(['openRouter', 'automatic1111']),
   saveTo: z.string().optional(),
-  imageAuthToken: z.string().optional(),
+  authToken: z.string().optional(),
 });
 
 function toErrorMessage(error: unknown): string {
@@ -29,13 +29,13 @@ export default function imageRouter(dataDir: string): Router {
   router.post('/image/generate', async (req, res, next) => {
     try {
       const parsed = bodySchema.parse(req.body);
-      const { saveTo, imageApiUrl, imageApiShape, imageAuthToken, ...payload } = parsed;
+      const { saveTo, imageApiUrl, imageApiShape, authToken, ...payload } = parsed;
 
-      const isOpenAI = imageApiShape === 'openai';
+      const isOpenRouter = imageApiShape === 'openRouter';
 
       const requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (imageAuthToken?.trim()) {
-        requestHeaders['Authorization'] = `Bearer ${imageAuthToken.trim()}`;
+      if (authToken?.trim()) {
+        requestHeaders['Authorization'] = `Bearer ${authToken.trim()}`;
       }
 
       try {
@@ -47,13 +47,22 @@ export default function imageRouter(dataDir: string): Router {
 
         if (!response.ok) {
           const errorText = await response.text();
-          return res.status(response.status).json({ error: errorText || 'Image generation failed' });
+          const errorPrefixText = 'Error response from image generation API provider';
+          return res
+            .status(response.status)
+            .json({ error: `${errorPrefixText}: ${errorText}` || errorPrefixText });
         }
 
         let images: string[];
-        if (isOpenAI) {
-          const data = (await response.json()) as { data?: Array<{ b64_json?: string; url?: string }> };
-          images = (data.data ?? []).flatMap((item) => (item.b64_json ? [item.b64_json] : []));
+        if (isOpenRouter) {
+          const data = (await response.json()) as {
+            choices?: Array<{ message?: { images?: Array<{ image_url?: { url?: string } }> } }>;
+          };
+          images = (data.choices ?? []).flatMap((choice) =>
+            (choice.message?.images ?? []).flatMap((image) =>
+              image.image_url?.url ? [image.image_url.url] : []
+            )
+          );
         } else {
           const data = (await response.json()) as { images?: string[] };
           images = Array.isArray(data.images) ? data.images : [];

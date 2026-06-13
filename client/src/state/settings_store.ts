@@ -11,7 +11,7 @@ import {
 import {
   imageApiShapeSchema,
   automatic1111SettingsSchema,
-  openaiSettingsSchema,
+  openRouterSettingsSchema,
   imageApiShapes,
   type ImageApiShape,
 } from '../engine/settings/image_api.js';
@@ -68,7 +68,7 @@ const settingsSchema = z.object({
   imageApiShape: imageApiShapeSchema,
   imageSettingsForShape: z.object({
     automatic1111: automatic1111SettingsSchema,
-    openai: openaiSettingsSchema,
+    openRouter: openRouterSettingsSchema,
   }),
   editImagePromptsBeforeDispatch: z.boolean(),
   autoImageRate: z.number(),
@@ -125,7 +125,7 @@ const DEFAULT_SETTINGS: Settings = {
   userGossipChanceMultiplier: 1,
   familiarityWeightMultiplier: 1,
   familiarityGain: 10,
-  familiarityDecay: 1,
+  familiarityDecay: 0.5,
   npcRemoteChatRate: 0.15,
   npcTriggeredGroupChatRate: 0.07,
   npcGroupChatAdditionalParticipants: 2,

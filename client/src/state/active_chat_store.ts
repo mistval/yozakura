@@ -113,16 +113,6 @@ function getCharactersByIds(characterIds: string[]): Character[] {
   return useScenarioCharacterStore.getState().getCharactersByIds(characterIds);
 }
 
-function calculateChatMedium(participants: Character[]): ChatMedium {
-  const uniqueLocationIds = new Set(participants.map((participant) => participant.locationId));
-  return uniqueLocationIds.size === 1 ? 'in_person' : 'remote';
-}
-
-function calculateChatMediumFromIds(participantIds: string[]): ChatMedium {
-  const participants = getCharactersByIds(participantIds);
-  return calculateChatMedium(participants);
-}
-
 function getActiveChatStateSnapshotFromState(state: BaseChatStoreState): ActiveChatStoreState {
   if (state.chatState === 'inactive') {
     throw new Error('Requesting active chat state, but chat is not active');
@@ -144,13 +134,34 @@ export function useActiveChatParticipants(): Character[] {
     .filter((character): character is Character => Boolean(character));
 }
 
-export function getActiveChatMedium(): ChatMedium {
-  return calculateChatMedium(getActiveChatParticipants());
+export function getActiveChatMedium(
+  participants = useActiveChatStore.getState().participantIds,
+  getRequiredCharacterById = useScenarioCharacterStore.getState().getRequiredCharacterById,
+  getCharacterLocation = useActiveChatStore.getState().getChatCharacterLocation,
+  map = useScenarioStore.getState().activeScenarioMap,
+  ephemeralLocation = useActiveChatStore.getState().ephemeralLocation
+): ChatMedium {
+  const allLocations = new Set(
+    participants.map((p) => getCharacterLocation(p, getRequiredCharacterById, map, ephemeralLocation)?.id)
+  );
+
+  return allLocations.size === 1 ? 'in_person' : 'remote';
 }
 
 export function useActiveChatMedium(): ChatMedium {
+  const getCharacterLocation = useActiveChatStore((s) => s.getChatCharacterLocation);
+  const getRequiredCharacterById = useScenarioCharacterStore((s) => s.getRequiredCharacterById);
+  const ephemeralLocation = useActiveChatStore((s) => s.ephemeralLocation);
+  const map = useScenarioStore((s) => s.activeScenarioMap);
   const participants = useActiveChatParticipants();
-  return calculateChatMedium(participants);
+
+  return getActiveChatMedium(
+    participants.map((p) => p.id),
+    getRequiredCharacterById,
+    getCharacterLocation,
+    map,
+    ephemeralLocation
+  );
 }
 
 export function useChatUserLocation() {
@@ -212,7 +223,6 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
 
     set({
       ...args,
-      chatMode: calculateChatMedium(participants),
       chatState: initiatorIsUser ? 'awaiting_user_input' : 'npc_speaking',
       processingMemoryStatusInfo: undefined,
       transcript: ConversationTranscript.new(),
@@ -313,7 +323,6 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
     set({
       participantIds: nextParticipantIds,
       transcript: nextTranscript,
-      chatMode: calculateChatMediumFromIds(nextParticipantIds),
       preConversationWardrobeSnapshotByCharacterId: {
         ...activeState.preConversationWardrobeSnapshotByCharacterId,
         [participantId]: participant.wardrobes,
@@ -343,7 +352,6 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
     set({
       participantIds: nextParticipantIds,
       transcript: nextTranscript,
-      chatMode: calculateChatMediumFromIds(nextParticipantIds),
       removedParticipantIds: currentState.removedParticipantIds.concat(participantId),
     });
   },

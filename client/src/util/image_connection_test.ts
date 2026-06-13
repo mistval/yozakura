@@ -2,8 +2,8 @@ import { getErrorMessage } from '../errors/error_util.js';
 import type { ImageApiShape } from '../state/settings_store.js';
 
 const AUTOMATIC1111_TXT2IMG_PATH = '/sdapi/v1/txt2img';
-const OPENAI_IMAGES_PATH = '/v1/chat/completions';
-const OPENAI_MODELS_PATH = '/models';
+const OPENROUTER_IMAGES_PATH = '/v1/chat/completions';
+const OPENROUTER_MODELS_PATH = '/v1/models';
 
 type UrlRewriteResult =
   | { ok: true; testUrl: string }
@@ -37,14 +37,14 @@ function toImageTestEndpointUrl(rawUrl: string, shape: ImageApiShape): UrlRewrit
     return { ok: true, testUrl: parsedUrl.toString() };
   }
 
-  if (!currentPathname.endsWith(OPENAI_IMAGES_PATH)) {
+  if (!currentPathname.endsWith(OPENROUTER_IMAGES_PATH)) {
     return {
       ok: false,
-      error: `OpenAI-compatible image URL is in an unexpected shape. Expected to end with ${OPENAI_IMAGES_PATH}.`,
+      error: `OpenAI-compatible image URL is in an unexpected shape. Expected to end with ${OPENROUTER_IMAGES_PATH}.`,
     };
   }
 
-  const nextPath = currentPathname.replace(new RegExp(`${OPENAI_IMAGES_PATH}$`), OPENAI_MODELS_PATH);
+  const nextPath = currentPathname.replace(new RegExp(`${OPENROUTER_IMAGES_PATH}$`), OPENROUTER_MODELS_PATH);
   parsedUrl.pathname = nextPath || '/';
   return { ok: true, testUrl: parsedUrl.toString() };
 }

@@ -37,13 +37,13 @@ function RetryCard({
   const isRetrying = card.status === 'retrying';
 
   return (
-    <div className="w-[24rem] max-w-[calc(100vw-2rem)] rounded-sm border border-border-strong bg-inset p-3 shadow-md">
+    <div className="w-120 max-w-[calc(100vw-2rem)] rounded-sm border border-border-strong bg-inset p-3 shadow-md">
       <div className="space-y-2">
         <div className="text-sm font-semibold text-primary">
           {card.operationType} (Attempt {card.attempt})
         </div>
         <div className="text-sm text-secondary-strong">{formatRetryCountdown(card, nowMs)}</div>
-        <div className="rounded-sm border border-danger-border bg-danger-bg px-2 py-1 text-sm text-danger-text">
+        <div className="rounded-sm border border-danger-border bg-danger-bg px-2 py-1 text-sm text-danger-text wrap-break-word">
           {card.errorMessage || 'Unknown error'}
         </div>
 

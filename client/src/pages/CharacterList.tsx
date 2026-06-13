@@ -69,7 +69,6 @@ export default function CharacterList() {
             <CharacterCard
               key={character.id}
               character={character}
-              imageHash={character.updatedAt}
               onClick={() => showCharacterEditor(character.id)}
             />
           ))

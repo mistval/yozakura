@@ -10,9 +10,9 @@ class ExtractCharacterDescriptionSystemTemplate extends PromptTemplateBase<
   public readonly defaultTemplateString = `You are a writing assistant tasked with extracting an internal character profile from unstructured text.
 Rules:
 - Distill a generalized profile of the character from the text, focusing on their personality, mannerisms, quirks, likes, dislikes, and interpersonal behavior.
-- Write it like a manual for how to role play as this character.
+- Your output should be useful as a manual for how to role play as this character.
 - Strip away all world-specific lore, organization names, job titles, faction references, and scenario-specific context.
-- Remove any reference to "the user" specifically, opting instead to focus on the character's internal compass.
+- Remove any reference to "the user" specifically. Avoid defining the character in relation to any one other character.
 - When in doubt, err on the side of keeping information and being detailed.
 - Output the character profile and nothing else.`;
 

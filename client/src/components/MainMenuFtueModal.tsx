@@ -38,20 +38,20 @@ const FTUE_TOKEN_STREAMING_TOOLTIP_HTML =
 const FTUE_IMAGE_API_URL_TOOLTIP_HTML_AUTOMATIC1111 =
   'URL for your image generation API. Usually, it should end with <code>/sdapi/v1/txt2img</code>.';
 
-const FTUE_IMAGE_API_URL_TOOLTIP_HTML_OPENAI =
+const FTUE_IMAGE_API_URL_TOOLTIP_HTML_OPENROUTER =
   'URL for your image generation API. Usually, it should end with <code>/v1/chat/completions</code>, just like the completions endpoint.';
 
 const FTUE_IMAGE_AUTH_TOKEN_TOOLTIP_HTML =
   'Bearer token required for most cloud image providers. Not needed for local AUTOMATIC1111.';
 
 const FTUE_IMAGE_MODEL_TOOLTIP_HTML =
-  'The image model to request (e.g. <code>dall-e-3</code>, <code>openai/dall-e-3</code> on OpenRouter).';
+  'The image model to request (e.g. <code>x-ai/grok-imagine-image-quality</code>).';
 
-const API_SHAPE_TOOLTIP_HTML = `The AUTOMATIC1111 shape is supported by most local image generation software (including, of course, <a href="https://github.com/automatic1111/stable-diffusion-webui">AUTOMATIC1111</a>). The OpenAI Completions shape is more commonly supported by cloud providers, including OpenRouter.`;
+const API_SHAPE_TOOLTIP_HTML = `The AUTOMATIC1111 shape is supported by most local image generation software (including, of course, <a href="https://github.com/automatic1111/stable-diffusion-webui">AUTOMATIC1111</a>). The OpenRouter shape is for OpenRouter and might work with other providers that have similar APIs.`;
 
 const IMAGE_SHAPE_LABELS: Record<ImageApiShape, string> = {
   automatic1111: 'AUTOMATIC1111',
-  openai: 'OpenAI Completions Compatible',
+  openRouter: 'OpenRouter',
 };
 
 export default function MainMenuFtueModal() {
@@ -293,7 +293,7 @@ export default function MainMenuFtueModal() {
                 value={llmModelDraft}
                 onChange={(event) => setLlmModelDraft(event.target.value)}
                 onBlur={saveConnectionDetails}
-                placeholder="openrouter/auto"
+                placeholder="deepseek/deepseek-chat"
                 className="w-full rounded-sm border px-3 py-2"
               />
             </div>
@@ -368,7 +368,7 @@ export default function MainMenuFtueModal() {
                   html={
                     imageApiShape === 'automatic1111'
                       ? FTUE_IMAGE_API_URL_TOOLTIP_HTML_AUTOMATIC1111
-                      : FTUE_IMAGE_API_URL_TOOLTIP_HTML_OPENAI
+                      : FTUE_IMAGE_API_URL_TOOLTIP_HTML_OPENROUTER
                   }
                   align="center"
                 />
@@ -379,8 +379,8 @@ export default function MainMenuFtueModal() {
                 onChange={(event) => setImageUrlDraft(event.target.value)}
                 onBlur={saveImageConnectionDetails}
                 placeholder={
-                  imageApiShape === 'openai'
-                    ? 'https://openrouter.ai/api/v1/images/generations'
+                  imageApiShape === 'openRouter'
+                    ? 'https://openrouter.ai/api/v1/chat/completions'
                     : 'http://127.0.0.1:7860/sdapi/v1/txt2img'
                 }
                 className="w-full rounded-sm border px-3 py-2"
@@ -409,7 +409,7 @@ export default function MainMenuFtueModal() {
               />
             </div>
 
-            {imageApiShape === 'openai' && (
+            {imageApiShape === 'openRouter' && (
               <div className="space-y-1">
                 <div className="flex items-center gap-3">
                   <label className="block text-sm font-medium" htmlFor="ftue-image-model">
@@ -426,7 +426,7 @@ export default function MainMenuFtueModal() {
                   value={imageModelDraft}
                   onChange={(event) => setImageModelDraft(event.target.value)}
                   onBlur={saveImageConnectionDetails}
-                  placeholder="dall-e-3"
+                  placeholder="x-ai/grok-imagine-image-quality"
                   className="w-full rounded-sm border px-3 py-2"
                 />
               </div>

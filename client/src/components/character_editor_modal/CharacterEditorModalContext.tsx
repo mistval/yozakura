@@ -17,7 +17,6 @@ import {
 import { detectCharacterCardMetadata } from '../../engine/character_card_metadata';
 import { createWardrobe } from '../../engine/wardrobes.js';
 import type { Character } from '../../engine/types';
-import defaultCardImage from '../../public/images/character/default_character.png';
 import { assertNonNullish } from '../../errors/application_error';
 import { getErrorMessage } from '../../errors/error_util';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
@@ -109,7 +108,7 @@ export function CharacterEditorModalProvider({
     ? previewUrl
     : currentImagePath
       ? `${currentImagePath}?v=${imageRefreshKey}`
-      : defaultCardImage;
+      : '/images/character/default_character.png';
 
   useEffect(() => {
     return () => {
@@ -340,7 +339,7 @@ export function CharacterEditorModalProvider({
       if (isGlobalMode) {
         await useGlobalCharactersStore.getState().saveGlobalCharacter(character, selectedImageFile);
       } else {
-        await saveScenarioCharacter(character);
+        await saveScenarioCharacter(character, selectedImageFile);
       }
 
       onClose({ deleted: false });

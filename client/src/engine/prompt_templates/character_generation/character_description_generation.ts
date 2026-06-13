@@ -26,13 +26,12 @@ Rules:
 class CharacterDescriptionGenerationUserTemplate extends PromptTemplateBase<
   z.infer<typeof characterEditorExecutionContextSchema>
 > {
-  public readonly defaultTemplateString = `Generate an interal character profile for <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %>.
+  public readonly defaultTemplateString = `Generate an internal character profile for <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %>.
 
 Here is some core information about <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> to consider:
 <hint>
 <%= it.focusedCharacter.internalDescription || (
-'Their personality traits include: ' + it.randomPersonalityTraits.join(', ') + '\\n' +
-'Their age is: ' + Math.floor(Math.random() * 60 + 18) + ' years old'
+'Their personality traits include: ' + it.randomPersonalityTraits.join(', ')
 ) %>
 </hint>
 

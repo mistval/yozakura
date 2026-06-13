@@ -47,9 +47,9 @@ Then you can start Yozakura and you're good to go. When the initial setup popup 
 
 ## Cloud LLM (OpenRouter)
 
-If your machine can't comfortably run a local model, or you just want better results, use a cloud provider instead. The models available in the cloud are far stronger than anything that fits on a consumer GPU, and Yozakura benefits from every bit of that strength: characters follow their personas more faithfully, memories stay coherent over long play sessions, and the world drifts into nonsense less often. The tradeoff is latency and money. You pay per token, and the big frontier models can be slower to respond than a small local model.
+If your machine can't comfortably run a local model, or you just want better narrative coherence, use a cloud provider instead.
 
-[OpenRouter](https://openrouter.ai) is the suggested provider because one account and one API key gets you access to practically every major model (Claude, GPT, Gemini, DeepSeek, and hundreds of others) on pay-as-you-go credits, and you can switch models by just editing a text field. That said, any provider exposing an OpenAI compatible completions endpoint will work the same way.
+[OpenRouter](https://openrouter.ai) is an excellent provider because one account and one API key gets you access to practically every major model (Claude, GPT, Gemini, DeepSeek, and hundreds of others) on pay-as-you-go credits, and you can switch models whenever you want. However, any provider exposing an OpenAI compatible completions endpoint will work the same way.
 
 Setup:
 
@@ -60,18 +60,20 @@ Setup:
    - **Completions API URL**: `https://openrouter.ai/api/v1/chat/completions`
    - **Bearer/Auth Token**: your OpenRouter API key
    - **Model**: a model ID from the [models page](https://openrouter.ai/models), see below
-5. Leave token streaming enabled (OpenRouter supports it), and click `Test Connection` to confirm everything works.
+5. Leave token streaming enabled, and click `Test Connection` to confirm you can connect.
 
-For the model, browse the OpenRouter models page and copy the ID of whatever appeals to you, for example `anthropic/claude-sonnet-4.5` (excellent but pricier) or `deepseek/deepseek-chat` (much cheaper and still strong). Each model's page shows its per-token pricing. Keep in mind that Yozakura makes a lot of LLM calls: every conversation is followed by a round of memory processing calls for each NPC involved, so a mid-priced workhorse model can be a better daily driver than a frontier model. There are also free model variants (marked `:free`) with daily rate limits. They're fine for kicking the tires, but Yozakura's call volume will run into those limits quickly.
+For the model, `deepseek/deepseek-chat` is a decent choice, but it's a good idea to try several models and find one you like. Yozakura makes a lot of LLM calls with all the NPC chatting and memory processing, so keep that in mind as you budget. In my experience each default twelve-message NPC chat with `deepseek/deepseek-chat` costs about a penny. Using the latest models from Anthropic, OpenAI, or Google could cost much more (and be overkill).
 
 One note on privacy: OpenRouter routes your prompts to the underlying model providers, and some free models may train on your inputs. You can restrict this in your OpenRouter privacy settings.
 
 ## Cloud Image Generation (OpenRouter)
 
-OpenRouter can also handle image generation, and it works through the same chat completions endpoint as text. In the initial setup popup under `Image Generation Setup` (or the settings cog -> Image Generation):
+OpenRouter can also handle image generation, and it works through the same chat completions endpoint as text. However, local image models will generally give you better results, especially if you're looking for animated style images, and they have somewhat more modest system requirements than text models. Using a local image model is recommended if at all possible. If not, then:
 
-1. Change **API Shape** to `OpenAI Completions Compatible`. The AUTOMATIC1111 shape is for local software; cloud providers including OpenRouter use the OpenAI shape.
-2. **Image API URL**: `https://openrouter.ai/api/v1/chat/completions` (yes, the same URL as the text API)
+In the initial setup popup under `Image Generation Setup` (or the settings cog -> Image Generation):
+
+1. Change **API Shape** to `OpenAI Completions Compatible`.
+2. **Image API URL**: `https://openrouter.ai/api/v1/chat/completions` (the same URL as the text API)
 3. **Bearer/Auth Token**: the same OpenRouter API key
 4. **Model**: an image-capable model, for example `google/gemini-2.5-flash-image`. On the OpenRouter models page you can filter by image output to see what's available.
 5. Click `Test Connection`.

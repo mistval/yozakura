@@ -9,7 +9,7 @@ import {
   getRequiredActiveScenarioMap,
   useScenarioStore,
 } from './scenario_store.js';
-import { newId } from '../util/id.js';
+import { addOrReplaceVersionQueryParam, newId } from '../util/id.js';
 
 type ScenarioCharacterStoreState = {
   scenarioCharactersById: Record<string, Character>;
@@ -26,6 +26,7 @@ type ScenarioCharacterStoreState = {
   saveScenarioCharacters: (character: Character[]) => void;
   saveScenarioCharacter: (
     character: Character,
+    imageFile?: File,
     setter?: (prevCharacter: Character | undefined) => Character
   ) => void;
   saveInactiveScenarioCharacterImmediate: (character: Character) => Promise<void>;
@@ -123,7 +124,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     get().setScenarioCharacters(characters);
   },
 
-  saveScenarioCharacter: (character, setter) => {
+  saveScenarioCharacter: (character, imageFile, setter) => {
     setter ??= (prev) => ({ ...prev, ...character });
 
     const state = get();
@@ -144,6 +145,18 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
         }
 
         await Database.storeScenarioCharacter(latestCharacter);
+
+        if (imageFile) {
+          await Files.upload(
+            latestCharacter.imagePath,
+            imageFile,
+            imageFile.type || 'application/octet-stream'
+          );
+
+          get().saveScenarioCharacterFields(character.id, {
+            imagePath: addOrReplaceVersionQueryParam(character.imagePath),
+          });
+        }
       },
       DATABASE_OBJECT_NAME,
       {
@@ -156,7 +169,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     const char = get().scenarioCharactersById[id];
     assertNonNullish(char, 'saveScenarioCharacterFields called for non-existent characterId: ' + id);
 
-    return get().saveScenarioCharacter(char, (prev) => {
+    return get().saveScenarioCharacter(char, undefined, (prev) => {
       assertNonNullish(
         prev,
         'saveScenarioCharacterFields setter called with non-existent previous character for id: ' + id
@@ -178,7 +191,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
   addConversationSummary: (characterId, summary) => {
     const character = get().getRequiredCharacterById(characterId);
 
-    return get().saveScenarioCharacter(character, (prev) => {
+    return get().saveScenarioCharacter(character, undefined, (prev) => {
       assertNonNullish(
         prev,
         'addConversationSummary setter called with non-existent previous character for id: ' + characterId
@@ -198,7 +211,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     const map = getRequiredActiveScenarioMap();
 
     const scenarioCharacter = await copyGlobalCharacterForScenario(character, scenarioId, map);
-    await get().saveScenarioCharacter(scenarioCharacter, () => scenarioCharacter);
+    await get().saveScenarioCharacter(scenarioCharacter, undefined, () => scenarioCharacter);
 
     return scenarioCharacter;
   },
