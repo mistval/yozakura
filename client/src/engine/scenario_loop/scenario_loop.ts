@@ -251,10 +251,21 @@ function stopScenarioLoop() {
 }
 
 export async function startScenarioLoop() {
-  stopScenarioLoop();
   const loopState = useScenarioLoopStateStore.getState();
+  const activeScenarioId = useScenarioStore.getState().activeScenario?.id;
+
+  if (!activeScenarioId) {
+    return;
+  }
+
+  if (activeScenarioId === loopState.runningForScenario) {
+    return;
+  }
+
+  stopScenarioLoop();
 
   loopState.setRunState('running');
+  loopState.setScenario(activeScenarioId);
 
   try {
     await doScenarioLoopAsyncAction(() => whenActiveChatRestoreSettled());
@@ -276,5 +287,9 @@ export async function startScenarioLoop() {
     });
 
     throw err;
+  } finally {
+    if (useScenarioLoopStateStore.getState().runningForScenario === activeScenarioId) {
+      loopState.setScenario(undefined);
+    }
   }
 }
