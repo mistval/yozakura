@@ -28,7 +28,7 @@ Rules:
 class ConversationRollingSummaryUserTemplate extends PromptTemplateBase<
   z.infer<typeof focusedConversationExecutionContextSchema>
 > {
-  public readonly defaultTemplateString = `Speaker persona:
+  public readonly defaultTemplateString = `<%= it.focusedCharacter.firstName %>'s persona:
 <<%= it.focusedCharacter.firstName %>_persona>
 <%= it.focusedCharacter.internalDescription %>
 

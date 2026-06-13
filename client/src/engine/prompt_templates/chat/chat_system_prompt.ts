@@ -57,10 +57,19 @@ Here is a goal that <%= it.focusedCharacter.firstName %> wants to discuss with <
 </goal>
 <% } %>
 
+The setting:
 <setting>
-<%= it.worldMap.description %>
+This scenario takes place in:
+World name: <%= it.worldMap.name %>
 
-<%= it.focusedCharacter.firstName %> is currently located in "<%= it.currentLocation.name %>": "<%= it.currentLocation.description %>"
+World description: <%= it.worldMap.description %>
+
+
+<%= it.focusedCharacter.firstName %>'s current location is:
+Location name:  <%= it.currentLocation.name %>
+
+Location description: <%= it.currentLocation.description %>
+
 </setting>
 
 <% const gossipTargetHasBeenRagged = it.raggedCharacters.some((c) => c.id === it.gossipTargetCharacter?.id); %>
@@ -73,6 +82,7 @@ Here is a goal that <%= it.focusedCharacter.firstName %> wants to discuss with <
 </memories_of_<%= it.gossipTargetCharacter.id %>>
 <% } %>
 
+Your instructions:
 <% const isInitialMessage = it.conversationMessages.length === 0; %>
 <instructions>
 - <%= isInitialMessage ? 'Write a proactive first message in the conversation as ' + it.focusedCharacter.firstName + ' in first person perspective' : 'Write the next response as ' + it.focusedCharacter.firstName + ' in first person perspective' %>

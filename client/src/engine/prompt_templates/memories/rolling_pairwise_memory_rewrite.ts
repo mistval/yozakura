@@ -8,17 +8,17 @@ class RollingPairwiseMemoryRewriteSystemTemplate extends PromptTemplateBase<
   z.infer<typeof targetedConversationExecutionContextSchema>
 > {
   public readonly defaultTemplateString = `You will be given the following types of information:
-1. A list of summaries of recent conversations that have taken place between <%= it.focusedCharacter.firstName %> and <%= it.targetCharacter.firstName %> (if any).
-2. A list of secondhand information that <%= it.focusedCharacter.firstName %> has heard about <%= it.targetCharacter.firstName %> (if any).
-3. A goal for <%= it.focusedCharacter.firstName %> in their next interaction with <%= it.targetCharacter.firstName %> (if any)
-4. An existing consolidated summary of <%= it.focusedCharacter.firstName %>'s memories towards <%= it.targetCharacter.firstName %> (if any).
+1. An existing consolidated summary of <%= it.focusedCharacter.firstName %>'s memories towards <%= it.targetCharacter.firstName %> (if any).
+2. A list of summaries of recent conversations that have taken place between <%= it.focusedCharacter.firstName %> and <%= it.targetCharacter.firstName %> (if any).
+3. A list of secondhand information that <%= it.focusedCharacter.firstName %> has heard about <%= it.targetCharacter.firstName %> (if any).
+4. A goal for <%= it.focusedCharacter.firstName %> in their next interaction with <%= it.targetCharacter.firstName %> (if any) 
 
 Your job is to use the available information to rewrite <%= it.focusedCharacter.firstName %>'s consolidated memory about <%= it.targetCharacter.firstName %>. The existing consolidated memory is now stale and needs rewriting to include newer details.
 
 Rules:
 - Your goal is to crystallize the current state of <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %> based on the provided logs.
 - First, prioritize information that is relevant to <%= it.focusedCharacter.firstName %>'s goal in their next interaction with <%= it.targetCharacter.firstName %> (if any).
-- Second, prioritize <%= it.focusedCharacter.firstName %>'s goals and intentions towards <%= it.targetCharacter.firstName %>, relationship status, memories, and emotional trajectory relevant to the relationship.
+- Second, prioritize <%= it.focusedCharacter.firstName %>'s broader goals and intentions towards <%= it.targetCharacter.firstName %>, relationship status, memories, and emotional trajectory relevant to the relationship.
 - From the existing consolidated memory, keep important details that remain plausible, even if they are not substantiated in the most recent conversation summaries.
 - Write in third person. Be specific and direct.
 - Output up to five paragraphs.
@@ -36,7 +36,7 @@ Rules:
 class RollingPairwiseMemoryRewriteUserTemplate extends PromptTemplateBase<
   z.infer<typeof targetedConversationExecutionContextSchema>
 > {
-  public readonly defaultTemplateString = `<%= it.focusedCharacter.firstName %>'s existing memory about <%= it.targetCharacter.firstName %>:
+  public readonly defaultTemplateString = `<%= it.focusedCharacter.firstName %>'s existing consolidated memory about <%= it.targetCharacter.firstName %>:
 <existing_memory>
 <%= it.targetCharacterRelationship.memory || (it.focusedCharacter.firstName + ' has no memories about ' + it.targetCharacter.firstName + ' yet.') %>
 
@@ -44,6 +44,12 @@ class RollingPairwiseMemoryRewriteUserTemplate extends PromptTemplateBase<
 
 Recent specific interactions with and information about <%= it.targetCharacter.firstName %> that <%= it.focusedCharacter.firstName %> remembers (oldest first):
 <%= it.targetCharacterFormattedRollingMemoriesText %>
+
+<%= it.focusedCharacter.firstName %> goal towards <%= it.targetCharacter.firstName %> in their next interaction:
+<goal>
+<% it.targetCharacterRelationship.nextConversationGoal || 'No goal is set' %>
+
+</goal>
 
 
 Output the updated memory now, prioritizing more recent information.`;

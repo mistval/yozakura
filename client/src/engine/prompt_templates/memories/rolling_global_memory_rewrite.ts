@@ -7,7 +7,7 @@ import { focusedConversationExecutionContextSchema } from '../prompt_template_co
 class RollingGlobalMemoryRewriteSystemTemplate extends PromptTemplateBase<
   z.infer<typeof focusedConversationExecutionContextSchema>
 > {
-  public readonly defaultTemplateString = `Your job is to read a list of conversation summaries and use it to distill 3-4 paragraphs of memories for <%= it.focusedCharacter.firstName %>. You will also have access to <%= it.focusedCharacter.firstName %>'s existing memory state.
+  public readonly defaultTemplateString = `Your job is to read a list of conversation summaries and use it to distill up to five paragraphs of memories for <%= it.focusedCharacter.firstName %>. You will also have access to <%= it.focusedCharacter.firstName %>'s existing memory state.
 
 Rules:
 - Prioritize recurring and actionable information that can be used to guide <%= it.focusedCharacter.firstName %>'s future actions and decisions.
@@ -43,6 +43,7 @@ Current global memory:
 
 Rolling conversation summary history (oldest first):
 <%= it.rollingConversationSummariesText %>
+
 
 Rewrite the global memory now. Output the new global memory and nothing else.`;
   public readonly contextSchema = focusedConversationExecutionContextSchema;
