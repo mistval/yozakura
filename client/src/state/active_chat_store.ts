@@ -83,6 +83,7 @@ type BaseChatStoreState = {
 type ActiveChatStoreState = OmitFunctions<BaseChatStoreState> & {
   chatState: 'awaiting_user_input' | 'generating_image' | 'processing_memories' | 'npc_speaking';
   participantIds: string[];
+  removedParticipantIds: string[];
   gossipTargetCharacterId: string | undefined;
   transcript: ConversationTranscript;
   preConversationWardrobeSnapshotByCharacterId: Record<string, Wardrobe[]>;
@@ -121,8 +122,21 @@ function getActiveChatStateSnapshotFromState(state: BaseChatStoreState): ActiveC
   return state as ActiveChatStoreState;
 }
 
-export function getActiveChatParticipants(): Character[] {
-  return getCharactersByIds(useActiveChatStore.getState().participantIds);
+export function getActiveChatParticipants(
+  options: {
+    includeRemoved?: boolean;
+    includeUser?: boolean;
+  } = {}
+): Character[] {
+  const state = useActiveChatStore.getState();
+  const scenarioState = useScenarioStore.getState();
+  const { includeRemoved = false, includeUser = true } = options;
+
+  return getCharactersByIds(
+    state.participantIds
+      .concat(includeRemoved ? state.removedParticipantIds : [])
+      .filter((id) => includeUser || id !== scenarioState.activeScenario?.userCharacterId)
+  );
 }
 
 export function useActiveChatParticipants(): Character[] {
@@ -347,12 +361,15 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
     }
 
     const nextParticipantIds = activeState.participantIds.filter((id) => id !== participantId);
-    const nextTranscript = activeState.transcript.updateMessagesForParticipantLeaving(participantId);
+    const { updatedTranscript, didPurge } =
+      activeState.transcript.updateMessagesForParticipantLeaving(participantId);
 
     set({
       participantIds: nextParticipantIds,
-      transcript: nextTranscript,
-      removedParticipantIds: currentState.removedParticipantIds.concat(participantId),
+      transcript: updatedTranscript,
+      removedParticipantIds: didPurge
+        ? currentState.removedParticipantIds
+        : currentState.removedParticipantIds.concat(participantId),
     });
   },
 

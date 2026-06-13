@@ -432,7 +432,10 @@ export class ChatCoordinator {
   }
 
   private static getPastTenseLabel() {
-    const participants = getActiveChatParticipants();
+    const participants = getActiveChatParticipants({
+      includeRemoved: true,
+    });
+
     if (participants.length === 2) {
       const verb = getActiveChatMedium() === 'in_person' ? 'spoke to' : 'remote chatted with';
       return `${participants[0]!.firstName} ${verb} ${participants[1]!.firstName}`;
@@ -490,7 +493,7 @@ export class ChatCoordinator {
       const mentionedCharacter = this.getCharacterById(characterId);
       assertNonNullish(mentionedCharacter, `Character with ID ${characterId} not found`);
 
-      for (const participant of getActiveChatParticipants()) {
+      for (const participant of getActiveChatParticipants({ includeUser: false })) {
         const focusedCharacter = this.getCharacterById(participant.id);
 
         const reminder = await memoryRagPromptTemplatesGroup.render({

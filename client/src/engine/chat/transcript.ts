@@ -365,26 +365,32 @@ export class ConversationTranscript {
     if (messageByCharacter) {
       // If character has sent a message, add a "left the chat" message for them
 
-      return new ConversationTranscript(
-        this.messages.concat(
-          new ChatMessageWrapper(
-            Database.createPersistedObject({
-              messageType: 'system_message',
-              systemMessageType: 'leave',
-              characterId,
-            }),
-            messageByCharacter.associatedCharacter
-          )
+      return {
+        updatedTranscript: new ConversationTranscript(
+          this.messages.concat(
+            new ChatMessageWrapper(
+              Database.createPersistedObject({
+                messageType: 'system_message',
+                systemMessageType: 'leave',
+                characterId,
+              }),
+              messageByCharacter.associatedCharacter
+            )
+          ),
+          this.participants
         ),
-        this.participants
-      );
+        didPurge: false,
+      };
     } else {
       // If the character hasn't sent any messages, remove their join message so it's like they never participated in the chat at all
 
-      return new ConversationTranscript(
-        this.messages.filter((m) => !m.isJoinOrLeaveMessageForCharacter(characterId)),
-        this.participants.filter((p) => p.id !== characterId)
-      );
+      return {
+        updatedTranscript: new ConversationTranscript(
+          this.messages.filter((m) => !m.isJoinOrLeaveMessageForCharacter(characterId)),
+          this.participants.filter((p) => p.id !== characterId)
+        ),
+        didPurge: true,
+      };
     }
   }
 

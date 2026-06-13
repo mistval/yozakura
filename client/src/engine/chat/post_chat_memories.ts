@@ -53,7 +53,7 @@ export async function generateCharacterEndOfChatUpdates(
     throw new Error('Cannot generate end of chat updates for the user character');
   }
 
-  const participants = getActiveChatParticipants();
+  const participants = getActiveChatParticipants({ includeRemoved: true });
   const otherParticipants = participants.filter(
     (participant) => participant.id !== fromCharacterPerspective.id
   );
@@ -273,7 +273,9 @@ export function buildConversationStateUpdates(
   }
 
   const getFirstNameForCharacterId = (characterId: string) => {
-    const participant = getActiveChatParticipants().find((entry) => entry.id === characterId);
+    const participant = getActiveChatParticipants({ includeRemoved: true }).find(
+      (entry) => entry.id === characterId
+    );
     return participant ? participant.firstName : characterId;
   };
 

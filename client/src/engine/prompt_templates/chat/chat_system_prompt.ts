@@ -38,11 +38,11 @@ You are roleplaying as <%= it.focusedCharacter.firstName %> <%= it.focusedCharac
 
 <% for (const p of it.participants) { %>
 <% if (p.id !== it.focusedCharacter.id) { %>
-<%= it.focusedCharacter.firstName %>'s memories about <%= p.firstName %> <%= p.lastName %>:
+What <%= it.focusedCharacter.firstName %> knows about <%= p.firstName %> <%= p.lastName %>:
 <memories_of_<%= p.id %>>
 <%= p.externalDescription %>
 
-<%= (await it.getRelationship(it.focusedCharacter.id, p.id))?.memory || it.focusedCharacter.firstName + ' has not met ' + p.firstName + ' yet.' %>
+<%= (await it.getRelationship(it.focusedCharacter.id, p.id))?.memory || it.focusedCharacter.firstName + ' has not met ' + p.firstName + ' yet. The previous information is surface level information that can be ascertained about ' + p.firstName + ' almost immediately when first meeting them.' %>
 
 </memories_of_<%= p.id %>>
 <% } %>
