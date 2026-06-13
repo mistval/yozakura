@@ -138,6 +138,22 @@ async function runUserChatAndShouldEndPhase(
   return !noEffect && !useSettingsStore.getState().freedomOfMovement;
 }
 
+function runWardrobeAutoselect() {
+  const turnsPerDay = TURNS_PER_PERIOD * timeOfDaySchema.options.length;
+  const isNewDay = getRequiredActiveScenario().turnNumber % turnsPerDay === 0;
+
+  if (isNewDay) {
+    for (const c of useScenarioCharacterStore.getState().scenarioCharacters) {
+      const updatedWardrobes = applyDailyWardrobeAutoselect(c.wardrobes);
+      if (updatedWardrobes) {
+        useScenarioCharacterStore
+          .getState()
+          .saveScenarioCharacterFields(c.id, { wardrobes: updatedWardrobes });
+      }
+    }
+  }
+}
+
 async function runUserPhase(opts?: { resumeRestoredChat?: boolean }) {
   const scenarioLoopState = useScenarioLoopStateStore.getState();
   scenarioLoopState.setPhase('user');
@@ -184,20 +200,6 @@ async function runNpcPhase() {
   useScenarioLoopStateStore.getState().setPhase('npc');
   const turnRunner = new NPCTurnRunner();
 
-  const turnsPerDay = TURNS_PER_PERIOD * timeOfDaySchema.options.length;
-  const isNewDay = getRequiredActiveScenario().turnNumber % turnsPerDay === 0;
-
-  if (isNewDay) {
-    for (const c of useScenarioCharacterStore.getState().scenarioCharacters) {
-      const updatedWardrobes = applyDailyWardrobeAutoselect(c.wardrobes);
-      if (updatedWardrobes) {
-        useScenarioCharacterStore
-          .getState()
-          .saveScenarioCharacterFields(c.id, { wardrobes: updatedWardrobes });
-      }
-    }
-  }
-
   while (true) {
     const runnerResult = await doScenarioLoopAsyncAction(() => turnRunner.runNextTurn());
 
@@ -234,6 +236,7 @@ async function runScenarioLoop(opts: { resumeRestoredChat: boolean }) {
   let resumeRestoredChat = opts.resumeRestoredChat;
 
   while (true) {
+    runWardrobeAutoselect();
     await runUserPhase({ resumeRestoredChat });
     resumeRestoredChat = false;
     await runNpcPhase();
