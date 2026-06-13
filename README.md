@@ -16,6 +16,8 @@ First clone the repo with git: `git clone https://github.com/mistval/yozakura.gi
 
 All commands below should be run in the root `yozakura` folder.
 
+The main branch is the `dev` branch which may be unstable. If you're looking to use Yozakura as a user, consider switching to the main branch: `git checkout main`. Pull requests should always go to the `dev` branch.
+
 ### Requirements
 
 - [Node.js v24](https://nodejs.org/) (see [.nvmrc](.nvmrc) for the exact recommended version)
@@ -52,3 +54,9 @@ To debug both the server and the client from within VS Code, the repo ships two 
 1. **Start the server in debug mode** — run the **Debug Server** launch configuration. This starts the server with the Node debugger attached.
 2. **Start the client** — run the client with `npm run dev --prefix client`.
 3. **Attach to the client** — run the **Debug Client** launch configuration, which opens Chrome against the running client and attaches the debugger.
+
+## Bugs and Feature Requests
+
+Please submit features requests to [Discussions](https://github.com/mistval/yozakura/discussions) and bug reports to [Issues](https://github.com/mistval/yozakura/issues).
+
+You can also join [my Discord](https://discord.com/invite/S92qCjbNHt) for either purpose or others.
