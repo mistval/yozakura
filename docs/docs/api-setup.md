@@ -47,24 +47,24 @@ Then you can start Yozakura and you're good to go. When the initial setup popup 
 
 ## Cloud LLM (OpenRouter)
 
-If your machine can't comfortably run a local model, or you just want better narrative coherence, use a cloud provider instead.
+If your machine can't comfortably run a local model, or you just want the better narrative coherence that stronger models can often provide, use a cloud provider instead.
 
 [OpenRouter](https://openrouter.ai) is an excellent provider because one account and one API key gets you access to practically every major model (Claude, GPT, Gemini, DeepSeek, and hundreds of others) on pay-as-you-go credits, and you can switch models whenever you want. However, any provider exposing an OpenAI compatible completions endpoint will work the same way.
 
 Setup:
 
 1. Create an account at [openrouter.ai](https://openrouter.ai).
-2. Buy some credits on the [Credits page](https://openrouter.ai/credits). It's pay-as-you-go, there's no subscription.
-3. Create an API key on the [Keys page](https://openrouter.ai/keys) and copy it somewhere safe (it's only shown once).
-4. In Yozakura's initial setup popup, under `Completions API Setup` (if you already closed the popup, the same fields are in the settings cog -> LLM Settings):
+2. Buy some credits on the [Credits page](https://openrouter.ai/credits).
+3. Create an API key on the [Keys page](https://openrouter.ai/keys).
+4. In Yozakura's initial setup popup, under `Completions API Setup` (if you already closed the popup, the same fields are in the settings cog -> LLM Settings -> Base Defaults):
    - **Completions API URL**: `https://openrouter.ai/api/v1/chat/completions`
    - **Bearer/Auth Token**: your OpenRouter API key
    - **Model**: a model ID from the [models page](https://openrouter.ai/models), see below
 5. Leave token streaming enabled, and click `Test Connection` to confirm you can connect.
 
-For the model, `deepseek/deepseek-chat` is a decent choice, but it's a good idea to try several models and find one you like. Yozakura makes a lot of LLM calls with all the NPC chatting and memory processing, so keep that in mind as you budget. In my experience each default twelve-message NPC chat with `deepseek/deepseek-chat` costs about a penny. Using the latest models from Anthropic, OpenAI, or Google could cost much more (and be overkill).
+For the model, `deepseek/deepseek-chat` is a decent choice, but it's a good idea to try several models and find one you like. Yozakura makes a lot of LLM calls with all the NPC chatting and memory processing, so keep that in mind as you budget. In my experience each default twelve-message NPC chat with `deepseek/deepseek-chat` costs about a penny. Using the latest models from Anthropic, OpenAI, or Google could cost much more (and may be overkill).
 
-One note on privacy: OpenRouter routes your prompts to the underlying model providers, and some free models may train on your inputs. You can restrict this in your OpenRouter privacy settings.
+One note on privacy: OpenRouter routes your prompts to the underlying model providers, and some providers may train on your inputs. You can restrict this in your OpenRouter privacy settings.
 
 ## Cloud Image Generation (OpenRouter)
 
@@ -72,16 +72,14 @@ OpenRouter can also handle image generation, and it works through the same chat 
 
 In the initial setup popup under `Image Generation Setup` (or the settings cog -> Image Generation):
 
-1. Change **API Shape** to `OpenAI Completions Compatible`.
+1. Change **API Shape** to `OpenRouter`.
 2. **Image API URL**: `https://openrouter.ai/api/v1/chat/completions` (the same URL as the text API)
 3. **Bearer/Auth Token**: the same OpenRouter API key
-4. **Model**: an image-capable model, for example `google/gemini-2.5-flash-image`. On the OpenRouter models page you can filter by image output to see what's available.
+4. **Model**: an image-capable model, for example `x-ai/grok-imagine-image-quality`. On the OpenRouter models page you can filter by image output to see what's available.
 5. Click `Test Connection`.
 
 Image generation is typically priced per image rather than per token, usually a few cents per image depending on the model.
 
-The cloud image models are generally stronger at understanding natural language than the tag-trained local Stable Diffusion models, so they tend to work well with Yozakura's generated scene prompts out of the box. If you want to steer the overall style, the image prompt prefix in the Image Generation settings is the place to do it. Image size and aspect ratio options live there too.
-
 ## GPU Settings
 
-On NVIDIA graphics cards, you may want to consider changing the `CUDA - Sysmem Fallback Policy` to `Prefer No Sysmem Fallback` in the NVIDIA Control Panel, especially if you're pushing the limits of what can fit in your GPU's VRAM. This will prevent your graphics card from partially offloading models to system RAM, which tends to make them unusably slow. The system will do its best to squeeze everything into GPU VRAM instead, but if there's really just not enough space, your LLM or image gen application will crash.
+On NVIDIA graphics cards, you may want to consider changing the `CUDA - Sysmem Fallback Policy` to `Prefer No Sysmem Fallback` in the NVIDIA Control Panel, especially if you're pushing the limits of what can fit in your GPU's VRAM. This will prevent your graphics card from partially offloading models to system RAM, which tends to make them unusably slow if you allow it to happen. After changing this setting, the system will do its best to squeeze everything into GPU VRAM instead, but if there's really just not enough space, your LLM or image gen application will crash, and/or other programs you're running will glitch graphically and crash. Sometimes rebooting your PC and not opening any other programs before using Yozakura will give you a bit of extra headroom.

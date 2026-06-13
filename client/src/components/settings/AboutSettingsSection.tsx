@@ -5,9 +5,9 @@ const APP_VERSION_LABEL = APP_RELEASE_TAG || 'Development Version';
 
 // TODO: Replace these with actual links
 const LINKS = {
-  github: 'https://github.com/your-org/your-repo',
-  wiki: 'https://example.com/wiki',
-  discord: 'https://discord.gg/example',
+  github: 'https://github.com/mistval/yozakura',
+  wiki: 'https://mistval.github.io/yozakura/docs/intro',
+  discord: 'https://discord.com/invite/S92qCjbNHt',
 };
 
 export default function AboutSettingsSection() {
@@ -25,7 +25,7 @@ export default function AboutSettingsSection() {
             GitHub
           </a>
           <a href={LINKS.wiki} target="_blank" rel="noreferrer" className="underline hover:text-primary">
-            Wiki
+            Documentation
           </a>
           <a href={LINKS.discord} target="_blank" rel="noreferrer" className="underline hover:text-primary">
             Discord Server
