@@ -13,6 +13,11 @@ const sidebars: SidebarsConfig = {
       label: 'Core Systems',
       items: ['chat', 'memory-system', 'template-system'],
     },
+    {
+      type: 'category',
+      label: 'Links & Help',
+      items: ['links'],
+    },
   ],
 };
 
