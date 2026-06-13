@@ -43,7 +43,7 @@ export default function PromptLogSettingsSection() {
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">Transport Options (authToken hidden)</p>
+                  <p className="text-sm font-medium">Transport Options</p>
                   <pre className="max-h-72 overflow-auto rounded-sm border p-2 text-xs font-mono whitespace-pre-wrap wrap-break-word">
                     {entry.transportOptionsJson}
                   </pre>
