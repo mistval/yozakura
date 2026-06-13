@@ -53,10 +53,14 @@ export function updateLLMConfigsWithBaseDefaultsConnection(
 
   const nextBaseConfig: LLMConfig = {
     ...baseConfigEntry,
-    llmMetaOptions: {
-      ...JSON.parse(baseConfigEntry.llmMetaOptions),
-      model: trimmedModel || undefined,
-    },
+    llmMetaOptions: JSON.stringify(
+      {
+        ...JSON.parse(baseConfigEntry.llmMetaOptions),
+        model: trimmedModel || undefined,
+      },
+      null,
+      2
+    ),
     llmUrl: trimmedUrl || undefined,
     llmAuthToken: trimmedToken || undefined,
   };

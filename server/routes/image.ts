@@ -7,7 +7,7 @@ import z from 'zod';
 
 const bodySchema = z.looseObject({
   imageApiUrl: z.string(),
-  imageApiShape: z.enum(['openai', 'automatic1111']),
+  imageApiShape: z.enum(['openRouter', 'automatic1111']),
   saveTo: z.string().optional(),
   authToken: z.string().optional(),
 });
@@ -31,7 +31,7 @@ export default function imageRouter(dataDir: string): Router {
       const parsed = bodySchema.parse(req.body);
       const { saveTo, imageApiUrl, imageApiShape, authToken, ...payload } = parsed;
 
-      const isOpenAI = imageApiShape === 'openai';
+      const isOpenRouter = imageApiShape === 'openRouter';
 
       const requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
       if (authToken?.trim()) {
@@ -54,14 +54,14 @@ export default function imageRouter(dataDir: string): Router {
         }
 
         let images: string[];
-        if (isOpenAI) {
+        if (isOpenRouter) {
           const data = (await response.json()) as {
             choices?: Array<{ message?: { images?: Array<{ image_url?: { url?: string } }> } }>;
           };
           images = (data.choices ?? []).flatMap((choice) =>
             (choice.message?.images ?? []).flatMap((image) =>
-              image.image_url?.url ? [image.image_url.url] : [],
-            ),
+              image.image_url?.url ? [image.image_url.url] : []
+            )
           );
         } else {
           const data = (await response.json()) as { images?: string[] };

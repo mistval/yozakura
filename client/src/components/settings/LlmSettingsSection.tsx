@@ -10,6 +10,7 @@ import { getErrorMessage } from '../../errors/error_util.js';
 import { useLlmConnectionTest } from '../../hooks/useLlmConnectionTest.js';
 import { useTextareaPasteWarningGate } from './pasteWarning/useTextareaPasteWarningGate.js';
 import { newId } from '../../util/id.js';
+import { readModelFromMetaOptions, writeModelToMetaOptions } from './meta_options_model.js';
 
 type ConfigDraft = LLMOptionsGroup;
 const DEFAULT_LLM_META_OPTIONS_SOURCE = JSON.stringify(LLM_DEFAULTS, null, 2);
@@ -235,6 +236,32 @@ function ConfigEditor({
         <div className="text-xs text-muted mt-1">
           e.g. context.promptTemplateGroup === 'gen_intelligent_next_speaker_select'
         </div>
+      </div>
+
+      <div>
+        <SettingFieldLabel
+          text="Model (optional)"
+          htmlFor={`llm-config-model-${config.id}`}
+          tooltipHtml={settingsTooltips['llm.model']}
+        />
+        <input
+          id={`llm-config-model-${config.id}`}
+          value={readModelFromMetaOptions(draft.llmMetaOptionsSource)}
+          onChange={(event) =>
+            setDraft(
+              (prev) =>
+                ({
+                  ...prev,
+                  llmMetaOptionsSource: writeModelToMetaOptions(
+                    prev.llmMetaOptionsSource,
+                    event.target.value
+                  ),
+                }) satisfies typeof prev
+            )
+          }
+          placeholder="deepseek/deepseek-chat"
+          className="rounded-input"
+        />
       </div>
 
       <div>

@@ -67,14 +67,7 @@ export const imageApiShapes = [
     defaultSettings: {
       url: DEFAULT_OPENROUTER_COMPLETIONS_IMAGE_API_URL,
       authToken: '',
-      metaOptions: JSON.stringify(
-        {
-          n: 1,
-          response_format: 'b64_json',
-        },
-        null,
-        2
-      ),
+      metaOptions: JSON.stringify({}, null, 2),
       sizeOptions: {
         chatImageSize: '1K',
         chatImageAspectRatio: '1:1',

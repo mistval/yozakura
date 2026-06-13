@@ -6,6 +6,7 @@ import NumericSettingRow from './ui/NumericSettingRow.js';
 import RangeNumberInput from './ui/RangeNumberInput.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
 import { settingsTooltips } from './settings_tooltips.js';
+import { readModelFromMetaOptions, writeModelToMetaOptions } from './meta_options_model.js';
 
 import { clampUnitRate, toPercent } from '../../util/numeric.js';
 
@@ -348,6 +349,23 @@ export default function ImageGenerationSettingsSection() {
               {showAuthToken ? 'Hide' : 'Show'}
             </button>
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <SettingFieldLabel
+            text="Model (optional)"
+            htmlFor="image-model"
+            tooltipHtml={settingsTooltips['image.model']}
+          />
+          <input
+            id="image-model"
+            value={readModelFromMetaOptions(metaOptionsFieldValue)}
+            onChange={(event) =>
+              applyMetaOptionsSource(writeModelToMetaOptions(metaOptionsFieldValue, event.target.value))
+            }
+            placeholder="x-ai/grok-imagine-image-quality"
+            className="rounded-input"
+          />
         </div>
 
         <div className="space-y-1">

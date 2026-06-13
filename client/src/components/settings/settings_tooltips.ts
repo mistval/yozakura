@@ -15,6 +15,8 @@ export const settingsTooltips = {
     'Optional bearer token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Required for most cloud  providers.',
   'image.metaOptions':
     'Extra JSON fields merged into every image generation request. For OpenRouter, this is where you set <code>model</code>, <code>size</code>, <code>n</code>, etc. For AUTOMATIC1111, this controls diffusion parameters such as <code>steps</code>, <code>sampler_name</code>, <code>cfg_scale</code>.',
+  'image.model':
+    'The image model to request (for example <code>x-ai/grok-imagine-image-quality</code>). This is saved as the <code>model</code> field of the meta options below.',
   'image.negativePrompt':
     'This text is appended as a <strong>negative prompt</strong> to discourage unwanted visual artifacts.',
   'image.editPromptBeforeDispatch':
@@ -72,6 +74,8 @@ export const settingsTooltips = {
     'When enabled, NPC responses stream token-by-token. This requires your OpenAI-compatible API provider to support streaming (SSE).',
   'llm.responsePreParser':
     'Optional JavaScript function source that pre-processes raw model responses for this option group. Leave blank to inherit from earlier matching groups. It must evaluate to a function like <code>(response) => string</code>.',
+  'llm.model':
+    'If your API accepts a <code>model</code> field in request bodies to select the model, set it here. This is saved as the <code>model</code> field of the meta options below.',
   'llm.metaOptions':
     'JSON object merged into LLM payload for this group, for example <code>{ "max_tokens": 220 }</code>.',
   'llm.rule':

@@ -45,7 +45,7 @@ const FTUE_IMAGE_AUTH_TOKEN_TOOLTIP_HTML =
   'Bearer token required for most cloud image providers. Not needed for local AUTOMATIC1111.';
 
 const FTUE_IMAGE_MODEL_TOOLTIP_HTML =
-  'The image model to request (e.g. <code>dall-e-3</code>, <code>openai/dall-e-3</code> on OpenRouter).';
+  'The image model to request (e.g. <code>x-ai/grok-imagine-image-quality</code>).';
 
 const API_SHAPE_TOOLTIP_HTML = `The AUTOMATIC1111 shape is supported by most local image generation software (including, of course, <a href="https://github.com/automatic1111/stable-diffusion-webui">AUTOMATIC1111</a>). The OpenRouter shape is for OpenRouter and might work with other providers that have similar APIs.`;
 
@@ -293,7 +293,7 @@ export default function MainMenuFtueModal() {
                 value={llmModelDraft}
                 onChange={(event) => setLlmModelDraft(event.target.value)}
                 onBlur={saveConnectionDetails}
-                placeholder="openrouter/auto"
+                placeholder="deepseek/deepseek-chat"
                 className="w-full rounded-sm border px-3 py-2"
               />
             </div>
@@ -426,7 +426,7 @@ export default function MainMenuFtueModal() {
                   value={imageModelDraft}
                   onChange={(event) => setImageModelDraft(event.target.value)}
                   onBlur={saveImageConnectionDetails}
-                  placeholder="dall-e-3"
+                  placeholder="x-ai/grok-imagine-image-quality"
                   className="w-full rounded-sm border px-3 py-2"
                 />
               </div>
