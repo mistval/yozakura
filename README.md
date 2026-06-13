@@ -16,6 +16,8 @@ First clone the repo with git: `git clone https://github.com/mistval/yozakura.gi
 
 All commands below should be run in the root `yozakura` folder.
 
+The main branch is the `dev` branch which may be unstable. If you're looking to use Yozakura as a user, consider switching to the main branch: `git checkout main`. Pull requests should always go to the `dev` branch.
+
 ### Requirements
 
 - [Node.js v24](https://nodejs.org/) (see [.nvmrc](.nvmrc) for the exact recommended version)
