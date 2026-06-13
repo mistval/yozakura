@@ -132,7 +132,7 @@ Alice and Charlie chatted online about their weekend plans. Charlie mentioned th
   }),
   globalWritableContext: z.record(z.string(), z.unknown()).meta({
     description:
-      'This object can be written to by templates, and it is shared among all templates across the entire lifetime of the application. The Yozakura system never reads, writes, or replaces this object. It is entirely managed by templates. It does not persist between full application shutdowns. If such persistence is necessary, browser localStorage can be used. This can be used for passing information between templates, caching, or other suitable purposes.',
+      'This object can be written to by templates, and it is shared among all templates across the entire lifetime of the application. The Yozakura system never reads, writes, or replaces this object. It is entirely managed by templates. It does not persist between full application shutdowns. This can be used for passing information between templates, caching, or other suitable purposes.',
   }),
   randomPersonalityTraits: z.array(z.string()).meta({
     description:

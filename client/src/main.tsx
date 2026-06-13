@@ -24,6 +24,7 @@ import ScenarioView from './pages/ScenarioView';
 import MapList from './pages/MapList';
 import MapEditor from './pages/MapEditor';
 import { QueryParamProvider } from 'use-query-params';
+import { hydrateSettings } from './state/settings_store.js';
 import './styles.css';
 
 function AppRoutes() {
@@ -73,8 +74,14 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+async function bootstrap() {
+  await hydrateSettings();
+
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+}
+
+void bootstrap();
