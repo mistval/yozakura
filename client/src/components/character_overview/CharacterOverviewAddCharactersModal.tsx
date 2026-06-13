@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useStateRef } from '../../hooks/useStateRef.js';
 import { useCharacterOverview } from './CharacterOverviewContext.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
@@ -17,7 +16,6 @@ export default function CharacterOverviewAddCharactersModal() {
   const globalCharactersAreLoaded = useGlobalCharactersStore((s) => s.globalCharactersAreLoaded);
 
   const [addCharacterSelectedGlobalIds, setAddCharacterSelectedGlobalIds] = useState<string[]>([]);
-  const [addCharacterSaving, setAddCharacterSaving, addCharacterSavingRef] = useStateRef(false);
 
   const currentScenarioCharacterGlobalIds = useMemo(() => {
     return Object.values(scenarioCharactersById).map((c) => c.globalCharacterId);
@@ -45,7 +43,7 @@ export default function CharacterOverviewAddCharactersModal() {
     });
   }, [globalCharacters, currentScenarioCharacterGlobalIds]);
 
-  const confirmAddCharacters = async () => {
+  const confirmAddCharacters = () => {
     assertNonNullish(scenario);
     assertNonNullish(activeMap, 'Active map is required to add characters to scenario');
 
@@ -54,14 +52,12 @@ export default function CharacterOverviewAddCharactersModal() {
 
     setAddCharacterSelectedGlobalIds([]);
 
-    await Promise.all(
-      addCharacters.map((character) =>
-        useScenarioCharacterStore.getState().addGlobalCharacterToActiveScenario(character, {
-          scenarioId: scenario.id,
-          map: activeMap,
-        })
-      )
-    );
+    for (const character of addCharacters) {
+      void useScenarioCharacterStore.getState().addGlobalCharacterToActiveScenario(character, {
+        scenarioId: scenario.id,
+        map: activeMap,
+      });
+    }
 
     backToCharacterOverview();
   };
@@ -86,28 +82,23 @@ export default function CharacterOverviewAddCharactersModal() {
         />
       )}
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={backToCharacterOverview} disabled={addCharacterSaving}>
+        <button type="button" onClick={backToCharacterOverview}>
           Cancel
         </button>
         <button
           type="button"
           onClick={() => {
             void (async () => {
-              if (!globalCharactersAreLoaded || addCharacterSavingRef.current) {
+              if (!globalCharactersAreLoaded) {
                 return;
               }
 
-              setAddCharacterSaving(true);
-              try {
-                await confirmAddCharacters();
-              } finally {
-                setAddCharacterSaving(false);
-              }
+              confirmAddCharacters();
             })();
           }}
-          disabled={!scenario || !globalCharactersAreLoaded || addCharacterSaving}
+          disabled={!scenario || !globalCharactersAreLoaded}
         >
-          {addCharacterSaving ? 'Adding...' : 'Add Selected'}
+          Add Selected
         </button>
       </div>
     </RoutedModalFrame>
