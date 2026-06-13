@@ -45,6 +45,6 @@ To debug both the server and the client from within VS Code, the repo ships two 
 2. **Start the client** — run the client with `npm run dev --prefix client`.
 3. **Attach to the client** — run the **Debug Client** launch configuration, which opens Chrome against the running client and attaches the debugger.
 
-## Prod mode
+## Running for Prod
 
-Instead of running the `npm run dev` commands, you can run `npm run build:web && npm run start --prefix server` and go to http://localhost:3001/ in your browser. This will serve the minified app bundle without any of the dev tooling, which will be faster. If cloning the repo is your preferred way to run the application as a user, this is probably how you should do it, although the dev build seems plenty fast so it might not really matter.
+Instead of running the `npm run dev` commands, you can run `npm run build:web && npm run start --prefix server` and go to http://localhost:3001/ in your browser. This will serve the minified app bundle without any of the dev tooling, which will be faster. If cloning the repo is your preferred way to run the application as a user, this is probably how you should do it.
