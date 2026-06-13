@@ -234,9 +234,14 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
 }));
 
 useMapStore.subscribe((newState, prevState) => {
-  const pendingScenarioId = useScenarioStore.getState().pendingScenarioId;
+  const scenarioState = useScenarioStore.getState();
+  const pendingScenarioId = scenarioState.pendingScenarioId;
   if (newState.mapsAreLoaded && !prevState.mapsAreLoaded && pendingScenarioId) {
-    useScenarioStore.getState().refreshScenario(pendingScenarioId);
+    scenarioState.refreshScenario(pendingScenarioId);
+  }
+
+  if (scenarioState.activeScenarioMap) {
+    scenarioState.setScenarioMap(scenarioState.activeScenarioMap.id);
   }
 });
 

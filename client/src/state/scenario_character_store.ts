@@ -333,10 +333,7 @@ useScenarioStore.subscribe(async (newScenario, prevScenario) => {
     await useScenarioCharacterStore.getState().loadScenarioCharacters();
   }
 
-  if (
-    newScenario.activeScenarioMap &&
-    newScenario.activeScenarioMap?.id !== prevScenario.activeScenarioMap?.id
-  ) {
+  if (newScenario.activeScenarioMap && newScenario.activeScenarioMap !== prevScenario.activeScenarioMap) {
     updateCharacterLocationsForMapChange(newScenario.activeScenarioMap);
   }
 });
