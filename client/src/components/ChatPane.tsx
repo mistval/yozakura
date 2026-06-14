@@ -184,6 +184,10 @@ export default function ChatPane() {
   };
 
   useEffect(() => {
+    if (window.yozakura) {
+      return undefined;
+    }
+
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (transcript?.countAllMessages() === 0) {
         return undefined;

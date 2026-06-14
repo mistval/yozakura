@@ -1,5 +1,7 @@
+import { uid } from 'uid';
+
 export function newId() {
-  return crypto.randomUUID().replaceAll('-', '');
+  return uid(18);
 }
 
 export function addOrReplaceVersionQueryParam(path: string) {
