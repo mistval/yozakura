@@ -10,36 +10,34 @@ If you want to use Yozakura, head to the [getting started guide](https://mistval
 
 If you want to contribute, tinker, or you just prefer the `git clone` installation method, continue reading below.
 
-## Installing via Git
-
-First clone the repo with git: `git clone https://github.com/mistval/yozakura.git`
-
-All commands below should be run in the root `yozakura` folder.
-
-The main branch is the `dev` branch which may be unstable. If you're looking to use Yozakura as a user, consider switching to the main branch: `git checkout main`. Pull requests should always go to the `dev` branch.
-
-### Requirements
+## Requirements
 
 - [Node.js v24](https://nodejs.org/) (see [.nvmrc](.nvmrc) for the exact recommended version)
+- [Git](https://git-scm.com/)
 
-Run npm install for both the client and server:
+## Quick Start
 
-```bash
+If you want to run a production build and use the application, run these commands after installing Node.js and Git:
+
+```sh
+git clone https://github.com/mistval/yozakura.git
+cd yozakura
+git checkout main
 npm install --prefix client
 npm install --prefix server
+npm run build:web
+npm run start --prefix server
 ```
-
-## Running a production build
-
-To run a minified production client build, run `npm run build:web && npm run start --prefix server`.
 
 Then go to http://localhost:3001/ in your browser.
 
-### Running a development build
+## Dev Setup
 
-To run a development build with hot reloading and other dev tooling, run:
+If you want to run Yozakura in dev mode, then after cloning, run:
 
-```bash
+```sh
+npm install --prefix client
+npm install --prefix server
 npm run dev
 ```
 
@@ -47,7 +45,7 @@ This runs the server and the client concurrently with hot reloading.
 
 That should be all you need to do to get it running. Navigate to [http://localhost:5173/](http://localhost:5173/) in your browser to see the app.
 
-### Debugging in VS Code
+## Debugging in VS Code
 
 To debug both the server and the client from within VS Code, the repo ships two VS Code launch configurations in [.vscode/launch.json](.vscode/launch.json):
 
