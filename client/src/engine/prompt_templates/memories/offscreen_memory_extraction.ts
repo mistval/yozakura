@@ -78,7 +78,7 @@ export const offscreenMemoryExtractionChainGroup = new PromptTemplateChain({
     { template: offscreenMemoryExtractionUserTemplate },
   ],
   parser: new PromptOutputParser<z.infer<typeof targetedConversationExecutionContextSchema>, string | null>(
-    `(response) => {
+    `async (response, it) => {
   if (response.includes('NONE')) {
     return null;
   }
