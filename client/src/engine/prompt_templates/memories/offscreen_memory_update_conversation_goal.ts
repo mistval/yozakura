@@ -80,7 +80,7 @@ export const offscreenMemoryUpdateConversationGoalChainGroup = new PromptTemplat
     string | null
   >(
     `(response) => {
-  if (response.includes('KEEP_OLD_GOAL')) {
+  if (response.includes('KEEP_OLD')) {
     return null;
   }
 
