@@ -127,15 +127,34 @@ class FinalInstructionsPromptTemplate extends PromptTemplateBase<
   public readonly role = 'system';
 }
 
+class ChatSystemUserNudgePrompt extends PromptTemplateBase<
+  z.infer<typeof focusedConversationExecutionContextSchema>
+> {
+  public readonly defaultTemplateString = '';
+  public readonly contextSchema = focusedConversationExecutionContextSchema;
+  public readonly templateName = 'User Nudge Prompt';
+  public readonly templateDescription =
+    'Some models (such as deepseek/deepseek-v4-flash) hate when a system prompt is the most recent message they receive. This will result in frequent "Empty LLM response" errors. If you see this happening (or otherwise suspect you\'re working with a model that behaves this way), try putting a short instruction message in here like: "Respond in character as <%= it.focusedCharacter.firstName %>". Anything you enter here will be appended as a user message after the system message. If you leave this empty, no user message wil be appended.';
+  public readonly templateId = 'chat_system_user_nudge_prompt';
+  public readonly templateSettings = [];
+  public readonly role = 'user';
+}
+
 const finalInstructionsPromptTemplate = new FinalInstructionsPromptTemplate();
 const chatSystemPromptTemplate = new ChatSystemPromptTemplate();
+const chatSystemUserNudgePrompt = new ChatSystemUserNudgePrompt();
+
 export const chatSystemPromptChain = new PromptTemplateChain({
   templateChainId: 'gen_npc_response',
   templateChainTitle: 'Chat System Prompt',
   templateChainDescription:
     'This template group controls the leading and trailing system prompts for NPC chat responses.',
   contextSchema: focusedConversationExecutionContextSchema,
-  templates: [{ template: chatSystemPromptTemplate }, { template: finalInstructionsPromptTemplate }],
+  templates: [
+    { template: chatSystemPromptTemplate },
+    { template: finalInstructionsPromptTemplate },
+    { template: chatSystemUserNudgePrompt },
+  ],
   parser: new PromptOutputParser<z.infer<typeof focusedConversationExecutionContextSchema>, string>(
     'async (response, it) => response',
     'chat_system_prompt_parser',

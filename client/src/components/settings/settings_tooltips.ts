@@ -54,7 +54,7 @@ export const settingsTooltips = {
   'user.speakerSelectionMode':
     '<strong>Round Robin</strong> rotates speakers in a consistent order. <strong>Manual</strong> waits for you to click <strong>Speak</strong>. <strong>Intelligent</strong> uses LLM-based moderation to choose who speaks next. This setting only applies to chats that include the user.',
   'npc.freedomOfMovement':
-    'When enabled, movement and conversation do not consume your turn. Your turn ends only when you press <strong>Wait</strong>.',
+    "When enabled, movement and conversation do not consume the user's turn. Your turn ends only when you press <strong>Wait</strong>.",
   'npc.onlyChatDelay':
     'Optional delay, in seconds, after each NPC message in NPC-only chats (chats where the user is not a participant). Use this to slow the pace of messages as they appear on screen.',
   'npc.gossipRate':

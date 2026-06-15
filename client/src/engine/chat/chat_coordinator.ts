@@ -218,6 +218,11 @@ export class ChatCoordinator {
         prompts.push(renderedPrompts[1]!);
       }
 
+      const userNudgePrompt = renderedPrompts[2];
+      if (userNudgePrompt?.content) {
+        prompts.push(userNudgePrompt);
+      }
+
       const tokenStreamingEnabled = useSettingsStore.getState().tokenStreamingEnabled;
 
       if (!tokenStreamingEnabled) {

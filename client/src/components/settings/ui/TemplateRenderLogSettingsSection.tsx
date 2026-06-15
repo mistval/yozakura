@@ -7,7 +7,9 @@ export default function TemplateRenderLogSettingsSection() {
     <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-semibold">Template Render Log</h2>
-        <p className="text-sm text-secondary">The most recent 100 render group executions.</p>
+        <p className="text-sm text-secondary">
+          The most recent 100 render group executions during this session.
+        </p>
       </div>
 
       <div className="bordered-section">

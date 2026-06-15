@@ -88,7 +88,7 @@ export default function PromptTemplateChainEditor({ chain }: PromptTemplateChain
           nextOverride.templateString = templateBody;
         }
 
-        if (!nextOverride.templateString) {
+        if (nextOverride.templateString === undefined) {
           nextTemplateOverrides[template.templateId] = null;
         } else {
           nextTemplateOverrides[template.templateId] = nextOverride;
