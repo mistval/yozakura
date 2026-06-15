@@ -1,7 +1,5 @@
 import express from 'express';
-import fs from 'fs';
-import path from 'path';
-import Database from 'better-sqlite3';
+import type Database from 'better-sqlite3';
 import { LRUCache } from 'lru-cache';
 import type { Router } from 'express';
 import z from 'zod';
@@ -9,18 +7,6 @@ import assert from 'assert';
 
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function ensureDatabase(dataDir: string): Database.Database {
-  fs.mkdirSync(dataDir, { recursive: true });
-  const dbPath = path.join(dataDir, 'app.sqlite');
-  const db = new Database(dbPath);
-
-  db.pragma('foreign_keys = ON');
-  db.pragma('journal_mode = WAL');
-  db.pragma('synchronous = NORMAL');
-
-  return db;
 }
 
 const execSchema = z.object({
@@ -32,10 +18,8 @@ const allSchema = z.object({
   parameterGroups: z.array(z.array(z.unknown())),
 });
 
-export default function dbRouter(dataDir: string): Router {
+export default function dbRouter(db: Database.Database): Router {
   const router = express.Router();
-
-  const db = ensureDatabase(dataDir);
 
   const preparedStatementCache = new LRUCache<string, Database.Statement>({
     max: 1000,

@@ -2,6 +2,8 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { openDatabase } from './database.js';
+import { runMigrations } from './migrator.js';
 import dbRouter from './routes/db.js';
 import filesRouter from './routes/files.js';
 import imageRouter from './routes/image.js';
@@ -31,11 +33,14 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   fs.mkdirSync(staticDir, { recursive: true });
 
+  const db = openDatabase(dataDir);
+  runMigrations(db);
+
   const app = express();
   app.use(express.json({ limit: '10mb' }));
 
   app.use('/api', filesRouter(dataDir));
-  app.use('/api', dbRouter(dataDir));
+  app.use('/api', dbRouter(db));
   app.use('/api', llmRouter());
   app.use('/api', imageRouter(dataDir));
 
