@@ -1,0 +1,11 @@
+services:
+  yozakura:
+    # For now, the public image only supports Intel/AMD CPUs. If you are
+	  # on ARM, comment out the 'image' line and uncomment the 'build' line
+    image: ghcr.io/mistval/yozakura:latest
+    # build: .
+    container_name: yozakura
+    init: true
+    network_mode: host
+    volumes:
+      - ./yozakura_data:/app/data
