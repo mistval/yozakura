@@ -336,6 +336,21 @@ export default function CharacterOverviewPairData({
                               }
                             );
                           }}
+                          onDelete={() => {
+                            const updatedSummaries = section.summaries.filter(
+                              (_, entryIndex) => entryIndex !== index
+                            );
+
+                            return saveRelationshipPatch(
+                              {
+                                fromId: section.fromId,
+                                toId: section.toId,
+                              },
+                              {
+                                rollingPairwiseSummaries: updatedSummaries,
+                              }
+                            );
+                          }}
                         >
                           {summary.summary || '(none)'}
                         </SpoilerSection>
@@ -373,6 +388,21 @@ export default function CharacterOverviewPairData({
                                       information: newValue,
                                     }
                                   : entry
+                            );
+
+                            return saveRelationshipPatch(
+                              {
+                                fromId: section.fromId,
+                                toId: section.toId,
+                              },
+                              {
+                                rollingOffscreenLearnedInformation: updatedInformations,
+                              }
+                            );
+                          }}
+                          onDelete={() => {
+                            const updatedInformations = section.learnedInformations.filter(
+                              (_, entryIndex) => entryIndex !== index
                             );
 
                             return saveRelationshipPatch(

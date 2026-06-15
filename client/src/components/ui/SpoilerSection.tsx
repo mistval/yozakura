@@ -9,6 +9,7 @@ export function SpoilerSection({
   defaultRevealed,
   className = '',
   onSave,
+  onDelete,
 }: {
   title: string;
   children: ReactNode;
@@ -16,6 +17,7 @@ export function SpoilerSection({
   defaultRevealed?: boolean;
   className?: string;
   onSave?: (value: string) => Promise<void> | void;
+  onDelete?: () => Promise<void> | void;
 }) {
   const [revealed, setRevealed] = useState(defaultRevealed ?? false);
   const [saved, setSaved] = useState(false);
@@ -62,6 +64,16 @@ export function SpoilerSection({
     }
   };
 
+  const handleDelete = async () => {
+    if (!onDelete || savingRef.current) return;
+    setSaving(true);
+    try {
+      await onDelete();
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className={`border rounded-sm p-3 ${className}`}>
       <button
@@ -83,6 +95,16 @@ export function SpoilerSection({
             onChange={(event) => setDraft(event.target.value)}
           />
           <div className="flex items-center justify-end gap-2">
+            {onDelete && (
+              <button
+                type="button"
+                className="border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover"
+                onClick={handleDelete}
+                disabled={saving}
+              >
+                Delete
+              </button>
+            )}
             {saved ? (
               <span className="text-sm text-success-text">Saved ✓</span>
             ) : (
