@@ -30,10 +30,10 @@ class RollingGlobalMemoryRewriteUserTemplate extends PromptTemplateBase<
   z.infer<typeof focusedConversationExecutionContextSchema>
 > {
   public readonly defaultTemplateString = `<%= it.focusedCharacter.firstName %>'s persona:
-<<%= it.focusedCharacter.firstName %>_persona>
+<persona>
 <%= it.focusedCharacter.internalDescription %>
 
-</<%= it.focusedCharacter.firstName %>_persona>
+</persona>
 
 Current global memory:
 <old_global_memory>

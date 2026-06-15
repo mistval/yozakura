@@ -3,9 +3,9 @@ import { chatCompletion } from '../llm.js';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry.js';
 import { buildFullPrompt, generateChatImage } from '../image_gen.js';
 import {
-  buildTargetedChatTemplateContext,
   buildChatModeratorContext,
   buildFocusedChatTemplateContext,
+  buildMemoryRagTemplateContext,
 } from '../prompt_templates/prompt_context_builder';
 import { useSettingsStore, type SpeakerSelectionMode } from '../../state/settings_store.js';
 import * as Database from '../../backend_bridge/database.js';
@@ -501,10 +501,9 @@ export class ChatCoordinator {
       for (const participant of getActiveChatParticipants({ includeUser: false })) {
         const focusedCharacter = this.getCharacterById(participant.id);
 
-        const reminder = await memoryRagPromptTemplatesGroup.render({
-          ...(await buildTargetedChatTemplateContext(focusedCharacter.id, mentionedCharacter.id)),
-          mentionedByCharacter,
-        });
+        const reminder = await memoryRagPromptTemplatesGroup.render(
+          await buildMemoryRagTemplateContext(focusedCharacter, mentionedCharacter, mentionedByCharacter)
+        );
 
         this.setTranscript(
           this.transcript().addOffscreenRagMessage(participant.id, reminder[0]!.content, mentionedCharacter)

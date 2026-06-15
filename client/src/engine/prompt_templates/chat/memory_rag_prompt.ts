@@ -6,9 +6,9 @@ import { memoryRagExecutionContext } from '../prompt_template_context_fields';
 class MemoryRagPromptTemplate extends PromptTemplateBase<z.infer<typeof memoryRagExecutionContext>> {
   public readonly defaultTemplateString = `<% const mentioner = it.mentionedByCharacter.id === it.focusedCharacter.id ? 'You' : it.mentionedByCharacter.firstName; %>
 <%= mentioner %> may have just mentioned a character named <%= it.targetCharacter.firstName %> <%= it.targetCharacter.lastName %> who is not part of this chat. Here are your memories of <%= it.targetCharacter.firstName %> (if any):
-<memories_of_<%= it.targetCharacter.id %>>
+<memories_of_<%= it.targetCharacter.xmlTagSafeName %>>
 <%= it.targetCharacterRelationship.memory || 'You do not have any memories of ' + it.targetCharacter.firstName + ' yet' %>
-</memories_of_<%= it.targetCharacter.id %>>`;
+</memories_of_<%= it.targetCharacter.xmlTagSafeName %>>`;
   public readonly contextSchema = memoryRagExecutionContext;
 
   public readonly templateName = 'Memory RAG Prompt';

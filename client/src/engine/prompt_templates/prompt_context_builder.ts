@@ -11,19 +11,28 @@ import {
 } from '../../state/active_chat_store.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import type {
-  CharacterEditorContext,
+  CharacterEditorExecutionContext,
   ContextCharacter,
   ConversationExecutionContext,
   FocusedConversationExecutionContext,
   GlobalExecutionContext,
+  MemoryRagExectionContext,
+  ModerationNextSpeakerExecutionContext,
   ScenarioExecutionContext,
-  TargetedConversationContext,
+  TargetedConversationExecutionContext,
 } from './prompt_template_context_fields.js';
 import { useSettingsStore } from '../../state/settings_store.js';
 import { generatePersonalityTraits } from '../../util/personality.js';
 import _ from 'lodash';
 
 const globalWritableContext = {};
+
+function toContextCharacter(character: Character): ContextCharacter {
+  return {
+    ...character,
+    xmlTagSafeName: `${character.firstName}_${character.lastName}`.toLowerCase().replaceAll(/\s+/, '_'),
+  };
+}
 
 function formatPairwiseMemoriesForPrompt(
   relationship: CharacterRelationship,
@@ -111,8 +120,8 @@ function buildScenarioTemplateContext(): ScenarioExecutionContext {
 
   return {
     ...buildGlobalTemplateContext(),
-    allCharacters: Object.values(scenarioCharacterStore.scenarioCharactersById),
-    userCharacter,
+    allCharacters: Object.values(scenarioCharacterStore.scenarioCharactersById).map(toContextCharacter),
+    userCharacter: toContextCharacter(userCharacter),
     scenario: scenarioStore.activeScenario,
     worldMap: scenarioStore.activeScenarioMap,
     getRelationship: (characterAId: string, characterBId: string) =>
@@ -136,14 +145,19 @@ async function buildChatTemplateContext(focusedCharacter?: Character): Promise<C
     .map((id) => scenarioCharacterStore.scenarioCharactersById[id])
     .filter((char): char is Character => char !== undefined);
 
+  const { gossipTargetCharacter, gossipTargetRelationship } = await getActiveChatGossipCharacter(
+    focusedCharacter?.id
+  );
+
   return {
     ...(await buildScenarioTemplateContext()),
-    participants: getActiveChatParticipants(),
+    participants: getActiveChatParticipants().map(toContextCharacter),
     chatMedium: getActiveChatMedium(),
-    raggedCharacters,
+    raggedCharacters: raggedCharacters.map(toContextCharacter),
     transcript: activeChatStore.transcript.toTextTranscript(focusedCharacter?.id),
     conversationMessages: activeChatStore.transcript.getRawMessages(),
-    ...(await getActiveChatGossipCharacter(focusedCharacter?.id)),
+    gossipTargetCharacter: gossipTargetCharacter ? toContextCharacter(gossipTargetCharacter) : undefined,
+    gossipTargetRelationship,
   };
 }
 
@@ -161,10 +175,10 @@ export async function buildFocusedChatTemplateContext(
   return {
     ...chatTemplateContext,
     currentLocation,
-    focusedCharacter: focusedCharacter,
+    focusedCharacter: toContextCharacter(focusedCharacter),
     focusedCharacterAppearance: buildAppearanceTags(focusedCharacter),
     rollingConversationSummariesText: formatGlobalMemoriesForPrompt(
-      focusedCharacter,
+      toContextCharacter(focusedCharacter),
       chatTemplateContext.allCharacters
     ),
   };
@@ -173,7 +187,7 @@ export async function buildFocusedChatTemplateContext(
 export async function buildTargetedChatTemplateContext(
   focusedCharacterId: string,
   targetCharacterId: string
-): Promise<TargetedConversationContext> {
+): Promise<TargetedConversationExecutionContext> {
   const scenarioCharacterStore = useScenarioCharacterStore.getState();
   const focusedCharacter = scenarioCharacterStore.scenarioCharactersById[focusedCharacterId];
   const targetCharacter = scenarioCharacterStore.scenarioCharactersById[targetCharacterId];
@@ -185,7 +199,7 @@ export async function buildTargetedChatTemplateContext(
 
   return {
     ...focusedContext,
-    targetCharacter,
+    targetCharacter: toContextCharacter(targetCharacter),
     targetCharacterRelationship: await useScenarioCharacterRelationshipStore
       .getState()
       .getCharacterRelationship(focusedCharacter.id, targetCharacter.id),
@@ -193,25 +207,27 @@ export async function buildTargetedChatTemplateContext(
       await useScenarioCharacterRelationshipStore
         .getState()
         .getCharacterRelationship(focusedCharacter.id, targetCharacter.id),
-      focusedCharacter,
-      targetCharacter,
+      toContextCharacter(focusedCharacter),
+      toContextCharacter(targetCharacter),
       focusedContext.allCharacters
     ),
   };
 }
 
-export function buildCharacterEditorContext(focusedCharacter: Character): CharacterEditorContext {
+export function buildCharacterEditorContext(focusedCharacter: Character): CharacterEditorExecutionContext {
   return {
     ...buildGlobalTemplateContext(),
     randomPersonalityTraits: generatePersonalityTraits(),
-    focusedCharacter,
+    focusedCharacter: toContextCharacter(focusedCharacter),
   };
 }
 
-export async function buildChatModeratorContext(speakerCandidates: Character[]) {
+export async function buildChatModeratorContext(
+  speakerCandidates: Character[]
+): Promise<ModerationNextSpeakerExecutionContext> {
   return {
     ...(await buildChatTemplateContext()),
-    speakerCandidates,
+    speakerCandidates: speakerCandidates.map(toContextCharacter),
   };
 }
 
@@ -223,5 +239,16 @@ export async function buildOffscreenMemoryUpdateConversationGoalContext(
   return {
     ...(await buildTargetedChatTemplateContext(fromCharacterId, toCharacterId)),
     candidateInformation,
+  };
+}
+
+export async function buildMemoryRagTemplateContext(
+  focusedCharacter: Character,
+  mentionedCharacter: Character,
+  mentionedByCharacter: Character
+): Promise<MemoryRagExectionContext> {
+  return {
+    ...(await buildTargetedChatTemplateContext(focusedCharacter.id, mentionedCharacter.id)),
+    mentionedByCharacter: toContextCharacter(mentionedByCharacter),
   };
 }
