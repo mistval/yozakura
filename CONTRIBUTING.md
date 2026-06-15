@@ -4,7 +4,7 @@ Thanks for your interest in contributing to Yozakura.
 
 This is a new project without particularly formal contribution requirements. Please just heed the following guidelines.
 
-1. Before working on a major feature, consider starting a discussion in [https://github.com/mistval/yozakura/discussions](discussions) and propose your motivation and intended approach.
+1. Before working on a major feature, consider starting a discussion in [discussions](https://github.com/mistval/yozakura/discussions) and propose your motivation and intended approach.
 2. Pull requests should go to the `dev` branch.
 3. Most significant pull requests will likely require at least a couple rounds of code review.
 4. Please make an effort to strictly adhere to type-safe coding approaches (using Zod for validation).
