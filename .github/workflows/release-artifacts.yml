@@ -35,6 +35,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set version from tag
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+        run: npm version "${TAG_NAME#v}" --no-git-tag-version --allow-same-version
+
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -87,6 +93,12 @@ jobs:
             package-lock.json
             client/package-lock.json
             server/package-lock.json
+
+      - name: Set version from tag
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
+        run: npm version "${TAG_NAME#v}" --no-git-tag-version --allow-same-version
 
       - name: Install root dependencies
         run: npm ci
