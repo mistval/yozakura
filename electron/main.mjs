@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import path from 'path';
-import { startServer } from '../server/dist/app.js';
+import { startServer } from '../server/dist/src/app.js';
 
 const __dirname = import.meta.dirname;
 const __filename = import.meta.filename;
