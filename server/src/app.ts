@@ -1,4 +1,5 @@
 import express, { type Express, type Request, type Response, type NextFunction } from 'express';
+import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -25,6 +26,10 @@ const DEFAULT_DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
 const DEFAULT_FRONTEND_DIST_DIR = path.resolve(__dirname, '..', '..', 'client', 'dist');
 
 export function createApp(options: CreateAppOptions = {}): Express {
+  const corsOrigin = process.env.YOZAKURA_CORS_ALLOWED_ORIGINS?.trim()
+    ? process.env.YOZAKURA_CORS_ALLOWED_ORIGINS.split(',').map((s) => s.trim())
+    : undefined;
+
   const dataDir = path.resolve(options.dataDir ?? process.env.YOZAKURA_DATA_DIR ?? DEFAULT_DATA_DIR);
   const staticDir = path.resolve(
     options.frontendDistDir ?? process.env.YOZAKURA_FRONTEND_DIST_DIR ?? DEFAULT_FRONTEND_DIST_DIR
@@ -38,6 +43,11 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   const app = express();
   app.use(express.json({ limit: '10mb' }));
+
+  if (corsOrigin) {
+    console.log('Configuration allowed custom CORS origins: ', corsOrigin.toString());
+    app.use(cors({ origin: corsOrigin }));
+  }
 
   app.use('/api', filesRouter(dataDir));
   app.use('/api', dbRouter(db));
