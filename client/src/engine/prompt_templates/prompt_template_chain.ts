@@ -104,13 +104,17 @@ export class PromptTemplateChain<TContextType extends PromptExecutionContext, TO
     return parsedResult;
   }
 
-  public async renderAndExecute(promptContext: TContextType): Promise<TOutputType> {
+  public async renderAndExecute(
+    promptContext: TContextType,
+    options: { abortSignal?: AbortSignal } = {}
+  ): Promise<TOutputType> {
     const completionRequestId = createCompletionRequestId();
     const messages = await this.render(promptContext, { completionRequestId });
     const response = await chatCompletion(messages, {
       promptTemplateGroup: this.templateChainId,
       completionRequestId,
       promptContext,
+      abortSignal: options.abortSignal,
     });
 
     return this.parse(response, promptContext, { completionRequestId });

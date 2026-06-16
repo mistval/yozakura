@@ -98,15 +98,14 @@ export function buildFullPrompt(character: Character, scenePrompt?: string): str
 export async function generateChatImage({
   fullPrompt,
   saveTo,
+  abortSignal,
 }: {
   fullPrompt: string;
   saveTo: string;
+  abortSignal?: AbortSignal;
 }): Promise<string[]> {
-  // Pause/abort before the image generation call, honoring the user's NPC-turn pause/stop.
-  return withPhaseTransitionGate(async (signal) => {
-    const payload = buildImagePayload(fullPrompt, 'chat', saveTo);
-    const result = await Api.generateImage(payload, signal);
+  const payload = buildImagePayload(fullPrompt, 'chat', saveTo);
+  const result = await Api.generateImage(payload, abortSignal);
 
-    return result.files;
-  });
+  return result.files;
 }

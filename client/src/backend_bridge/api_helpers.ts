@@ -6,8 +6,8 @@ type LlmTokenCallback = (fullText: string) => void;
 export type LlmChatOptions = {
   targetUrl?: string | undefined;
   authToken?: string | undefined;
-  onTokens?: LlmTokenCallback;
-  signal?: AbortSignal;
+  onTokens?: LlmTokenCallback | undefined;
+  signal?: AbortSignal | undefined;
 };
 
 const openAIChatCompletionSchema = z.object({

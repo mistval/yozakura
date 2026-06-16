@@ -6,7 +6,6 @@ import { useSettingsStore } from '../state/settings_store.js';
 import { usePromptLogStore } from '../state/prompt_log_store.js';
 import { useTemplateRenderLogStore } from '../state/template_render_log_store.js';
 import { getErrorMessage } from '../errors/error_util.js';
-import { withPhaseTransitionGate } from '../util/phase_transition_gate.js';
 import type { PromptExecutionContext } from './prompt_templates/prompt_template_context_fields';
 
 type ResponsePreParser = (response: string) => string;
@@ -16,8 +15,9 @@ const IDENTITY_RESPONSE_PRE_PARSER: ResponsePreParser = (response) => response;
 type ChatCompletionOptions = {
   promptContext: PromptExecutionContext;
   promptTemplateGroup: string;
-  onTokens?: (fullText: string) => void;
+  onTokens?: (fullText: string) => void | undefined;
   completionRequestId: string;
+  abortSignal?: AbortSignal | undefined;
   [key: string]: unknown;
 };
 
@@ -185,51 +185,57 @@ export async function chatCompletion(
   options: ChatCompletionOptions
 ): Promise<string> {
   // Pause/abort before the LLM call (and outside the retry loop, so an abort is not retried).
-  return withPhaseTransitionGate((signal) =>
-    runWithInteractiveRetry<string>({
-      operationType: 'api.llm_completion',
-      maxRetries: Number.POSITIVE_INFINITY,
-      signal,
-      run: async () => {
-        const { promptTemplateGroup, onTokens, completionRequestId, promptContext, ...llmOptions } = options;
-        const resolvedPromptOptions = resolveLlmPromptOptions(promptTemplateGroup, promptContext);
 
-        const payload = {
-          ...resolvedPromptOptions.metaOptions,
-          ...llmOptions,
-          messages,
-        };
+  return runWithInteractiveRetry<string>({
+    operationType: 'api.llm_completion',
+    maxRetries: Number.POSITIVE_INFINITY,
+    signal: options.abortSignal,
+    run: async () => {
+      const {
+        promptTemplateGroup,
+        onTokens,
+        completionRequestId,
+        promptContext,
+        abortSignal,
+        ...llmOptions
+      } = options;
+      const resolvedPromptOptions = resolveLlmPromptOptions(promptTemplateGroup, promptContext);
 
-        const transportOptions: LlmTransportOptions = {
-          targetUrl: resolvedPromptOptions.targetUrl,
-          authToken: resolvedPromptOptions.authToken,
-          ...(useSettingsStore.getState().tokenStreamingEnabled && onTokens ? { onTokens } : {}),
-        };
+      const payload = {
+        ...resolvedPromptOptions.metaOptions,
+        ...llmOptions,
+        messages,
+      };
 
-        const responseText = await Api.llmChat(payload, { ...transportOptions, signal });
+      const transportOptions: LlmTransportOptions = {
+        targetUrl: resolvedPromptOptions.targetUrl,
+        authToken: resolvedPromptOptions.authToken,
+        ...(useSettingsStore.getState().tokenStreamingEnabled && onTokens ? { onTokens } : {}),
+      };
 
-        usePromptLogStore.getState().addEntry({
-          payloadJson: stringifyForPromptLog(payload),
-          transportOptionsJson: sanitizeTransportOptionsForPromptLog(transportOptions),
-          responseJson: stringifyForPromptLog(responseText),
+      const responseText = await Api.llmChat(payload, { ...transportOptions, signal: options.abortSignal });
+
+      usePromptLogStore.getState().addEntry({
+        payloadJson: stringifyForPromptLog(payload),
+        transportOptionsJson: sanitizeTransportOptionsForPromptLog(transportOptions),
+        responseJson: stringifyForPromptLog(responseText),
+      });
+
+      if (completionRequestId) {
+        useTemplateRenderLogStore.getState().postTemplateRender({
+          completionRequestId,
+          completions: {
+            rawResponse: responseText,
+          },
         });
+      }
 
-        if (completionRequestId) {
-          useTemplateRenderLogStore.getState().postTemplateRender({
-            completionRequestId,
-            completions: {
-              rawResponse: responseText,
-            },
-          });
-        }
+      const cleaned = cleanLlmText(responseText, resolvedPromptOptions.responsePreParserSource);
+      if (!cleaned) {
+        throw new Error('Empty LLM response');
+      }
 
-        const cleaned = cleanLlmText(responseText, resolvedPromptOptions.responsePreParserSource);
-        if (!cleaned) {
-          throw new Error('Empty LLM response');
-        }
-
-        return cleaned;
-      },
-    })
-  );
+      return cleaned;
+    },
+  });
 }

@@ -28,6 +28,7 @@ import { newId } from '../../util/id';
 import { buildConversationStateUpdates, generateCharacterEndOfChatUpdates } from './post_chat_memories';
 import { wait } from '../../util/promise';
 import { getRequiredRandomChoice } from '../../util/array';
+import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
 
 export class ChatCoordinator {
   public static async activate(participantIds: string[]) {
@@ -143,18 +144,21 @@ export class ChatCoordinator {
   }
 
   public static async generateImageFromPrompt(fullPrompt: string) {
-    return this.activeChatStore().doWithStateGenerationImage(async () => {
-      const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
-      const files = await generateChatImage({
-        fullPrompt,
-        saveTo,
+    return withPhaseTransitionGate((abortSignal) => {
+      return this.activeChatStore().doWithStateGenerationImage(async () => {
+        const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
+        const files = await generateChatImage({
+          fullPrompt,
+          saveTo,
+          abortSignal,
+        });
+
+        const firstFile = files[0];
+        assertNonNullish(firstFile, 'No file returned from image generation call');
+
+        this.setTranscript(this.transcript().addImageMessage(firstFile).updatedTranscript);
+        return firstFile;
       });
-
-      const firstFile = files[0];
-      assertNonNullish(firstFile, 'No file returned from image generation call');
-
-      this.setTranscript(this.transcript().addImageMessage(firstFile).updatedTranscript);
-      return firstFile;
     });
   }
 
@@ -224,45 +228,49 @@ export class ChatCoordinator {
 
     const tokenStreamingEnabled = useSettingsStore.getState().tokenStreamingEnabled;
 
-    if (!tokenStreamingEnabled) {
+    return withPhaseTransitionGate(async (abortSignal) => {
+      if (!tokenStreamingEnabled) {
+        const response = await chatCompletion(prompts, {
+          promptTemplateGroup: 'gen_npc_response',
+          completionRequestId,
+          promptContext,
+          abortSignal,
+        });
+
+        const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
+          completionRequestId,
+        });
+
+        await this.addCharacterMessage(speaker.id, parsedResponse);
+        await this.pauseAfterNpcOnlyMessage();
+
+        return this.transcript;
+      }
+
+      const draftMessage = this.startStreamingNpcDraftMessage(speaker);
+
       const response = await chatCompletion(prompts, {
         promptTemplateGroup: 'gen_npc_response',
-        completionRequestId,
         promptContext,
+        completionRequestId,
+        abortSignal,
+        onTokens: (fullText: string) => {
+          this.setTranscript(this.transcript().editLatestMessage(fullText).updatedTranscript);
+        },
       });
 
       const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
         completionRequestId,
       });
 
+      // We delete and re-add in order to trigger certain effects like memory RAG
+      this.deleteMessageById(draftMessage.id);
       await this.addCharacterMessage(speaker.id, parsedResponse);
+
       await this.pauseAfterNpcOnlyMessage();
 
       return this.transcript;
-    }
-
-    const draftMessage = this.startStreamingNpcDraftMessage(speaker);
-
-    const response = await chatCompletion(prompts, {
-      promptTemplateGroup: 'gen_npc_response',
-      promptContext,
-      completionRequestId,
-      onTokens: (fullText: string) => {
-        this.setTranscript(this.transcript().editLatestMessage(fullText).updatedTranscript);
-      },
     });
-
-    const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
-      completionRequestId,
-    });
-
-    // We delete and re-add in order to trigger certain effects like memory RAG
-    this.deleteMessageById(draftMessage.id);
-    await this.addCharacterMessage(speaker.id, parsedResponse);
-
-    await this.pauseAfterNpcOnlyMessage();
-
-    return this.transcript;
   }
 
   public static getSpeakerSelectionMode(): SpeakerSelectionMode {
