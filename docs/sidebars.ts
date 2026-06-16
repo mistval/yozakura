@@ -15,6 +15,11 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Advanced',
+      items: ['settings-math'],
+    },
+    {
+      type: 'category',
       label: 'Links & Help',
       items: ['links'],
     },
