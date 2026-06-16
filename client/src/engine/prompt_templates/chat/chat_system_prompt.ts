@@ -87,7 +87,10 @@ Your instructions:
 <instructions>
 - <%= isInitialMessage ? 'Write a proactive first message in the conversation as ' + it.focusedCharacter.firstName + ' in first person perspective' : 'Write the next response as ' + it.focusedCharacter.firstName + ' in first person perspective' %>
 
-- Be concise. Write no more than three sentences.
+- <%= it.chatMedium === 'in_person'
+  ? 'Be concise. Write no more than three sentences.'
+  : 'Text messaging style (concise, casual, abbreviated, use emojis if consistent with ' + it.focusedCharacter.firstName + "'s persona). Be concise. Write no more than three sentences." %>
+
 - Use quotes for speech and asterisks for actions and internal speech.
 - Be aware that other characters' internal speech is not directly known to your character.
 - Avoid repetition.
@@ -114,6 +117,7 @@ class FinalInstructionsPromptTemplate extends PromptTemplateBase<
 - <%= it.chatMedium === 'in_person'
   ? 'Be concise. Write no more than three sentences.'
   : 'Text messaging style (concise, casual, abbreviated, use emojis if consistent with ' + it.focusedCharacter.firstName + "'s persona). Be concise. Write no more than three sentences." %>
+  
 - Use quotes for speech and asterisks for actions and internal speech.
 - Be aware that other characters' internal speech is not directly known to your character.
 - Avoid repetition.
