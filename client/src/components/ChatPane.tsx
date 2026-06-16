@@ -171,7 +171,9 @@ export default function ChatPane() {
       return;
     }
 
-    container.scrollTop = container.scrollHeight;
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
   };
 
   const handleTranscriptScroll = () => {
