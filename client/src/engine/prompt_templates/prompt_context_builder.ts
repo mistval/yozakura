@@ -30,7 +30,7 @@ const globalWritableContext = {};
 function toContextCharacter(character: Character): ContextCharacter {
   return {
     ...character,
-    xmlTagSafeName: `${character.firstName}_${character.lastName}`.toLowerCase().replaceAll(/\s+/, '_'),
+    xmlTagSafeName: `${character.firstName}_${character.lastName}`.toLowerCase().replaceAll(/\s+/g, '_'),
   };
 }
 
