@@ -1,7 +1,6 @@
 import * as Api from '../backend_bridge/api';
 import { assertNonNullish } from '../errors/application_error.js';
 import { useSettingsStore } from '../state/settings_store.js';
-import { withPhaseTransitionGate } from '../util/phase_transition_gate.js';
 import type { Character } from './types.js';
 
 function buildImagePayload(prompt: string, style: 'chat' | 'card', saveTo?: string): Record<string, unknown> {
