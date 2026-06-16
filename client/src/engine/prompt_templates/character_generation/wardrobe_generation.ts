@@ -27,16 +27,29 @@ Rules:
 class WardrobeGenerationUserTemplate extends PromptTemplateBase<
   z.infer<typeof characterEditorExecutionContextSchema>
 > {
-  public readonly defaultTemplateString = `Generate a list of comma-separated tags representing a character's typical clothing and accessories.
-
-Example output: blue jeans,red cardigan,white sneakers,canvas backpack
-
-The tags should describe what this character might typically wear on a regular day.
-
-Character description:
+  public readonly defaultTemplateString = `Here is the character description:
 <description>
 <%= it.focusedCharacter.internalDescription.replaceAll('{{user}}', 'the user').replaceAll('{{char}}', it.focusedCharacter.firstName) %>
+
 </description>
+
+<% if (it.focusedCharacter.wardrobes.length) { %>
+Here are the sets of tags we've already generated:
+<existing_tag_sets>
+<% for (const wardrobe of it.focusedCharacter.wardrobes) { %>
+<tag_set>
+<%= wardrobe.text %>
+
+</tag_set>
+<% } %>
+</existing_tag_sets>
+
+Generate a distinct list of comma-separated tags representing a set of clothing and accessories that the character might wear.
+<% } else { %>
+Generate a list of comma-separated tags representing a set of clothing and accessories that the character might wear.
+<% } %>
+
+Example output: blue jeans,red cardigan,white sneakers,canvas backpack
 
 Generate clothing/accessory tags for this character now. Output ONLY the comma-separated tags, nothing else.`;
 
