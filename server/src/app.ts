@@ -21,8 +21,8 @@ type StartServerOptions = CreateAppOptions & {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DEFAULT_DATA_DIR = path.resolve(__dirname, '..', 'data');
-const DEFAULT_FRONTEND_DIST_DIR = path.resolve(__dirname, '..', 'client', 'dist');
+const DEFAULT_DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
+const DEFAULT_FRONTEND_DIST_DIR = path.resolve(__dirname, '..', '..', 'client', 'dist');
 
 export function createApp(options: CreateAppOptions = {}): Express {
   const dataDir = path.resolve(options.dataDir ?? process.env.YOZAKURA_DATA_DIR ?? DEFAULT_DATA_DIR);

@@ -14,8 +14,8 @@ WORKDIR /app
 COPY server/package*.json ./server/
 RUN npm ci --prefix server
 
-COPY server/app.ts server/index.ts server/tsconfig.json ./server/
-COPY server/routes ./server/routes
+COPY server/index.ts server/tsconfig.json ./server/
+COPY server/src ./server/src
 RUN npm run build --prefix server
 
 COPY --from=web-builder /app/client/dist ./client/dist
