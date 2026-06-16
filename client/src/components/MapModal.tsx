@@ -5,7 +5,7 @@ import RoutedModalFrame from './ui/RoutedModalFrame.js';
 import { useGraphTheme } from '../theme/graph_themes.js';
 import type { Character } from '../engine/types.js';
 import { useScenarioStore } from '../state/scenario_store.js';
-import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
+import { useScenarioCharacterStore, useUserCharacter } from '../state/scenario_character_store.js';
 import { useCharacterOverview } from './character_overview/CharacterOverviewContext.js';
 import { useMapModal } from './MapModalContext.js';
 
@@ -42,6 +42,7 @@ export default function MapModal() {
   const { closeMap } = useMapModal();
   const map = useScenarioStore((state) => state.activeScenarioMap);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
+  const user = useUserCharacter();
   const graphTheme = useGraphTheme();
   const { showCharacterOverview } = useCharacterOverview();
 
@@ -72,7 +73,10 @@ export default function MapModal() {
 
   const graph = useMemo(() => {
     const locations = map?.locations ?? [];
-    const nodes = locations.map((location) => ({ id: location.id, label: location.name || 'Untitled' }));
+    const nodes = locations.map((location) => ({
+      id: location.id,
+      label: location.name || 'Untitled',
+    }));
     const edges = locations.flatMap((location) =>
       location.adjacency.map((targetId) => ({
         id: `${location.id}->${targetId}`,
@@ -83,7 +87,10 @@ export default function MapModal() {
     return { nodes, edges };
   }, [map]);
 
-  const actives = useMemo(() => (selectedLocationId ? [selectedLocationId] : []), [selectedLocationId]);
+  const actives = useMemo(
+    () => [user?.locationId, selectedLocationId].filter((id): id is string => Boolean(id)),
+    [user?.locationId, selectedLocationId]
+  );
 
   const selectedLocation = useMemo(
     () =>
