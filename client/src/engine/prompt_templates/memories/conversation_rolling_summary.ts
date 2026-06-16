@@ -29,10 +29,10 @@ class ConversationRollingSummaryUserTemplate extends PromptTemplateBase<
   z.infer<typeof focusedConversationExecutionContextSchema>
 > {
   public readonly defaultTemplateString = `<%= it.focusedCharacter.firstName %>'s persona:
-<<%= it.focusedCharacter.firstName %>_persona>
+<persona>
 <%= it.focusedCharacter.internalDescription %>
 
-</<%= it.focusedCharacter.firstName %>_persona>
+</persona>
 
 Conversation participants: <%= it.participants.map((participant) => participant.firstName + ' ' + participant.lastName).join(', ') %>
 

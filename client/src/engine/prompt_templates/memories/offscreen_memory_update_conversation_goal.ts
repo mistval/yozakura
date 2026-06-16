@@ -69,7 +69,7 @@ export const offscreenMemoryUpdateConversationGoalChainGroup = new PromptTemplat
   templateChainId: 'gen_offscreen_character_binary_update_next_convo_goal',
   templateChainTitle: 'Offscreen Conversation Goal Update',
   templateChainDescription:
-    'Two-message chain for deciding whether to keep the existing next-conversation goal or replace it with a new one.',
+    'Prompts for deciding whether to keep the existing next-conversation goal or replace it with a new one. Parser may return null to keep existing goal.',
   contextSchema: offscreenMemoryUpdateConversationGoalContextSchema,
   templates: [
     { template: offscreenMemoryUpdateConversationGoalSystemTemplate },
@@ -79,8 +79,8 @@ export const offscreenMemoryUpdateConversationGoalChainGroup = new PromptTemplat
     z.infer<typeof offscreenMemoryUpdateConversationGoalContextSchema>,
     string | null
   >(
-    `(response) => {
-  if (response.includes('KEEP_OLD_GOAL')) {
+    `async (response, it) => {
+  if (response.includes('KEEP_OLD')) {
     return null;
   }
 

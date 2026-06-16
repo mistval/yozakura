@@ -3,9 +3,9 @@ import { chatCompletion } from '../llm.js';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry.js';
 import { buildFullPrompt, generateChatImage } from '../image_gen.js';
 import {
-  buildTargetedChatTemplateContext,
   buildChatModeratorContext,
   buildFocusedChatTemplateContext,
+  buildMemoryRagTemplateContext,
 } from '../prompt_templates/prompt_context_builder';
 import { useSettingsStore, type SpeakerSelectionMode } from '../../state/settings_store.js';
 import * as Database from '../../backend_bridge/database.js';
@@ -205,74 +205,62 @@ export class ChatCoordinator {
     const speaker = useScenarioCharacterStore.getState().getRequiredCharacterById(npcId);
     const completionRequestId = newId();
 
-    try {
-      const promptContext = await buildFocusedChatTemplateContext(speaker.id);
-      const renderedPrompts = await chatSystemPromptChain.render(promptContext, {
-        completionRequestId,
-      });
+    const promptContext = await buildFocusedChatTemplateContext(speaker.id);
+    const renderedPrompts = await chatSystemPromptChain.render(promptContext, {
+      completionRequestId,
+    });
 
-      const aiPromptMessages = this.transcript().toAIPromptMessages(speaker.id);
-      const prompts = [renderedPrompts[0]!].concat(aiPromptMessages);
+    const aiPromptMessages = this.transcript().toAIPromptMessages(speaker.id);
+    const prompts = [renderedPrompts[0]!].concat(aiPromptMessages);
 
-      if (aiPromptMessages.length > 0) {
-        prompts.push(renderedPrompts[1]!);
-      }
+    if (aiPromptMessages.length > 0) {
+      prompts.push(renderedPrompts[1]!);
+    }
 
-      const userNudgePrompt = renderedPrompts[2];
-      if (userNudgePrompt?.content) {
-        prompts.push(userNudgePrompt);
-      }
+    const userNudgePrompt = renderedPrompts[2];
+    if (userNudgePrompt?.content) {
+      prompts.push(userNudgePrompt);
+    }
 
-      const tokenStreamingEnabled = useSettingsStore.getState().tokenStreamingEnabled;
+    const tokenStreamingEnabled = useSettingsStore.getState().tokenStreamingEnabled;
 
-      if (!tokenStreamingEnabled) {
-        const response = await chatCompletion(prompts, {
-          promptTemplateGroup: 'gen_npc_response',
-          completionRequestId,
-          promptContext,
-        });
-
-        const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
-          completionRequestId,
-        });
-
-        await this.addCharacterMessage(speaker.id, parsedResponse);
-        await this.pauseAfterNpcOnlyMessage();
-
-        return this.transcript;
-      }
-
-      const draftMessage = this.startStreamingNpcDraftMessage(speaker);
-
+    if (!tokenStreamingEnabled) {
       const response = await chatCompletion(prompts, {
         promptTemplateGroup: 'gen_npc_response',
-        promptContext,
         completionRequestId,
-        onTokens: (fullText: string) => {
-          this.setTranscript(this.transcript().editLatestMessage(fullText).updatedTranscript);
-        },
+        promptContext,
       });
 
       const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
         completionRequestId,
       });
 
-      // We delete and re-add in order to trigger certain effects like memory RAG
-      this.deleteMessageById(draftMessage.id);
       await this.addCharacterMessage(speaker.id, parsedResponse);
-
       await this.pauseAfterNpcOnlyMessage();
-    } catch (err) {
-      const mostRecentMessage = this.transcript().getMostRecentMessage();
-      if (mostRecentMessage && !mostRecentMessage.getContent()) {
-        this.setTranscript(this.transcript().deleteMessageById(mostRecentMessage.getId()).updatedTranscript);
-      }
 
-      await showNonRetriableErrorCardIfNeeded({
-        error: err,
-        operationType: 'chat.npc.speak',
-      });
+      return this.transcript;
     }
+
+    const draftMessage = this.startStreamingNpcDraftMessage(speaker);
+
+    const response = await chatCompletion(prompts, {
+      promptTemplateGroup: 'gen_npc_response',
+      promptContext,
+      completionRequestId,
+      onTokens: (fullText: string) => {
+        this.setTranscript(this.transcript().editLatestMessage(fullText).updatedTranscript);
+      },
+    });
+
+    const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
+      completionRequestId,
+    });
+
+    // We delete and re-add in order to trigger certain effects like memory RAG
+    this.deleteMessageById(draftMessage.id);
+    await this.addCharacterMessage(speaker.id, parsedResponse);
+
+    await this.pauseAfterNpcOnlyMessage();
 
     return this.transcript;
   }
@@ -501,10 +489,9 @@ export class ChatCoordinator {
       for (const participant of getActiveChatParticipants({ includeUser: false })) {
         const focusedCharacter = this.getCharacterById(participant.id);
 
-        const reminder = await memoryRagPromptTemplatesGroup.render({
-          ...(await buildTargetedChatTemplateContext(focusedCharacter.id, mentionedCharacter.id)),
-          mentionedByCharacter,
-        });
+        const reminder = await memoryRagPromptTemplatesGroup.render(
+          await buildMemoryRagTemplateContext(focusedCharacter, mentionedCharacter, mentionedByCharacter)
+        );
 
         this.setTranscript(
           this.transcript().addOffscreenRagMessage(participant.id, reminder[0]!.content, mentionedCharacter)

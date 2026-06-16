@@ -69,14 +69,15 @@ const moderationNextSpeakerUserTemplate = new ModerationNextSpeakerUserTemplate(
 export const moderationNextSpeakerTemplatesGroup = new PromptTemplateChain({
   templateChainId: 'gen_intelligent_next_speaker_select',
   templateChainTitle: 'Next Speaker Selection',
-  templateChainDescription: 'Templates used for intelligent next speaker selection in group chat.',
+  templateChainDescription:
+    'Templates used for intelligent next speaker selection in group chat. Parser may return null to fall back to simple selection logic.',
   contextSchema: moderationNextSpeakerExecutionContextSchema,
   templates: [
     { template: moderationNextSpeakerSystemTemplate },
     { template: moderationNextSpeakerUserTemplate },
   ],
   parser: new PromptOutputParser<z.infer<typeof moderationNextSpeakerExecutionContextSchema>, string | null>(
-    `(response, it) => {
+    `async (response, it) => {
   const nextSpeakerName = response.split(/\\s/)[0]?.toLowerCase();
   return it.speakerCandidates.find(
     (candidate) => candidate.firstName.toLowerCase() === nextSpeakerName

@@ -9,19 +9,27 @@ import {
   worldMapSchema,
 } from '../types';
 
-const characterSchema = internalCharacterSchema.pick({
-  id: true,
-  firstName: true,
-  lastName: true,
-  internalDescription: true,
-  externalDescription: true,
-  baseAppearanceTags: true,
-  wardrobes: true,
-  globalMemories: true,
-  locationId: true,
-  exampleDialogue: true,
-  rollingConversationSummaries: true,
-});
+const characterSchema = internalCharacterSchema
+  .pick({
+    id: true,
+    firstName: true,
+    lastName: true,
+    internalDescription: true,
+    externalDescription: true,
+    baseAppearanceTags: true,
+    wardrobes: true,
+    globalMemories: true,
+    locationId: true,
+    exampleDialogue: true,
+    rollingConversationSummaries: true,
+  })
+  .extend({
+    xmlTagSafeName: z.string().meta({
+      description:
+        'An encoding of the first and last name that is syntactically valid in the name of an XML tag',
+      examples: ['alice_smith'],
+    }),
+  });
 
 export type ContextCharacter = z.infer<typeof characterSchema>;
 
@@ -210,7 +218,7 @@ export const characterEditorExecutionContextSchema = globalExecutionContextSchem
   })
 );
 
-export type CharacterEditorContext = z.infer<typeof characterEditorExecutionContextSchema>;
+export type CharacterEditorExecutionContext = z.infer<typeof characterEditorExecutionContextSchema>;
 
 export const targetedConversationExecutionContextSchema = focusedConversationExecutionContextSchema.and(
   contextSchemaFields.pick({
@@ -219,13 +227,15 @@ export const targetedConversationExecutionContextSchema = focusedConversationExe
     targetCharacterFormattedRollingMemoriesText: true,
   })
 );
-export type TargetedConversationContext = z.infer<typeof targetedConversationExecutionContextSchema>;
+export type TargetedConversationExecutionContext = z.infer<typeof targetedConversationExecutionContextSchema>;
 
 export const memoryRagExecutionContext = targetedConversationExecutionContextSchema.and(
   contextSchemaFields.pick({
     mentionedByCharacter: true,
   })
 );
+
+export type MemoryRagExectionContext = z.infer<typeof memoryRagExecutionContext>;
 
 export const offscreenMemoryUpdateConversationGoalContextSchema =
   targetedConversationExecutionContextSchema.and(
@@ -239,7 +249,7 @@ export const offscreenMemoryUpdateConversationGoalContextSchema =
       })
   );
 
-type OffscreenMemoryUpdateConversationGoalContext = z.infer<
+type OffscreenMemoryUpdateConversationGoalExecutionContext = z.infer<
   typeof offscreenMemoryUpdateConversationGoalContextSchema
 >;
 
@@ -254,14 +264,17 @@ export const moderationNextSpeakerExecutionContextSchema = conversationExecution
     })
 );
 
-type ModerationNextSpeakerExecutionContext = z.infer<typeof moderationNextSpeakerExecutionContextSchema>;
+export type ModerationNextSpeakerExecutionContext = z.infer<
+  typeof moderationNextSpeakerExecutionContextSchema
+>;
 
 export type PromptExecutionContext =
   | GlobalExecutionContext
   | ScenarioExecutionContext
   | ConversationExecutionContext
   | FocusedConversationExecutionContext
-  | CharacterEditorContext
-  | TargetedConversationContext
-  | OffscreenMemoryUpdateConversationGoalContext
-  | ModerationNextSpeakerExecutionContext;
+  | CharacterEditorExecutionContext
+  | TargetedConversationExecutionContext
+  | OffscreenMemoryUpdateConversationGoalExecutionContext
+  | ModerationNextSpeakerExecutionContext
+  | MemoryRagExectionContext;

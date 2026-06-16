@@ -34,10 +34,10 @@ class OffscreenMemoryExtractionUserTemplate extends PromptTemplateBase<
   z.infer<typeof targetedConversationExecutionContextSchema>
 > {
   public readonly defaultTemplateString = `Here is <%= it.focusedCharacter.firstName %>'s persona:
-<<%= it.focusedCharacter.firstName %>_persona>
+<persona>
 <%= it.focusedCharacter.internalDescription %>
 
-</<%= it.focusedCharacter.firstName %>_persona>
+</persona>
 
 Here is the conversation transcript:
 <transcript>
@@ -71,14 +71,14 @@ export const offscreenMemoryExtractionChainGroup = new PromptTemplateChain({
   templateChainId: 'gen_offscreen_learned_information',
   templateChainTitle: 'Offscreen Memory Extraction',
   templateChainDescription:
-    'Prompts for extracting information learned about a character not participating in the conversation.',
+    'Prompts for extracting information learned about a character not participating in the conversation. The parser can return null if nothing new was learned.',
   contextSchema: targetedConversationExecutionContextSchema,
   templates: [
     { template: offscreenMemoryExtractionSystemTemplate },
     { template: offscreenMemoryExtractionUserTemplate },
   ],
   parser: new PromptOutputParser<z.infer<typeof targetedConversationExecutionContextSchema>, string | null>(
-    `(response) => {
+    `async (response, it) => {
   if (response.includes('NONE')) {
     return null;
   }

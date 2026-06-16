@@ -37,94 +37,6 @@ function sqlDatetimeNow() {
   return `CONCAT(datetime('now'), 'Z')`;
 }
 
-const CREATE_MULTI_TABLES_SQL = `
-  CREATE TABLE IF NOT EXISTS ${TABLE_CHARACTER} (
-    id TEXT PRIMARY KEY,
-    data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
-    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()})
-  );
-
-  CREATE TABLE IF NOT EXISTS ${TABLE_SCENARIO_CHARACTER} (
-    id TEXT PRIMARY KEY,
-    scenario_id TEXT NOT NULL,
-    data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
-    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
-    FOREIGN KEY (scenario_id) REFERENCES ${TABLE_SCENARIO}(id) ON DELETE CASCADE
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_scenario_character_scenario_character
-    ON ${TABLE_SCENARIO_CHARACTER}(scenario_id);
-
-  CREATE TABLE IF NOT EXISTS ${TABLE_SCENARIO} (
-    id TEXT PRIMARY KEY,
-    data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
-    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()})
-  );
-
-  CREATE TABLE IF NOT EXISTS ${TABLE_CHARACTER_RELATIONSHIP} (
-    id TEXT PRIMARY KEY,
-    from_id TEXT NOT NULL,
-    to_id TEXT NOT NULL,
-    data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
-    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
-    UNIQUE(from_id, to_id),
-    FOREIGN KEY (from_id) REFERENCES ${TABLE_SCENARIO_CHARACTER}(id) ON DELETE CASCADE,
-    FOREIGN KEY (to_id) REFERENCES ${TABLE_SCENARIO_CHARACTER}(id) ON DELETE CASCADE
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_character_relationship_from_to
-    ON ${TABLE_CHARACTER_RELATIONSHIP}(from_id, to_id);
-
-  CREATE INDEX IF NOT EXISTS idx_character_relationship_to_from
-    ON ${TABLE_CHARACTER_RELATIONSHIP}(to_id, from_id);
-
-  CREATE TABLE IF NOT EXISTS ${TABLE_CONVERSATION} (
-    id TEXT PRIMARY KEY,
-    scenario_id TEXT NOT NULL,
-    data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
-    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
-    FOREIGN KEY (scenario_id) REFERENCES ${TABLE_SCENARIO}(id) ON DELETE CASCADE
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_conversation_scenario_updated_at_desc
-    ON ${TABLE_CONVERSATION}(scenario_id, updated_at DESC);
-
-  CREATE TABLE IF NOT EXISTS ${TABLE_CONVERSATION_PARTICIPANT} (
-    id TEXT PRIMARY KEY,
-    character_id TEXT NOT NULL,
-    conversation_id TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
-    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
-    UNIQUE(character_id, conversation_id),
-    FOREIGN KEY (conversation_id) REFERENCES ${TABLE_CONVERSATION}(id) ON DELETE CASCADE
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_conversation_participant_character_updated_at_desc
-    ON ${TABLE_CONVERSATION_PARTICIPANT}(character_id, updated_at DESC);
-
-  CREATE INDEX IF NOT EXISTS idx_conversation_participant_conversation_character
-    ON ${TABLE_CONVERSATION_PARTICIPANT}(conversation_id, character_id);
-
-  CREATE TABLE IF NOT EXISTS ${TABLE_MAP} (
-    id TEXT PRIMARY KEY,
-    data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
-    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()})
-  );
-
-  CREATE TABLE IF NOT EXISTS ${TABLE_KEY_VALUE} (
-    key TEXT PRIMARY KEY,
-    data TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()}),
-    updated_at TEXT NOT NULL DEFAULT (${sqlDatetimeNow()})
-  );
-`;
-
 const UPSERT_CHARACTER_SQL = `
   INSERT INTO ${TABLE_CHARACTER} (id, data, created_at, updated_at)
   SELECT
@@ -349,27 +261,11 @@ type ConversationPageResult = {
   hasNextPage: boolean;
 };
 
-let dbSchemaReadyPromise: Promise<void> | undefined = undefined;
-
-function ensureDbSchema() {
-  if (!dbSchemaReadyPromise) {
-    dbSchemaReadyPromise = Api.dbExec(CREATE_MULTI_TABLES_SQL)
-      .then(() => undefined)
-      .catch((error) => {
-        dbSchemaReadyPromise = undefined;
-        throw error;
-      });
-  }
-
-  return dbSchemaReadyPromise;
-}
-
 async function selectUntypedMultiQuery(statement: string, parameterGroups: unknown[][]) {
   if (parameterGroups.length === 0) {
     return [];
   }
 
-  await ensureDbSchema();
   const response = await Api.dbAll(statement, parameterGroups);
   return response.results.flat();
 }
@@ -419,7 +315,6 @@ async function dbRun(statement: string, parameterGroups: unknown[][]) {
     return;
   }
 
-  await ensureDbSchema();
   await Api.dbRun(statement, parameterGroups);
 }
 

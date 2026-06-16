@@ -15,6 +15,7 @@ type RunWithInteractiveRetryOptions<T> = {
   maxRetries?: number;
   shouldRetry?: (error: unknown, attempt: number) => boolean;
   hint?: string | ((error: unknown, attempt: number) => string | undefined);
+  signal?: AbortSignal | undefined;
 };
 
 type Deferred<T> = {
@@ -224,6 +225,10 @@ export async function runWithInteractiveRetry<T>(options: RunWithInteractiveRetr
         return result;
       } catch (error) {
         if (error instanceof InteractiveRetryError) {
+          throw error;
+        }
+
+        if (options.signal?.aborted) {
           throw error;
         }
 

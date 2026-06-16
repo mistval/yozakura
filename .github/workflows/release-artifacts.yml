@@ -110,6 +110,8 @@ jobs:
         run: npm ci --prefix server
 
       - name: Build frontend
+        env:
+          VITE_GITHUB_RELEASE_TAG: '$TAG_NAME'
         run: npm run build:web
 
       - name: Build backend

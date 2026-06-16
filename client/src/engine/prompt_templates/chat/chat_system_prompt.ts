@@ -39,12 +39,12 @@ You are roleplaying as <%= it.focusedCharacter.firstName %> <%= it.focusedCharac
 <% for (const p of it.participants) { %>
 <% if (p.id !== it.focusedCharacter.id) { %>
 What <%= it.focusedCharacter.firstName %> knows about <%= p.firstName %> <%= p.lastName %>:
-<memories_of_<%= p.id %>>
+<memories_of_<%= p.xmlTagSafeName %>>
 <%= p.externalDescription %>
 
 <%= (await it.getRelationship(it.focusedCharacter.id, p.id))?.memory || it.focusedCharacter.firstName + ' has not met ' + p.firstName + ' yet. The previous information is surface level information that can be ascertained about ' + p.firstName + ' almost immediately when first meeting them.' %>
 
-</memories_of_<%= p.id %>>
+</memories_of_<%= p.xmlTagSafeName %>>
 <% } %>
 <% } %>
 
@@ -76,10 +76,10 @@ Location description: <%= it.currentLocation.description %>
 <% const shouldIncludeGossipMemory = !gossipTargetHasBeenRagged && it.gossipTargetCharacter && it.gossipTargetRelationship?.memory; %>
 <% if (shouldIncludeGossipMemory) { %>
 <%= it.focusedCharacter.firstName %> also knows another character named <%= it.gossipTargetCharacter.firstName %> <%= it.gossipTargetCharacter.lastName %>. <%= it.gossipTargetCharacter.firstName %> is not taking part in this conversation, but <%= it.focusedCharacter.firstName %> can mention <%= it.gossipTargetCharacter.firstName %> if it adds to the conversation. Here is <%= it.focusedCharacter.firstName %>'s relationship with <%= it.gossipTargetCharacter.firstName %>:
-<memories_of_<%= it.gossipTargetCharacter.id %>>
+<memories_of_<%= it.gossipTargetCharacter.xmlTagSafeName %>>
 <%= it.gossipTargetRelationship.memory %>
 
-</memories_of_<%= it.gossipTargetCharacter.id %>>
+</memories_of_<%= it.gossipTargetCharacter.xmlTagSafeName %>>
 <% } %>
 
 Your instructions:

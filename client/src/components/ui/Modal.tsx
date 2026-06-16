@@ -33,6 +33,7 @@ export default function Modal({
   zIndex,
 }: ModalProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const mouseDownOutside = useRef<boolean>(false);
 
   const setContainerRef: React.RefCallback<HTMLDivElement> = (node) => {
     containerRef.current = node;
@@ -72,8 +73,17 @@ export default function Modal({
 
   if (!open) return undefined;
 
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) {
+      mouseDownOutside.current = true;
+    }
+  };
+
   const handleOutsideClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!closeOnBackdropClick || !onClose) {
+    const wasDownOutside = mouseDownOutside.current;
+    mouseDownOutside.current = false;
+
+    if (!closeOnBackdropClick || !onClose || wasDownOutside) {
       return;
     }
 
@@ -93,6 +103,7 @@ export default function Modal({
           ref={setContainerRef}
           className={`h-full overflow-y-auto ${className}`}
           onClick={handleOutsideClick}
+          onMouseDown={handleMouseDown}
         >
           {children}
         </div>

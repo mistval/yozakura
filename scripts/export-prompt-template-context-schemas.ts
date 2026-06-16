@@ -245,6 +245,8 @@ async function main(): Promise<void> {
   for (const chain of chains) {
     console.log(`- ${chain.templateChainId} -> ${chain.schemaFileName}`);
   }
+
+  process.exit(0);
 }
 
 void main();

@@ -18,6 +18,7 @@ import {
   doWithScenarioLoopPromise,
   ScenarioLoopAbortSignalException,
   scenarioLoopPromiseCallbacks,
+  UserAbortSignalException,
 } from './flow_control';
 import type { ChatUserInputAction, UserTurnAction } from './types';
 
@@ -82,51 +83,56 @@ async function runChatLoop(
     await doScenarioLoopAsyncAction(() => ChatCoordinator.activate(participantIds));
   }
 
-  let nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+  try {
+    let nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
 
-  while (true) {
-    const numMessagesSent = ChatCoordinator.countChatMessages();
-    if (numMessagesSent >= getChatMessageLimit()) {
-      return closeChatSession();
-    }
-
-    const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();
-
-    if (userCharacter && nextSpeaker.id === userCharacter.id) {
-      ChatCoordinator.setStateAwaitingUserInput();
-      const userChatAction = await doWithScenarioLoopPromise<ChatUserInputAction>(
-        async (userChatActionPromise) => {
-          scenarioLoopPromiseCallbacks.userChatAction = userChatActionPromise;
-          return userChatActionPromise.promise;
-        }
-      );
-
-      if (userChatAction.actionType === 'skip_turn') {
-        nextSpeaker = await doScenarioLoopAsyncAction(() =>
-          ChatCoordinator.selectNextSpeaker({ notSpeakerId: nextSpeaker.id })
-        );
-      } else if (userChatAction.actionType === 'speak_as') {
-        nextSpeaker = await doScenarioLoopAsyncAction(() =>
-          ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: userChatAction.characterId })
-        );
-      } else if (userChatAction.actionType === 'request_end_chat') {
-        const transcript = useActiveChatStore.getState().transcript;
-        assertNonNullish(transcript, 'No chat transcript');
-        return closeChatSession(userChatAction.forceNoEffect);
-      } else if (userChatAction.actionType === 'send_message') {
-        await doScenarioLoopAsyncAction(() =>
-          ChatCoordinator.addCharacterMessage(userCharacter.id, userChatAction.message)
-        );
-
-        nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
-      } else {
-        assert(false, 'Unexpected user chat action');
+    while (true) {
+      const numMessagesSent = ChatCoordinator.countChatMessages();
+      if (numMessagesSent >= getChatMessageLimit()) {
+        return closeChatSession();
       }
-    } else {
-      ChatCoordinator.setStateNpcSpeaking();
-      await doScenarioLoopAsyncAction(() => ChatCoordinator.speakAsNpc(nextSpeaker.id));
-      nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+
+      const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();
+
+      if (userCharacter && nextSpeaker.id === userCharacter.id) {
+        ChatCoordinator.setStateAwaitingUserInput();
+        const userChatAction = await doWithScenarioLoopPromise<ChatUserInputAction>(
+          async (userChatActionPromise) => {
+            scenarioLoopPromiseCallbacks.userChatAction = userChatActionPromise;
+            return userChatActionPromise.promise;
+          }
+        );
+
+        if (userChatAction.actionType === 'skip_turn') {
+          nextSpeaker = await doScenarioLoopAsyncAction(() =>
+            ChatCoordinator.selectNextSpeaker({ notSpeakerId: nextSpeaker.id })
+          );
+        } else if (userChatAction.actionType === 'speak_as') {
+          nextSpeaker = await doScenarioLoopAsyncAction(() =>
+            ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: userChatAction.characterId })
+          );
+        } else if (userChatAction.actionType === 'request_end_chat') {
+          const transcript = useActiveChatStore.getState().transcript;
+          assertNonNullish(transcript, 'No chat transcript');
+          return closeChatSession(userChatAction.forceNoEffect);
+        } else if (userChatAction.actionType === 'send_message') {
+          await doScenarioLoopAsyncAction(() =>
+            ChatCoordinator.addCharacterMessage(userCharacter.id, userChatAction.message)
+          );
+
+          nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+        } else {
+          assert(false, 'Unexpected user chat action');
+        }
+      } else {
+        ChatCoordinator.setStateNpcSpeaking();
+        await doScenarioLoopAsyncAction(() => ChatCoordinator.speakAsNpc(nextSpeaker.id));
+        nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+      }
     }
+  } catch (err) {
+    await closeChatSession(true);
+    throw err;
   }
 }
 
@@ -236,10 +242,29 @@ async function runScenarioLoop(opts: { resumeRestoredChat: boolean }) {
   let resumeRestoredChat = opts.resumeRestoredChat;
 
   while (true) {
-    runWardrobeAutoselect();
-    await runUserPhase({ resumeRestoredChat });
-    resumeRestoredChat = false;
-    await runNpcPhase();
+    try {
+      runWardrobeAutoselect();
+      await runUserPhase({ resumeRestoredChat });
+      resumeRestoredChat = false;
+      await runNpcPhase();
+    } catch (err) {
+      // The user paused/stopped the NPC turn: hand control back to the user character by
+      // looping back to the user phase, disable auto mode, and clear the request. No error
+      // card is shown since this is a deliberate user action, not a failure.
+      if (err instanceof UserAbortSignalException) {
+        const loopState = useScenarioLoopStateStore.getState();
+        loopState.setAutoMode(false);
+        loopState.setUserRequestedPhaseTransition('none');
+        continue;
+      }
+
+      await showNonRetriableErrorCardIfNeeded({
+        operationType: 'chat_loop_top_level',
+        error: err as Error,
+      });
+
+      throw err;
+    }
   }
 }
 
@@ -283,7 +308,7 @@ export async function startScenarioLoop() {
       operationType: 'scenario_loop.run_loop',
       error: err,
       messagePrefix: 'Scenario loop fatal error',
-      hint: 'The scenario loop is no longer running. Try refreshing the page.',
+      hint: 'The scenario loop is no longer running. Try restarting the application.',
     });
 
     throw err;

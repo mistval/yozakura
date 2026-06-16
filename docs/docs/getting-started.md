@@ -28,18 +28,20 @@ Installation:
 
 ## Docker
 
-Prerequisites:
+### Prerequisites:
 
 1. You need access to an LLM via a completions API.
 2. You need to have [Docker](https://docs.docker.com/desktop/) installed
 
-Installation:
+### Installation:
 
-1. Run `docker run -p 4396:4396 -d ghcr.io/mistval/yozakura:latest`
+**Using Docker compose**: Save this [docker-compose.yml](https://github.com/mistval/yozakura/blob/main/docker-compose.yml) file somewhere and run `docker compose up -d` in that directory.
 
-If you want to use local models, you generally need to add `--network=host` to your Docker command, which **might not work at all on Windows**. As a workaround, you could create a Docker network, run your models inside Docker containers too, and network them together, but that's beyond the scope of this article.
+**Or without compose**: Run `docker run --network host -v ./yozakura_data:/app/data -d ghcr.io/mistval/yozakura:latest`.
 
-If you want to put your yozakura_data directory somewhere easily accessible, add a volume option to the command like: `docker run -p 4396:4396 -d -v /d/yozakura_data:/app/data ghcr.io/mistval/yozakura:latest`. If you don't do this, yozakura will create an anonymous volume, but you'll have to deal with re-attaching it to the new container if you ever pull a new image.
+In both cases, your data will be saved to a `yozakura_data` folder in the current working directory.
+
+Both methods use host network mode in order to have access to APIs you're running on your local machine. If you are not running text completions or image generation APIs on your local machine, you can remove the host network mode option. Note that host network mode **might not work at all on Windows**.
 
 Give it just a few moments to start, then visit `http://localhost:4396` in your web browser.
 
