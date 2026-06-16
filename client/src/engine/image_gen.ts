@@ -1,6 +1,7 @@
 import * as Api from '../backend_bridge/api';
 import { assertNonNullish } from '../errors/application_error.js';
 import { useSettingsStore } from '../state/settings_store.js';
+import { withPhaseTransitionGate } from '../util/phase_transition_gate.js';
 import type { Character } from './types.js';
 
 function buildImagePayload(prompt: string, style: 'chat' | 'card', saveTo?: string): Record<string, unknown> {
@@ -101,8 +102,11 @@ export async function generateChatImage({
   fullPrompt: string;
   saveTo: string;
 }): Promise<string[]> {
-  const payload = buildImagePayload(fullPrompt, 'chat', saveTo);
-  const result = await Api.generateImage(payload);
+  // Pause/abort before the image generation call, honoring the user's NPC-turn pause/stop.
+  return withPhaseTransitionGate(async (signal) => {
+    const payload = buildImagePayload(fullPrompt, 'chat', saveTo);
+    const result = await Api.generateImage(payload, signal);
 
-  return result.files;
+    return result.files;
+  });
 }

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { runWithInteractiveRetry } from '../engine/interative_retry';
 import { ApplicationError } from '../errors/application_error';
 
 type LlmTokenCallback = (fullText: string) => void;
@@ -8,20 +7,8 @@ export type LlmChatOptions = {
   targetUrl?: string | undefined;
   authToken?: string | undefined;
   onTokens?: LlmTokenCallback;
+  signal?: AbortSignal;
 };
-
-type RetryHintResolver = (error: unknown, attempt: number) => string | undefined;
-
-type AsyncApiCall<TArgs extends unknown[], TResult> = (...args: TArgs) => Promise<TResult>;
-
-type RetriedApiCallDefinition<TArgs extends unknown[], TResult> = {
-  operationType: string;
-  execute: AsyncApiCall<TArgs, TResult>;
-  hint?: string | RetryHintResolver;
-};
-
-const DEFAULT_API_RETRY_HINT =
-  'The backend server might not be running or downstream services might be unavailable.';
 
 const openAIChatCompletionSchema = z.object({
   choices: z.array(
@@ -164,7 +151,7 @@ async function parseLlmStreamingResponse(response: Response, onTokens: LlmTokenC
 }
 
 export async function executeLlmChat(payload: Record<string, unknown>, options: LlmChatOptions = {}) {
-  const { targetUrl, authToken, onTokens } = options;
+  const { targetUrl, authToken, onTokens, signal } = options;
   const streamingRequested = typeof onTokens === 'function';
 
   if (streamingRequested) {
@@ -184,6 +171,7 @@ export async function executeLlmChat(payload: Record<string, unknown>, options: 
       targetUrl,
       authToken,
     }),
+    signal: signal ?? null,
   });
 
   if (!response.ok) {
@@ -197,17 +185,6 @@ export async function executeLlmChat(payload: Record<string, unknown>, options: 
 
   const completion = await parseJSONResponse(openAIChatCompletionSchema, response);
   return completion?.choices?.[0]?.message?.content || '';
-}
-
-export function withInfiniteRetry<TArgs extends unknown[], TResult>(
-  definition: RetriedApiCallDefinition<TArgs, TResult>
-): AsyncApiCall<TArgs, TResult> {
-  return (...args: TArgs) =>
-    runWithInteractiveRetry<TResult>({
-      operationType: definition.operationType,
-      hint: definition.hint ?? DEFAULT_API_RETRY_HINT,
-      run: () => definition.execute(...args),
-    });
 }
 
 export async function parseJSONResponse<TZodType>(

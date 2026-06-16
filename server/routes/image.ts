@@ -27,6 +27,13 @@ export default function imageRouter(dataDir: string): Router {
   const router = express.Router();
 
   router.post('/image/generate', async (req, res, next) => {
+    const upstreamAbortController = new AbortController();
+    res.on('close', () => {
+      if (!res.writableEnded) {
+        upstreamAbortController.abort();
+      }
+    });
+
     try {
       const parsed = bodySchema.parse(req.body);
       const { saveTo, imageApiUrl, imageApiShape, authToken, ...payload } = parsed;
@@ -43,6 +50,7 @@ export default function imageRouter(dataDir: string): Router {
           method: 'POST',
           headers: requestHeaders,
           body: JSON.stringify(payload),
+          signal: upstreamAbortController.signal,
         });
 
         if (!response.ok) {

@@ -1,5 +1,12 @@
 import type { ChatUserInputAction, UserTurnAction } from './types';
 
+export class UserAbortSignalException extends Error {
+  public constructor(message = 'User aborted the current NPC turn') {
+    super(message);
+    this.name = 'UserAbortSignalException';
+  }
+}
+
 export class ScenarioLoopAbortSignalException extends Error {}
 
 class ScenarioLoopPromise<TReturnType> {

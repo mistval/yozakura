@@ -41,6 +41,12 @@ export default function ScenarioView() {
   const submitUserChatAction = useScenarioLoopStateStore((state) => state.submitUserChatAction);
   const autoModeEnabled = useScenarioLoopStateStore((state) => state.autoMode);
   const setAutoModeEnabled = useScenarioLoopStateStore((state) => state.setAutoMode);
+  const userRequestedPhaseTransition = useScenarioLoopStateStore(
+    (state) => state.userRequestedPhaseTransition
+  );
+  const setUserRequestedPhaseTransition = useScenarioLoopStateStore(
+    (state) => state.setUserRequestedPhaseTransition
+  );
   const npcPhaseBusy = currentPhase === 'npc';
   const canSubmitUserTurn = currentPhase === 'user' && !hasActiveChatSession;
   const previousUserIdRef = useRef<string | null>(null);
@@ -218,6 +224,9 @@ export default function ScenarioView() {
   const resolvedLocation = location || activeMap.locations[0];
   assertNonNullish(resolvedLocation, 'No valid current location available for user location.');
 
+  const showNpcPhaseControls = npcPhaseBusy && !activeChatIncludesUser;
+  const npcTurnPaused = userRequestedPhaseTransition === 'paused';
+
   const renderSessionHeader = ({ includeMenu = false }: { includeMenu?: boolean } = {}) => (
     <div className="flex justify-between items-center">
       <div className="font-semibold">
@@ -260,7 +269,30 @@ export default function ScenarioView() {
               submitUserWait();
             }}
             disabled={!canSubmitUserTurn}
+            canMove={!showNpcPhaseControls}
           />
+
+          {showNpcPhaseControls && (
+            <div>
+              <div className="font-semibold mb-1">NPC turn</div>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  className="border-warning-border bg-warning-bg text-warning-text-strong hover:bg-warning-border-soft"
+                  onClick={() => setUserRequestedPhaseTransition(npcTurnPaused ? 'none' : 'paused')}
+                >
+                  {npcTurnPaused ? '▶ Resume' : '⏸ Pause'}
+                </button>
+                <button
+                  type="button"
+                  className="border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover"
+                  onClick={() => setUserRequestedPhaseTransition('stopped')}
+                >
+                  ■ Stop
+                </button>
+              </div>
+            </div>
+          )}
 
           {hasActiveChatSession && (
             <div className="mx-auto py-6 space-y-3">

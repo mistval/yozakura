@@ -54,6 +54,13 @@ export default function llmRouter() {
   const router = express.Router();
 
   router.post('/llm/chat', async (req, res) => {
+    const upstreamAbortController = new AbortController();
+    res.on('close', () => {
+      if (!res.writableEnded) {
+        upstreamAbortController.abort();
+      }
+    });
+
     try {
       const parsed = completionsRequestSchema.parse(req.body);
       const { targetUrl, authToken, ...llmPayload } = parsed;
@@ -68,6 +75,7 @@ export default function llmRouter() {
         method: 'POST',
         headers,
         body: JSON.stringify(llmPayload),
+        signal: upstreamAbortController.signal,
       });
 
       res.status(response.status);

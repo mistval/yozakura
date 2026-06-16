@@ -18,6 +18,7 @@ import {
   doWithScenarioLoopPromise,
   ScenarioLoopAbortSignalException,
   scenarioLoopPromiseCallbacks,
+  UserAbortSignalException,
 } from './flow_control';
 import type { ChatUserInputAction, UserTurnAction } from './types';
 
@@ -247,12 +248,21 @@ async function runScenarioLoop(opts: { resumeRestoredChat: boolean }) {
       resumeRestoredChat = false;
       await runNpcPhase();
     } catch (err) {
+      // The user paused/stopped the NPC turn: hand control back to the user character by
+      // looping back to the user phase, disable auto mode, and clear the request. No error
+      // card is shown since this is a deliberate user action, not a failure.
+      if (err instanceof UserAbortSignalException) {
+        const loopState = useScenarioLoopStateStore.getState();
+        loopState.setAutoMode(false);
+        loopState.setUserRequestedPhaseTransition('none');
+        continue;
+      }
+
       await showNonRetriableErrorCardIfNeeded({
         operationType: 'chat_loop_top_level',
         error: err as Error,
       });
 
-      // If error is instance of the new UserAbortSignalException error, continue the loop. Otherwise, re-throw.
       throw err;
     }
   }

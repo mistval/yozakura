@@ -6,6 +6,7 @@ import { useSettingsStore } from '../state/settings_store.js';
 import { usePromptLogStore } from '../state/prompt_log_store.js';
 import { useTemplateRenderLogStore } from '../state/template_render_log_store.js';
 import { getErrorMessage } from '../errors/error_util.js';
+import { withPhaseTransitionGate } from '../util/phase_transition_gate.js';
 import type { PromptExecutionContext } from './prompt_templates/prompt_template_context_fields';
 
 type ResponsePreParser = (response: string) => string;
@@ -183,48 +184,52 @@ export async function chatCompletion(
   messages: PromptMessage[],
   options: ChatCompletionOptions
 ): Promise<string> {
-  return runWithInteractiveRetry<string>({
-    operationType: 'api.llm_completion',
-    maxRetries: Number.POSITIVE_INFINITY,
-    run: async () => {
-      const { promptTemplateGroup, onTokens, completionRequestId, promptContext, ...llmOptions } = options;
-      const resolvedPromptOptions = resolveLlmPromptOptions(promptTemplateGroup, promptContext);
+  // Pause/abort before the LLM call (and outside the retry loop, so an abort is not retried).
+  return withPhaseTransitionGate((signal) =>
+    runWithInteractiveRetry<string>({
+      operationType: 'api.llm_completion',
+      maxRetries: Number.POSITIVE_INFINITY,
+      signal,
+      run: async () => {
+        const { promptTemplateGroup, onTokens, completionRequestId, promptContext, ...llmOptions } = options;
+        const resolvedPromptOptions = resolveLlmPromptOptions(promptTemplateGroup, promptContext);
 
-      const payload = {
-        ...resolvedPromptOptions.metaOptions,
-        ...llmOptions,
-        messages,
-      };
+        const payload = {
+          ...resolvedPromptOptions.metaOptions,
+          ...llmOptions,
+          messages,
+        };
 
-      const transportOptions: LlmTransportOptions = {
-        targetUrl: resolvedPromptOptions.targetUrl,
-        authToken: resolvedPromptOptions.authToken,
-        ...(useSettingsStore.getState().tokenStreamingEnabled && onTokens ? { onTokens } : {}),
-      };
+        const transportOptions: LlmTransportOptions = {
+          targetUrl: resolvedPromptOptions.targetUrl,
+          authToken: resolvedPromptOptions.authToken,
+          ...(useSettingsStore.getState().tokenStreamingEnabled && onTokens ? { onTokens } : {}),
+        };
 
-      const responseText = await Api.llmChat(payload, transportOptions);
+        const responseText = await Api.llmChat(payload, { ...transportOptions, signal });
 
-      usePromptLogStore.getState().addEntry({
-        payloadJson: stringifyForPromptLog(payload),
-        transportOptionsJson: sanitizeTransportOptionsForPromptLog(transportOptions),
-        responseJson: stringifyForPromptLog(responseText),
-      });
-
-      if (completionRequestId) {
-        useTemplateRenderLogStore.getState().postTemplateRender({
-          completionRequestId,
-          completions: {
-            rawResponse: responseText,
-          },
+        usePromptLogStore.getState().addEntry({
+          payloadJson: stringifyForPromptLog(payload),
+          transportOptionsJson: sanitizeTransportOptionsForPromptLog(transportOptions),
+          responseJson: stringifyForPromptLog(responseText),
         });
-      }
 
-      const cleaned = cleanLlmText(responseText, resolvedPromptOptions.responsePreParserSource);
-      if (!cleaned) {
-        throw new Error('Empty LLM response');
-      }
+        if (completionRequestId) {
+          useTemplateRenderLogStore.getState().postTemplateRender({
+            completionRequestId,
+            completions: {
+              rawResponse: responseText,
+            },
+          });
+        }
 
-      return cleaned;
-    },
-  });
+        const cleaned = cleanLlmText(responseText, resolvedPromptOptions.responsePreParserSource);
+        if (!cleaned) {
+          throw new Error('Empty LLM response');
+        }
+
+        return cleaned;
+      },
+    })
+  );
 }

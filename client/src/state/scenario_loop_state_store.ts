@@ -10,16 +10,20 @@ import { useActiveChatStore } from './active_chat_store';
 
 type ScenarioLoopPhase = 'user' | 'npc';
 
+export type UserRequestedPhaseTransition = 'none' | 'paused' | 'stopped';
+
 type ScenarioLoopStateStoreState = {
   currentPhase: ScenarioLoopPhase;
   autoMode: boolean;
   runState: ScenarioLoopRunState;
   runningForScenario: string | undefined;
+  userRequestedPhaseTransition: UserRequestedPhaseTransition;
 
   setScenario: (scenarioId: string | undefined) => void;
   setPhase: (phase: ScenarioLoopPhase) => void;
   setAutoMode: (enabled: boolean) => void;
   setRunState: (runState: ScenarioLoopRunState) => void;
+  setUserRequestedPhaseTransition: (value: UserRequestedPhaseTransition) => void;
   resetLoopState: () => void;
   submitChatMessage: (message: string) => boolean;
   submitChatSkipTurn: () => boolean;
@@ -61,6 +65,7 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
   autoMode: false,
   runState: 'idle',
   runningForScenario: undefined,
+  userRequestedPhaseTransition: 'none',
 
   setPhase(phase: ScenarioLoopPhase) {
     set({
@@ -78,10 +83,15 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
     set({ runState });
   },
 
+  setUserRequestedPhaseTransition(value: UserRequestedPhaseTransition) {
+    set({ userRequestedPhaseTransition: value });
+  },
+
   resetLoopState() {
     set({
       currentPhase: 'user',
       runState: 'idle',
+      userRequestedPhaseTransition: 'none',
     });
   },
 
