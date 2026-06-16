@@ -39,6 +39,14 @@ export default function CharacterOverviewSingleData({
   const { closeCharacterOverview, openCharacterOverviewEditor } = useCharacterOverview();
   const [relationshipToUser, setRelationshipToUser] = useState<CharacterRelationship | undefined>(undefined);
 
+  const sortedLocations = useMemo(() => {
+    if (activeMap) {
+      return [...activeMap.locations].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return [];
+  }, [activeMap?.locations]);
+
   const otherCharactersArr = useMemo(
     () => characters.filter((c) => c.id !== selectedSingleCharacter.id),
     [selectedSingleCharacter]
@@ -145,7 +153,7 @@ export default function CharacterOverviewSingleData({
             }}
             className="border rounded-sm px-2 py-1 bg-inset"
           >
-            {activeMap.locations.map((location) => (
+            {sortedLocations.map((location) => (
               <option key={location.id} value={location.id}>
                 {location.name}
               </option>
