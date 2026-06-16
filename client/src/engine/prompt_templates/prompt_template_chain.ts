@@ -106,7 +106,7 @@ export class PromptTemplateChain<TContextType extends PromptExecutionContext, TO
 
   public async renderAndExecute(
     promptContext: TContextType,
-    options: { abortSignal?: AbortSignal } = {}
+    options: { abortSignal?: AbortSignal | undefined } = {}
   ): Promise<TOutputType> {
     const completionRequestId = createCompletionRequestId();
     const messages = await this.render(promptContext, { completionRequestId });

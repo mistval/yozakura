@@ -6,6 +6,7 @@ import {
   extractSillyTavernRawImportFields,
   type YozakuraCardPayload,
   type SillyTavernCardPayload,
+  type DetectedCardMetadata,
 } from './character_card_metadata.js';
 import { type Character } from './types.js';
 import { createWardrobe } from './wardrobes.js';
@@ -18,17 +19,34 @@ import { wardrobeGenerationTemplateGroup } from './prompt_templates/character_ge
 import { newId } from '../util/id.js';
 import { buildCharacterEditorContext } from './prompt_templates/prompt_context_builder.js';
 
-export async function generateCharacterInternalDescription(character: Character): Promise<string> {
-  return characterDescriptionGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character));
+export async function generateCharacterInternalDescription(
+  character: Character,
+  abortSignal?: AbortSignal
+): Promise<string> {
+  return characterDescriptionGenerationTemplateGroup.renderAndExecute(
+    buildCharacterEditorContext(character),
+    { abortSignal }
+  );
 }
 
-export async function generateCharacterExternalDescription(character: Character): Promise<string> {
-  return externalDescriptionGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character));
+export async function generateCharacterExternalDescription(
+  character: Character,
+  abortSignal?: AbortSignal
+): Promise<string> {
+  return externalDescriptionGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character), {
+    abortSignal,
+  });
 }
+
+type ExtractCharacterCardOptions = {
+  abortSignal?: AbortSignal;
+  onStep?: (step: string) => void;
+};
 
 export async function extractCharacterCard(
   character: Character,
-  onFieldGenerated?: <K extends keyof Character>(key: K, value: Character[K]) => void
+  onFieldGenerated?: <K extends keyof Character>(key: K, value: Character[K]) => void,
+  options?: ExtractCharacterCardOptions
 ): Promise<{
   description: string;
   exampleDialogue: string;
@@ -39,18 +57,27 @@ export async function extractCharacterCard(
     throw new Error('Character firstName and description must be non-empty');
   }
 
+  const signal = options?.abortSignal;
+  const onStep = options?.onStep;
+
+  onStep?.('Extracting description');
   const description = await extractCharacterDescriptionTemplateGroup.renderAndExecute(
-    buildCharacterEditorContext(character)
+    buildCharacterEditorContext(character),
+    { abortSignal: signal }
   );
 
   onFieldGenerated?.('internalDescription', description);
-  const externalDescription = await generateCharacterExternalDescription(character);
+  onStep?.('Generating external description');
+  const externalDescription = await generateCharacterExternalDescription(character, signal);
   onFieldGenerated?.('externalDescription', externalDescription);
-  const exampleDialogue = await generateExampleDialogue(character);
+  onStep?.('Generating example dialogue');
+  const exampleDialogue = await generateExampleDialogue(character, signal);
   onFieldGenerated?.('exampleDialogue', exampleDialogue);
-  const baseAppearanceTags = await generateBaseAppearanceTags(character);
+  onStep?.('Generating appearance');
+  const baseAppearanceTags = await generateBaseAppearanceTags(character, signal);
   onFieldGenerated?.('baseAppearanceTags', baseAppearanceTags);
-  const wardrobeTags = await generateWardrobe(character);
+  onStep?.('Generating wardrobe');
+  const wardrobeTags = await generateWardrobe(character, signal);
   onFieldGenerated?.('wardrobes', [createWardrobe(wardrobeTags, 'default')]);
 
   return {
@@ -61,16 +88,28 @@ export async function extractCharacterCard(
   };
 }
 
-export async function generateExampleDialogue(character: Character): Promise<string> {
-  return exampleDialogueTemplateGroup.renderAndExecute(buildCharacterEditorContext(character));
+export async function generateExampleDialogue(
+  character: Character,
+  abortSignal?: AbortSignal
+): Promise<string> {
+  return exampleDialogueTemplateGroup.renderAndExecute(buildCharacterEditorContext(character), {
+    abortSignal,
+  });
 }
 
-export async function generateBaseAppearanceTags(character: Character): Promise<string> {
-  return baseAppearanceGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character));
+export async function generateBaseAppearanceTags(
+  character: Character,
+  abortSignal?: AbortSignal
+): Promise<string> {
+  return baseAppearanceGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character), {
+    abortSignal,
+  });
 }
 
-export async function generateWardrobe(character: Character): Promise<string> {
-  return wardrobeGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character));
+export async function generateWardrobe(character: Character, abortSignal?: AbortSignal): Promise<string> {
+  return wardrobeGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character), {
+    abortSignal,
+  });
 }
 
 export function createBlankCharacter(): Character {
@@ -138,6 +177,66 @@ export function applySillyTavernRawImport(character: Character, payload: SillyTa
     internalDescription: importedFields.internalDescription || character.internalDescription,
     exampleDialogue: importedFields.exampleDialogue || character.exampleDialogue,
   };
+}
+
+export type CardImportMode = 'convert' | 'raw';
+
+export function getImportedCardName(
+  detected: DetectedCardMetadata
+): { firstName: string; lastName: string } | undefined {
+  if (detected.kind === 'none') {
+    return undefined;
+  }
+
+  if (detected.kind === 'yozakura') {
+    return {
+      firstName: detected.payload.character.firstName,
+      lastName: detected.payload.character.lastName ?? '',
+    };
+  }
+
+  const nameParts = extractSillyTavernNameParts(detected.payload);
+  return {
+    firstName: nameParts.firstName,
+    lastName: nameParts.lastName ?? '',
+  };
+}
+
+type BuildImportedCardCharacterOptions = {
+  abortSignal?: AbortSignal;
+  onStep?: (step: string) => void;
+};
+
+export async function buildImportedCardCharacter(
+  detected: DetectedCardMetadata,
+  mode: CardImportMode,
+  options?: BuildImportedCardCharacterOptions
+): Promise<Character | undefined> {
+  if (detected.kind === 'none') {
+    return undefined;
+  }
+
+  const base = createBlankCharacter();
+
+  if (detected.kind === 'yozakura') {
+    return mergeYozakuraCardIntoCharacter(base, detected.payload);
+  }
+
+  if (mode === 'raw') {
+    return applySillyTavernRawImport(base, detected.payload);
+  }
+
+  const extractionCharacter = buildSillyTavernExtractionCharacter(base, detected.payload);
+  const result: Character = { ...extractionCharacter };
+  await extractCharacterCard(
+    extractionCharacter,
+    (key, value) => {
+      result[key] = value;
+    },
+    options
+  );
+
+  return result;
 }
 
 function sanitizeCharacterSlugPart(value: string): string {
