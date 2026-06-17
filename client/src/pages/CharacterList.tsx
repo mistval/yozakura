@@ -13,7 +13,11 @@ export default function CharacterList() {
   const navigate = useNavigate();
   const { openSettings } = useSettingsModal();
   const { showCharacterEditor } = useGlobalCharacterEditor();
-  const { open: bulkImportOpen, openModal: openBulkImport, closeModal: closeBulkImport } = useModalQueryParam('bulkimport');
+  const {
+    open: bulkImportOpen,
+    openModal: openBulkImport,
+    closeModal: closeBulkImport,
+  } = useModalQueryParam('bulkimport');
 
   const sortedGlobalCharacters = useMemo(
     () =>
