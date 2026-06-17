@@ -53,9 +53,20 @@ export function applyPostConversationWardrobeAutoRevert(
       let changed = false;
       const newWardrobes = participant.wardrobes.map((wardrobe) => {
         const snapshotWardrope = snapshot.find((w) => w.id === wardrobe.id);
+        const isNew = !snapshotWardrope;
+
+        if (isNew) {
+          changed = true;
+          return {
+            ...wardrobe,
+            enabled: !wardrobe.autoRevert,
+          };
+        }
+
         const wasEnabled = snapshotWardrope?.enabled ?? wardrobe.enabled;
         const newEnabled = wardrobe.autoRevert ? wasEnabled : wardrobe.enabled;
         changed ||= wardrobe.enabled !== newEnabled;
+
         return {
           ...wardrobe,
           enabled: newEnabled,

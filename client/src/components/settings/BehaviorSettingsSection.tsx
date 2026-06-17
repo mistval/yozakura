@@ -275,15 +275,7 @@ export default function BehaviorSettingsSection() {
       <div>
         <h2 className="text-2xl font-semibold">Behavior Settings</h2>
       </div>
-      <div className="rounded-lg border p-4 space-y-4 bg-surface-soft">
-        <CheckboxSettingRow
-          id="scenario-freedom-of-movement"
-          label="Freedom of movement"
-          tooltipHtml={settingsTooltips['npc.freedomOfMovement']}
-          checked={freedomOfMovement}
-          onChange={(nextChecked) => setSettings({ freedomOfMovement: nextChecked })}
-        />
-
+      <div className="rounded-lg border p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface-soft">
         <div className="space-y-2">
           <SettingFieldLabel
             text="NPC group chat speaker selection mode"
@@ -326,6 +318,14 @@ export default function BehaviorSettingsSection() {
             <option value="intelligent">Intelligent</option>
           </select>
         </div>
+
+        <CheckboxSettingRow
+          id="scenario-freedom-of-movement"
+          label="Freedom of movement"
+          tooltipHtml={settingsTooltips['npc.freedomOfMovement']}
+          checked={freedomOfMovement}
+          onChange={(nextChecked) => setSettings({ freedomOfMovement: nextChecked })}
+        />
 
         {rangeSettingRows.map((setting) => (
           <div key={setting.id}>

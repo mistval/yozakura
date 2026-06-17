@@ -4,6 +4,8 @@ import { useSettingsStore, type ChatPaneWidth } from '../../state/settings_store
 import { ConversationTranscript } from '../../engine/chat/transcript.js';
 import { useMemo } from 'react';
 import Markdown from 'react-markdown';
+import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
+import { useConversationLog } from './ConversationLogContext.js';
 
 const CHAT_PANE_WIDTH_OPTIONS: Array<{ value: ChatPaneWidth; label: string }> = [
   { value: 'narrow', label: 'Narrow' },
@@ -69,6 +71,8 @@ function StateUpdateNodeView({ node, pathKey }: { node: ConversationStateUpdateN
 
 export default function ConversationLogView({ userId, selectedEntry, onBack }: ConversationLogViewProps) {
   const conversationLogWidth = useSettingsStore((s) => s.conversationLogWidth);
+  const { showCharacterOverview } = useCharacterOverview();
+  const { closeConversationLog } = useConversationLog();
   const setSettings = useSettingsStore((s) => s.setSettings);
 
   if (!selectedEntry) return undefined;
@@ -122,6 +126,21 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
               );
             })}
           </div>
+
+          {selectedEntry.participants.length === 2 && (
+            <button
+              onClick={() => {
+                closeConversationLog();
+                showCharacterOverview({
+                  target: 'overview',
+                  selectedIds: selectedEntry.participants.map((p) => p.id),
+                  scrolldown: true,
+                });
+              }}
+            >
+              View Relationship
+            </button>
+          )}
 
           <label className="block space-y-1 text-sm">
             <div className="font-medium">Conversation Width</div>

@@ -63,7 +63,7 @@ export type SillyTavernCardPayload = {
   data: SillyTavernCardData;
 };
 
-type DetectedCardMetadata =
+export type DetectedCardMetadata =
   | { kind: 'none' }
   | { kind: 'yozakura'; payload: YozakuraCardPayload }
   | { kind: 'sillytavern'; payload: SillyTavernCardPayload };

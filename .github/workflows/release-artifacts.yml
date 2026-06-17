@@ -111,7 +111,7 @@ jobs:
 
       - name: Build frontend
         env:
-          VITE_GITHUB_RELEASE_TAG: '$TAG_NAME'
+          VITE_GITHUB_RELEASE_TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}
         run: npm run build:web
 
       - name: Build backend
