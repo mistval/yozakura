@@ -45,7 +45,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   app.use(express.json({ limit: '10mb' }));
 
   if (corsOrigin) {
-    console.log('Configuration allowed custom CORS origins: ', corsOrigin.toString());
+    console.log('Configuration allowed custom CORS origins:', corsOrigin.toString());
     app.use(cors({ origin: corsOrigin }));
   }
 
