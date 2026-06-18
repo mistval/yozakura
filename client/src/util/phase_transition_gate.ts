@@ -1,10 +1,15 @@
 import { UserAbortSignalException } from '../engine/scenario_loop/flow_control.js';
 import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store.js';
 
-export async function withPhaseTransitionGate<T>(fn: (signal: AbortSignal) => Promise<T>): Promise<T> {
+export async function withPhaseTransitionGate<T>(
+  fn: (signal: AbortSignal) => Promise<T>,
+  opts?: { isUserInteraction?: boolean | undefined }
+): Promise<T> {
   let { userRequestedPhaseTransition } = useScenarioLoopStateStore.getState();
 
-  if (userRequestedPhaseTransition === 'paused') {
+  // User-initiated generation (e.g. driving an NPC message while a chat is paused) must never be
+  // blocked by the pause; only automatic generation waits for the user to resume.
+  if (!opts?.isUserInteraction && userRequestedPhaseTransition === 'paused') {
     await new Promise((resolve) => {
       const unsubscribe = useScenarioLoopStateStore.subscribe((state) => {
         userRequestedPhaseTransition = state.userRequestedPhaseTransition;

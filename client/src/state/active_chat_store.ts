@@ -38,6 +38,8 @@ const persistedActiveChatSchema = z.object({
   preConversationWardrobeSnapshotByCharacterId: z.record(z.string(), z.array(wardrobeSchema)),
   ephemeralLocation: ephemeralLocationSchema.optional(),
   initiatorId: z.string().optional(),
+  chatInstructions: z.string().optional(),
+  chatInstructionsByCharacterId: z.record(z.string(), z.string()).optional(),
 });
 
 type PersistedActiveChat = z.infer<typeof persistedActiveChatSchema>;
@@ -58,6 +60,8 @@ type BaseChatStoreState = {
   ephemeralLocation: EphemeralLocation | undefined;
   initiatorId: string | undefined;
   memoryRagHelper: MemoryRAGHelper | undefined;
+  chatInstructions: string;
+  chatInstructionsByCharacterId: Record<string, string>;
 
   isActive: () => boolean;
   setTranscript: (transcript: ConversationTranscript) => void;
@@ -68,6 +72,8 @@ type BaseChatStoreState = {
   userIsParticipant: () => boolean;
   addChatParticipant: (participantId: string) => void;
   removeChatParticipant: (participantId: string) => void;
+  setChatInstructions: (instructions: string) => void;
+  setCharacterChatInstructions: (characterId: string, instructions: string) => void;
   setStateProcessingMemories: (info: string) => void;
   setStateAwaitingUserInput: () => void;
   setStateNpcSpeaking: () => void;
@@ -104,6 +110,8 @@ const inactiveState: OmitFunctions<BaseChatStoreState> = {
   ephemeralLocation: undefined,
   initiatorId: undefined,
   memoryRagHelper: undefined,
+  chatInstructions: '',
+  chatInstructionsByCharacterId: {},
 };
 
 function getRequiredCharacterById(characterId: string): Character {
@@ -263,6 +271,8 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
       ephemeralLocation: persisted.ephemeralLocation,
       initiatorId: persisted.initiatorId,
       memoryRagHelper,
+      chatInstructions: persisted.chatInstructions ?? '',
+      chatInstructionsByCharacterId: persisted.chatInstructionsByCharacterId ?? {},
     });
 
     for (const rawMessage of transcript.getRawMessages()) {
@@ -356,10 +366,6 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
       throw new Error('Cannot remove participant from a two-person chat');
     }
 
-    if (participantId === getRequiredActiveScenario().userCharacterId) {
-      throw new Error('Cannot remove user from chat');
-    }
-
     const nextParticipantIds = activeState.participantIds.filter((id) => id !== participantId);
     const { updatedTranscript, didPurge } =
       activeState.transcript.updateMessagesForParticipantLeaving(participantId);
@@ -376,6 +382,19 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
   setTranscript(transcript: ConversationTranscript) {
     set({
       transcript,
+    });
+  },
+
+  setChatInstructions(instructions: string) {
+    set({ chatInstructions: instructions });
+  },
+
+  setCharacterChatInstructions(characterId: string, instructions: string) {
+    set({
+      chatInstructionsByCharacterId: {
+        ...get().chatInstructionsByCharacterId,
+        [characterId]: instructions,
+      },
     });
   },
 
@@ -426,6 +445,8 @@ function buildPersistedActiveChat(state: BaseChatStoreState): PersistedActiveCha
     preConversationWardrobeSnapshotByCharacterId: state.preConversationWardrobeSnapshotByCharacterId,
     ephemeralLocation: state.ephemeralLocation,
     initiatorId: state.initiatorId,
+    chatInstructions: state.chatInstructions,
+    chatInstructionsByCharacterId: state.chatInstructionsByCharacterId,
   };
 }
 

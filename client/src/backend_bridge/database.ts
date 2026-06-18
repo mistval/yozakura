@@ -30,7 +30,7 @@ const TABLE_MAP = 'map';
 const TABLE_KEY_VALUE = 'key_value';
 
 function buildSqlPlaceholders(count: number): string {
-  return new Array(count).fill('?').join(', ');
+  return Array(count).fill('?').join(', ');
 }
 
 function sqlDatetimeNow() {

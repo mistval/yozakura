@@ -49,10 +49,10 @@ export const settingsTooltips = {
   'npc.offscreenLearnedInformationLimit':
     'How many pieces of recent offscreen learned information are retained per character-pair. Older information is discarded and will no longer be injected into memory rewrite prompts, thus information no longer in that window is more likely to be discarded from character memory.',
   'chat.paneWidth': 'Controls the horizontal layout width of the chat panel.',
-  'npc.groupSpeakerSelectionMode':
-    '<strong>Round Robin</strong> rotates speakers in a consistent order. <strong>Intelligent</strong> uses LLM-based moderation to choose who speaks next. This setting only applies to chats without the user as a participant.',
-  'user.speakerSelectionMode':
-    '<strong>Round Robin</strong> rotates speakers in a consistent order. <strong>Manual</strong> waits for you to click <strong>Speak</strong>. <strong>Intelligent</strong> uses LLM-based moderation to choose who speaks next. This setting only applies to chats that include the user.',
+  speakerSelectionMode:
+    '<strong>Round Robin</strong> rotates speakers in a consistent order. <strong>Intelligent</strong> uses LLM-based moderation to choose who speaks next.',
+  'behavior.pauseAtNpcChatStart':
+    'When enabled, every NPC-only chat begins paused with control handed to you, so you can steer it message-by-message (choose who speaks, edit, delete, or redo messages) before letting it run. Press <strong>Start Chat</strong> / <strong>Resume</strong> in the chat to let the NPCs continue on their own.',
   'npc.freedomOfMovement':
     "When enabled, movement and conversation do not consume the user's turn. Your turn ends only when you press <strong>Wait</strong>.",
   'npc.onlyChatDelay':

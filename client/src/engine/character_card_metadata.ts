@@ -294,7 +294,7 @@ export function extractSillyTavernNameParts(payload: SillyTavernCardPayload): {
   }
 
   const tokens = rawName.split(/\s+/).filter(Boolean);
-  const firstName = tokens[0];
+  const firstName = tokens[0]?.trim();
   if (!firstName) {
     return { firstName: 'NameUnknown' };
   }

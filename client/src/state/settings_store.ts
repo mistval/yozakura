@@ -29,7 +29,7 @@ export type PromptTemplateOverride = {
   templateString?: string | undefined;
 };
 
-const speakerSelectionModeSchema = z.enum(['round_robin', 'manual', 'intelligent']);
+const speakerSelectionModeSchema = z.enum(['round_robin', 'intelligent']);
 export type SpeakerSelectionMode = z.infer<typeof speakerSelectionModeSchema>;
 const chatPaneWidthSchema = z.enum(['narrow', 'medium', 'wide', 'extra_wide', 'unconstrained']);
 export type ChatPaneWidth = z.infer<typeof chatPaneWidthSchema>;
@@ -56,8 +56,8 @@ const settingsSchema = z.object({
   npcTriggeredGroupChatRate: z.number(),
   npcGroupChatAdditionalParticipants: z.number(),
   npcChatRate: z.number(),
-  userChatSpeakerSelectionMode: speakerSelectionModeSchema,
-  npcGroupChatSpeakerSelectionMode: speakerSelectionModeSchema,
+  speakerSelectionMode: speakerSelectionModeSchema,
+  pauseAtNpcChatStart: z.boolean(),
   chatPaneWidth: chatPaneWidthSchema,
   conversationLogWidth: chatPaneWidthSchema,
   freedomOfMovement: z.boolean(),
@@ -129,8 +129,8 @@ const DEFAULT_SETTINGS: Settings = {
   npcTriggeredGroupChatRate: 0.07,
   npcGroupChatAdditionalParticipants: 2,
   npcChatRate: 0.5,
-  userChatSpeakerSelectionMode: 'round_robin',
-  npcGroupChatSpeakerSelectionMode: 'round_robin',
+  speakerSelectionMode: 'round_robin',
+  pauseAtNpcChatStart: false,
   chatPaneWidth: 'medium',
   conversationLogWidth: 'medium',
   freedomOfMovement: false,
@@ -229,7 +229,7 @@ async function loadOverridesFromBackend(): Promise<SettingsOverrides> {
     'settings',
     { debouncerKey: SETTINGS_KV_KEY }
   );
-  return (stored as SettingsOverrides | undefined) ?? {};
+  return stored as SettingsOverrides;
 }
 
 export async function hydrateSettings(): Promise<void> {

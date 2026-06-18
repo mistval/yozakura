@@ -158,6 +158,7 @@ async function buildChatTemplateContext(focusedCharacter?: Character): Promise<C
     conversationMessages: activeChatStore.transcript.getRawMessages(),
     gossipTargetCharacter: gossipTargetCharacter ? toContextCharacter(gossipTargetCharacter) : undefined,
     gossipTargetRelationship,
+    chatInstructions: activeChatStore.chatInstructions,
   };
 }
 
@@ -181,6 +182,8 @@ export async function buildFocusedChatTemplateContext(
       toContextCharacter(focusedCharacter),
       chatTemplateContext.allCharacters
     ),
+    focusedCharacterChatInstructions:
+      useActiveChatStore.getState().chatInstructionsByCharacterId[focusedCharacter.id] ?? '',
   };
 }
 

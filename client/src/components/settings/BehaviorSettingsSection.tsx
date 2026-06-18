@@ -32,8 +32,8 @@ export default function BehaviorSettingsSection() {
   const npcTriggeredGroupChatRate = useSettingsStore((s) => s.npcTriggeredGroupChatRate);
   const npcRemoteChatRate = useSettingsStore((s) => s.npcRemoteChatRate);
   const freedomOfMovement = useSettingsStore((s) => s.freedomOfMovement);
-  const npcGroupChatSpeakerSelectionMode = useSettingsStore((s) => s.npcGroupChatSpeakerSelectionMode);
-  const userChatSpeakerSelectionMode = useSettingsStore((s) => s.userChatSpeakerSelectionMode);
+  const speakerSelectionMode = useSettingsStore((s) => s.speakerSelectionMode);
+  const pauseAtNpcChatStart = useSettingsStore((s) => s.pauseAtNpcChatStart);
   const setSettings = useSettingsStore((s) => s.setSettings);
   const [drafts, setDrafts] = useState<Record<string, number | string>>({});
 
@@ -58,8 +58,8 @@ export default function BehaviorSettingsSection() {
     npcTriggeredGroupChatRate,
     npcRemoteChatRate,
     freedomOfMovement,
-    npcGroupChatSpeakerSelectionMode,
-    userChatSpeakerSelectionMode,
+    speakerSelectionMode,
+    pauseAtNpcChatStart,
   ]);
 
   const numericSettingRows: Array<{
@@ -278,18 +278,17 @@ export default function BehaviorSettingsSection() {
       <div className="rounded-lg border p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface-soft">
         <div className="space-y-2">
           <SettingFieldLabel
-            text="NPC group chat speaker selection mode"
-            htmlFor="npc-group-chat-speaker-selection-mode"
-            tooltipHtml={settingsTooltips['npc.groupSpeakerSelectionMode']}
+            text="Speaker selection mode"
+            htmlFor="speaker-selection-mode"
+            tooltipHtml={settingsTooltips['speakerSelectionMode']}
           />
           <select
-            id="npc-group-chat-speaker-selection-mode"
-            value={npcGroupChatSpeakerSelectionMode}
-            onChange={(event) =>
-              setSettings({
-                npcGroupChatSpeakerSelectionMode: event.target.value as SpeakerSelectionMode,
-              })
-            }
+            id="speaker-selection-mode"
+            value={speakerSelectionMode}
+            onChange={(event) => {
+              const nextMode = event.target.value as SpeakerSelectionMode;
+              setSettings({ speakerSelectionMode: nextMode });
+            }}
             className="rounded-input"
           >
             <option value="round_robin">Round Robin</option>
@@ -297,27 +296,13 @@ export default function BehaviorSettingsSection() {
           </select>
         </div>
 
-        <div className="space-y-2">
-          <SettingFieldLabel
-            text="User chat speaker selection mode"
-            htmlFor="user-chat-speaker-selection-mode"
-            tooltipHtml={settingsTooltips['user.speakerSelectionMode']}
-          />
-          <select
-            id="user-chat-speaker-selection-mode"
-            value={userChatSpeakerSelectionMode}
-            onChange={(event) =>
-              setSettings({
-                userChatSpeakerSelectionMode: event.target.value as SpeakerSelectionMode,
-              })
-            }
-            className="rounded-input"
-          >
-            <option value="round_robin">Round Robin</option>
-            <option value="manual">Manual</option>
-            <option value="intelligent">Intelligent</option>
-          </select>
-        </div>
+        <CheckboxSettingRow
+          id="scenario-pause-at-npc-chat-start"
+          label="Pause at NPC chat start"
+          tooltipHtml={settingsTooltips['behavior.pauseAtNpcChatStart']}
+          checked={pauseAtNpcChatStart}
+          onChange={(nextChecked) => setSettings({ pauseAtNpcChatStart: nextChecked })}
+        />
 
         <CheckboxSettingRow
           id="scenario-freedom-of-movement"

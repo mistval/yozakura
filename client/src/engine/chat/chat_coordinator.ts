@@ -12,6 +12,7 @@ import * as Database from '../../backend_bridge/database.js';
 import type { Character, ChatMessage, EphemeralLocation, StoredConversation } from '../types';
 import { getRequiredActiveScenario } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
+import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { ConversationTranscript } from './transcript';
 import {
   clearPersistedActiveChat,
@@ -69,6 +70,10 @@ export class ChatCoordinator {
   }
 
   public static removeParticipant(participantId: string) {
+    if (participantId === this.userCharacterId()) {
+      useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
+    }
+
     return this.activeChatStore().removeChatParticipant(participantId);
   }
 
@@ -82,6 +87,14 @@ export class ChatCoordinator {
 
   public static setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation) {
     this.activeChatStore().setEphemeralLocation(setter);
+  }
+
+  public static setChatInstructions(instructions: string) {
+    this.activeChatStore().setChatInstructions(instructions);
+  }
+
+  public static setCharacterChatInstructions(characterId: string, instructions: string) {
+    this.activeChatStore().setCharacterChatInstructions(characterId, instructions);
   }
 
   public static deleteMessageById(messageId: string) {
@@ -107,7 +120,7 @@ export class ChatCoordinator {
       throw new Error('Trying to redo a non-chat message?');
     }
 
-    return this.speakAsNpc(forcedSpeakerId);
+    return this.speakAsNpc(forcedSpeakerId, { isUserInteraction: true });
   }
 
   public static async editMessageById(id: string, newContent: string) {
@@ -115,16 +128,18 @@ export class ChatCoordinator {
     this.setTranscript(updatedTranscript);
   }
 
-  public static async addCharacterMessage(senderId: string, message: string) {
+  public static async addCharacterMessage(
+    senderId: string,
+    message: string,
+    options: { isUserInteraction?: boolean | undefined } = {}
+  ) {
     const sender = this.getCharacterById(senderId);
     const { updatedTranscript, newRawMessage } = this.transcript().addCharacterChatMessage(message, sender);
 
     this.setTranscript(updatedTranscript);
 
-    await Promise.all([
-      this.trackOffscreenMentions(sender, newRawMessage.id, message),
-      this.maybeGenerateAutoImageForMessage(newRawMessage),
-    ]);
+    await this.trackOffscreenMentions(sender, newRawMessage.id, message);
+    await this.maybeGenerateAutoImageForMessage(newRawMessage, options);
   }
 
   public static hasUserChatMessages() {
@@ -132,18 +147,26 @@ export class ChatCoordinator {
     return userCharacter && this.transcript().hasMessagesFromCharacter(userCharacter.id);
   }
 
-  public static async buildSceneImageFullPrompt(primaryCharacterId: string) {
+  public static async buildSceneImageFullPrompt(
+    primaryCharacterId: string,
+    opts: { isUserInteraction?: boolean | undefined } = {}
+  ) {
     return this.activeChatStore().doWithStateGenerationImage(async () => {
-      const primaryCharacter = this.getCharacterById(primaryCharacterId);
-      const generatedScenePrompt = await chatSceneImageChainGroup.renderAndExecute(
-        await buildFocusedChatTemplateContext(primaryCharacter.id)
-      );
+      return withPhaseTransitionGate(async () => {
+        const primaryCharacter = this.getCharacterById(primaryCharacterId);
+        const generatedScenePrompt = await chatSceneImageChainGroup.renderAndExecute(
+          await buildFocusedChatTemplateContext(primaryCharacter.id)
+        );
 
-      return buildFullPrompt(primaryCharacter, generatedScenePrompt);
+        return buildFullPrompt(primaryCharacter, generatedScenePrompt);
+      }, opts);
     });
   }
 
-  public static async generateImageFromPrompt(fullPrompt: string) {
+  public static async generateImageFromPrompt(
+    fullPrompt: string,
+    opts?: { isUserInteraction?: boolean | undefined }
+  ) {
     return withPhaseTransitionGate((abortSignal) => {
       return this.activeChatStore().doWithStateGenerationImage(async () => {
         const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
@@ -159,7 +182,7 @@ export class ChatCoordinator {
         this.setTranscript(this.transcript().addImageMessage(firstFile).updatedTranscript);
         return firstFile;
       });
-    });
+    }, opts);
   }
 
   public static async endActiveChat(noEffect: boolean) {
@@ -205,7 +228,7 @@ export class ChatCoordinator {
     }
   }
 
-  public static async speakAsNpc(npcId: string) {
+  public static async speakAsNpc(npcId: string, opts?: { isUserInteraction?: boolean }) {
     const speaker = useScenarioCharacterStore.getState().getRequiredCharacterById(npcId);
     const completionRequestId = newId();
 
@@ -241,7 +264,7 @@ export class ChatCoordinator {
           completionRequestId,
         });
 
-        await this.addCharacterMessage(speaker.id, parsedResponse);
+        await this.addCharacterMessage(speaker.id, parsedResponse, opts);
         await this.pauseAfterNpcOnlyMessage();
 
         return this.transcript;
@@ -265,18 +288,20 @@ export class ChatCoordinator {
 
       // We delete and re-add in order to trigger certain effects like memory RAG
       this.deleteMessageById(draftMessage.id);
-      await this.addCharacterMessage(speaker.id, parsedResponse);
+      await this.addCharacterMessage(speaker.id, parsedResponse, opts);
 
       await this.pauseAfterNpcOnlyMessage();
 
       return this.transcript;
-    });
+    }, opts);
   }
 
   public static getSpeakerSelectionMode(): SpeakerSelectionMode {
-    return this.activeChatStore().userIsParticipant()
-      ? useSettingsStore.getState().userChatSpeakerSelectionMode
-      : useSettingsStore.getState().npcGroupChatSpeakerSelectionMode;
+    return useSettingsStore.getState().speakerSelectionMode;
+  }
+
+  public static isChatPaused(): boolean {
+    return useScenarioLoopStateStore.getState().userRequestedPhaseTransition === 'paused';
   }
 
   public static async selectNextSpeaker(opts?: {
@@ -285,6 +310,10 @@ export class ChatCoordinator {
   }): Promise<Character> {
     if (opts?.forcedSpeakerId) {
       return this.getCharacterById(opts.forcedSpeakerId);
+    }
+
+    if (this.isChatPaused()) {
+      return this.getUserCharacter();
     }
 
     assert(
@@ -299,7 +328,7 @@ export class ChatCoordinator {
 
     try {
       // If it's the first message, return the initiator (unless they are specifically excluded)
-      if (!this.transcript().hasAtLeastOneCharacterMessage()) {
+      if (!this.transcript().hasCharacterMessages()) {
         if (excludedSpeakerId !== this.initiatorId()) {
           const initiator = this.initiator();
           if (initiator) {
@@ -310,11 +339,6 @@ export class ChatCoordinator {
           assertNonNullish(firstAvailable, 'No available participant for first message speaker selection');
           return firstAvailable;
         }
-      }
-
-      // If we're in manual mode, give it to the user (so they can choose a forcedSpeakerId)
-      if (selectionMode === 'manual') {
-        return this.getUserCharacter();
       }
 
       const mostRecentSpeakerId = this.transcript().getMostRecentSpeakerId();
@@ -454,7 +478,8 @@ export class ChatCoordinator {
   }
 
   private static async maybeGenerateAutoImageForMessage(
-    chatMessage: Extract<ChatMessage, { messageType: 'chat_message' }>
+    chatMessage: Extract<ChatMessage, { messageType: 'chat_message' }>,
+    opts: { isUserInteraction?: boolean | undefined } = {}
   ) {
     const settings = useSettingsStore.getState();
 
@@ -467,17 +492,8 @@ export class ChatCoordinator {
       return;
     }
 
-    try {
-      const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId);
-      await this.generateImageFromPrompt(fullPrompt);
-    } catch (error) {
-      await showNonRetriableErrorCardIfNeeded({
-        operationType: 'chat.auto_generate_image',
-        error,
-        messagePrefix: 'Auto image generation failed',
-        hint: 'The backend server might not be running.',
-      });
-    }
+    const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId, opts);
+    await this.generateImageFromPrompt(fullPrompt, opts);
   }
 
   private static async trackOffscreenMentions(
