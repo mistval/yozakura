@@ -44,7 +44,7 @@ async function closeChatSession(forceNoEffect?: boolean): Promise<{
   useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('none');
 
   const activeChatStore = useActiveChatStore.getState();
-  const noEffect = forceNoEffect || (activeChatStore.transcript?.countAllMessages() ?? 0) < 2;
+  const noEffect = forceNoEffect || (activeChatStore.transcript?.countCharacterChatMessages() ?? 0) < 2;
 
   doPostConversationWardrobeAutoRevert();
   await doScenarioLoopAsyncAction(() => ChatCoordinator.endActiveChat(noEffect));
