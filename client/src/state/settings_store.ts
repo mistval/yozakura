@@ -229,7 +229,7 @@ async function loadOverridesFromBackend(): Promise<SettingsOverrides> {
     'settings',
     { debouncerKey: SETTINGS_KV_KEY }
   );
-  return stored as SettingsOverrides;
+  return (stored ?? {}) as SettingsOverrides;
 }
 
 export async function hydrateSettings(): Promise<void> {
