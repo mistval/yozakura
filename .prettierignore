@@ -8,3 +8,4 @@ docs/build/
 out/
 docs/.docusaurus
 venv
+data/
