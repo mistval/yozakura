@@ -2,11 +2,12 @@ import { z } from 'zod';
 import { PromptTemplateBase } from '../prompt_template';
 import { PromptOutputParser } from '../prompt_output_parser';
 import { PromptTemplateChain } from '../prompt_template_chain';
-import { moderationNextSpeakerExecutionContextSchema } from '../prompt_template_context_fields';
+import {
+  moderationNextSpeakerExecutionContextSchema,
+  type ModerationNextSpeakerExecutionContext,
+} from '../prompt_template_context_fields';
 
-class ModerationNextSpeakerSystemTemplate extends PromptTemplateBase<
-  z.infer<typeof moderationNextSpeakerExecutionContextSchema>
-> {
+class ModerationNextSpeakerSystemTemplate extends PromptTemplateBase<ModerationNextSpeakerExecutionContext> {
   public readonly defaultTemplateString = `You are an expert conversation moderator. Your task is to analyze a chat transcript and select the single best candidate to speak next.
 
 Selection Rules:
@@ -24,9 +25,7 @@ Selection Rules:
   public readonly role = 'system';
 }
 
-class ModerationNextSpeakerUserTemplate extends PromptTemplateBase<
-  z.infer<typeof moderationNextSpeakerExecutionContextSchema>
-> {
+class ModerationNextSpeakerUserTemplate extends PromptTemplateBase<ModerationNextSpeakerExecutionContext> {
   public readonly defaultTemplateString = `<transcript>
 <%= (() => {
   const formatChatMessage = (message) => {
@@ -76,7 +75,7 @@ export const moderationNextSpeakerTemplatesGroup = new PromptTemplateChain({
     { template: moderationNextSpeakerSystemTemplate },
     { template: moderationNextSpeakerUserTemplate },
   ],
-  parser: new PromptOutputParser<z.infer<typeof moderationNextSpeakerExecutionContextSchema>, string | null>(
+  parser: new PromptOutputParser<ModerationNextSpeakerExecutionContext, string | null>(
     `async (response, it) => {
   const nextSpeakerName = response.split(/\\s/)[0]?.toLowerCase();
   return it.speakerCandidates.find(

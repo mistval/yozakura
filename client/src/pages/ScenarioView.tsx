@@ -41,9 +41,6 @@ export default function ScenarioView() {
   const submitUserChatAction = useScenarioLoopStateStore((state) => state.submitUserChatAction);
   const autoModeEnabled = useScenarioLoopStateStore((state) => state.autoMode);
   const setAutoModeEnabled = useScenarioLoopStateStore((state) => state.setAutoMode);
-  const userRequestedPhaseTransition = useScenarioLoopStateStore(
-    (state) => state.userRequestedPhaseTransition
-  );
   const setUserRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.setUserRequestedPhaseTransition
   );
@@ -94,7 +91,7 @@ export default function ScenarioView() {
     ? activeParticipants.some((participant) => participant.id === scenario.userCharacterId)
     : false;
   const perspectiveCharacterId =
-    npcPhaseBusy && hasActiveChatSession && !activeChatIncludesUser
+    hasActiveChatSession && !activeChatIncludesUser
       ? activeParticipants[0]?.id || scenario?.userCharacterId
       : scenario?.userCharacterId;
   const perspectiveCharacter: Character | undefined = perspectiveCharacterId
@@ -182,13 +179,6 @@ export default function ScenarioView() {
       return;
     }
 
-    const chatIncludesUser = activeParticipants.some(
-      (participant) => participant.id === scenario.userCharacterId
-    );
-    if (!chatIncludesUser) {
-      return;
-    }
-
     const npc = charactersById[npcId];
     assertNonNullish(npc, `addCharacterToActiveChat called with unknown npcId: ${npcId}`);
 
@@ -225,7 +215,6 @@ export default function ScenarioView() {
   assertNonNullish(resolvedLocation, 'No valid current location available for user location.');
 
   const showNpcPhaseControls = npcPhaseBusy && !activeChatIncludesUser;
-  const npcTurnPaused = userRequestedPhaseTransition === 'paused';
 
   const renderSessionHeader = ({ includeMenu = false }: { includeMenu?: boolean } = {}) => (
     <div className="flex justify-between items-center">
@@ -278,13 +267,6 @@ export default function ScenarioView() {
               <div className="flex gap-2 flex-wrap">
                 <button
                   type="button"
-                  className="border-warning-border bg-warning-bg text-warning-text-strong hover:bg-warning-border-soft"
-                  onClick={() => setUserRequestedPhaseTransition(npcTurnPaused ? 'none' : 'paused')}
-                >
-                  {npcTurnPaused ? '▶ Resume' : '⏸ Pause'}
-                </button>
-                <button
-                  type="button"
                   className="border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover"
                   onClick={() => setUserRequestedPhaseTransition('stopped')}
                 >
@@ -324,9 +306,7 @@ export default function ScenarioView() {
                     }}
                     selected={isSelected}
                     disabled={
-                      (!hasActiveChatSession && !canSubmitUserTurn) ||
-                      (npcPhaseBusy && !activeChatIncludesUser) ||
-                      char.id === scenario.userCharacterId
+                      (!hasActiveChatSession && !canSubmitUserTurn) || char.id === scenario.userCharacterId
                     }
                   />
                 );

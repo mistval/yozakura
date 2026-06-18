@@ -89,6 +89,14 @@ const contextSchemaFields = z.object({
     description:
       'All messages exchanged in the current conversation. This can enable more advanced use cases than the plain text transcript, such as referencing message types or metadata.',
   }),
+  chatInstructions: z.string().meta({
+    description:
+      'Free-form instructions entered by the user in chat settings that apply to every character in the current conversation. Empty if the user has not provided any.',
+  }),
+  focusedCharacterChatInstructions: z.string().meta({
+    description:
+      "Free-form instructions entered by the user in the focused character's chat settings that apply only to the focused character during the current conversation. Empty if the user has not provided any.",
+  }),
   settings: z.record(z.string(), z.unknown()).meta({
     description: "The current user settings. This won't be documented in detail, but is available.",
   }),
@@ -195,6 +203,7 @@ const conversationExecutionContextSchema = scenarioExecutionContextSchema.and(
     gossipTargetRelationship: true,
     transcript: true,
     conversationMessages: true,
+    chatInstructions: true,
   })
 );
 
@@ -206,6 +215,7 @@ export const focusedConversationExecutionContextSchema = conversationExecutionCo
     focusedCharacter: true,
     focusedCharacterAppearance: true,
     rollingConversationSummariesText: true,
+    focusedCharacterChatInstructions: true,
   })
 );
 

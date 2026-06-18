@@ -184,8 +184,6 @@ export async function chatCompletion(
   messages: PromptMessage[],
   options: ChatCompletionOptions
 ): Promise<string> {
-  // Pause/abort before the LLM call (and outside the retry loop, so an abort is not retried).
-
   return runWithInteractiveRetry<string>({
     operationType: 'api.llm_completion',
     maxRetries: Number.POSITIVE_INFINITY,

@@ -94,6 +94,12 @@ Your instructions:
 - Use quotes for speech and asterisks for actions and internal speech.
 - Be aware that other characters' internal speech is not directly known to your character.
 - Avoid repetition.
+<% if (it.chatInstructions) { %>
+- <%= it.chatInstructions %>
+<% } %>
+<% if (it.focusedCharacterChatInstructions) { %>
+- <%= it.focusedCharacterChatInstructions %>
+<% } %>
 </instructions>`;
 
   public readonly contextSchema = focusedConversationExecutionContextSchema;
@@ -121,6 +127,12 @@ class FinalInstructionsPromptTemplate extends PromptTemplateBase<
 - Use quotes for speech and asterisks for actions and internal speech.
 - Be aware that other characters' internal speech is not directly known to your character.
 - Avoid repetition.
+<% if (it.chatInstructions) { %>
+- <%= it.chatInstructions %>
+<% } %>
+<% if (it.focusedCharacterChatInstructions) { %>
+- <%= it.focusedCharacterChatInstructions %>
+<% } %>
 </instructions>`;
   public readonly contextSchema = focusedConversationExecutionContextSchema;
   public readonly templateName = 'Final Instructions Prompt';

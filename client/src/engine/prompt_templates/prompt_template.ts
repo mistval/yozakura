@@ -32,9 +32,9 @@ export abstract class PromptTemplateBase<TContextType extends object> {
       maxRetries: Number.POSITIVE_INFINITY,
       hint: TEMPLATE_RENDER_RETRY_HINT,
       run: async () => {
-        this.contextSchema.parse(context);
+        const parsedContext = this.contextSchema.parse(context);
         const templateString = this.getTemplateString();
-        const rendered = await etaRender(templateString, context);
+        const rendered = await etaRender(templateString, parsedContext);
 
         if (options?.completionRequestId) {
           useTemplateRenderLogStore.getState().postTemplateRender({

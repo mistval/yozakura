@@ -15,6 +15,7 @@ import {
 import { useScenarioStore } from '../state/scenario_store.js';
 import ChatSettings from './chat/chat_settings.js';
 import CharacterChatSettings from './chat/character_chat_settings.js';
+import { useUserCharacter } from '../state/scenario_character_store.js';
 
 const CHAT_PANE_WIDTH_CLASS_BY_SETTING: Record<ChatPaneWidth, string> = {
   narrow: 'w-full max-w-3xl mx-auto',
@@ -25,7 +26,6 @@ const CHAT_PANE_WIDTH_CLASS_BY_SETTING: Record<ChatPaneWidth, string> = {
 };
 
 export default function ChatPane() {
-  const userChatSpeakerSelectionMode = useSettingsStore((s) => s.userChatSpeakerSelectionMode);
   const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
   const groupChatMessageLimit = useSettingsStore((s) => s.groupChatMessageLimit);
   const richNpcMessageCount = useSettingsStore((s) => s.richNpcMessageCount);
@@ -35,7 +35,7 @@ export default function ChatPane() {
   const participants = useActiveChatParticipants();
   const chatState = useActiveChatStore((state) => state.chatState);
   const processingMemoryStatusInfo = useActiveChatStore((state) => state.processingMemoryStatusInfo);
-  const userCharacterId = useScenarioStore((state) => state.activeScenario?.userCharacterId);
+  const userCharacter = useUserCharacter();
   const scenario = useScenarioStore((state) => state.activeScenario);
   const userLocation = useChatUserLocation();
 
@@ -54,12 +54,16 @@ export default function ChatPane() {
   const submitChatSkipTurn = useScenarioLoopStateStore((state) => state.submitChatSkipTurn);
   const submitChatSpeakAs = useScenarioLoopStateStore((state) => state.submitChatSpeakAs);
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
+  const userRequestedPhaseTransition = useScenarioLoopStateStore(
+    (state) => state.userRequestedPhaseTransition
+  );
+  const setUserRequestedPhaseTransition = useScenarioLoopStateStore(
+    (state) => state.setUserRequestedPhaseTransition
+  );
 
   const generatingAutoImage = chatState === 'generating_image';
-  const chatMemoryUpdateStatus =
-    chatState === 'processing_memories' ? (processingMemoryStatusInfo ?? '') : '';
-  const chatLoopBusy =
-    chatState === 'npc_speaking' || chatState === 'processing_memories' || chatState === 'generating_image';
+  const processingMemories = chatState === 'processing_memories';
+  const chatMemoryUpdateStatus = processingMemories ? (processingMemoryStatusInfo ?? '') : '';
   const isAwaitingUserInput = chatState === 'awaiting_user_input';
 
   const participantById = useMemo(
@@ -68,18 +72,28 @@ export default function ChatPane() {
   );
 
   assertNonNullish(participants[0]);
-  assertNonNullish(userCharacterId);
+  assertNonNullish(userCharacter);
 
-  const includesUser = participants.some((participant) => participant.id === userCharacterId);
-  const nonUserParticipants = participants.filter((participant) => participant.id !== userCharacterId);
+  const includesUser = useMemo(
+    () => participants.some((participant) => participant.id === userCharacter.id),
+    [participantById, userCharacter]
+  );
+  const nonUserParticipants = useMemo(
+    () => participants.filter((participant) => participant.id !== userCharacter.id),
+    [participants, userCharacter]
+  );
+  const participantsCardOrder = useMemo(() => {
+    if (!includesUser) {
+      return nonUserParticipants;
+    }
+
+    return nonUserParticipants.concat(userCharacter);
+  }, [userCharacter, nonUserParticipants]);
+
   const isTwoParticipantChat = participants.length === 2;
-  const isManualSpeakerSelection = includesUser && userChatSpeakerSelectionMode === 'manual';
-  const showSkipButton = participants.length > 2 && !isManualSpeakerSelection;
-  const showImageButton = includesUser;
-  const busy = chatLoopBusy;
+  const isPaused = userRequestedPhaseTransition === 'paused';
+  const showSkipButton = participants.length > 2;
   const chatPaneWidthClass = CHAT_PANE_WIDTH_CLASS_BY_SETTING[chatPaneWidth];
-  const canPerformMessageActions =
-    participants.some((participant) => participant.id === userCharacterId) && !busy;
 
   const messageLimit = includesUser
     ? undefined
@@ -87,9 +101,10 @@ export default function ChatPane() {
       ? groupChatMessageLimit
       : richNpcMessageCount * 2;
 
-  const npcOnlyProgressLabel = includesUser
-    ? ''
-    : `NPC-only chat in progress (${transcript?.countCharacterChatMessages()}/${messageLimit || 10} messages).`;
+  const npcOnlyProgressLabel =
+    includesUser || isPaused
+      ? ''
+      : `NPC-only chat in progress (${transcript?.countCharacterChatMessages()}/${messageLimit || 10} messages).`;
 
   const primaryNpc = nonUserParticipants[0];
   assertNonNullish(primaryNpc);
@@ -104,6 +119,7 @@ export default function ChatPane() {
       return;
     }
 
+    ChatCoordinator.addParticipant(userCharacter.id);
     setInput('');
     submitChatMessage(message);
   };
@@ -117,7 +133,9 @@ export default function ChatPane() {
   const openImagePrompt = async () => {
     const imageCharacterId = transcript.getMostRecentSpeakerId() ?? primaryNpc.id;
 
-    const fullPrompt = await ChatCoordinator.buildSceneImageFullPrompt(imageCharacterId);
+    const fullPrompt = await ChatCoordinator.buildSceneImageFullPrompt(imageCharacterId, {
+      isUserInteraction: true,
+    });
 
     if (editImagePromptsBeforeDispatch) {
       setImagePrompt(fullPrompt);
@@ -125,12 +143,12 @@ export default function ChatPane() {
       return;
     }
 
-    await ChatCoordinator.generateImageFromPrompt(fullPrompt);
+    await ChatCoordinator.generateImageFromPrompt(fullPrompt, { isUserInteraction: true });
   };
 
   const generateImageNow = async () => {
     setShowImagePrompt(false);
-    await ChatCoordinator.generateImageFromPrompt(imagePrompt);
+    await ChatCoordinator.generateImageFromPrompt(imagePrompt, { isUserInteraction: true });
   };
 
   const deleteMessage = (id: string) => {
@@ -160,20 +178,31 @@ export default function ChatPane() {
     submitChatRequestEnd();
   };
 
+  const togglePause = () => {
+    if (isPaused) {
+      setUserRequestedPhaseTransition('none');
+      submitChatSkipTurn();
+    } else {
+      setUserRequestedPhaseTransition('paused');
+    }
+  };
+
   const isNearTranscriptBottom = (container: HTMLDivElement) => {
     const remaining = container.scrollHeight - container.scrollTop - container.clientHeight;
     return remaining <= 24;
   };
 
   const scrollTranscriptToBottom = () => {
-    const container = transcriptContainerRef.current;
-    if (!container || !autoScrollUnlockedRef.current) {
-      return;
-    }
+    setTimeout(() => {
+      const container = transcriptContainerRef.current;
+      if (!container || !autoScrollUnlockedRef.current) {
+        return;
+      }
 
-    requestAnimationFrame(() => {
-      container.scrollTop = container.scrollHeight;
-    });
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+    }, 25);
   };
 
   const handleTranscriptScroll = () => {
@@ -183,6 +212,31 @@ export default function ChatPane() {
     }
 
     autoScrollUnlockedRef.current = isNearTranscriptBottom(container);
+  };
+
+  const getRunButtonTitle = () => {
+    const userIsInitiator = participants[0]?.id === userCharacter.id;
+    if (userIsInitiator && isAwaitingUserInput && !transcript.hasCharacterMessages()) {
+      return undefined;
+    }
+
+    if (!transcript.hasCharacterMessages()) {
+      return '▶ Start Chat';
+    }
+
+    if (isPaused) {
+      return '▶ Resume';
+    }
+
+    return '⏸ Pause';
+  };
+
+  const getEndChatButtonTitle = () => {
+    if (transcript.countCharacterChatMessages() > 1) {
+      return 'Finish Chat';
+    }
+
+    return 'Cancel Chat';
   };
 
   useEffect(() => {
@@ -215,6 +269,8 @@ export default function ChatPane() {
     return undefined;
   }
 
+  const runButtonTitle = getRunButtonTitle();
+
   return (
     <div
       className={`border rounded-sm bg-emphasized p-3 space-y-3 h-full max-h-[calc(100vh-9rem)] flex flex-col ${chatPaneWidthClass}`}
@@ -235,27 +291,34 @@ export default function ChatPane() {
           )}
           {chatMemoryUpdateStatus && <div className="text-sm text-secondary">{chatMemoryUpdateStatus}</div>}
           {generatingAutoImage && <div className="text-sm text-secondary">Generating image...</div>}
-          {includesUser && (
+          {!processingMemories && (
             <button type="button" onClick={() => setShowChatSettings(true)}>
               Chat Settings
             </button>
           )}
-          {includesUser && (
+          {runButtonTitle && (
             <button
               type="button"
-              onClick={requestEndChat}
-              disabled={busy || !isAwaitingUserInput}
-              className="button-emphasized font-semibold"
+              className="border-warning-border bg-warning-bg text-warning-text-strong hover:bg-warning-border-soft"
+              onClick={togglePause}
             >
-              End Chat
+              {runButtonTitle}
             </button>
           )}
+          <button
+            type="button"
+            onClick={requestEndChat}
+            disabled={!isAwaitingUserInput}
+            className="button-emphasized font-semibold"
+          >
+            {getEndChatButtonTitle()}
+          </button>
         </div>
       </div>
 
       <div className="flex gap-3 flex-1 min-h-0">
         <div className="w-44 shrink-0 space-y-2 overflow-y-auto">
-          {nonUserParticipants.map((participant) => (
+          {participantsCardOrder.map((participant) => (
             <div
               key={participant.id}
               className={`border rounded-sm p-2 bg-surface-subtle cursor-pointer`}
@@ -278,14 +341,15 @@ export default function ChatPane() {
               <div className="mt-1 text-sm font-medium text-center">
                 {participant.firstName} {participant.lastName}
               </div>
-              {isManualSpeakerSelection && (
+
+              {participant.id !== userCharacter.id && (
                 <button
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
                     triggerParticipantSpeak(participant.id);
                   }}
-                  disabled={busy || !isAwaitingUserInput}
+                  disabled={!isAwaitingUserInput}
                   className="text-xs w-full mt-1"
                 >
                   Speak
@@ -302,15 +366,17 @@ export default function ChatPane() {
         >
           {transcript.countAllMessages() === 0 && (
             <div className="text-sm text-muted">
-              {participants[0]!.id === userCharacterId
-                ? 'Say something to start the conversation.'
-                : 'Conversation in progress...'}
+              {participants[0]!.id === userCharacter.id
+                ? 'Say something to start the conversation, or choose an NPC to speak.'
+                : isPaused
+                  ? 'Click Speak on a character card to choose who talks next, or Start Chat to let them talk on their own.'
+                  : 'Conversation in progress...'}
             </div>
           )}
-          {transcript.getVisibleMessages(userCharacterId).map((entry) => (
+          {transcript.getVisibleMessages(userCharacter.id).map((entry) => (
             <div
               key={entry.getId()}
-              className={`relative group ${includesUser && entry.isSentByCharacter(userCharacterId) ? 'text-right' : ''}`}
+              className={`relative group ${entry.isSentByCharacter(userCharacter.id) ? 'text-right' : ''}`}
             >
               {entry.isImageMessage() ? (
                 <img
@@ -329,20 +395,20 @@ export default function ChatPane() {
                     onChange={(event) => setEditingMessageDraft(event.target.value)}
                     rows={3}
                     className="w-full border rounded-sm p-2 bg-inset text-sm"
-                    disabled={chatLoopBusy}
+                    disabled={!isAwaitingUserInput}
                   />
                   <div className="flex justify-end gap-2 text-xs">
                     <button
                       type="button"
                       onClick={() => setEditingMessageId(undefined)}
-                      disabled={chatLoopBusy}
+                      disabled={!isAwaitingUserInput}
                     >
                       Cancel
                     </button>
                     <button
                       type="button"
                       onClick={saveEditingMessageEdit}
-                      disabled={chatLoopBusy || !editingMessageDraft.trim()}
+                      disabled={!isAwaitingUserInput || !editingMessageDraft.trim()}
                     >
                       Save
                     </button>
@@ -354,7 +420,7 @@ export default function ChatPane() {
                 </>
               )}
 
-              {canPerformMessageActions && !chatLoopBusy && !editingMessageId && (
+              {isAwaitingUserInput && !editingMessageId && (
                 <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs h-6 leading-none">
                   <button
                     type="button"
@@ -362,7 +428,7 @@ export default function ChatPane() {
                       const id = entry.getId();
                       deleteMessage(id);
                     }}
-                    disabled={!canPerformMessageActions || chatLoopBusy}
+                    disabled={!isAwaitingUserInput}
                     title="Delete message"
                     aria-label="Delete message"
                     className="px-1 h-5 w-5 flex items-center justify-center"
@@ -371,14 +437,14 @@ export default function ChatPane() {
                   </button>
 
                   {entry.isCharacterChatMessage() &&
-                    entry.asCharacterChatMessage().senderId !== userCharacterId && (
+                    entry.asCharacterChatMessage().senderId !== userCharacter.id && (
                       <button
                         type="button"
                         onClick={() => {
                           const id = entry.getId();
                           redoMessage(id);
                         }}
-                        disabled={!canPerformMessageActions || chatLoopBusy}
+                        disabled={!isAwaitingUserInput}
                         title="Retry message"
                         aria-label="Retry message"
                         className="px-1 h-5 w-5 flex items-center justify-center"
@@ -395,7 +461,7 @@ export default function ChatPane() {
                         setEditingMessageId(id);
                         setEditingMessageDraft(entry.getContent());
                       }}
-                      disabled={!canPerformMessageActions || chatLoopBusy}
+                      disabled={!isAwaitingUserInput}
                       title="Edit message"
                       aria-label="Edit message"
                       className="px-1 h-5 w-5 flex items-center justify-center"
@@ -410,36 +476,44 @@ export default function ChatPane() {
         </div>
       </div>
 
-      {includesUser && (
-        <div className="flex gap-2 mb-0">
-          <textarea
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey && input.trim() && !busy && isAwaitingUserInput) {
-                event.preventDefault();
-                send();
-              }
+      <div className="flex gap-2 mb-0">
+        <textarea
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey && input.trim() && isAwaitingUserInput) {
+              event.preventDefault();
+              send();
+            }
+          }}
+          disabled={!includesUser && !isAwaitingUserInput}
+          placeholder={includesUser ? 'Enter a message' : 'Entering a message will add the user to the chat.'}
+          rows={2}
+          className="flex-1"
+        />
+        <button
+          type="button"
+          onClick={send}
+          disabled={!isAwaitingUserInput || !input.trim() || !isAwaitingUserInput}
+        >
+          Send
+        </button>
+        {showSkipButton && (
+          <button
+            type="button"
+            onClick={() => {
+              setUserRequestedPhaseTransition('none');
+              submitChatSkipTurn();
             }}
-            placeholder="Type a message"
-            rows={2}
-            className="flex-1"
-          />
-          <button type="button" onClick={send} disabled={busy || !input.trim() || !isAwaitingUserInput}>
-            Send
+            disabled={!isAwaitingUserInput}
+          >
+            Skip
           </button>
-          {showSkipButton && (
-            <button type="button" onClick={submitChatSkipTurn} disabled={busy || !isAwaitingUserInput}>
-              Skip
-            </button>
-          )}
-          {showImageButton && (
-            <button type="button" onClick={openImagePrompt} disabled={chatLoopBusy || !isAwaitingUserInput}>
-              Gen Image
-            </button>
-          )}
-        </div>
-      )}
+        )}
+        <button type="button" onClick={openImagePrompt} disabled={!isAwaitingUserInput}>
+          Gen Image
+        </button>
+      </div>
 
       <ImagePromptModal
         open={showImagePrompt}

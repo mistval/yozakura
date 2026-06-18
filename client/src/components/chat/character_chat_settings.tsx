@@ -1,8 +1,9 @@
 import Modal from '../ui/Modal.js';
 import ImplicitWardrobeEditor from '../wardrobe/ImplicitWardrobeEditor.js';
+import SettingFieldLabel from '../settings/ui/SettingFieldLabel.js';
 import type { Character } from '../../engine/types.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
-import { useActiveChatParticipants } from '../../state/active_chat_store.js';
+import { useActiveChatParticipants, useActiveChatStore } from '../../state/active_chat_store.js';
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
@@ -22,6 +23,7 @@ export default function CharacterChatSettings({
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const saveScenarioCharacterFields = useScenarioCharacterStore((state) => state.saveScenarioCharacterFields);
   const participants = useActiveChatParticipants();
+  const chatInstructionsByCharacterId = useActiveChatStore((state) => state.chatInstructionsByCharacterId);
   const { showCharacterOverview } = useCharacterOverview();
 
   if (!settingsCharacterId || !scenario) {
@@ -33,6 +35,7 @@ export default function CharacterChatSettings({
     return undefined;
   }
 
+  const isUserCharacter = character.id === scenario.userCharacterId;
   const persistWardrobes = (updatedWardrobes: Character['wardrobes']) => {
     saveScenarioCharacterFields(character.id, {
       wardrobes: updatedWardrobes,
@@ -52,7 +55,10 @@ export default function CharacterChatSettings({
                 {participants.length > 2 && (
                   <button
                     type="button"
-                    onClick={() => ChatCoordinator.removeParticipant(settingsCharacterId)}
+                    onClick={() => {
+                      ChatCoordinator.removeParticipant(settingsCharacterId);
+                      onClose();
+                    }}
                   >
                     Remove from Chat
                   </button>
@@ -65,6 +71,26 @@ export default function CharacterChatSettings({
 
             {character.externalDescription && (
               <div className={`border rounded-sm p-3`}>{character.externalDescription}</div>
+            )}
+
+            {!isUserCharacter && (
+              <div className="space-y-2">
+                <SettingFieldLabel
+                  text="Chat Instructions"
+                  htmlFor="character-chat-instructions"
+                  tooltipHtml={`Anything you enter here will be included in the system prompt for just ${character.firstName} during this chat. Use it to steer this character specifically. Applies only to this chat.`}
+                />
+                <textarea
+                  id="character-chat-instructions"
+                  value={chatInstructionsByCharacterId[settingsCharacterId] ?? ''}
+                  onChange={(event) =>
+                    ChatCoordinator.setCharacterChatInstructions(settingsCharacterId, event.target.value)
+                  }
+                  rows={4}
+                  className="w-full border rounded-sm p-2 bg-inset"
+                  placeholder={`Instructions for ${character.firstName} in this chat`}
+                />
+              </div>
             )}
 
             <ImplicitWardrobeEditor
@@ -83,17 +109,19 @@ export default function CharacterChatSettings({
             >
               Character Overview
             </button>
-            <button
-              className="ml-3"
-              onClick={() =>
-                showCharacterOverview({
-                  selectedIds: [settingsCharacterId, scenario.userCharacterId],
-                  scrolldown: true,
-                })
-              }
-            >
-              Relationship Overview
-            </button>
+            {!isUserCharacter && (
+              <button
+                className="ml-3"
+                onClick={() =>
+                  showCharacterOverview({
+                    selectedIds: [settingsCharacterId, scenario.userCharacterId],
+                    scrolldown: true,
+                  })
+                }
+              >
+                Relationship Overview
+              </button>
+            )}
           </>
         </div>
       </div>

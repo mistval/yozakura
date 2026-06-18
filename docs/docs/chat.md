@@ -46,7 +46,7 @@ Each character in a group chat updates their memories towards all other characte
 
 ## Group Chat Speaker Selection Modes
 
-The speaker selection mode for group chats can be changed from the default "Round Robin" mode to "Manual" (gives you a "speak" button to click) or "Intelligent" (asks your LLM to choose should speak next).
+The speaker selection mode for group chats can be changed from the default "Round Robin" mode to "Intelligent" (asks your LLM to choose should speak next).
 
 ![speaker selection mode settings](/img/speaker_selection_mode.png)
 

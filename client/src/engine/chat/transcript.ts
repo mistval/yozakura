@@ -310,7 +310,7 @@ export class ConversationTranscript {
     updatedTranscript: ConversationTranscript;
   } {
     let updatedTranscript = this.removeOffscreenRagMessagesForCharacter(joiner.id);
-    const hasMessages = this.hasAtLeastOneCharacterMessage();
+    const hasMessages = this.hasCharacterMessages();
 
     if (hasMessages) {
       updatedTranscript = updatedTranscript.addJoinMessage(joiner).updatedTranscript;
@@ -433,7 +433,7 @@ export class ConversationTranscript {
     }
   }
 
-  public hasAtLeastOneCharacterMessage() {
+  public hasCharacterMessages() {
     return this.messages.some((message) => message.isCharacterChatMessage());
   }
 

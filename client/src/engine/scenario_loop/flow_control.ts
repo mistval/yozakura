@@ -59,8 +59,7 @@ export function doScenarioLoopAsyncAction<TReturnType>(action: () => Promise<TRe
 }
 
 export function abortAllPendingActions() {
-  const pending = [...currentScenarioLoopPromises];
-  for (const promise of pending) {
+  for (const promise of currentScenarioLoopPromises) {
     promise.abort();
   }
 

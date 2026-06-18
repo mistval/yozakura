@@ -14,15 +14,16 @@ interface ChatSettingsProps {
 }
 
 export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
-  const userChatSpeakerSelectionMode = useSettingsStore((s) => s.userChatSpeakerSelectionMode);
+  const speakerSelectionMode = useSettingsStore((s) => s.speakerSelectionMode);
   const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
   const setSettings = useSettingsStore((s) => s.setSettings);
+  const chatInstructions = useActiveChatStore((s) => s.chatInstructions);
   const userLocation = useChatUserLocation();
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
   const canEndChat = useActiveChatStore((state) => state.chatState === 'awaiting_user_input');
 
-  const updateUserSpeakerSelectionMode = (nextMode: SpeakerSelectionMode) => {
-    setSettings({ userChatSpeakerSelectionMode: nextMode });
+  const updateSpeakerSelectionMode = (nextMode: SpeakerSelectionMode) => {
+    setSettings({ speakerSelectionMode: nextMode });
   };
 
   const updateChatPaneWidth = (nextWidth: ChatPaneWidth) => {
@@ -48,16 +49,15 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
             <SettingFieldLabel
               text="Next Speaker Selection Mode"
               htmlFor="chat-next-speaker-selection-mode"
-              tooltipHtml={settingsTooltips['user.speakerSelectionMode']}
+              tooltipHtml={settingsTooltips['speakerSelectionMode']}
             />
             <select
               id="chat-next-speaker-selection-mode"
-              value={userChatSpeakerSelectionMode}
-              onChange={(event) => updateUserSpeakerSelectionMode(event.target.value as SpeakerSelectionMode)}
+              value={speakerSelectionMode}
+              onChange={(event) => updateSpeakerSelectionMode(event.target.value as SpeakerSelectionMode)}
               className="rounded-input bg-inset"
             >
               <option value="round_robin">Round Robin</option>
-              <option value="manual">Manual</option>
               <option value="intelligent">Intelligent</option>
             </select>
           </div>
@@ -80,6 +80,22 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
               <option value="extra_wide">Extra Wide</option>
               <option value="unconstrained">Limit Breaker</option>
             </select>
+          </div>
+
+          <div className="space-y-2">
+            <SettingFieldLabel
+              text="Chat instructions"
+              htmlFor="chat-instructions"
+              tooltipHtml="Anything you enter here will be included in the system prompt for all characters in this chat. Use it to steer the whole conversation (e.g. tone, topic, or scenario constraints). Applies only to this chat."
+            />
+            <textarea
+              id="chat-instructions"
+              value={chatInstructions}
+              onChange={(event) => ChatCoordinator.setChatInstructions(event.target.value)}
+              rows={4}
+              className="w-full border rounded-sm p-2 bg-inset"
+              placeholder="Instructions for every character in this chat"
+            />
           </div>
 
           <label className="block space-y-2">

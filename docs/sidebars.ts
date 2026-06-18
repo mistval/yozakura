@@ -15,6 +15,11 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'How To Guides',
+      items: ['how-to-different-models-per-prompt'],
+    },
+    {
+      type: 'category',
       label: 'Advanced',
       items: ['settings-math'],
     },

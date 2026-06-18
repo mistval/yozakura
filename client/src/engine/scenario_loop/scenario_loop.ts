@@ -40,9 +40,11 @@ function doPostConversationWardrobeAutoRevert() {
 async function closeChatSession(forceNoEffect?: boolean): Promise<{
   noEffect: boolean;
 }> {
-  const activeChatStore = useActiveChatStore;
-  const includesUser = activeChatStore.getState().userIsParticipant();
-  const noEffect = forceNoEffect || (includesUser && !ChatCoordinator.hasUserChatMessages());
+  // Ending a chat always clears the steering pause (so post-chat work and subsequent NPC turns run).
+  useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('none');
+
+  const activeChatStore = useActiveChatStore.getState();
+  const noEffect = forceNoEffect || (activeChatStore.transcript?.countAllMessages() ?? 0) < 2;
 
   doPostConversationWardrobeAutoRevert();
   await doScenarioLoopAsyncAction(() => ChatCoordinator.endActiveChat(noEffect));
@@ -56,7 +58,8 @@ function getChatMessageLimit() {
   const chatState = useActiveChatStore.getState();
   const settings = useSettingsStore.getState();
 
-  if (chatState.userIsParticipant()) {
+  // While paused the user is steering message-by-message, so the automatic limit must not end the chat.
+  if (chatState.userIsParticipant() || ChatCoordinator.isChatPaused()) {
     return Number.MAX_SAFE_INTEGER;
   }
 
@@ -83,6 +86,11 @@ async function runChatLoop(
     await doScenarioLoopAsyncAction(() => ChatCoordinator.activate(participantIds));
   }
 
+  // Optionally hand the user steering control from the very start of an NPC-only chat.
+  if (useSettingsStore.getState().pauseAtNpcChatStart && !useActiveChatStore.getState().userIsParticipant()) {
+    useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
+  }
+
   try {
     let nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
 
@@ -99,7 +107,18 @@ async function runChatLoop(
         const userChatAction = await doWithScenarioLoopPromise<ChatUserInputAction>(
           async (userChatActionPromise) => {
             scenarioLoopPromiseCallbacks.userChatAction = userChatActionPromise;
-            return userChatActionPromise.promise;
+            // While parked for steering we are not inside withPhaseTransitionGate, so handle a Stop
+            // request here by aborting the wait and unwinding back to the user phase.
+            const unsubscribe = useScenarioLoopStateStore.subscribe((state) => {
+              if (state.userRequestedPhaseTransition === 'stopped') {
+                userChatActionPromise.reject(new UserAbortSignalException());
+              }
+            });
+            try {
+              return await userChatActionPromise.promise;
+            } finally {
+              unsubscribe();
+            }
           }
         );
 
@@ -126,7 +145,12 @@ async function runChatLoop(
         }
       } else {
         ChatCoordinator.setStateNpcSpeaking();
-        await doScenarioLoopAsyncAction(() => ChatCoordinator.speakAsNpc(nextSpeaker.id));
+        // While paused, the only way an NPC is the next speaker is because the user explicitly chose
+        // them, so this generation is a user interaction that must bypass the pause gate.
+        const isUserInteraction = ChatCoordinator.isChatPaused();
+        await doScenarioLoopAsyncAction(() =>
+          ChatCoordinator.speakAsNpc(nextSpeaker.id, { isUserInteraction })
+        );
         nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
       }
     }
@@ -248,14 +272,15 @@ async function runScenarioLoop(opts: { resumeRestoredChat: boolean }) {
       resumeRestoredChat = false;
       await runNpcPhase();
     } catch (err) {
-      // The user paused/stopped the NPC turn: hand control back to the user character by
-      // looping back to the user phase, disable auto mode, and clear the request. No error
-      // card is shown since this is a deliberate user action, not a failure.
       if (err instanceof UserAbortSignalException) {
         const loopState = useScenarioLoopStateStore.getState();
         loopState.setAutoMode(false);
         loopState.setUserRequestedPhaseTransition('none');
         continue;
+      }
+
+      if (err instanceof ScenarioLoopAbortSignalException) {
+        throw err;
       }
 
       await showNonRetriableErrorCardIfNeeded({
