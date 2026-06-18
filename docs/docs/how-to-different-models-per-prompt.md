@@ -11,7 +11,7 @@ keywords:
   - llm option groups
 ---
 
-Yozakura sends a lot of different kinds of prompts to your LLM. Some of them are the actual character responses you read in chat, others include summarizing conversations, updating memories, and more. It's possible to route these different types of prompts to different models, which may provide a better experience.
+Yozakura sends a lot of different kinds of prompts to your LLM. Some of them are the actual character responses you read in chat, others including summarizing conversations, updating memories, and more. It's possible to route these different types of prompts to different models, which may provide a better experience.
 
 This is handled by the **LLM Settings** section. Open the settings cog and go to **LLM Settings**. Under **LLM Prompt Options** you'll find a list of option groups. Out of the box there's already a separate group for each prompt type, so you don't need to create a new one except for advanced use cases.
 
