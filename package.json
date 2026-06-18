@@ -10,6 +10,7 @@
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "build:server": "npm run build --prefix server",
     "build:web": "npm run build --prefix client",
+    "build": "npm run build:server && npm run build:web",
     "format:check": "prettier --check .",
     "install:server": "npm ci --prefix server",
     "install:web": "npm ci --prefix client",
