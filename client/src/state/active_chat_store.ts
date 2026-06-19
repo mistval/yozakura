@@ -17,7 +17,6 @@ import {
 import { ConversationTranscript } from '../engine/chat/transcript.js';
 import { MemoryRAGHelper } from '../engine/memory_rag_helper.js';
 import type { OmitFunctions } from '../util/types.js';
-import * as Database from '../backend_bridge/database.js';
 import { getRequiredActiveScenario, useScenarioStore } from './scenario_store.js';
 import { useScenarioCharacterStore, useUserCharacter } from './scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
@@ -29,7 +28,7 @@ type StartChatSessionArgs = {
   gossipTargetCharacterId: string | undefined;
 };
 
-const persistedActiveChatSchema = z.object({
+export const persistedActiveChatSchema = z.object({
   participantIds: z.array(z.string()),
   removedParticipantIds: z.array(z.string()),
   chatMode: chatMediumSchema,
@@ -42,11 +41,7 @@ const persistedActiveChatSchema = z.object({
   chatInstructionsByCharacterId: z.record(z.string(), z.string()).optional(),
 });
 
-type PersistedActiveChat = z.infer<typeof persistedActiveChatSchema>;
-
-function activeChatPersistenceKey(scenarioId: string) {
-  return `scenario_${scenarioId}_active_chat`;
-}
+export type PersistedActiveChat = z.infer<typeof persistedActiveChatSchema>;
 
 type BaseChatStoreState = {
   chatState: 'inactive' | 'awaiting_user_input' | 'generating_image' | 'processing_memories' | 'npc_speaking';
@@ -433,7 +428,10 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
   },
 }));
 
-function buildPersistedActiveChat(state: BaseChatStoreState): PersistedActiveChat {
+// Pure serialization of the active chat for persistence. Database I/O and restore scheduling are
+// owned by the scenario loop (see engine/scenario_loop/turn_persistence.ts), which persists the
+// active chat together with the turn state in a single row.
+export function buildPersistedActiveChat(state: BaseChatStoreState): PersistedActiveChat {
   assertNonNullish(state.transcript, 'Cannot persist active chat without a transcript');
 
   return {
@@ -449,104 +447,3 @@ function buildPersistedActiveChat(state: BaseChatStoreState): PersistedActiveCha
     chatInstructionsByCharacterId: state.chatInstructionsByCharacterId,
   };
 }
-
-function activeChatShouldPersist(state: BaseChatStoreState): boolean {
-  const scenario = useScenarioStore.getState().activeScenario;
-  if (!scenario || state.chatState === 'inactive' || !state.transcript) {
-    return false;
-  }
-
-  return state.transcript.hasMessagesFromCharacter(scenario.userCharacterId);
-}
-
-function persistActiveChat() {
-  const scenario = useScenarioStore.getState().activeScenario;
-  if (!scenario) {
-    return;
-  }
-
-  const key = activeChatPersistenceKey(scenario.id);
-
-  void Database.doAsDataWrite(
-    async () => {
-      const state = useActiveChatStore.getState();
-      if (useScenarioStore.getState().activeScenario?.id !== scenario.id || !activeChatShouldPersist(state)) {
-        return;
-      }
-
-      await Database.storeKeyValue(key, buildPersistedActiveChat(state), persistedActiveChatSchema);
-    },
-    'active_chat',
-    { debouncerKey: key }
-  );
-}
-
-export function clearPersistedActiveChat(scenarioId: string) {
-  const key = activeChatPersistenceKey(scenarioId);
-  void Database.doAsDataWrite(
-    async () => {
-      await Database.deleteKeyValue(key);
-    },
-    'active_chat',
-    { debouncerKey: key }
-  );
-}
-
-function whenScenarioCharactersLoaded(): Promise<void> {
-  if (useScenarioCharacterStore.getState().scenarioCharactersAreLoaded) {
-    return Promise.resolve();
-  }
-
-  return new Promise<void>((resolve) => {
-    const unsubscribe = useScenarioCharacterStore.subscribe((state) => {
-      if (state.scenarioCharactersAreLoaded) {
-        unsubscribe();
-        resolve();
-      }
-    });
-  });
-}
-
-async function restoreActiveChatIfPresent() {
-  await whenScenarioCharactersLoaded();
-
-  const scenario = useScenarioStore.getState().activeScenario;
-  if (!scenario) {
-    return;
-  }
-
-  const key = activeChatPersistenceKey(scenario.id);
-  const restored = await Database.doAsDataRead(
-    () => Database.loadKeyValue(key, persistedActiveChatSchema),
-    'active_chat',
-    { debouncerKey: key }
-  );
-
-  if (
-    restored &&
-    !useActiveChatStore.getState().isActive() &&
-    useScenarioStore.getState().activeScenario?.id === scenario.id
-  ) {
-    useActiveChatStore.getState().restoreFromPersisted(restored);
-  }
-}
-
-let activeChatRestoreSettled: Promise<void> = useScenarioStore.getState().activeScenario
-  ? restoreActiveChatIfPresent()
-  : Promise.resolve();
-
-useScenarioStore.subscribe((newState, prevState) => {
-  if (newState.activeScenario && newState.activeScenario.id !== prevState.activeScenario?.id) {
-    activeChatRestoreSettled = restoreActiveChatIfPresent();
-  }
-});
-
-export function whenActiveChatRestoreSettled(): Promise<void> {
-  return activeChatRestoreSettled;
-}
-
-useActiveChatStore.subscribe((newState, prevState) => {
-  if (newState.transcript !== prevState.transcript && activeChatShouldPersist(newState)) {
-    persistActiveChat();
-  }
-});

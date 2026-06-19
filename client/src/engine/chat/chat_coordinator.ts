@@ -15,7 +15,6 @@ import { useScenarioCharacterStore } from '../../state/scenario_character_store.
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { ConversationTranscript } from './transcript';
 import {
-  clearPersistedActiveChat,
   getActiveChatMedium,
   getActiveChatParticipants,
   getAllActiveChatSpeakers,
@@ -223,7 +222,6 @@ export class ChatCoordinator {
       }
     } catch (err) {
     } finally {
-      clearPersistedActiveChat(scenario.id);
       this.deactivate();
     }
   }

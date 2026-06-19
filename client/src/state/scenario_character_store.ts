@@ -313,6 +313,21 @@ export function useUserCharacter() {
   return getUserCharacter(scenario, charactersById);
 }
 
+export function whenScenarioCharactersLoaded(): Promise<void> {
+  if (useScenarioCharacterStore.getState().scenarioCharactersAreLoaded) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve) => {
+    const unsubscribe = useScenarioCharacterStore.subscribe((state) => {
+      if (state.scenarioCharactersAreLoaded) {
+        unsubscribe();
+        resolve();
+      }
+    });
+  });
+}
+
 function updateCharacterLocationsForMapChange(map: WorldMap) {
   const scenarioCharacterStore = useScenarioCharacterStore.getState();
   const locationIds = map.locations.map((location) => location.id);
