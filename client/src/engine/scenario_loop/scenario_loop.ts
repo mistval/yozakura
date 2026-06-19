@@ -7,20 +7,22 @@ import { getRequiredActiveScenario, useScenarioStore } from '../../state/scenari
 import { useSettingsStore } from '../../state/settings_store';
 import { ChatCoordinator } from '../chat/chat_coordinator';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry';
-import { NPCTurnRunner } from '../npc_turn_runner';
 import { buildSimpleInteractionRelationshipUpdates } from '../relationship';
 import { TURNS_PER_PERIOD } from '../schedule';
 import { timeOfDaySchema } from '../types';
 import { applyDailyWardrobeAutoselect, applyPostConversationWardrobeAutoRevert } from '../wardrobes';
+import { CharacterInputInterface } from './character_input_interfaces/character_input_interface';
+import { NPCInputInterface } from './character_input_interfaces/npc_input_interface';
+import { UserInputInterface } from './character_input_interfaces/user_input_interface';
 import {
   abortAllPendingActions,
   doScenarioLoopAsyncAction,
-  doWithScenarioLoopPromise,
   ScenarioLoopAbortSignalException,
   scenarioLoopPromiseCallbacks,
   UserAbortSignalException,
 } from './flow_control';
-import type { ChatUserInputAction, UserTurnAction } from './types';
+import { TurnState } from './turn_state';
+import type { TurnMove, TurnMoveOutcome } from './types';
 
 function doPostConversationWardrobeAutoRevert() {
   const activeChatState = useActiveChatStore.getState();
@@ -40,7 +42,7 @@ function doPostConversationWardrobeAutoRevert() {
 async function closeChatSession(forceNoEffect?: boolean): Promise<{
   noEffect: boolean;
 }> {
-  // Ending a chat always clears the steering pause (so post-chat work and subsequent NPC turns run).
+  // Ending a chat always clears the steering pause (so post-chat work and subsequent turns run).
   useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('none');
 
   const activeChatStore = useActiveChatStore.getState();
@@ -76,7 +78,18 @@ async function moveScenarioCharacter(characterId: string, toId: string) {
   });
 }
 
+function makeInputInterface(characterId: string, turnState: TurnState): CharacterInputInterface {
+  const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();
+
+  if (userCharacter && characterId === userCharacter.id) {
+    return new UserInputInterface();
+  }
+
+  return new NPCInputInterface(characterId, turnState);
+}
+
 async function runChatLoop(
+  turnState: TurnState,
   participantIds: string[],
   opts?: { resumeRestored?: boolean }
 ): Promise<{
@@ -100,58 +113,32 @@ async function runChatLoop(
         return closeChatSession();
       }
 
-      const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();
+      const speakerInput = makeInputInterface(nextSpeaker.id, turnState);
+      const chatInput = await speakerInput.getNextChatInput();
 
-      if (userCharacter && nextSpeaker.id === userCharacter.id) {
-        ChatCoordinator.setStateAwaitingUserInput();
-        const userChatAction = await doWithScenarioLoopPromise<ChatUserInputAction>(
-          async (userChatActionPromise) => {
-            scenarioLoopPromiseCallbacks.userChatAction = userChatActionPromise;
-            // While parked for steering we are not inside withPhaseTransitionGate, so handle a Stop
-            // request here by aborting the wait and unwinding back to the user phase.
-            const unsubscribe = useScenarioLoopStateStore.subscribe((state) => {
-              if (state.userRequestedPhaseTransition === 'stopped') {
-                userChatActionPromise.reject(new UserAbortSignalException());
-              }
-            });
-            try {
-              return await userChatActionPromise.promise;
-            } finally {
-              unsubscribe();
-            }
-          }
+      if (chatInput.actionType === 'skip_turn') {
+        nextSpeaker = await doScenarioLoopAsyncAction(() =>
+          ChatCoordinator.selectNextSpeaker({ notSpeakerId: nextSpeaker.id })
         );
-
-        if (userChatAction.actionType === 'skip_turn') {
-          nextSpeaker = await doScenarioLoopAsyncAction(() =>
-            ChatCoordinator.selectNextSpeaker({ notSpeakerId: nextSpeaker.id })
-          );
-        } else if (userChatAction.actionType === 'speak_as') {
-          nextSpeaker = await doScenarioLoopAsyncAction(() =>
-            ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: userChatAction.characterId })
-          );
-        } else if (userChatAction.actionType === 'request_end_chat') {
-          const transcript = useActiveChatStore.getState().transcript;
-          assertNonNullish(transcript, 'No chat transcript');
-          return closeChatSession(userChatAction.forceNoEffect);
-        } else if (userChatAction.actionType === 'send_message') {
-          await doScenarioLoopAsyncAction(() =>
-            ChatCoordinator.addCharacterMessage(userCharacter.id, userChatAction.message)
-          );
-
-          nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
-        } else {
-          assert(false, 'Unexpected user chat action');
-        }
-      } else {
-        ChatCoordinator.setStateNpcSpeaking();
-        // While paused, the only way an NPC is the next speaker is because the user explicitly chose
-        // them, so this generation is a user interaction that must bypass the pause gate.
-        const isUserInteraction = ChatCoordinator.isChatPaused();
+      } else if (chatInput.actionType === 'speak_as') {
+        nextSpeaker = await doScenarioLoopAsyncAction(() =>
+          ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: chatInput.characterId })
+        );
+      } else if (chatInput.actionType === 'request_end_chat') {
+        const transcript = useActiveChatStore.getState().transcript;
+        assertNonNullish(transcript, 'No chat transcript');
+        return closeChatSession(chatInput.forceNoEffect);
+      } else if (chatInput.actionType === 'send_message') {
         await doScenarioLoopAsyncAction(() =>
-          ChatCoordinator.speakAsNpc(nextSpeaker.id, { isUserInteraction })
+          ChatCoordinator.addCharacterMessage(nextSpeaker.id, chatInput.message)
         );
+
         nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+      } else if (chatInput.actionType === 'spoke') {
+        // The NPC interface already generated and added its own message.
+        nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+      } else {
+        assert(false, 'Unexpected chat input action');
       }
     }
   } catch (err) {
@@ -160,12 +147,63 @@ async function runChatLoop(
   }
 }
 
-async function runUserChatAndShouldEndPhase(
-  participantIds: string[],
-  opts?: { resumeRestored?: boolean }
-): Promise<boolean> {
-  const { noEffect } = await runChatLoop(participantIds, opts);
-  return !noEffect && !useSettingsStore.getState().freedomOfMovement;
+async function applyTurnMove(
+  characterId: string,
+  move: TurnMove,
+  turnState: TurnState
+): Promise<TurnMoveOutcome> {
+  if (move.actionType === 'wait') {
+    return { noEffect: true };
+  }
+
+  if (move.actionType === 'move') {
+    await moveScenarioCharacter(characterId, move.destinationLocationId);
+    return { noEffect: true };
+  }
+
+  if (move.actionType === 'chat') {
+    if (move.rich) {
+      return runChatLoop(turnState, move.participantIds);
+    }
+
+    const participants = useScenarioCharacterStore.getState().getCharactersByIds(move.participantIds);
+    const updatedRelationships = await buildSimpleInteractionRelationshipUpdates({ participants });
+
+    await Promise.all(
+      updatedRelationships.map((r) =>
+        useScenarioCharacterRelationshipStore.getState().saveRelationshipFields(r, r)
+      )
+    );
+
+    return { noEffect: true };
+  }
+
+  assert(false, 'Unknown turn move type');
+}
+
+async function processCharacterTurn(characterId: string, turnState: TurnState) {
+  const inputInterface = makeInputInterface(characterId, turnState);
+
+  while (true) {
+    const move = await inputInterface.getNextTurnMove();
+    const outcome = await applyTurnMove(characterId, move, turnState);
+
+    if (!inputInterface.continuesAfterMove(move, outcome)) {
+      return;
+    }
+  }
+}
+
+async function runTurn(turnState: TurnState) {
+  const loopState = useScenarioLoopStateStore.getState();
+
+  let characterId = turnState.peekCurrentCharacterId();
+  while (characterId !== undefined) {
+    loopState.setCurrentTurnCharacterId(characterId);
+    await processCharacterTurn(characterId, turnState);
+    turnState.completeCurrentCharacter();
+    characterId = turnState.peekCurrentCharacterId();
+  }
 }
 
 function runWardrobeAutoselect() {
@@ -184,80 +222,27 @@ function runWardrobeAutoselect() {
   }
 }
 
-async function runUserPhase(opts?: { resumeRestoredChat?: boolean }) {
-  const scenarioLoopState = useScenarioLoopStateStore.getState();
-  scenarioLoopState.setPhase('user');
-
-  if (opts?.resumeRestoredChat && useActiveChatStore.getState().isActive()) {
-    const restoredParticipantIds = useActiveChatStore.getState().participantIds;
-    if (await runUserChatAndShouldEndPhase(restoredParticipantIds, { resumeRestored: true })) {
-      return;
-    }
-  }
-
-  if (scenarioLoopState.autoMode) {
-    return;
-  }
-
-  while (true) {
-    const userAction = await doWithScenarioLoopPromise<UserTurnAction>(async (userActionPromise) => {
-      scenarioLoopPromiseCallbacks.userTurnAction = userActionPromise;
-      return userActionPromise.promise;
-    });
-
-    const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();
-    assertNonNullish(userCharacter, 'User character not found');
-
-    if (userAction.actionType === 'initiate_chat') {
-      if (await runUserChatAndShouldEndPhase([userCharacter.id, userAction.characterId])) {
-        return;
-      }
-    } else if (userAction.actionType == 'move') {
-      await moveScenarioCharacter(userCharacter.id, userAction.destinationLocationId);
-
-      if (!useSettingsStore.getState().freedomOfMovement) {
-        return;
-      }
-    } else if (userAction.actionType === 'wait') {
-      return;
-    } else {
-      assert(false, 'Unknown user action type');
-    }
-  }
+function getTurnCharacterIds(): string[] {
+  return useScenarioCharacterStore.getState().scenarioCharacters.map((c) => c.id);
 }
 
-async function runNpcPhase() {
-  useScenarioLoopStateStore.getState().setPhase('npc');
-  const turnRunner = new NPCTurnRunner();
+function getRequiredUserCharacterId(): string {
+  const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();
+  assertNonNullish(userCharacter, 'User character not found');
+  return userCharacter.id;
+}
 
-  while (true) {
-    const runnerResult = await doScenarioLoopAsyncAction(() => turnRunner.runNextTurn());
+async function resumeRestoredChatIntoTurn(turnState: TurnState) {
+  const restoredParticipantIds = useActiveChatStore.getState().participantIds;
+  const { noEffect } = await runChatLoop(turnState, restoredParticipantIds, { resumeRestored: true });
 
-    if (runnerResult.result === 'all_turns_complete') {
-      useScenarioStore.getState().updateScenario((prev) => ({
-        ...prev,
-        turnNumber: prev.turnNumber + 1,
-      }));
-
-      return;
-    }
-
-    if (runnerResult.result === 'do_rich_interaction') {
-      await runChatLoop(runnerResult.participants.map((p) => p.id));
-    } else if (runnerResult.result === 'do_simple_interaction') {
-      const updatedRelationships = await buildSimpleInteractionRelationshipUpdates({
-        participants: runnerResult.participants,
-      });
-
-      await Promise.all(
-        updatedRelationships.map((r) =>
-          useScenarioCharacterRelationshipStore.getState().saveRelationshipFields(r, r)
-        )
-      );
-    } else if (runnerResult.result === 'npc_moved') {
-      await moveScenarioCharacter(runnerResult.characterId, runnerResult.destinationLocationId);
-    } else {
-      assert(false, 'Unknown NPC turn result');
+  // Mirror the legacy restore behavior: a consequential restored chat consumes the user's turn
+  // (unless they have freedom of movement). This "resume into the user round" handling is what we
+  // intend to revisit once TurnState is persisted alongside the active chat.
+  if (!noEffect && !useSettingsStore.getState().freedomOfMovement) {
+    const userCharacterId = useScenarioCharacterStore.getState().getUserCharacter()?.id;
+    if (userCharacterId !== undefined) {
+      turnState.completeCharacter(userCharacterId);
     }
   }
 }
@@ -268,9 +253,20 @@ async function runScenarioLoop(opts: { resumeRestoredChat: boolean }) {
   while (true) {
     try {
       runWardrobeAutoselect();
-      await runUserPhase({ resumeRestoredChat });
-      resumeRestoredChat = false;
-      await runNpcPhase();
+
+      const turnState = TurnState.new(getTurnCharacterIds(), [getRequiredUserCharacterId()]);
+
+      if (resumeRestoredChat && useActiveChatStore.getState().isActive()) {
+        resumeRestoredChat = false;
+        await resumeRestoredChatIntoTurn(turnState);
+      }
+
+      await runTurn(turnState);
+
+      useScenarioStore.getState().updateScenario((prev) => ({
+        ...prev,
+        turnNumber: prev.turnNumber + 1,
+      }));
     } catch (err) {
       if (err instanceof UserAbortSignalException) {
         const loopState = useScenarioLoopStateStore.getState();

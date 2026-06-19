@@ -3,13 +3,16 @@ import { useCharacterEditorModal } from './CharacterEditorModalContext';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import { useActiveChatStore } from '../../state/active_chat_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
+import { useScenarioStore } from '../../state/scenario_store';
 
 export default function HeaderSection() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { canDelete, isBusy, deleteConfirmationMessage, closeEditor, remove, isNew, isGlobalMode, error } =
     useCharacterEditorModal();
   const activeChatStatus = useActiveChatStore((state) => state.chatState !== 'inactive');
-  const npcPhaseBusy = useScenarioLoopStateStore((state) => state.currentPhase === 'npc');
+  const currentTurnCharacterId = useScenarioLoopStateStore((state) => state.currentTurnCharacterId);
+  const userCharacterId = useScenarioStore((state) => state.activeScenario?.userCharacterId);
+  const npcPhaseBusy = currentTurnCharacterId !== undefined && currentTurnCharacterId !== userCharacterId;
 
   return (
     <>

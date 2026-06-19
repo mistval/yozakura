@@ -35,7 +35,7 @@ export default function ScenarioView() {
   const { openSettings } = useSettingsModal();
   const activeParticipants = useActiveChatParticipants();
   const hasActiveChatSession = useActiveChatStore((state) => state.chatState !== 'inactive');
-  const currentPhase = useScenarioLoopStateStore((state) => state.currentPhase);
+  const currentTurnCharacterId = useScenarioLoopStateStore((state) => state.currentTurnCharacterId);
   const submitUserWait = useScenarioLoopStateStore((state) => state.submitUserWait);
   const submitUserMove = useScenarioLoopStateStore((state) => state.submitUserMove);
   const submitUserChatAction = useScenarioLoopStateStore((state) => state.submitUserChatAction);
@@ -44,8 +44,11 @@ export default function ScenarioView() {
   const setUserRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.setUserRequestedPhaseTransition
   );
-  const npcPhaseBusy = currentPhase === 'npc';
-  const canSubmitUserTurn = currentPhase === 'user' && !hasActiveChatSession;
+  const isUserTurn =
+    currentTurnCharacterId !== undefined && currentTurnCharacterId === scenario?.userCharacterId;
+  const npcPhaseBusy =
+    currentTurnCharacterId !== undefined && currentTurnCharacterId !== scenario?.userCharacterId;
+  const canSubmitUserTurn = isUserTurn && !hasActiveChatSession;
   const previousUserIdRef = useRef<string | null>(null);
   const [visibleRelationships, setVisibleRelationships] = useState<CharacterRelationships>({});
 
