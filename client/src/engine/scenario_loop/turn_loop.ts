@@ -51,24 +51,30 @@ export async function runTurnLoop() {
 }
 
 async function runTurnLoopTick() {
-  if (useActiveChatStore.getState().machineState === undefined) {
+  const { machineState, currentCharacterId, startNewTurn } = useActiveChatStore.getState();
+
+  if (machineState === undefined) {
     runWardrobeAutoselect();
-    useActiveChatStore.getState().startNewTurn(getTurnCharacterIds(), getRequiredUserCharacterId());
+    startNewTurn(getTurnCharacterIds(), getRequiredUserCharacterId());
   }
 
-  const characterId = useActiveChatStore.getState().currentCharacterId();
+  // TODO: I'm noticing that current character ID is duplicated between useActiveChatStore
+  // and useScenarioLoopStateStore. Can we centralize it to useActiveChatStore?
+  // That's the more fitting place for it.
+  const characterId = currentCharacterId();
   assertNonNullish(characterId, 'No current character to process');
   useScenarioLoopStateStore.getState().setCurrentTurnCharacterId(characterId);
 
   const inputInterface = makeInputInterface(characterId);
 
-  if (useActiveChatStore.getState().machineState === 'chatting') {
+  if (machineState === 'chatting') {
     const outcome = await runChatLoop();
     const move: TurnMove = {
       actionType: 'chat',
       participantIds: useActiveChatStore.getState().participantIds,
       rich: true,
     };
+
     advanceAfterMove(inputInterface, move, outcome, true);
     return;
   }
@@ -76,15 +82,26 @@ async function runTurnLoopTick() {
   const { move, persist } = await inputInterface.getNextTurnMove();
 
   if (move.actionType === 'chat' && move.rich) {
+    // TODO: It's not appropriate for ChatCoordinator to update the machine state in this call.
+    // Only turn loop should update the machine state, it owns that. I'd rather see chatcoordinator
+    // be more like "here are the details of this chat if you wanna start it. submitting it to
+    // useActiveChatStore is your job".
     await doScenarioLoopAsyncAction(() => ChatCoordinator.beginChat(move.participantIds));
     persistTurn();
     return;
   }
 
-  const outcome = await applyTurnMove(characterId, move);
+  const outcome = await applySimpleTurnMove(characterId, move);
   advanceAfterMove(inputInterface, move, outcome, persist);
 }
 
+// TODO: I really dislike this function because it takes in a flag for whether it should persist or not,
+// but it only respects that flag if it feels like it. It also doesn't always advance. There's too much coordination
+// happening between getNextTurnMove() and this turn loop in regards to whether persistence happens or not.
+// There should be one clear authority. If somebody returns a boolean "persist: true" then we should persist.
+// If you're concerned about repetitive or unnecessary calls to persist, I would say you don't need to be.
+// Persisting is never harmful. Sometimes it's unnecessary, but never harmful. So we should err on the side
+// of being simple about it.
 function advanceAfterMove(
   inputInterface: CharacterInputInterface,
   move: TurnMove,
@@ -121,6 +138,11 @@ async function runChatLoop(): Promise<{ noEffect: boolean }> {
     let nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
 
     while (true) {
+      // TODO: I would like to see the NPCInputInterface do this. I think that would
+      // be cleaner. NPCInputInterface can look at the current chat state and the NPC
+      // can "decide" to end the chat under the right conditions. That could also
+      // simplify the "persistence owner is unclear" issue, because the NPC would
+      // return false for persist when it wants to end the chat.
       if (ChatCoordinator.countChatMessages() >= getChatMessageLimit()) {
         return closeChatSession();
       }
@@ -142,17 +164,18 @@ async function runChatLoop(): Promise<{ noEffect: boolean }> {
         await doScenarioLoopAsyncAction(() =>
           ChatCoordinator.addCharacterMessage(nextSpeaker.id, input.message)
         );
-        if (persist) {
-          persistTurn();
-        }
         nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
       } else if (input.actionType === 'spoke') {
-        if (persist) {
-          persistTurn();
-        }
         nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
       } else {
         assert(false, 'Unexpected chat input action');
+      }
+
+      // TODO: FYI I moved this out here, for reasons I've discussed. If somebody says "persist"
+      // then we should persist. If somebody says persist in a situation where doing so is
+      // invalid, we should assert, not ignore.
+      if (persist) {
+        persistTurn();
       }
     }
   } catch (err) {
@@ -161,7 +184,7 @@ async function runChatLoop(): Promise<{ noEffect: boolean }> {
   }
 }
 
-async function applyTurnMove(characterId: string, move: TurnMove): Promise<TurnMoveOutcome> {
+async function applySimpleTurnMove(characterId: string, move: TurnMove): Promise<TurnMoveOutcome> {
   if (move.actionType === 'wait') {
     return { noEffect: true };
   }

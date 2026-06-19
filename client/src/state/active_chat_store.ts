@@ -10,7 +10,6 @@ import type {
   WorldMapLocation,
 } from '../engine/types.js';
 import {
-  chatMediumSchema,
   ephemeralLocationSchema,
   serializedConversationTranscriptSchema,
   wardrobeSchema,
@@ -32,7 +31,6 @@ type StartChatSessionArgs = {
 export const persistedActiveChatSchema = z.object({
   participantIds: z.array(z.string()),
   removedParticipantIds: z.array(z.string()),
-  chatMode: chatMediumSchema,
   gossipTargetCharacterId: z.string().optional(),
   serializedTranscript: serializedConversationTranscriptSchema,
   preConversationWardrobeSnapshotByCharacterId: z.record(z.string(), z.array(wardrobeSchema)),
@@ -64,7 +62,6 @@ type BaseChatStoreState = {
   processingMemoryStatusInfo: string | undefined;
   participantIds: string[];
   removedParticipantIds: string[];
-  chatMode: ChatMedium | undefined;
   gossipTargetCharacterId: string | undefined;
   transcript: ConversationTranscript | undefined;
   preConversationWardrobeSnapshotByCharacterId: Record<string, Wardrobe[]>;
@@ -125,7 +122,6 @@ type InactiveChatFields = Omit<
 
 const inactiveChatState: InactiveChatFields = {
   chatState: 'inactive',
-  chatMode: 'in_person',
   removedParticipantIds: [],
   processingMemoryStatusInfo: undefined,
   participantIds: [],
@@ -393,15 +389,17 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
     set({
       ...inactiveChatState,
       ...turnFields,
+      // TODO: Is there a way we can spread or something and get all these properties automatically?
+      // I just know we're going to forget to update this in the future otherwise.
       chatState: 'awaiting_user_input',
       participantIds: activeChat.participantIds,
       removedParticipantIds: activeChat.removedParticipantIds,
-      chatMode: activeChat.chatMode,
       gossipTargetCharacterId: activeChat.gossipTargetCharacterId,
       transcript: ConversationTranscript.deserialize(activeChat.serializedTranscript),
       preConversationWardrobeSnapshotByCharacterId: activeChat.preConversationWardrobeSnapshotByCharacterId,
       ephemeralLocation: activeChat.ephemeralLocation,
       initiatorId: activeChat.initiatorId,
+      // TODO: Let's make these non-optional if we're going to force defaults here.
       chatInstructions: activeChat.chatInstructions ?? '',
       chatInstructionsByCharacterId: activeChat.chatInstructionsByCharacterId ?? {},
     });
@@ -559,10 +557,11 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
 export function buildPersistedActiveChat(state: BaseChatStoreState): PersistedActiveChat {
   assertNonNullish(state.transcript, 'Cannot persist active chat without a transcript');
 
+  // TODO: Ditto, it's going to be annoying it we have to remember to update
+  // this whenever we add a field.
   return {
     participantIds: state.participantIds,
     removedParticipantIds: state.removedParticipantIds,
-    chatMode: state.chatMode ?? 'in_person',
     gossipTargetCharacterId: state.gossipTargetCharacterId,
     serializedTranscript: state.transcript.serialize(),
     preConversationWardrobeSnapshotByCharacterId: state.preConversationWardrobeSnapshotByCharacterId,
