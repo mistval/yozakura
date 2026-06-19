@@ -5,7 +5,7 @@ export type CharacterEditorModalProps = {
   characterId?: string | undefined;
   scenarioId?: string | undefined;
   queryParam?: string | undefined;
-  onClose: (result: { deleted?: boolean }) => void;
+  onClose: () => void;
 };
 
 export type PendingCardImport =

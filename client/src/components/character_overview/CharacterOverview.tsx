@@ -165,10 +165,7 @@ export default function CharacterOverview() {
         open={Boolean(routeEditingCharacterId)}
         characterId={routeEditingCharacterId}
         scenarioId={scenario.id}
-        onClose={({ deleted }) => {
-          if (deleted) {
-            setSelectedIds([]);
-          }
+        onClose={() => {
           backToCharacterOverview();
         }}
       />

@@ -209,7 +209,7 @@ export function CharacterEditorModalProvider({
     setImageRefreshKey(Date.now());
   };
 
-  const closeEditor = () => onClose({ deleted: false });
+  const closeEditor = () => onClose();
 
   const generateInternalDescriptionField = async () => {
     await runWithField(
@@ -335,14 +335,20 @@ export function CharacterEditorModalProvider({
   };
 
   const save = async () => {
+    const sanitizedCharacter = {
+      ...character,
+      firstName: character.firstName.trim(),
+      lastName: character.lastName.trim(),
+    };
+
     await runWithField('save', async () => {
       if (isGlobalMode) {
-        await useGlobalCharactersStore.getState().saveGlobalCharacter(character, selectedImageFile);
+        await useGlobalCharactersStore.getState().saveGlobalCharacter(sanitizedCharacter, selectedImageFile);
       } else {
-        await saveScenarioCharacter(character, selectedImageFile);
+        await saveScenarioCharacter(sanitizedCharacter, selectedImageFile);
       }
 
-      onClose({ deleted: false });
+      onClose();
     });
   };
 
@@ -355,7 +361,7 @@ export function CharacterEditorModalProvider({
         // We leave the image since chat logs still reference it. Will be deleted when/if the scenario gets deleted.
       }
 
-      onClose({ deleted: true });
+      onClose();
     });
   };
 
