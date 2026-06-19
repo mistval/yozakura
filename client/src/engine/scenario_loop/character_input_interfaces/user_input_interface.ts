@@ -9,17 +9,55 @@ import {
   UserAbortSignalException,
 } from '../flow_control';
 import type {
-  ChatTurnInput,
+  ChatInputResult,
   ChatUserInputAction,
   TurnMove,
   TurnMoveOutcome,
+  TurnMoveResult,
   UserTurnAction,
 } from '../types';
 import { CharacterInputInterface } from './character_input_interface';
 
 export class UserInputInterface extends CharacterInputInterface {
-  public async getNextTurnMove(): Promise<TurnMove> {
-    // In auto mode the user character is passive; it yields its turn without waiting for UI input.
+  public async getNextTurnMove(): Promise<TurnMoveResult> {
+    return { move: await this.resolveTurnMove(), persist: true };
+  }
+
+  public async getNextChatInput(): Promise<ChatInputResult> {
+    ChatCoordinator.setStateAwaitingUserInput();
+
+    const input = await doWithScenarioLoopPromise<ChatUserInputAction>(async (userChatActionPromise) => {
+      scenarioLoopPromiseCallbacks.userChatAction = userChatActionPromise;
+      const unsubscribe = useScenarioLoopStateStore.subscribe((state) => {
+        if (state.userRequestedPhaseTransition === 'stopped') {
+          userChatActionPromise.reject(new UserAbortSignalException());
+        }
+      });
+      try {
+        return await userChatActionPromise.promise;
+      } finally {
+        unsubscribe();
+      }
+    });
+
+    return { input, persist: true };
+  }
+
+  public continuesAfterMove(move: TurnMove, outcome: TurnMoveOutcome): boolean {
+    const freedomOfMovement = useSettingsStore.getState().freedomOfMovement;
+
+    if (move.actionType === 'move') {
+      return freedomOfMovement;
+    }
+
+    if (move.actionType === 'chat') {
+      return freedomOfMovement || outcome.noEffect;
+    }
+
+    return false;
+  }
+
+  private async resolveTurnMove(): Promise<TurnMove> {
     if (useScenarioLoopStateStore.getState().autoMode) {
       return { actionType: 'wait' };
     }
@@ -45,41 +83,5 @@ export class UserInputInterface extends CharacterInputInterface {
     }
 
     assert(false, 'Unknown user action type');
-  }
-
-  public async getNextChatInput(): Promise<ChatTurnInput> {
-    ChatCoordinator.setStateAwaitingUserInput();
-
-    return doWithScenarioLoopPromise<ChatUserInputAction>(async (userChatActionPromise) => {
-      scenarioLoopPromiseCallbacks.userChatAction = userChatActionPromise;
-      // While parked for steering we are not inside withPhaseTransitionGate, so handle a Stop
-      // request here by aborting the wait and unwinding back to the turn loop.
-      const unsubscribe = useScenarioLoopStateStore.subscribe((state) => {
-        if (state.userRequestedPhaseTransition === 'stopped') {
-          userChatActionPromise.reject(new UserAbortSignalException());
-        }
-      });
-      try {
-        return await userChatActionPromise.promise;
-      } finally {
-        unsubscribe();
-      }
-    });
-  }
-
-  public continuesAfterMove(move: TurnMove, outcome: TurnMoveOutcome): boolean {
-    const freedomOfMovement = useSettingsStore.getState().freedomOfMovement;
-
-    if (move.actionType === 'move') {
-      return freedomOfMovement;
-    }
-
-    if (move.actionType === 'chat') {
-      // A consequential chat ends the turn unless the user has freedom of movement.
-      return freedomOfMovement || outcome.noEffect;
-    }
-
-    // 'wait' ends the turn.
-    return false;
   }
 }

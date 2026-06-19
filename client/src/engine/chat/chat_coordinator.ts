@@ -31,7 +31,7 @@ import { getRequiredRandomChoice } from '../../util/array';
 import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
 
 export class ChatCoordinator {
-  public static async activate(participantIds: string[]) {
+  public static async beginChat(participantIds: string[]) {
     assert(participantIds.length >= 2, 'At least two participants are required to initialize chat');
     assert(this.activeChatStore().chatState === 'inactive', 'Already active');
 
@@ -53,11 +53,15 @@ export class ChatCoordinator {
       return undefined;
     });
 
-    this.activeChatStore().activate({
+    this.activeChatStore().beginChat({
       participantIds,
       initiatorId: firstParticipant.id,
       gossipTargetCharacterId,
     });
+  }
+
+  public static enterActiveChat() {
+    this.activeChatStore().enterActiveChat();
   }
 
   public static deactivate() {

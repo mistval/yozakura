@@ -71,4 +71,14 @@ interface ChatTurnSpoke {
 
 export type ChatTurnInput = ChatUserInputAction | ChatTurnSpoke;
 
+export interface TurnMoveResult {
+  move: TurnMove;
+  persist: boolean;
+}
+
+export interface ChatInputResult {
+  input: ChatTurnInput;
+  persist: boolean;
+}
+
 export type ScenarioLoopRunState = 'idle' | 'running' | 'errored';

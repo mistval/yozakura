@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import _ from 'lodash';
 import { z } from 'zod';
 import type {
   Character,
@@ -43,7 +44,22 @@ export const persistedActiveChatSchema = z.object({
 
 export type PersistedActiveChat = z.infer<typeof persistedActiveChatSchema>;
 
+export type TurnMachineState = 'deciding' | 'chatting';
+
+export const serializedTurnSchema = z.object({
+  machineState: z.enum(['deciding', 'chatting']),
+  pendingTurnCharacterIds: z.array(z.string()),
+  chatsSoFar: z.record(z.string(), z.array(z.object({ withIds: z.array(z.string()) }))),
+  activeChat: persistedActiveChatSchema.optional(),
+});
+
+export type SerializedTurn = z.infer<typeof serializedTurnSchema>;
+
 type BaseChatStoreState = {
+  machineState: TurnMachineState | undefined;
+  pendingTurnCharacterIds: string[];
+  chatsSoFar: Record<string, { withIds: string[] }[]>;
+
   chatState: 'inactive' | 'awaiting_user_input' | 'generating_image' | 'processing_memories' | 'npc_speaking';
   processingMemoryStatusInfo: string | undefined;
   participantIds: string[];
@@ -60,9 +76,18 @@ type BaseChatStoreState = {
 
   isActive: () => boolean;
   setTranscript: (transcript: ConversationTranscript) => void;
-  activate: (args: StartChatSessionArgs) => void;
-  restoreFromPersisted: (persisted: PersistedActiveChat) => void;
+  startNewTurn: (allCharacterIds: string[], userCharacterId: string) => void;
+  currentCharacterId: () => string | undefined;
+  finishCurrentCharacter: () => boolean;
+  setMachineState: (machineState: TurnMachineState) => void;
+  recordChat: (initiatorId: string, withIds: string[]) => void;
+  hasChatted: (characterAId: string, characterBId: string) => boolean;
+  beginChat: (args: StartChatSessionArgs) => void;
+  enterActiveChat: () => void;
   deactivate: () => void;
+  reset: () => void;
+  serialize: () => SerializedTurn | undefined;
+  hydrate: (snapshot: SerializedTurn) => void;
   setEphemeralLocation: (setter: (prev: EphemeralLocation) => EphemeralLocation) => void;
   userIsParticipant: () => boolean;
   addChatParticipant: (participantId: string) => void;
@@ -93,7 +118,12 @@ type ActiveChatStoreState = OmitFunctions<BaseChatStoreState> & {
   memoryRagHelper: MemoryRAGHelper;
 };
 
-const inactiveState: OmitFunctions<BaseChatStoreState> = {
+type InactiveChatFields = Omit<
+  OmitFunctions<BaseChatStoreState>,
+  'machineState' | 'pendingTurnCharacterIds' | 'chatsSoFar'
+>;
+
+const inactiveChatState: InactiveChatFields = {
   chatState: 'inactive',
   chatMode: 'in_person',
   removedParticipantIds: [],
@@ -227,59 +257,154 @@ export function getAllActiveChatSpeakers(): Character[] {
 }
 
 export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
-  ...inactiveState,
+  ...inactiveChatState,
+  machineState: undefined,
+  pendingTurnCharacterIds: [],
+  chatsSoFar: {},
 
   isActive() {
     return get().chatState !== 'inactive';
   },
 
-  activate(args) {
+  startNewTurn(allCharacterIds, userCharacterId) {
+    const otherCharacterIds = allCharacterIds.filter((id) => id !== userCharacterId);
+    const ordered = [userCharacterId, ..._.shuffle(otherCharacterIds)];
+
+    get().memoryRagHelper?.teardown();
+    set({
+      ...inactiveChatState,
+      machineState: 'deciding',
+      pendingTurnCharacterIds: ordered,
+      chatsSoFar: {},
+    });
+  },
+
+  currentCharacterId() {
+    return get().pendingTurnCharacterIds[0];
+  },
+
+  finishCurrentCharacter() {
+    const remaining = get().pendingTurnCharacterIds.slice(1);
+    const turnEnded = remaining.length === 0;
+    set({
+      pendingTurnCharacterIds: remaining,
+      machineState: turnEnded ? undefined : 'deciding',
+    });
+    return turnEnded;
+  },
+
+  setMachineState(machineState) {
+    set({ machineState });
+  },
+
+  recordChat(initiatorId, withIds) {
+    const existing = get().chatsSoFar[initiatorId] ?? [];
+    set({
+      chatsSoFar: {
+        ...get().chatsSoFar,
+        [initiatorId]: existing.concat({ withIds }),
+      },
+    });
+  },
+
+  hasChatted(characterAId, characterBId) {
+    const chatsSoFar = get().chatsSoFar;
+    return (
+      (chatsSoFar[characterAId] ?? []).some((chat) => chat.withIds.includes(characterBId)) ||
+      (chatsSoFar[characterBId] ?? []).some((chat) => chat.withIds.includes(characterAId))
+    );
+  },
+
+  beginChat(args) {
     const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();
     const participants = getCharactersByIds(args.participantIds);
     const initiatorIsUser = args.initiatorId === userCharacter?.id;
 
     set({
-      ...args,
+      ...inactiveChatState,
+      machineState: 'chatting',
+      participantIds: args.participantIds,
+      initiatorId: args.initiatorId,
+      gossipTargetCharacterId: args.gossipTargetCharacterId,
       chatState: initiatorIsUser ? 'awaiting_user_input' : 'npc_speaking',
-      processingMemoryStatusInfo: undefined,
       transcript: ConversationTranscript.new(),
-      memoryRagHelper: new MemoryRAGHelper(),
       preConversationWardrobeSnapshotByCharacterId: Object.fromEntries(
         participants.map((p) => [p.id, p.wardrobes])
       ),
     });
   },
 
-  restoreFromPersisted(persisted) {
-    const transcript = ConversationTranscript.deserialize(persisted.serializedTranscript);
+  enterActiveChat() {
+    const transcript = get().transcript;
+    assertNonNullish(transcript, 'Cannot enter chat without a transcript');
+
     const memoryRagHelper = new MemoryRAGHelper();
-
-    set({
-      chatState: 'awaiting_user_input',
-      processingMemoryStatusInfo: undefined,
-      participantIds: persisted.participantIds,
-      removedParticipantIds: persisted.removedParticipantIds,
-      chatMode: persisted.chatMode,
-      gossipTargetCharacterId: persisted.gossipTargetCharacterId,
-      transcript,
-      preConversationWardrobeSnapshotByCharacterId: persisted.preConversationWardrobeSnapshotByCharacterId,
-      ephemeralLocation: persisted.ephemeralLocation,
-      initiatorId: persisted.initiatorId,
-      memoryRagHelper,
-      chatInstructions: persisted.chatInstructions ?? '',
-      chatInstructionsByCharacterId: persisted.chatInstructionsByCharacterId ?? {},
-    });
-
     for (const rawMessage of transcript.getRawMessages()) {
       if (rawMessage.messageType === 'chat_message') {
         memoryRagHelper.collectMentionedOffscreenCharacterIds(rawMessage.id, rawMessage.message);
       }
     }
+
+    set({ memoryRagHelper });
   },
 
   deactivate() {
     get().memoryRagHelper?.teardown();
-    set(inactiveState);
+    set(inactiveChatState);
+  },
+
+  reset() {
+    get().memoryRagHelper?.teardown();
+    set({
+      ...inactiveChatState,
+      machineState: undefined,
+      pendingTurnCharacterIds: [],
+      chatsSoFar: {},
+    });
+  },
+
+  serialize() {
+    const state = get();
+    if (state.machineState === undefined) {
+      return undefined;
+    }
+
+    return {
+      machineState: state.machineState,
+      pendingTurnCharacterIds: state.pendingTurnCharacterIds,
+      chatsSoFar: state.chatsSoFar,
+      activeChat: state.machineState === 'chatting' ? buildPersistedActiveChat(state) : undefined,
+    };
+  },
+
+  hydrate(snapshot) {
+    const turnFields = {
+      machineState: snapshot.machineState,
+      pendingTurnCharacterIds: snapshot.pendingTurnCharacterIds,
+      chatsSoFar: snapshot.chatsSoFar,
+    };
+
+    const activeChat = snapshot.activeChat;
+    if (!activeChat) {
+      set({ ...inactiveChatState, ...turnFields });
+      return;
+    }
+
+    set({
+      ...inactiveChatState,
+      ...turnFields,
+      chatState: 'awaiting_user_input',
+      participantIds: activeChat.participantIds,
+      removedParticipantIds: activeChat.removedParticipantIds,
+      chatMode: activeChat.chatMode,
+      gossipTargetCharacterId: activeChat.gossipTargetCharacterId,
+      transcript: ConversationTranscript.deserialize(activeChat.serializedTranscript),
+      preConversationWardrobeSnapshotByCharacterId: activeChat.preConversationWardrobeSnapshotByCharacterId,
+      ephemeralLocation: activeChat.ephemeralLocation,
+      initiatorId: activeChat.initiatorId,
+      chatInstructions: activeChat.chatInstructions ?? '',
+      chatInstructionsByCharacterId: activeChat.chatInstructionsByCharacterId ?? {},
+    });
   },
 
   setStateAwaitingUserInput() {

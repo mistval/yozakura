@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import { assert, assertNonNullish } from '../../../errors/application_error';
+import { useActiveChatStore } from '../../../state/active_chat_store';
 import { useScenarioCharacterStore } from '../../../state/scenario_character_store';
 import { useScenarioCharacterRelationshipStore } from '../../../state/scenario_character_relationship_store';
 import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_store';
@@ -10,19 +11,15 @@ import { ChatCoordinator } from '../../chat/chat_coordinator';
 import { familiarityRelativeWeight, getDirectedRelationship } from '../../relationship';
 import type { Character, CharacterRelationships, WorldMapLocation } from '../../types';
 import { doScenarioLoopAsyncAction } from '../flow_control';
-import type { TurnState } from '../turn_state';
-import type { ChatTurnInput, TurnMove } from '../types';
+import type { ChatInputResult, TurnMove, TurnMoveResult } from '../types';
 import { CharacterInputInterface } from './character_input_interface';
 
 export class NPCInputInterface extends CharacterInputInterface {
-  public constructor(
-    private readonly characterId: string,
-    private readonly turnState: TurnState
-  ) {
+  public constructor(private readonly characterId: string) {
     super();
   }
 
-  public async getNextTurnMove(): Promise<TurnMove> {
+  public async getNextTurnMove(): Promise<TurnMoveResult> {
     const npc = useScenarioCharacterStore.getState().getRequiredCharacterById(this.characterId);
     const currentLocation = this.getCharacterLocation(npc.id);
     const forcedConversationTargetId = npc.nextConversationWithCharacterId;
@@ -51,11 +48,14 @@ export class NPCInputInterface extends CharacterInputInterface {
           nextConversationWithCharacterId: '',
         });
 
-        if (!this.turnState.hasChatted(npc.id, forcedConversationTarget.id)) {
-          this.turnState.recordChat(npc.id, [forcedConversationTarget.id]);
-          return this.buildChatMove(npc, [forcedConversationTarget], forcedConversationTargetRelationship, 1, {
-            forceRichInteraction: true,
-          });
+        if (!useActiveChatStore.getState().hasChatted(npc.id, forcedConversationTarget.id)) {
+          useActiveChatStore.getState().recordChat(npc.id, [forcedConversationTarget.id]);
+          return {
+            move: this.buildChatMove(npc, [forcedConversationTarget], forcedConversationTargetRelationship, 1, {
+              forceRichInteraction: true,
+            }),
+            persist: false,
+          };
         }
       }
     }
@@ -76,7 +76,7 @@ export class NPCInputInterface extends CharacterInputInterface {
         .scenarioCharacters.filter(
           (c) =>
             c.id !== npc.id &&
-            !this.turnState.hasChatted(c.id, npc.id) &&
+            !useActiveChatStore.getState().hasChatted(c.id, npc.id) &&
             (!this.autoModeEnabled || c.id !== scenario.userCharacterId)
         );
 
@@ -105,18 +105,21 @@ export class NPCInputInterface extends CharacterInputInterface {
 
       // If there are no chat candidates, fall through and do a move instead
       if (chatCandidates.length > 0) {
-        this.turnState.recordChat(
+        useActiveChatStore.getState().recordChat(
           npc.id,
           chatCandidates.map((c) => c.id)
         );
-        return this.buildChatMove(npc, chatCandidates, directedRelationships, maxOtherParticipants);
+        return {
+          move: this.buildChatMove(npc, chatCandidates, directedRelationships, maxOtherParticipants),
+          persist: false,
+        };
       }
     }
 
-    return this.buildMoveMove(npc);
+    return { move: this.buildMoveMove(npc), persist: false };
   }
 
-  public async getNextChatInput(): Promise<ChatTurnInput> {
+  public async getNextChatInput(): Promise<ChatInputResult> {
     ChatCoordinator.setStateNpcSpeaking();
     // While paused, the only way an NPC is the next speaker is because the user explicitly chose
     // them, so this generation is a user interaction that must bypass the pause gate.
@@ -125,10 +128,9 @@ export class NPCInputInterface extends CharacterInputInterface {
       ChatCoordinator.speakAsNpc(this.characterId, { isUserInteraction })
     );
 
-    return { actionType: 'spoke' };
+    return { input: { actionType: 'spoke' }, persist: true };
   }
 
-  // NPCs take exactly one move per turn.
   public continuesAfterMove(): boolean {
     return false;
   }
