@@ -7,22 +7,10 @@
       "sampler_name": "%sampler%",
       "scheduler": "%scheduler%",
       "denoise": "%denoise%",
-      "model": [
-        "4",
-        0
-      ],
-      "positive": [
-        "6",
-        0
-      ],
-      "negative": [
-        "7",
-        0
-      ],
-      "latent_image": [
-        "12",
-        0
-      ]
+      "model": ["4", 0],
+      "positive": ["6", 0],
+      "negative": ["7", 0],
+      "latent_image": ["12", 0]
     },
     "class_type": "KSampler",
     "_meta": {
@@ -41,10 +29,7 @@
   "6": {
     "inputs": {
       "text": "%prompt%",
-      "clip": [
-        "4",
-        1
-      ]
+      "clip": ["4", 1]
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
@@ -54,10 +39,7 @@
   "7": {
     "inputs": {
       "text": "%negative_prompt%",
-      "clip": [
-        "4",
-        1
-      ]
+      "clip": ["4", 1]
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
@@ -66,14 +48,8 @@
   },
   "8": {
     "inputs": {
-      "samples": [
-        "3",
-        0
-      ],
-      "vae": [
-        "4",
-        2
-      ]
+      "samples": ["3", 0],
+      "vae": ["4", 2]
     },
     "class_type": "VAEDecode",
     "_meta": {
@@ -83,10 +59,7 @@
   "9": {
     "inputs": {
       "filename_prefix": "SillyTavern",
-      "images": [
-        "8",
-        0
-      ]
+      "images": ["8", 0]
     },
     "class_type": "SaveImage",
     "_meta": {
@@ -104,14 +77,8 @@
   },
   "12": {
     "inputs": {
-      "pixels": [
-        "13",
-        0
-      ],
-      "vae": [
-        "4",
-        2
-      ]
+      "pixels": ["13", 0],
+      "vae": ["4", 2]
     },
     "class_type": "VAEEncode",
     "_meta": {
@@ -124,10 +91,7 @@
       "width": "%width%",
       "height": "%height%",
       "crop": "center",
-      "image": [
-        "10",
-        0
-      ]
+      "image": ["10", 0]
     },
     "class_type": "ImageScale",
     "_meta": {
