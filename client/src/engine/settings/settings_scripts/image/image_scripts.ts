@@ -8,12 +8,14 @@ import {
 } from './image_script_types.js';
 import { openAiImageGenerationsImageScript } from './builtins/open_ai_generations.js';
 import { comfyuiScript } from './builtins/comfyui.js';
+import { cloudflareImageScript } from './builtins/cloudflare.js';
 
 export const BUILTIN_IMAGE_SCRIPTS: ImageGenerationSettingsScript[] = [
   automatic1111Script,
   openRouterScript,
   openAiImageGenerationsImageScript,
   comfyuiScript,
+  cloudflareImageScript,
 ];
 
 export function getBuiltinImageScript(scriptId: string): ImageGenerationSettingsScript | undefined {

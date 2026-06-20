@@ -1,4 +1,6 @@
-export const cloudflareImageScript = {
+import type { ImageGenerationSettingsScript } from '../image_script_types';
+
+export const cloudflareImageScript: ImageGenerationSettingsScript = {
   id: 'cloudflare-workers-ai',
   name: 'Cloudflare Workers AI',
   controls: () => [
@@ -37,8 +39,8 @@ export const cloudflareImageScript = {
     {
       id: 'sceneWidth',
       type: 'number',
-      label: 'Scene width',
-      default: '1216',
+      label: 'Chat image width (px)',
+      default: '1024',
       min: 256,
       max: 2048,
       step: 64,
@@ -47,8 +49,8 @@ export const cloudflareImageScript = {
     {
       id: 'sceneHeight',
       type: 'number',
-      label: 'Scene height',
-      default: '832',
+      label: 'Chat image height (px)',
+      default: '1024',
       min: 256,
       max: 2048,
       step: 64,
@@ -56,8 +58,8 @@ export const cloudflareImageScript = {
     {
       id: 'cardWidth',
       type: 'number',
-      label: 'Card width',
-      default: '832',
+      label: 'Character card width (px)',
+      default: '512',
       min: 256,
       max: 2048,
       step: 64,
@@ -66,8 +68,8 @@ export const cloudflareImageScript = {
     {
       id: 'cardHeight',
       type: 'number',
-      label: 'Card height',
-      default: '1216',
+      label: 'Character card height',
+      default: '768',
       min: 256,
       max: 2048,
       step: 64,
@@ -109,169 +111,148 @@ export const cloudflareImageScript = {
       placeholder: 'leave blank for random',
       tooltipHtml: 'Fix a number to make generations reproducible. Leave blank for a random seed each time.',
     },
-    { id: 'testConnection', type: 'button', title: 'Test Connection' },
+    { id: 'testConnection', type: 'button', title: 'Test Connection (will generate small image)' },
   ],
 
   async buttonHandler(buttonId, controlValues, helpers) {
     if (buttonId !== 'testConnection') {
-      return { result: 'failure', resultDescription: 'Unknown button: ' + buttonId };
+      return { result: 'failure', resultDescription: `Unknown button: ${buttonId}` };
     }
-    const accountId = (controlValues.accountId || '').trim();
-    const apiToken = (controlValues.apiToken || '').trim();
+    const accountId = controlValues.accountId?.trim() ?? '';
+    const apiToken = controlValues.apiToken?.trim() ?? '';
     const model = controlValues.model || '@cf/black-forest-labs/flux-1-schnell';
     if (!accountId)
       return { result: 'failure', resultDescription: 'Enter your Cloudflare Account ID first.' };
     if (!apiToken) return { result: 'failure', resultDescription: 'Enter your Cloudflare API token first.' };
 
-    const url =
-      'https://api.cloudflare.com/client/v4/accounts/' + encodeURIComponent(accountId) + '/ai/run/' + model;
+    const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`;
     try {
       const response = await helpers.proxiedFetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + apiToken },
-        body: JSON.stringify({ prompt: 'a small red circle on a white background' }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiToken}` },
+        body: JSON.stringify({ prompt: 'a small image' }),
       });
       if (response.ok) {
         return {
           result: 'success',
-          resultDescription:
-            'Connected to Cloudflare Workers AI and generated a test image with ' + model + '.',
+          resultDescription: `Connected to Workers AI and generated a test image with ${model}.`,
         };
       }
-      let detail = 'HTTP ' + response.status;
+      const text = await response.text().catch(() => '');
+      let detail = '';
       try {
-        const t = await response.text();
-        try {
-          const j = JSON.parse(t);
-          const msgs = (j.errors || [])
-            .map(function (e) {
-              return e && e.message;
-            })
-            .filter(Boolean);
-          if (msgs.length) detail += ' \u2013 ' + msgs.join('; ');
-          else if (t) detail += ' \u2013 ' + t.slice(0, 200);
-        } catch (e) {
-          if (t) detail += ' \u2013 ' + t.slice(0, 200);
-        }
-      } catch (e) {}
-      return { result: 'failure', resultDescription: 'Connection failed: ' + detail };
+        detail = (
+          JSON.parse(text)
+            ?.errors?.map((e: Error) => e?.message)
+            .filter(Boolean) ?? []
+        ).join('; ');
+      } catch {
+        /* not JSON */
+      }
+      return {
+        result: 'failure',
+        resultDescription: `Connection failed: HTTP ${response.status}${detail ? ` - ${detail}` : ''}`,
+      };
     } catch (e) {
       return {
         result: 'failure',
-        resultDescription: 'Connection failed: ' + (e && e.message ? e.message : String(e)),
+        resultDescription: `Connection failed: ${(e as Error | undefined)?.message ?? String(e)}`,
       };
     }
   },
 
   async generateImages(controlValues, request, helpers) {
-    const accountId = (controlValues.accountId || '').trim();
-    const apiToken = (controlValues.apiToken || '').trim();
+    const accountId = controlValues.accountId?.trim() ?? '';
+    const apiToken = controlValues.apiToken?.trim() ?? '';
     const model = controlValues.model || '@cf/black-forest-labs/flux-1-schnell';
     if (!accountId) throw new Error('Cloudflare Account ID is required.');
     if (!apiToken) throw new Error('Cloudflare API token is required.');
 
     // promptType may be a plain string or an object with .promptType depending on context.
-    const promptType = (request.context && request.context.promptType) || request.context || 'scene';
+    const promptType = request.context?.promptType ?? request.context ?? 'scene';
     const isCard = promptType === 'character_card';
     const isFlux = /flux/i.test(model);
 
-    const num = function (v, fallback) {
-      if (v === undefined || v === null || String(v).trim() === '') return fallback;
-      const n = Number(v);
+    const num = <TFallbackType>(v: string | undefined, fallback: TFallbackType) => {
+      const t = v?.trim() ?? '';
+      if (t === '') return fallback;
+      const n = Number(t);
       return Number.isFinite(n) ? n : fallback;
     };
 
     const width = isCard ? num(controlValues.cardWidth, 832) : num(controlValues.sceneWidth, 1216);
     const height = isCard ? num(controlValues.cardHeight, 1216) : num(controlValues.sceneHeight, 832);
-    const stepsRaw = num(controlValues.steps, isFlux ? 8 : 20);
-    const guidance = num(controlValues.guidance, 7.5);
-    const seedRaw = (controlValues.seed || '').trim();
+    const steps = num(controlValues.steps, isFlux ? 8 : 20);
+    const seed = num(controlValues.seed, null);
 
-    const body = { prompt: request.prompt };
-    if (seedRaw !== '') {
-      const s = Number(seedRaw);
-      if (Number.isFinite(s)) body.seed = Math.trunc(s);
-    }
+    const body: Record<string, unknown> = { prompt: request.prompt };
+    if (seed !== null) body.seed = Math.trunc(seed);
     if (isFlux) {
-      body.steps = Math.max(1, Math.min(8, Math.round(stepsRaw)));
+      body.steps = Math.max(1, Math.min(8, Math.round(steps)));
     } else {
-      body.num_steps = Math.max(1, Math.min(20, Math.round(stepsRaw)));
-      body.guidance = guidance;
+      body.num_steps = Math.max(1, Math.min(20, Math.round(steps)));
+      body.guidance = num(controlValues.guidance, 7.5);
       body.width = Math.round(width);
       body.height = Math.round(height);
-      const neg = (controlValues.negativePrompt || '').trim();
+      const neg = controlValues.negativePrompt?.trim();
       if (neg) body.negative_prompt = neg;
     }
 
-    const url =
-      'https://api.cloudflare.com/client/v4/accounts/' + encodeURIComponent(accountId) + '/ai/run/' + model;
+    const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`;
     const response = await helpers.proxiedFetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + apiToken,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiToken}` },
       body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      let detail = 'HTTP ' + response.status;
+      const text = await response.text().catch(() => '');
+      let detail = text.slice(0, 300);
       try {
-        const errText = await response.text();
-        try {
-          const errJson = JSON.parse(errText);
-          const msgs = (errJson.errors || [])
-            .map(function (e) {
-              return e && e.message;
-            })
-            .filter(Boolean);
-          if (msgs.length) detail += ' \u2013 ' + msgs.join('; ');
-          else if (errText) detail += ' \u2013 ' + errText.slice(0, 300);
-        } catch (e) {
-          if (errText) detail += ' \u2013 ' + errText.slice(0, 300);
-        }
-      } catch (e) {}
-      throw new Error('Cloudflare image generation failed: ' + detail);
+        const msgs =
+          JSON.parse(text)
+            ?.errors?.map((e: Error) => e?.message)
+            .filter(Boolean) ?? [];
+        if (msgs.length) detail = msgs.join('; ');
+      } catch {
+        /* not JSON, keep raw text */
+      }
+      throw new Error(
+        `Cloudflare image generation failed: HTTP ${response.status}${detail ? ` - ${detail}` : ''}`
+      );
     }
 
-    const contentType = (response.headers.get('content-type') || '').toLowerCase();
-
     // Stable Diffusion family: raw image bytes (already PNG) -> stream straight through.
-    if (contentType.indexOf('image/') === 0) {
-      return [{ readableStream: response.body }];
+    if ((response.headers.get('content-type') ?? '').toLowerCase().startsWith('image/')) {
+      const body = response.body;
+      if (!body) {
+        throw new Error(`Response without body from CloudFlare`);
+      }
+
+      return [{ readableStream: body }];
     }
 
     // FLUX family / JSON envelope: { result: { image: "<base64>" } }
     const data = await response.json();
-    const base64 = (data && data.result && data.result.image) || (data && data.image);
-    if (!base64) {
-      throw new Error('Cloudflare response did not contain image data.');
-    }
+    const base64 = data?.result?.image ?? data?.image;
+    if (!base64) throw new Error('Cloudflare response did not contain image data.');
 
-    const clean = String(base64).indexOf(',') !== -1 ? String(base64).split(',').pop() : String(base64);
-    const binary = atob(clean);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const bytes = Uint8Array.from(atob(base64.includes(',') ? base64.split(',').pop() : base64), (c) =>
+      c.charCodeAt(0)
+    );
 
-    // FLUX returns JPEG; re-encode to PNG (best effort) so saved files match the assumed format.
-    try {
-      if (typeof document !== 'undefined' && typeof createImageBitmap !== 'undefined') {
-        const bitmap = await createImageBitmap(new Blob([bytes]));
-        const canvas = document.createElement('canvas');
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
-        canvas.getContext('2d').drawImage(bitmap, 0, 0);
-        if (bitmap.close) bitmap.close();
-        const pngBlob = await new Promise(function (resolve, reject) {
-          canvas.toBlob(function (b) {
-            b ? resolve(b) : reject(new Error('PNG encode failed'));
-          }, 'image/png');
-        });
-        return [{ readableStream: pngBlob.stream ? pngBlob.stream() : new Response(pngBlob).body }];
-      }
-    } catch (e) {
-      // Fall through to returning the raw decoded bytes.
-    }
-    return [{ readableStream: new Response(bytes).body }];
+    // FLUX returns JPEG; re-encode to a real PNG so Yozakura can write its metadata into it.
+    const bitmap = await createImageBitmap(new Blob([bytes]));
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext('2d')!.drawImage(bitmap, 0, 0);
+    bitmap.close?.();
+    const pngBlob = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG encoding failed'))), 'image/png')
+    );
+
+    const readableStream = pngBlob.stream?.() ?? new Response(pngBlob).body;
+    return [{ readableStream }];
   },
 };
