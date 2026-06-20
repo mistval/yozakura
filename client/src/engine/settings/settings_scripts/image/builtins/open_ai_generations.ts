@@ -12,7 +12,7 @@ export const openAiImageGenerationsImageScript: ImageGenerationSettingsScript = 
       width: 'full',
       default: 'https://api.openai.com/v1/images/generations',
       tooltipHtml:
-        'The image-generations endpoint, following the OpenAI Images API shape. Defaults to OpenAI; change it for any other compatible provider (e.g. <code>https://nano-gpt.com/v1/images/generations</code>).',
+        'The image-generations endpoint, following the OpenAI Images API shape. Defaults to OpenAI; change it for any other compatible provider (e.g. <code>https://nano-gpt.com/api/v1/images/generations</code>).',
     },
     {
       id: 'apiKey',
@@ -35,7 +35,7 @@ export const openAiImageGenerationsImageScript: ImageGenerationSettingsScript = 
       id: 'sceneWidth',
       type: 'number',
       label: 'Chat image width (px)',
-      default: '1536',
+      default: '1024',
       min: 64,
       step: 8,
       tooltipHtml:
@@ -53,7 +53,7 @@ export const openAiImageGenerationsImageScript: ImageGenerationSettingsScript = 
       id: 'cardWidth',
       type: 'number',
       label: 'Character card width (px)',
-      default: '1024',
+      default: '512',
       min: 64,
       step: 8,
       tooltipHtml: 'Width for character card portraits.',
@@ -62,7 +62,7 @@ export const openAiImageGenerationsImageScript: ImageGenerationSettingsScript = 
       id: 'cardHeight',
       type: 'number',
       label: 'Character card height (px)',
-      default: '1536',
+      default: '768',
       min: 64,
       step: 8,
     },
