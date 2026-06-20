@@ -1,60 +1,81 @@
 import * as Api from '../backend_bridge/api';
+import { createProxiedFetch } from '../backend_bridge/proxied_fetch.js';
+import { loadUserTextFileContent } from '../backend_bridge/database.js';
 import { assertNonNullish } from '../errors/application_error.js';
+import { runWithInteractiveRetry } from './interative_retry.js';
 import { useSettingsStore } from '../state/settings_store.js';
 import type { Character } from './types.js';
+import type { SettingsScriptHelpers } from './settings/settings_scripts/settings_script.js';
+import { resolveImageScript } from './settings/settings_scripts/image/image_scripts.js';
+import {
+  getSettingsScriptSection,
+  resolveControls,
+  resolveControlValues,
+} from './settings/settings_scripts/settings_scripts_store.js';
+import {
+  IMAGE_GENERATION_SECTION_ID,
+  makeTextFileGroupKey,
+} from './settings/settings_scripts/settings_scripts_state.js';
+import type { ImagePromptType } from './settings/settings_scripts/image/image_script_types';
 
-function buildImagePayload(prompt: string, style: 'chat' | 'card', saveTo?: string): Record<string, unknown> {
-  const settings = useSettingsStore.getState();
+const IMAGE_GENERATION_RETRY_HINT =
+  'The backend server might not be running or the image provider might be unavailable.';
 
-  if (settings.imageApiShape === 'automatic1111') {
-    const shapeSettings = settings.imageSettingsForShape.automatic1111;
-    const metaOptions = JSON.parse(shapeSettings.metaOptions) as Record<string, unknown>;
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read generated image.'));
+    reader.readAsDataURL(blob);
+  });
+}
 
-    return {
-      saveTo,
-      imageApiUrl: shapeSettings.url,
-      authToken: shapeSettings.authToken,
-      imageApiShape: settings.imageApiShape,
-      ...metaOptions,
-      prompt,
-      width:
-        style === 'card'
-          ? shapeSettings.sizeOptions.cardImageWidth
-          : shapeSettings.sizeOptions.chatImageWidth,
-      height:
-        style === 'card'
-          ? shapeSettings.sizeOptions.cardImageHeight
-          : shapeSettings.sizeOptions.chatImageHeight,
-    };
-  } else {
-    const shapeSettings = settings.imageSettingsForShape.openRouter;
-    const metaOptions = JSON.parse(shapeSettings.metaOptions) as Record<string, unknown>;
+async function dispatchImageGeneration(
+  prompt: string,
+  promptType: ImagePromptType,
+  options: { abortSignal?: AbortSignal | undefined } = {}
+): Promise<Blob> {
+  return runWithInteractiveRetry({
+    operationType: 'api.generate_image',
+    hint: IMAGE_GENERATION_RETRY_HINT,
+    signal: options.abortSignal,
+    run: async () => {
+      const section = getSettingsScriptSection(IMAGE_GENERATION_SECTION_ID);
+      const resolved = resolveImageScript(section.selectedScriptId, section.customScriptSource);
+      if (!resolved.ok) {
+        throw new Error(resolved.error);
+      }
 
-    return {
-      saveTo,
-      imageApiUrl: shapeSettings.url,
-      authToken: shapeSettings.authToken,
-      imageApiShape: settings.imageApiShape,
-      modalities: ['image'],
-      image_config: {
-        aspect_ratio:
-          style === 'card'
-            ? shapeSettings.sizeOptions.cardImageAspectRatio
-            : shapeSettings.sizeOptions.chatImageAspectRatio,
-        image_size:
-          style === 'card'
-            ? shapeSettings.sizeOptions.cardImageSize
-            : shapeSettings.sizeOptions.chatImageSize,
-      },
-      ...metaOptions,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-    };
-  }
+      const stored = section.controlValues[section.selectedScriptId];
+      const controls = resolveControls(resolved.script.controls, {
+        controlValues: stored ?? {},
+        buttonData: {},
+      });
+
+      const controlValues = resolveControlValues(controls, stored);
+
+      const helpers: SettingsScriptHelpers = {
+        proxiedFetch: createProxiedFetch(options.abortSignal),
+        abortSignal: options.abortSignal,
+        loadUserTextFile: (controlId, fileId) =>
+          loadUserTextFileContent(
+            makeTextFileGroupKey(IMAGE_GENERATION_SECTION_ID, section.selectedScriptId, controlId),
+            fileId
+          ),
+      };
+
+      const results = await resolved.script.generateImages(
+        controlValues,
+        { prompt, context: { promptType } },
+        helpers
+      );
+      const firstStream = results[0]?.readableStream;
+      assertNonNullish(firstStream, 'Image generation returned no image data.');
+
+      const bytes = await new Response(firstStream).arrayBuffer();
+      return new Blob([bytes], { type: 'image/png' });
+    },
+  });
 }
 
 function getCharacterWardrobeTags(character: Pick<Character, 'wardrobes'>): string {
@@ -75,13 +96,9 @@ export async function generateCharacterCard(character: Character): Promise<strin
   };
 
   const prompt = buildFullPrompt(characterWithFirstWardrobe);
-  const payload = buildImagePayload(prompt, 'card');
+  const blob = await dispatchImageGeneration(prompt, 'character_card');
 
-  const result = await Api.generateImage(payload);
-  const first = result.images?.[0];
-
-  assertNonNullish(first, `Image API returned empty image array`);
-  return `data:image/png;base64,${first}`;
+  return blobToDataUrl(blob);
 }
 
 export function buildAppearanceTags(character: Character): string {
@@ -103,8 +120,9 @@ export async function generateChatImage({
   saveTo: string;
   abortSignal?: AbortSignal;
 }): Promise<string[]> {
-  const payload = buildImagePayload(fullPrompt, 'chat', saveTo);
-  const result = await Api.generateImage(payload, abortSignal);
+  const blob = await dispatchImageGeneration(fullPrompt, 'scene', { abortSignal });
+  const filePath = `/api/files/${saveTo}`;
+  await Api.putFile(filePath, blob, 'image/png');
 
-  return result.files;
+  return [filePath];
 }

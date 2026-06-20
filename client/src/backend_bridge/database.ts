@@ -635,6 +635,69 @@ export async function deleteKeyValue(key: string) {
   await dbRun(DELETE_KEY_VALUE_SQL, [[key]]);
 }
 
+const TABLE_USER_TEXT_FILES = 'user_text_files';
+
+const UPSERT_USER_TEXT_FILE_SQL = `
+  INSERT INTO ${TABLE_USER_TEXT_FILES} (id, group_key, file_name, file_content, created_at, updated_at)
+  VALUES (?, ?, ?, ?, ${sqlDatetimeNow()}, ${sqlDatetimeNow()})
+  ON CONFLICT(id)
+  DO UPDATE SET
+    file_name = excluded.file_name,
+    file_content = excluded.file_content,
+    updated_at = ${sqlDatetimeNow()}
+`;
+
+const SELECT_USER_TEXT_FILES_BY_GROUP_SQL = `
+  SELECT id, file_name
+  FROM ${TABLE_USER_TEXT_FILES}
+  WHERE group_key = ?
+`;
+
+const SELECT_USER_TEXT_FILE_CONTENT_SQL = `
+  SELECT file_content
+  FROM ${TABLE_USER_TEXT_FILES}
+  WHERE group_key = ? AND id = ?
+  LIMIT 1
+`;
+
+const DELETE_USER_TEXT_FILE_SQL = `
+  DELETE FROM ${TABLE_USER_TEXT_FILES}
+  WHERE id = ?
+`;
+
+export type UserTextFileSummary = { id: string; fileName: string };
+
+export async function listUserTextFiles(groupKey: string): Promise<UserTextFileSummary[]> {
+  const rows = await selectTypedMultiQuery(
+    SELECT_USER_TEXT_FILES_BY_GROUP_SQL,
+    [[groupKey]],
+    z.object({ id: z.string(), file_name: z.string() })
+  );
+  return rows.map((row) => ({ id: row.id, fileName: row.file_name }));
+}
+
+export async function loadUserTextFileContent(groupKey: string, id: string): Promise<string | undefined> {
+  const row = await selectTypedSingleRow(
+    SELECT_USER_TEXT_FILE_CONTENT_SQL,
+    [groupKey, id],
+    z.object({ file_content: z.string() })
+  );
+  return row?.file_content;
+}
+
+export async function saveUserTextFile(file: {
+  id: string;
+  groupKey: string;
+  fileName: string;
+  fileContent: string;
+}): Promise<void> {
+  await dbRun(UPSERT_USER_TEXT_FILE_SQL, [[file.id, file.groupKey, file.fileName, file.fileContent]]);
+}
+
+export async function deleteUserTextFile(id: string): Promise<void> {
+  await dbRun(DELETE_USER_TEXT_FILE_SQL, [[id]]);
+}
+
 export function createPersistedObject<
   TFieldsType extends {
     createdAt?: string | undefined;

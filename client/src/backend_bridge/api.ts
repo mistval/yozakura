@@ -8,11 +8,6 @@ const DEFAULT_API_RETRY_HINT =
 
 const zodEmpty = z.object({});
 
-const imageResponseType = z.object({
-  files: z.array(z.string()).default([]),
-  images: z.array(z.string()).optional(),
-});
-
 const dbExecResponseType = z.object({
   ok: z.boolean(),
 });
@@ -64,20 +59,6 @@ export const deleteFile = (path: string) =>
 
 export const llmChat = (payload: Record<string, unknown>, options: LlmChatOptions = {}) =>
   executeLlmChat(payload, options);
-
-export const generateImage = (payload: Record<string, unknown>, signal?: AbortSignal) =>
-  runWithInteractiveRetry({
-    operationType: 'api.generate_image',
-    hint: DEFAULT_API_RETRY_HINT,
-    signal,
-    run: () =>
-      fetch('/api/image/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: signal ?? null,
-      }).then((r) => parseJSONResponse(imageResponseType, r)),
-  });
 
 export async function dbExec(sql: string) {
   const response = await fetch('/api/db/exec', {

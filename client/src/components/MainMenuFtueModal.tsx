@@ -4,12 +4,11 @@ import { useDraft } from '../hooks/useDraft.js';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { DEMO_CHARACTERS } from '../engine/demo_characters.js';
 import YozakuraLogo from '../theme/yozakura_logo.js';
-import { useSettingsStore, type ImageApiShape, type Settings } from '../state/settings_store.js';
+import { useSettingsStore, type Settings } from '../state/settings_store.js';
 import Modal from './ui/Modal.js';
 import InfoTooltip from './ui/InfoTooltip.js';
 import { getErrorMessage } from '../errors/error_util.js';
 import { useLlmConnectionTest } from '../hooks/useLlmConnectionTest.js';
-import { useImageConnectionTest } from '../hooks/useImageConnectionTest.js';
 import { useMapStore } from '../state/map_store.js';
 import { assertNonNullish } from '../errors/application_error.js';
 import { useGlobalCharactersStore } from '../state/global_character_store.js';
@@ -20,6 +19,18 @@ import {
   updateLLMConfigsWithBaseDefaultsConnection,
 } from '../engine/settings/cascading_llm_configs.js';
 import { getRequiredRandomChoice } from '../util/array.js';
+import {
+  BUILTIN_IMAGE_SCRIPTS,
+  getBuiltinImageScript,
+  resolveImageScript,
+} from '../engine/settings/settings_scripts/image/image_scripts.js';
+import { getImageScriptDocumentation } from '../engine/settings/settings_scripts/image/image_script_documentation.js';
+import {
+  setSelectedScriptId,
+  useSettingsScriptSection,
+} from '../engine/settings/settings_scripts/settings_scripts_store.js';
+import { IMAGE_GENERATION_SECTION_ID } from '../engine/settings/settings_scripts/settings_scripts_state.js';
+import CustomScriptSettings from './settings/settingsScripts/CustomScriptSettings.js';
 
 const DEMO_MAP_ID = 'paradise_island';
 
@@ -35,34 +46,17 @@ const FTUE_MODEL_TOOLTIP_HTML =
 const FTUE_TOKEN_STREAMING_TOOLTIP_HTML =
   'When enabled, NPC chat responses stream token-by-token while they are being generated. Your API provider must support OpenAI-compatible streaming (SSE). Most providers do support this.';
 
-const FTUE_IMAGE_API_URL_TOOLTIP_HTML_AUTOMATIC1111 =
-  'URL for your image generation API. Usually, it should end with <code>/sdapi/v1/txt2img</code>.';
-
-const FTUE_IMAGE_API_URL_TOOLTIP_HTML_OPENROUTER =
-  'URL for your image generation API. Usually, it should end with <code>/v1/chat/completions</code>, just like the completions endpoint.';
-
-const FTUE_IMAGE_AUTH_TOKEN_TOOLTIP_HTML =
-  'Bearer token required for most cloud image providers. Not needed for local AUTOMATIC1111.';
-
-const FTUE_IMAGE_MODEL_TOOLTIP_HTML =
-  'The image model to request (e.g. <code>x-ai/grok-imagine-image-quality</code>).';
-
-const API_SHAPE_TOOLTIP_HTML = `The AUTOMATIC1111 shape is supported by most local image generation software (including, of course, <a href="https://github.com/automatic1111/stable-diffusion-webui">AUTOMATIC1111</a>). The OpenRouter shape is for OpenRouter and might work with other providers that have similar APIs.`;
-
-const IMAGE_SHAPE_LABELS: Record<ImageApiShape, string> = {
-  automatic1111: 'AUTOMATIC1111',
-  openRouter: 'OpenRouter',
-};
+const API_SHAPE_TOOLTIP_HTML = `The AUTOMATIC1111 shape is supported by most local image generation software (including, of course, <a href="https://github.com/automatic1111/stable-diffusion-webui">AUTOMATIC1111</a>). The OpenRouter shape is for OpenRouter and might work with other providers that have similar APIs. More providers, including fully custom ones, can be configured later in Settings.`;
 
 export default function MainMenuFtueModal() {
   const navigate = useNavigate();
   const location = useLocation();
   const llmConfigs = useSettingsStore((s) => s.llmConfigs);
-  const imageApiShape = useSettingsStore((s) => s.imageApiShape);
-  const imageSettingsForShape = useSettingsStore((s) => s.imageSettingsForShape);
   const tokenStreamingEnabled = useSettingsStore((s) => s.tokenStreamingEnabled);
   const mainMenuFtueSeen = useSettingsStore((s) => s.mainMenuFtueSeen);
   const setSettings = useSettingsStore((s) => s.setSettings);
+
+  const imageSection = useSettingsScriptSection(IMAGE_GENERATION_SECTION_ID);
 
   const globalCharactersAreLoaded = useGlobalCharactersStore((s) => s.globalCharactersAreLoaded);
   const maps = useMapStore((s) => s.maps);
@@ -74,12 +68,6 @@ export default function MainMenuFtueModal() {
     success: llmConnectionTestSuccess,
     testConnection: testLlmConnectionFromHook,
   } = useLlmConnectionTest();
-  const {
-    loading: imageConnectionTestLoading,
-    error: imageConnectionTestError,
-    success: imageConnectionTestSuccess,
-    testConnection: testImageConnectionFromHook,
-  } = useImageConnectionTest();
 
   const baseDefaultsConfig = useMemo(() => findBaseDefaultsLLMConfig(llmConfigs), [llmConfigs]);
   const llmModelSource = useMemo(() => {
@@ -90,20 +78,11 @@ export default function MainMenuFtueModal() {
     return typeof model === 'string' ? model : '';
   }, [baseDefaultsConfig?.llmMetaOptions]);
 
-  const currentImageSettings = imageSettingsForShape?.[imageApiShape];
-  const imageModelSource = useMemo(() => {
-    const model = currentImageSettings
-      ? (JSON.parse(currentImageSettings.metaOptions) as Record<string, unknown>).model
-      : undefined;
-    return typeof model === 'string' ? model : '';
-  }, [currentImageSettings?.metaOptions]);
+  const ftueImageControlIds = getBuiltinImageScript(imageSection.selectedScriptId)?.ftueControlIds;
 
   const [llmUrlDraft, setLlmUrlDraft] = useDraft(baseDefaultsConfig?.llmUrl ?? '');
   const [llmAuthTokenDraft, setLlmAuthTokenDraft] = useDraft(baseDefaultsConfig?.llmAuthToken ?? '');
   const [llmModelDraft, setLlmModelDraft] = useDraft(llmModelSource);
-  const [imageUrlDraft, setImageUrlDraft] = useDraft(currentImageSettings?.url ?? '');
-  const [imageAuthTokenDraft, setImageAuthTokenDraft] = useDraft(currentImageSettings?.authToken ?? '');
-  const [imageModelDraft, setImageModelDraft] = useDraft(imageModelSource);
 
   const shouldRenderOnThisRoute = location.pathname === '/';
   const open = shouldRenderOnThisRoute && !mainMenuFtueSeen;
@@ -121,34 +100,6 @@ export default function MainMenuFtueModal() {
         llmModelDraft
       ),
     }));
-  };
-
-  const saveImageConnectionDetails = () => {
-    setSettings((previous: Settings) => {
-      const shape = previous.imageApiShape;
-      const current = previous.imageSettingsForShape?.[shape] || {};
-
-      const trimmedModel = imageModelDraft.trim();
-      const currentMetaOptions = JSON.parse(current.metaOptions) as Record<string, unknown>;
-      const nextMetaOptions = { ...currentMetaOptions, model: trimmedModel || undefined } as Record<
-        string,
-        unknown
-      >;
-
-      const nextShapeSettings = {
-        ...current,
-        url: imageUrlDraft,
-        authToken: imageAuthTokenDraft,
-        metaOptions: JSON.stringify(nextMetaOptions),
-      };
-
-      return {
-        imageSettingsForShape: {
-          ...previous.imageSettingsForShape,
-          [shape]: nextShapeSettings,
-        },
-      };
-    });
   };
 
   const closeModal = () => {
@@ -214,8 +165,6 @@ export default function MainMenuFtueModal() {
   };
 
   const handleTestConnection = () => testLlmConnectionFromHook(llmUrlDraft, llmAuthTokenDraft);
-  const handleImageTestConnection = () =>
-    testImageConnectionFromHook(imageUrlDraft, imageAuthTokenDraft, imageApiShape);
 
   return (
     <Modal
@@ -339,113 +288,32 @@ export default function MainMenuFtueModal() {
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 <label className="block text-sm font-medium" htmlFor="ftue-image-api-shape">
-                  API Shape
+                  Provider
                 </label>
 
-                <InfoTooltip html={API_SHAPE_TOOLTIP_HTML} label="About API shape" align="center" />
+                <InfoTooltip html={API_SHAPE_TOOLTIP_HTML} label="About provider" align="center" />
               </div>
               <select
                 id="ftue-image-api-shape"
-                value={imageApiShape}
-                onChange={(event) => setSettings({ imageApiShape: event.target.value as ImageApiShape })}
+                value={imageSection.selectedScriptId}
+                onChange={(event) => setSelectedScriptId(IMAGE_GENERATION_SECTION_ID, event.target.value)}
                 className="w-full rounded-sm border px-3 py-2"
               >
-                {(Object.keys(IMAGE_SHAPE_LABELS) as ImageApiShape[]).map((shape) => (
-                  <option key={shape} value={shape}>
-                    {IMAGE_SHAPE_LABELS[shape]}
+                {BUILTIN_IMAGE_SCRIPTS.map((script) => (
+                  <option key={script.id} value={script.id}>
+                    {script.name}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <label className="block text-sm font-medium" htmlFor="ftue-image-url">
-                  Image API URL
-                </label>
-                <InfoTooltip
-                  label="About Image API URL"
-                  html={
-                    imageApiShape === 'automatic1111'
-                      ? FTUE_IMAGE_API_URL_TOOLTIP_HTML_AUTOMATIC1111
-                      : FTUE_IMAGE_API_URL_TOOLTIP_HTML_OPENROUTER
-                  }
-                  align="center"
-                />
-              </div>
-              <input
-                id="ftue-image-url"
-                value={imageUrlDraft}
-                onChange={(event) => setImageUrlDraft(event.target.value)}
-                onBlur={saveImageConnectionDetails}
-                placeholder={
-                  imageApiShape === 'openRouter'
-                    ? 'https://openrouter.ai/api/v1/chat/completions'
-                    : 'http://127.0.0.1:7860/sdapi/v1/txt2img'
-                }
-                className="w-full rounded-sm border px-3 py-2"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center 3">
-                <label className="block text-sm font-medium" htmlFor="ftue-image-auth-token">
-                  Bearer/Auth Token (optional)
-                </label>
-                <InfoTooltip
-                  label="About Image Auth Token"
-                  html={FTUE_IMAGE_AUTH_TOKEN_TOOLTIP_HTML}
-                  align="center"
-                />
-              </div>
-              <input
-                id="ftue-image-auth-token"
-                type="password"
-                value={imageAuthTokenDraft}
-                onChange={(event) => setImageAuthTokenDraft(event.target.value)}
-                onBlur={saveImageConnectionDetails}
-                placeholder="Bearer token"
-                className="w-full rounded-sm border px-3 py-2"
-              />
-            </div>
-
-            {imageApiShape === 'openRouter' && (
-              <div className="space-y-1">
-                <div className="flex items-center gap-3">
-                  <label className="block text-sm font-medium" htmlFor="ftue-image-model">
-                    Model
-                  </label>
-                  <InfoTooltip
-                    label="About Image Model"
-                    html={FTUE_IMAGE_MODEL_TOOLTIP_HTML}
-                    align="center"
-                  />
-                </div>
-                <input
-                  id="ftue-image-model"
-                  value={imageModelDraft}
-                  onChange={(event) => setImageModelDraft(event.target.value)}
-                  onBlur={saveImageConnectionDetails}
-                  placeholder="x-ai/grok-imagine-image-quality"
-                  className="w-full rounded-sm border px-3 py-2"
-                />
-              </div>
-            )}
-
-            <div className="flex items-center justify-end gap-3 pt-1">
-              {imageConnectionTestSuccess && (
-                <p className="text-sm text-secondary">✓ Connection successful.</p>
-              )}
-              <button
-                type="button"
-                onClick={() => void handleImageTestConnection()}
-                disabled={imageConnectionTestLoading}
-                className="px-3 py-1 border rounded-sm"
-              >
-                {imageConnectionTestLoading ? 'Testing...' : 'Test Connection'}
-              </button>
-            </div>
-            {imageConnectionTestError && <div className="error-card">{imageConnectionTestError}</div>}
+            <CustomScriptSettings
+              sectionId={IMAGE_GENERATION_SECTION_ID}
+              resolveScript={resolveImageScript}
+              getDocumentation={getImageScriptDocumentation}
+              documentationTitle="Custom Image Generation Script Documentation"
+              visibleControlIds={ftueImageControlIds}
+            />
           </section>
 
           <section className="space-y-3 rounded-lg border border-border-default p-4">

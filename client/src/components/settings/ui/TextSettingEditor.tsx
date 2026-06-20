@@ -6,7 +6,7 @@ type TextSettingEditorProps = {
   draftId?: string;
   label: string;
   htmlFor: string;
-  tooltipHtml?: string;
+  tooltipHtml?: string | undefined;
   value: string;
   onChange: (nextValue: string) => void;
   textareaRows?: number;

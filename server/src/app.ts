@@ -7,8 +7,8 @@ import { openDatabase } from './database.js';
 import { runMigrations } from './migrator.js';
 import dbRouter from './routes/db.js';
 import filesRouter from './routes/files.js';
-import imageRouter from './routes/image.js';
 import llmRouter from './routes/llm.js';
+import proxyRouter from './routes/proxy.js';
 
 type CreateAppOptions = {
   dataDir?: string;
@@ -52,7 +52,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   app.use('/api', filesRouter(dataDir));
   app.use('/api', dbRouter(db));
   app.use('/api', llmRouter());
-  app.use('/api', imageRouter(dataDir));
+  app.use('/api', proxyRouter());
 
   app.get('/health', (_req: Request, res: Response) => {
     res.json({ ok: true });
