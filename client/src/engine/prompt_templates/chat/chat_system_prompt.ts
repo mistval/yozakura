@@ -69,7 +69,13 @@ World description: <%= it.worldMap.description %>
 Location name:  <%= it.currentLocation.name %>
 
 Location description: <%= it.currentLocation.description %>
-
+<% if (it.characterMovementInfo) { %>
+<% if (it.characterMovementInfo.status === 'in_designated_zone') { %>
+<%= it.focusedCharacter.firstName %> is currently here<%= it.characterMovementInfo.reason ? ' because ' + it.characterMovementInfo.reason : '' %>.
+<% } else { %>
+<%= it.focusedCharacter.firstName %> is currently moving towards <%= it.characterMovementInfo.targetLocationName %><%= it.characterMovementInfo.reason ? ' because ' + it.characterMovementInfo.reason : '' %>.
+<% } %>
+<% } %>
 </setting>
 
 <% const gossipTargetHasBeenRagged = it.raggedCharacters.some((c) => c.id === it.gossipTargetCharacter?.id); %>

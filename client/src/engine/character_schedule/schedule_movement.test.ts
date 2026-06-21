@@ -7,6 +7,7 @@ import type {
   WorldMapLocation,
 } from '../types';
 import {
+  resolveCharacterMovementInfo,
   resolveScheduleAllowedLocations,
   resolveScheduledMove,
   resolveUserMovementSuggestion,
@@ -44,9 +45,10 @@ function makeSegment(
   zoneId: string,
   movementPolicy: MovementPolicy,
   startTurn: number,
-  endTurn: number
+  endTurn: number,
+  reason?: string
 ): ScheduleSegment {
-  return { id: `${zoneId}-seg`, startTurn, endTurn, zoneId, movementPolicy };
+  return { id: `${zoneId}-seg`, startTurn, endTurn, zoneId, movementPolicy, reason };
 }
 
 function makeSchedule(
@@ -370,5 +372,70 @@ describe('resolveUserMovementSuggestion', () => {
       highlightWait: false,
       forbiddenLocationIds: [],
     });
+  });
+});
+
+describe('resolveCharacterMovementInfo', () => {
+  it('returns undefined when there is no active schedule', () => {
+    const result = resolveCharacterMovementInfo({
+      character: { id: 'npc', locationId: 'A', groupIds: [] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [],
+      groupSchedulesByGroupId: {},
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it('reports in_designated_zone with the segment reason', () => {
+    const result = resolveCharacterMovementInfo({
+      character: { id: 'npc', locationId: 'C', groupIds: ['g1'] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      groupSchedulesByGroupId: {
+        g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4, 'she works the night shift')]),
+      },
+    });
+    expect(result).toEqual({ status: 'in_designated_zone', reason: 'she works the night shift' });
+  });
+
+  it('reports in_designated_zone with no reason when none is set', () => {
+    const result = resolveCharacterMovementInfo({
+      character: { id: 'npc', locationId: 'C', groupIds: ['g1'] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4)]) },
+    });
+    expect(result).toEqual({ status: 'in_designated_zone', reason: undefined });
+  });
+
+  it('reports moving_towards_designated_zone with the target name and reason', () => {
+    const result = resolveCharacterMovementInfo({
+      character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      groupSchedulesByGroupId: {
+        g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'rush', 0, 4, 'her shift starts soon')]),
+      },
+    });
+    expect(result).toEqual({
+      status: 'moving_towards_designated_zone',
+      reason: 'her shift starts soon',
+      targetLocationName: 'C',
+    });
+  });
+
+  it('returns undefined when the designated zone is unreachable', () => {
+    const result = resolveCharacterMovementInfo({
+      character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
+      turnNumber: 0,
+      locations: [...LINE_LOCATIONS, makeLocation('Z', [])],
+      effectiveZones: [makeZone('zoneZ', ['Z'])],
+      groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneZ', 'teleport', 0, 4, 'r')]) },
+    });
+    expect(result).toBeUndefined();
   });
 });

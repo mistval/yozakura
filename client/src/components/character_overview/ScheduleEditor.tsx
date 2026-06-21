@@ -10,6 +10,7 @@ import { getEffectiveZones } from '../../engine/map/map_zone.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
 import { useMapZoneStore } from '../../state/map_zone_store.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
+import InfoTooltip from './../ui/InfoTooltip';
 import { newId } from '../../util/id.js';
 
 const SEGMENT_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#14b8a6'];
@@ -19,6 +20,8 @@ const DEFAULT_PIXELS_PER_TURN = 56;
 const MIN_PIXELS_PER_TURN = 14;
 const MAX_PIXELS_PER_TURN = 220;
 const ZOOM_STEP = 1.15;
+const REASON_TOOLTIP =
+  'Explain why the character should be here at this time, completing the thought: "They are here because …". This may be injected into the character\'s system prompt while their schedule keeps them in this zone.';
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -29,7 +32,10 @@ function parsePositiveInt(value: string, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-function assignLanes(segments: ScheduleSegment[]): { laneBySegmentId: Record<string, number>; laneCount: number } {
+function assignLanes(segments: ScheduleSegment[]): {
+  laneBySegmentId: Record<string, number>;
+  laneCount: number;
+} {
   const ordered = [...segments].sort((a, b) => a.startTurn - b.startTurn || a.endTurn - b.endTurn);
   const laneEndTurns: number[] = [];
   const laneBySegmentId: Record<string, number> = {};
@@ -88,7 +94,11 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
       const pointerOffset = event.clientX - rect.left;
       const pointerContentX = pointerOffset + el.scrollLeft;
       setPixelsPerTurn((prev) => {
-        const next = clamp(prev * (event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP), MIN_PIXELS_PER_TURN, MAX_PIXELS_PER_TURN);
+        const next = clamp(
+          prev * (event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP),
+          MIN_PIXELS_PER_TURN,
+          MAX_PIXELS_PER_TURN
+        );
         const turnAtPointer = pointerContentX / prev;
         const nextScrollLeft = turnAtPointer * next - pointerOffset;
         requestAnimationFrame(() => {
@@ -147,7 +157,10 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
             className="w-28 border rounded-sm px-3 py-2 bg-inset"
             value={lengthInTurns}
             onChange={(event) =>
-              mutate((prev) => ({ ...prev, lengthInTurns: parsePositiveInt(event.target.value, prev.lengthInTurns) }))
+              mutate((prev) => ({
+                ...prev,
+                lengthInTurns: parsePositiveInt(event.target.value, prev.lengthInTurns),
+              }))
             }
           />
         </div>
@@ -160,8 +173,13 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
       </div>
 
       <div className="space-y-1">
-        <div className="text-xs text-muted">Drag a segment to move it, drag its edges to resize, scroll to zoom.</div>
-        <div ref={scrollRef} className="w-full overflow-x-auto rounded-sm border border-border-default bg-inset">
+        <div className="text-xs text-muted">
+          Drag a segment to move it, drag its edges to resize, scroll to zoom.
+        </div>
+        <div
+          ref={scrollRef}
+          className="w-full overflow-x-auto rounded-sm border border-border-default bg-inset"
+        >
           <div className="relative" style={{ width: `${contentWidth}px`, height: `${contentHeight}px` }}>
             {Array.from({ length: lengthInTurns + 1 }, (_, turn) => (
               <div
@@ -248,9 +266,15 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <label className="block text-sm" htmlFor="segment-zone">
-                Allowed zone
-              </label>
+              <div className="flex items-center gap-2">
+                <label className="block text-sm" htmlFor="segment-zone">
+                  Allowed zone
+                </label>
+                <InfoTooltip
+                  label="About movement policy"
+                  html="The character is required to be in this zone when this schedule segment is active. If a character has multiple active schedule segments, they are allowed to be in any one the zones they are assigned to, and will move toward the nearest."
+                />
+              </div>
               <select
                 id="segment-zone"
                 className="w-full border rounded-sm px-3 py-2 bg-inset"
@@ -266,12 +290,18 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
             </div>
 
             <div className="space-y-1">
-              <label className="block text-sm" htmlFor="segment-policy">
-                Movement policy
-              </label>
+              <div className="flex items-center gap-2">
+                <label className="block text-sm" htmlFor="segment-policy">
+                  Movement policy
+                </label>
+                <InfoTooltip
+                  label="About movement policy"
+                  html="<strong>Teleport</strong> means the character will instantly move to the zone whenever they are not in one. <strong>Rush</strong> means the character will move towards the zone one hop at a time, never stopping to initiate chats (although other characters can still initiate chats with them). <strong>Meander</strong> means the character will move towards the zone one hop a time, while occasionally stopping to initiate chats, at the rate specific in Behavior Settings."
+                />
+              </div>
               <select
                 id="segment-policy"
-                className="w-full border rounded-sm px-3 py-2 bg-inset"
+                className="w-full border rounded-sm px-3 py-2 bg-inset capitalize"
                 value={selectedSegment.movementPolicy}
                 onChange={(event) =>
                   updateSegment(selectedSegment.id, {
@@ -300,7 +330,10 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
                 value={selectedSegment.startTurn}
                 onChange={(event) =>
                   updateSegment(selectedSegment.id, {
-                    startTurn: Math.max(0, Math.min(Math.trunc(Number(event.target.value)), selectedSegment.endTurn - 1)),
+                    startTurn: Math.max(
+                      0,
+                      Math.min(Math.trunc(Number(event.target.value)), selectedSegment.endTurn - 1)
+                    ),
                   })
                 }
               />
@@ -327,6 +360,26 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
                 }
               />
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <label className="block text-sm" htmlFor="segment-reason" title={REASON_TOOLTIP}>
+                Reason (optional)
+              </label>
+              <InfoTooltip
+                label="About movement policy"
+                html="The reason why the character should be here at the specified time. Should complete the thought: <strong>They are here because ... </strong>. For example: <strong>they work here</strong>. This information will be injected into their system prompt (unless you have edited the Chat System Prompt to do otherwise)."
+              />
+            </div>
+            <textarea
+              id="segment-reason"
+              title={REASON_TOOLTIP}
+              className="w-full min-h-20 border rounded-sm px-3 py-2 bg-inset"
+              value={selectedSegment.reason ?? ''}
+              onChange={(event) => updateSegment(selectedSegment.id, { reason: event.target.value })}
+              placeholder="They are here because…"
+            />
           </div>
         </div>
       ) : (

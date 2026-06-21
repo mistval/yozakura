@@ -23,6 +23,7 @@ import type {
 } from './prompt_template_context_fields.js';
 import { useSettingsStore } from '../../state/settings_store.js';
 import { generatePersonalityTraits } from '../../util/personality.js';
+import { getCharacterMovementInfo } from '../character_schedule/get_scheduled_move.js';
 import _ from 'lodash';
 
 const globalWritableContext = {};
@@ -184,6 +185,7 @@ export async function buildFocusedChatTemplateContext(
     ),
     focusedCharacterChatInstructions:
       useActiveChatStore.getState().chatInstructionsByCharacterId[focusedCharacter.id] ?? '',
+    characterMovementConstraint: getCharacterMovementInfo(focusedCharacter),
   };
 }
 

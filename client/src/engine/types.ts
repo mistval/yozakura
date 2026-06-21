@@ -250,6 +250,7 @@ export const scheduleSegmentSchema = z.object({
   endTurn: z.number().int().positive(),
   zoneId: z.string(),
   movementPolicy: movementPolicySchema,
+  reason: z.string().optional(),
 });
 
 export type ScheduleSegment = z.infer<typeof scheduleSegmentSchema>;

@@ -82,9 +82,14 @@ export function resolveScheduleAllowedLocations(input: {
   turnNumber: number;
   groupSchedulesByGroupId: Record<string, ScenarioCharacterGroupSchedule>;
   effectiveZones: MapZone[];
-}): { allowed: Set<string>; policyByLocationId: Map<string, MovementPolicy> } {
+}): {
+  allowed: Set<string>;
+  policyByLocationId: Map<string, MovementPolicy>;
+  reasonByLocationId: Map<string, string>;
+} {
   const allowed = new Set<string>();
   const policyByLocationId = new Map<string, MovementPolicy>();
+  const reasonByLocationId = new Map<string, string>();
 
   for (const groupId of input.character.groupIds) {
     const schedule = input.groupSchedulesByGroupId[groupId];
@@ -108,11 +113,14 @@ export function resolveScheduleAllowedLocations(input: {
           locationId,
           mostPermissivePolicy(policyByLocationId.get(locationId), segment.movementPolicy)
         );
+        if (segment.reason && !reasonByLocationId.has(locationId)) {
+          reasonByLocationId.set(locationId, segment.reason);
+        }
       }
     }
   }
 
-  return { allowed, policyByLocationId };
+  return { allowed, policyByLocationId, reasonByLocationId };
 }
 
 export function resolveScheduledMove(
@@ -242,4 +250,52 @@ export function resolveUserMovementSuggestion(
   }
 
   return { suggestedLocationIds, highlightByLocationId, highlightWait: false, forbiddenLocationIds };
+}
+
+export interface CharacterMovementInfo {
+  status: 'in_designated_zone' | 'moving_towards_designated_zone';
+  reason: string | undefined;
+  targetLocationName?: string | undefined;
+}
+
+export function resolveCharacterMovementInfo(
+  input: ScheduleMovementInput
+): CharacterMovementInfo | undefined {
+  const forbidden = resolveForbiddenLocationIds(input);
+  const { allowed, reasonByLocationId } = resolveScheduleAllowedLocations(input);
+
+  for (const locationId of forbidden) {
+    allowed.delete(locationId);
+  }
+
+  if (allowed.size === 0) {
+    return undefined;
+  }
+
+  const current = input.character.locationId;
+
+  if (allowed.has(current)) {
+    return { status: 'in_designated_zone', reason: reasonByLocationId.get(current) };
+  }
+
+  const adjacencyByLocationId = new Map(input.locations.map((l) => [l.id, l.adjacency] as const));
+  const getNeighbors = (locationId: string) => adjacencyByLocationId.get(locationId) ?? [];
+
+  const { targets } = findNearestReachable(
+    current,
+    getNeighbors,
+    (locationId) => allowed.has(locationId),
+    (locationId) => !forbidden.has(locationId)
+  );
+
+  const target = targets[0];
+  if (target === undefined) {
+    return undefined;
+  }
+
+  return {
+    status: 'moving_towards_designated_zone',
+    reason: reasonByLocationId.get(target),
+    targetLocationName: input.locations.find((location) => location.id === target)?.name,
+  };
 }

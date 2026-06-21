@@ -3,8 +3,10 @@ import { useMapZoneStore } from '../../state/map_zone_store.js';
 import { getRequiredActiveScenario, getRequiredActiveScenarioMap } from '../../state/scenario_store.js';
 import type { Character } from '../types.js';
 import {
+  resolveCharacterMovementInfo,
   resolveScheduledMove,
   resolveUserMovementSuggestion,
+  type CharacterMovementInfo,
   type ScheduledMove,
   type UserMovementSuggestion,
 } from './schedule_movement.js';
@@ -32,4 +34,10 @@ export function getUserMovementSuggestion(
   user: Pick<Character, 'id' | 'locationId' | 'groupIds'>
 ): UserMovementSuggestion | undefined {
   return resolveUserMovementSuggestion(getScheduleMovementInput(user));
+}
+
+export function getCharacterMovementInfo(
+  character: Pick<Character, 'id' | 'locationId' | 'groupIds'>
+): CharacterMovementInfo | undefined {
+  return resolveCharacterMovementInfo(getScheduleMovementInput(character));
 }

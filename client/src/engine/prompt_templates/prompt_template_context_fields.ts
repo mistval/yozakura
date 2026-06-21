@@ -167,6 +167,18 @@ Alice and Charlie chatted online about their weekend plans. Charlie mentioned th
   speakerCandidates: z.array(characterSchema).meta({
     description: 'The list of characters who are eligible to speak next in the conversation.',
   }),
+  characterMovementConstraint: z
+    .object({
+      status: z.enum(['in_designated_zone', 'moving_towards_designated_zone']),
+      reason: z.string().optional(),
+      targetLocationId: z.string().optional(),
+      targetLocationName: z.string().optional(),
+    })
+    .optional()
+    .meta({
+      description:
+        "Why the focused character is at, or heading toward, a location. Undefined if there's no known reason. status 'in_designated_zone' means they are where their character schedule wants them; 'moving_towards_designated_zone' means they are en route, with targetLocationName naming the target location. reason is the optional author-written justification for why the character is scheduled to be in the named location.",
+    }),
 });
 
 const globalExecutionContextSchema = contextSchemaFields
@@ -216,6 +228,7 @@ export const focusedConversationExecutionContextSchema = conversationExecutionCo
     focusedCharacterAppearance: true,
     rollingConversationSummariesText: true,
     focusedCharacterChatInstructions: true,
+    characterMovementConstraint: true,
   })
 );
 
