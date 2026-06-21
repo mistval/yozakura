@@ -4,22 +4,10 @@
     "inputs": {
       "cfg": "%scale%",
       "denoise": 1,
-      "latent_image": [
-        "5",
-        0
-      ],
-      "model": [
-        "4",
-        0
-      ],
-      "negative": [
-        "7",
-        0
-      ],
-      "positive": [
-        "6",
-        0
-      ],
+      "latent_image": ["5", 0],
+      "model": ["4", 0],
+      "negative": ["7", 0],
+      "positive": ["6", 0],
       "sampler_name": "%sampler%",
       "scheduler": "%scheduler%",
       "seed": "%seed%",
@@ -43,44 +31,29 @@
   "6": {
     "class_type": "CLIPTextEncode",
     "inputs": {
-      "clip": [
-        "4",
-        1
-      ],
+      "clip": ["4", 1],
       "text": "%prompt%"
     }
   },
   "7": {
     "class_type": "CLIPTextEncode",
     "inputs": {
-      "clip": [
-        "4",
-        1
-      ],
+      "clip": ["4", 1],
       "text": "%negative_prompt%"
     }
   },
   "8": {
     "class_type": "VAEDecode",
     "inputs": {
-      "samples": [
-        "3",
-        0
-      ],
-      "vae": [
-        "4",
-        2
-      ]
+      "samples": ["3", 0],
+      "vae": ["4", 2]
     }
   },
   "9": {
     "class_type": "SaveImage",
     "inputs": {
       "filename_prefix": "Yozakura",
-      "images": [
-        "8",
-        0
-      ]
+      "images": ["8", 0]
     }
   }
 }
