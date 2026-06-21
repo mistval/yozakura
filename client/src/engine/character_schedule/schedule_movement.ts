@@ -195,7 +195,12 @@ export function resolveUserMovementSuggestion(
     if (forbiddenLocationIds.length === 0) {
       return undefined;
     }
-    return { suggestedLocationIds: [], highlightByLocationId: {}, highlightWait: false, forbiddenLocationIds };
+    return {
+      suggestedLocationIds: [],
+      highlightByLocationId: {},
+      highlightWait: false,
+      forbiddenLocationIds,
+    };
   };
 
   if (allowed.size === 0) {
@@ -252,7 +257,7 @@ export function resolveUserMovementSuggestion(
   return { suggestedLocationIds, highlightByLocationId, highlightWait: false, forbiddenLocationIds };
 }
 
-export interface CharacterMovementInfo {
+export interface CharacterMovementConstraint {
   status: 'in_designated_zone' | 'moving_towards_designated_zone';
   reason: string | undefined;
   targetLocationName?: string | undefined;
@@ -260,7 +265,7 @@ export interface CharacterMovementInfo {
 
 export function resolveCharacterMovementInfo(
   input: ScheduleMovementInput
-): CharacterMovementInfo | undefined {
+): CharacterMovementConstraint | undefined {
   const forbidden = resolveForbiddenLocationIds(input);
   const { allowed, reasonByLocationId } = resolveScheduleAllowedLocations(input);
 

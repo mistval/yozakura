@@ -6,7 +6,7 @@ import {
   resolveCharacterMovementInfo,
   resolveScheduledMove,
   resolveUserMovementSuggestion,
-  type CharacterMovementInfo,
+  type CharacterMovementConstraint,
   type ScheduledMove,
   type UserMovementSuggestion,
 } from './schedule_movement.js';
@@ -36,8 +36,8 @@ export function getUserMovementSuggestion(
   return resolveUserMovementSuggestion(getScheduleMovementInput(user));
 }
 
-export function getCharacterMovementInfo(
+export function getCharacterMovementConstraint(
   character: Pick<Character, 'id' | 'locationId' | 'groupIds'>
-): CharacterMovementInfo | undefined {
+): CharacterMovementConstraint | undefined {
   return resolveCharacterMovementInfo(getScheduleMovementInput(character));
 }

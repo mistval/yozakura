@@ -56,7 +56,15 @@ function makeSchedule(
   lengthInTurns: number,
   segments: ScheduleSegment[]
 ): ScenarioCharacterGroupSchedule {
-  return { id: `${groupId}-sched`, scenarioId: 's1', groupId, lengthInTurns, segments, createdAt: '', updatedAt: '' };
+  return {
+    id: `${groupId}-sched`,
+    scenarioId: 's1',
+    groupId,
+    lengthInTurns,
+    segments,
+    createdAt: '',
+    updatedAt: '',
+  };
 }
 
 describe('resolveScheduledMove', () => {
@@ -151,7 +159,10 @@ describe('resolveScheduledMove', () => {
       turnNumber: 0,
       effectiveZones: [makeZone('zoneC', ['C']), makeZone('zoneD', ['D'])],
       groupSchedulesByGroupId: {
-        g1: makeSchedule('g1', 4, [makeSegment('zoneC', 'teleport', 0, 4), makeSegment('zoneD', 'rush', 0, 4)]),
+        g1: makeSchedule('g1', 4, [
+          makeSegment('zoneC', 'teleport', 0, 4),
+          makeSegment('zoneD', 'rush', 0, 4),
+        ]),
       },
     });
     expect([...allowed].sort()).toEqual(['C', 'D']);

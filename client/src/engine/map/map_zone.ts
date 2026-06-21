@@ -10,8 +10,7 @@ export function getEffectiveZones(scenarioId: string, mapId: string, allZones: M
   );
 
   const globalZones = allZones.filter(
-    (zone) =>
-      zone.scenarioId === undefined && zone.mapId === mapId && !overriddenGlobalZoneIds.has(zone.id)
+    (zone) => zone.scenarioId === undefined && zone.mapId === mapId && !overriddenGlobalZoneIds.has(zone.id)
   );
 
   return scenarioZones.concat(globalZones);

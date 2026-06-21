@@ -84,9 +84,7 @@ export default function MapZoneEditor({
       return;
     }
     const current = selectedZone.privateToGroupIds;
-    const next = current.includes(groupId)
-      ? current.filter((id) => id !== groupId)
-      : current.concat(groupId);
+    const next = current.includes(groupId) ? current.filter((id) => id !== groupId) : current.concat(groupId);
     setSelectedZoneId(controller.editZone(selectedZone.id, { privateToGroupIds: next }));
   };
 
@@ -113,7 +111,9 @@ export default function MapZoneEditor({
       </div>
 
       {!selectedZone ? (
-        controller.ready ? undefined : <div className="text-sm text-muted">Loading zones…</div>
+        controller.ready ? undefined : (
+          <div className="text-sm text-muted">Loading zones…</div>
+        )
       ) : (
         <div className="flex min-h-0 flex-col gap-4 lg:flex-row">
           <div className="w-full shrink-0 space-y-3 lg:w-72">

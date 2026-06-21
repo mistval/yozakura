@@ -134,9 +134,7 @@ export const useMapZoneStore = create<MapZoneStoreState>((set, get) => ({
   },
 
   deleteZone: (zoneId) => {
-    const remaining = get().zones.filter(
-      (zone) => zone.id !== zoneId && zone.parentZoneId !== zoneId
-    );
+    const remaining = get().zones.filter((zone) => zone.id !== zoneId && zone.parentZoneId !== zoneId);
     set({ zones: remaining });
 
     void Database.doAsDataWrite(async () => {

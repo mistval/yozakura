@@ -193,96 +193,100 @@ export default function MapModal() {
       )}
 
       {view === 'characters' && (
-      <>
-      <div className="flex min-h-0 flex-1 gap-4 p-4">
-        <div className="w-72 shrink-0 space-y-3 overflow-y-auto pr-1 scrollbar-none">
-          {locationGroups.length === 0 && <div className="text-sm text-muted">No locations to display.</div>}
-          {locationGroups.map(({ location, characters }) => {
-            const isSelected = selectedLocationId === location.id;
-            const isHovered = hoveredLocationId === location.id;
-            const ringClass = isSelected
-              ? 'ring-2 ring-success-ring border-transparent'
-              : isHovered
-                ? 'ring-2 ring-focus-ring border-transparent'
-                : 'border-border-default';
+        <>
+          <div className="flex min-h-0 flex-1 gap-4 p-4">
+            <div className="w-72 shrink-0 space-y-3 overflow-y-auto pr-1 scrollbar-none">
+              {locationGroups.length === 0 && (
+                <div className="text-sm text-muted">No locations to display.</div>
+              )}
+              {locationGroups.map(({ location, characters }) => {
+                const isSelected = selectedLocationId === location.id;
+                const isHovered = hoveredLocationId === location.id;
+                const ringClass = isSelected
+                  ? 'ring-2 ring-success-ring border-transparent'
+                  : isHovered
+                    ? 'ring-2 ring-focus-ring border-transparent'
+                    : 'border-border-default';
 
-            return (
-              <div
-                key={location.id}
-                ref={(node) => {
-                  if (node) {
-                    groupRefs.current.set(location.id, node);
-                  } else {
-                    groupRefs.current.delete(location.id);
-                  }
-                }}
-                className={`cursor-pointer space-y-2 rounded-sm border bg-inset p-3 transition-shadow ${ringClass}`}
-                onClick={() => toggleSelectedLocation(location.id, { center: true })}
-                onMouseEnter={() => setHoveredLocationId(location.id)}
-                onMouseLeave={() =>
-                  setHoveredLocationId((current) => (current === location.id ? undefined : current))
-                }
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="truncate text-sm font-semibold">{location.name || 'Untitled Location'}</h3>
-                  <span className="shrink-0 text-xs text-muted">{characters.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {characters.length === 0 ? (
-                    <div className="text-sm text-muted">Nobody is here.</div>
-                  ) : (
-                    characters.map((character) => (
-                      <CharacterAvatar
-                        key={character.id}
-                        character={character}
-                        interactive={isSelected}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isSelected) {
-                            showCharacterOverview({ selectedIds: [character.id], scrolldown: true });
-                          } else {
-                            toggleSelectedLocation(location.id, { center: true });
-                          }
-                        }}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="relative min-w-0 flex-1 overflow-hidden rounded-sm border border-border-default bg-inset">
-          {graph.nodes.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center text-sm text-muted">
-              No locations to display.
+                return (
+                  <div
+                    key={location.id}
+                    ref={(node) => {
+                      if (node) {
+                        groupRefs.current.set(location.id, node);
+                      } else {
+                        groupRefs.current.delete(location.id);
+                      }
+                    }}
+                    className={`cursor-pointer space-y-2 rounded-sm border bg-inset p-3 transition-shadow ${ringClass}`}
+                    onClick={() => toggleSelectedLocation(location.id, { center: true })}
+                    onMouseEnter={() => setHoveredLocationId(location.id)}
+                    onMouseLeave={() =>
+                      setHoveredLocationId((current) => (current === location.id ? undefined : current))
+                    }
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="truncate text-sm font-semibold">
+                        {location.name || 'Untitled Location'}
+                      </h3>
+                      <span className="shrink-0 text-xs text-muted">{characters.length}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {characters.length === 0 ? (
+                        <div className="text-sm text-muted">Nobody is here.</div>
+                      ) : (
+                        characters.map((character) => (
+                          <CharacterAvatar
+                            key={character.id}
+                            character={character}
+                            interactive={isSelected}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isSelected) {
+                                showCharacterOverview({ selectedIds: [character.id], scrolldown: true });
+                              } else {
+                                toggleSelectedLocation(location.id, { center: true });
+                              }
+                            }}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ) : (
-            <GraphCanvas
-              ref={graphRef}
-              nodes={graph.nodes}
-              edges={graph.edges}
-              theme={graphTheme}
-              actives={actives}
-              onNodePointerOver={(node) => setHoveredLocationId(node.id)}
-              onNodePointerOut={() => setHoveredLocationId(undefined)}
-              onNodeClick={(node) => toggleSelectedLocation(node.id)}
-              onCanvasClick={() => setSelectedLocationId(undefined)}
-            />
-          )}
-        </div>
-      </div>
 
-      {selectedLocation && (
-        <div className="shrink-0 border-t border-border-default px-4 py-3 space-y-1">
-          <div className="font-semibold">{selectedLocation.name || 'Untitled Location'}</div>
-          {selectedLocation.description && (
-            <div className="text-sm text-secondary">{selectedLocation.description}</div>
+            <div className="relative min-w-0 flex-1 overflow-hidden rounded-sm border border-border-default bg-inset">
+              {graph.nodes.length === 0 ? (
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-muted">
+                  No locations to display.
+                </div>
+              ) : (
+                <GraphCanvas
+                  ref={graphRef}
+                  nodes={graph.nodes}
+                  edges={graph.edges}
+                  theme={graphTheme}
+                  actives={actives}
+                  onNodePointerOver={(node) => setHoveredLocationId(node.id)}
+                  onNodePointerOut={() => setHoveredLocationId(undefined)}
+                  onNodeClick={(node) => toggleSelectedLocation(node.id)}
+                  onCanvasClick={() => setSelectedLocationId(undefined)}
+                />
+              )}
+            </div>
+          </div>
+
+          {selectedLocation && (
+            <div className="shrink-0 border-t border-border-default px-4 py-3 space-y-1">
+              <div className="font-semibold">{selectedLocation.name || 'Untitled Location'}</div>
+              {selectedLocation.description && (
+                <div className="text-sm text-secondary">{selectedLocation.description}</div>
+              )}
+            </div>
           )}
-        </div>
-      )}
-      </>
+        </>
       )}
     </RoutedModalFrame>
   );

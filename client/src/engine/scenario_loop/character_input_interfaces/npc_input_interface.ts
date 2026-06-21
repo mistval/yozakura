@@ -61,9 +61,15 @@ export class NPCInputInterface extends CharacterInputInterface {
         if (!useActiveChatStore.getState().hasChatted(npc.id, forcedConversationTarget.id)) {
           useActiveChatStore.getState().recordChat(npc.id, [forcedConversationTarget.id]);
           return {
-            move: this.buildChatMove(npc, [forcedConversationTarget], forcedConversationTargetRelationship, 1, {
-              forceRichInteraction: true,
-            }),
+            move: this.buildChatMove(
+              npc,
+              [forcedConversationTarget],
+              forcedConversationTargetRelationship,
+              1,
+              {
+                forceRichInteraction: true,
+              }
+            ),
             persist: false,
           };
         }

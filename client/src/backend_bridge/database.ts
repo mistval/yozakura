@@ -856,11 +856,7 @@ export async function storeGroupSchedule(schedule: ScenarioCharacterGroupSchedul
 }
 
 export async function loadGroupSchedules(scenarioId: string) {
-  return selectDataRows(
-    SELECT_GROUP_SCHEDULES_SQL,
-    [[scenarioId]],
-    scenarioCharacterGroupScheduleSchema
-  );
+  return selectDataRows(SELECT_GROUP_SCHEDULES_SQL, [[scenarioId]], scenarioCharacterGroupScheduleSchema);
 }
 
 export async function deleteGroupSchedule(id: string) {

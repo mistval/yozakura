@@ -107,9 +107,7 @@ export default function CharacterGroupsTab() {
                     type="button"
                     onClick={() => toggleMembership(character)}
                     className={`flex items-center gap-2 rounded-sm border p-2 text-left ${
-                      isMember
-                        ? 'border-success-ring ring-2 ring-success-ring'
-                        : 'border-border-default'
+                      isMember ? 'border-success-ring ring-2 ring-success-ring' : 'border-border-default'
                     }`}
                   >
                     <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border-default bg-emphasized">
