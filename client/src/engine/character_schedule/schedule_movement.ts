@@ -263,7 +263,7 @@ export interface CharacterMovementConstraint {
   targetLocationName?: string | undefined;
 }
 
-export function resolveCharacterMovementInfo(
+export function resolveCharacterMovementConstraint(
   input: ScheduleMovementInput
 ): CharacterMovementConstraint | undefined {
   const forbidden = resolveForbiddenLocationIds(input);

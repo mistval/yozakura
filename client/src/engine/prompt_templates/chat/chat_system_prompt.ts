@@ -69,11 +69,11 @@ World description: <%= it.worldMap.description %>
 Location name:  <%= it.currentLocation.name %>
 
 Location description: <%= it.currentLocation.description %>
-<% if (it.characterMovementInfo) { %>
-<% if (it.characterMovementInfo.status === 'in_designated_zone') { %>
-<%= it.focusedCharacter.firstName %> is currently here<%= it.characterMovementInfo.reason ? ' because ' + it.characterMovementInfo.reason : '' %>.
+<% if (it.characterMovementConstraint) { %>
+<% if (it.characterMovementConstraint.status === 'in_designated_zone') { %>
+<%= it.focusedCharacter.firstName %> is currently here<%= it.characterMovementConstraint.reason ? ' because ' + it.characterMovementConstraint.reason : '' %>.
 <% } else { %>
-<%= it.focusedCharacter.firstName %> is currently moving towards <%= it.characterMovementInfo.targetLocationName %><%= it.characterMovementInfo.reason ? ' because ' + it.characterMovementInfo.reason : '' %>.
+<%= it.focusedCharacter.firstName %> is currently moving towards <%= it.characterMovementConstraint.targetLocationName %><%= it.characterMovementConstraint.reason ? ' because ' + it.characterMovementConstraint.reason : '' %>.
 <% } %>
 <% } %>
 </setting>

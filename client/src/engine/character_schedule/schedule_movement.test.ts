@@ -7,7 +7,7 @@ import type {
   WorldMapLocation,
 } from '../types';
 import {
-  resolveCharacterMovementInfo,
+  resolveCharacterMovementConstraint,
   resolveScheduleAllowedLocations,
   resolveScheduledMove,
   resolveUserMovementSuggestion,
@@ -386,9 +386,9 @@ describe('resolveUserMovementSuggestion', () => {
   });
 });
 
-describe('resolveCharacterMovementInfo', () => {
+describe('resolveCharacterMovementConstraint', () => {
   it('returns undefined when there is no active schedule', () => {
-    const result = resolveCharacterMovementInfo({
+    const result = resolveCharacterMovementConstraint({
       character: { id: 'npc', locationId: 'A', groupIds: [] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
@@ -399,7 +399,7 @@ describe('resolveCharacterMovementInfo', () => {
   });
 
   it('reports in_designated_zone with the segment reason', () => {
-    const result = resolveCharacterMovementInfo({
+    const result = resolveCharacterMovementConstraint({
       character: { id: 'npc', locationId: 'C', groupIds: ['g1'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
@@ -412,7 +412,7 @@ describe('resolveCharacterMovementInfo', () => {
   });
 
   it('reports in_designated_zone with no reason when none is set', () => {
-    const result = resolveCharacterMovementInfo({
+    const result = resolveCharacterMovementConstraint({
       character: { id: 'npc', locationId: 'C', groupIds: ['g1'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
@@ -423,7 +423,7 @@ describe('resolveCharacterMovementInfo', () => {
   });
 
   it('reports moving_towards_designated_zone with the target name and reason', () => {
-    const result = resolveCharacterMovementInfo({
+    const result = resolveCharacterMovementConstraint({
       character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
@@ -440,7 +440,7 @@ describe('resolveCharacterMovementInfo', () => {
   });
 
   it('returns undefined when the designated zone is unreachable', () => {
-    const result = resolveCharacterMovementInfo({
+    const result = resolveCharacterMovementConstraint({
       character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
       locations: [...LINE_LOCATIONS, makeLocation('Z', [])],

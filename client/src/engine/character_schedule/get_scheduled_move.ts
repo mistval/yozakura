@@ -3,7 +3,7 @@ import { useMapZoneStore } from '../../state/map_zone_store.js';
 import { getRequiredActiveScenario, getRequiredActiveScenarioMap } from '../../state/scenario_store.js';
 import type { Character } from '../types.js';
 import {
-  resolveCharacterMovementInfo,
+  resolveCharacterMovementConstraint,
   resolveScheduledMove,
   resolveUserMovementSuggestion,
   type CharacterMovementConstraint,
@@ -39,5 +39,5 @@ export function getUserMovementSuggestion(
 export function getCharacterMovementConstraint(
   character: Pick<Character, 'id' | 'locationId' | 'groupIds'>
 ): CharacterMovementConstraint | undefined {
-  return resolveCharacterMovementInfo(getScheduleMovementInput(character));
+  return resolveCharacterMovementConstraint(getScheduleMovementInput(character));
 }
