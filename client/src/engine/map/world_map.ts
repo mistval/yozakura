@@ -1,15 +1,13 @@
 import { assertNonNullish } from '../../errors/application_error.js';
 import type { WorldMap, WorldMapLocation } from '../types.js';
+import { breadthFirstSearch } from './graph_search.js';
 
 export function getLocationIds(map: WorldMap) {
   return map.locations.map((location) => location.id);
 }
 
 export function getConnectivityIslands(locations: WorldMapLocation[]) {
-  const locationsById = Object.fromEntries(locations.map((location) => [location.id, location] as const));
-  const adjacency = Object.fromEntries(
-    locations.map((location) => [location.id, location.adjacency || []] as const)
-  ) as Record<string, string[]>;
+  const locationsById = new Map(locations.map((location) => [location.id, location] as const));
   const unvisited = new Set(locations.map((location) => location.id));
   const islands: WorldMapLocation[][] = [];
 
@@ -17,29 +15,20 @@ export function getConnectivityIslands(locations: WorldMapLocation[]) {
     const startId = unvisited.values().next().value as string | undefined;
     assertNonNullish(startId);
 
-    const queue = [startId];
-    unvisited.delete(startId);
-    const islandIds: string[] = [];
+    const { order } = breadthFirstSearch(
+      startId,
+      (locationId) => locationsById.get(locationId)?.adjacency ?? []
+    );
 
-    while (queue.length > 0) {
-      const currentId = queue.shift();
-      assertNonNullish(currentId);
-
-      islandIds.push(currentId);
-
-      for (const targetId of adjacency[currentId] || []) {
-        if (!unvisited.has(targetId)) {
-          continue;
-        }
-
-        unvisited.delete(targetId);
-        queue.push(targetId);
+    const islandLocations: WorldMapLocation[] = [];
+    for (const locationId of order) {
+      unvisited.delete(locationId);
+      const location = locationsById.get(locationId);
+      if (location) {
+        islandLocations.push(location);
       }
     }
 
-    const islandLocations = islandIds
-      .map((locationId) => locationsById[locationId])
-      .filter((location): location is WorldMapLocation => Boolean(location));
     islands.push(islandLocations);
   }
 

@@ -133,6 +133,7 @@ export function createBlankCharacter(): Character {
     updatedAt: '',
     rollingConversationSummaries: [],
     nextConversationWithCharacterId: '',
+    groupIds: [],
   };
 }
 

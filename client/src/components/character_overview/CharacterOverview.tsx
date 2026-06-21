@@ -8,6 +8,7 @@ import CharacterOverviewAddCharactersModal from './CharacterOverviewAddCharacter
 import CharacterOverviewPairData from './CharacterOverviewPairData.js';
 import CharacterOverviewSelectionStrip from './CharacterOverviewSelectionStrip.js';
 import CharacterOverviewSingleData from './CharacterOverviewSingleData.js';
+import CharacterGroupsTab from './CharacterGroupsTab.js';
 import RoutedModalFrame from '../ui/RoutedModalFrame.js';
 import CharacterEditorModal from '../character_editor_modal/CharacterEditorModal.js';
 import { assertNonNullish } from '../../errors/application_error.js';
@@ -34,6 +35,7 @@ export default function CharacterOverview() {
   } = useCharacterOverview();
 
   const userId = scenario?.userCharacterId || '';
+  const [tab, setTab] = useState<'overview' | 'groups'>('overview');
   const [relationships, setRelationships] = useState<CharacterRelationships>({});
   const contentRef = useRef<HTMLDivElement>(undefined);
 
@@ -126,37 +128,63 @@ export default function CharacterOverview() {
         contentRef={contentRef}
       >
         <>
-          <h2 className="text-xl font-semibold">Character Overview</h2>
-          <CharacterOverviewSelectionStrip
-            characters={orderedCharacters}
-            selectedIds={validSelectedIds}
-            activeMap={activeMap}
-            relationshipLogs={relationships}
-            onToggleSelect={toggleSelect}
-          />
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Character Overview</h2>
+          </div>
 
-          {!selectedPair && selectedSingleCharacter && (
-            <div className="space-y-2">
-              <div className="text-sm text-muted">Select two characters to view their relationship.</div>
-              <CharacterOverviewSingleData
-                selectedSingleCharacter={selectedSingleCharacter}
-                scenario={scenario}
+          <div className="inline-flex gap-2 rounded-sm border border-border-default p-1">
+            <button
+              type="button"
+              className={tab === 'overview' ? 'button-emphasized' : ''}
+              onClick={() => setTab('overview')}
+            >
+              Overview
+            </button>
+            <button
+              type="button"
+              className={tab === 'groups' ? 'button-emphasized' : ''}
+              onClick={() => setTab('groups')}
+            >
+              Character Groups
+            </button>
+          </div>
+
+          {tab === 'overview' && (
+            <>
+              <CharacterOverviewSelectionStrip
+                characters={orderedCharacters}
+                selectedIds={validSelectedIds}
                 activeMap={activeMap}
-                onShowConversationDetail={(entryId) => {
-                  showConversationLog({ conversationId: entryId });
-                }}
+                relationshipLogs={relationships}
+                onToggleSelect={toggleSelect}
               />
-            </div>
+
+              {!selectedPair && selectedSingleCharacter && (
+                <div className="space-y-2">
+                  <div className="text-sm text-muted">Select two characters to view their relationship.</div>
+                  <CharacterOverviewSingleData
+                    selectedSingleCharacter={selectedSingleCharacter}
+                    scenario={scenario}
+                    activeMap={activeMap}
+                    onShowConversationDetail={(entryId) => {
+                      showConversationLog({ conversationId: entryId });
+                    }}
+                  />
+                </div>
+              )}
+
+              {selectedPair && (
+                <CharacterOverviewPairData
+                  selectedCharacterIds={selectedPair}
+                  onShowConversationDetail={(entryId) => {
+                    showConversationLog({ conversationId: entryId });
+                  }}
+                />
+              )}
+            </>
           )}
 
-          {selectedPair && (
-            <CharacterOverviewPairData
-              selectedCharacterIds={selectedPair}
-              onShowConversationDetail={(entryId) => {
-                showConversationLog({ conversationId: entryId });
-              }}
-            />
-          )}
+          {tab === 'groups' && <CharacterGroupsTab />}
         </>
       </RoutedModalFrame>
 

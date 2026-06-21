@@ -6,6 +6,9 @@ import {
   storedConversationSchema,
   scenarioSchema,
   worldMapSchema,
+  scenarioCharacterGroupSchema,
+  mapZoneSchema,
+  scenarioCharacterGroupScheduleSchema,
   type CharacterPair,
   type Character,
   type CharacterRelationship,
@@ -14,6 +17,9 @@ import {
   type WorldMap,
   type RootPersistedObject,
   type ScenarioSummary,
+  type ScenarioCharacterGroup,
+  type MapZone,
+  type ScenarioCharacterGroupSchedule,
 } from '../engine/types.js';
 import { assert } from '../errors/application_error';
 import { newId } from '../util/id';
@@ -28,6 +34,9 @@ const TABLE_CONVERSATION = 'conversation';
 const TABLE_CONVERSATION_PARTICIPANT = 'conversation_participant';
 const TABLE_MAP = 'map';
 const TABLE_KEY_VALUE = 'key_value';
+const TABLE_SCENARIO_CHARACTER_GROUP = 'scenario_character_group';
+const TABLE_MAP_ZONE = 'map_zone';
+const TABLE_SCENARIO_CHARACTER_GROUP_SCHEDULE = 'scenario_character_group_schedule';
 
 function buildSqlPlaceholders(count: number): string {
   return Array(count).fill('?').join(', ');
@@ -696,6 +705,166 @@ export async function saveUserTextFile(file: {
 
 export async function deleteUserTextFile(id: string): Promise<void> {
   await dbRun(DELETE_USER_TEXT_FILE_SQL, [[id]]);
+}
+
+const UPSERT_SCENARIO_CHARACTER_GROUP_SQL = `
+  INSERT INTO ${TABLE_SCENARIO_CHARACTER_GROUP} (id, scenario_id, data, created_at, updated_at)
+  SELECT
+    json_extract(value, '$[0]'),
+    json_extract(value, '$[1]'),
+    json_extract(value, '$[2]'),
+    ${sqlDatetimeNow()},
+    ${sqlDatetimeNow()}
+  FROM json_each(?)
+  WHERE TRUE
+  ON CONFLICT(id)
+  DO UPDATE SET
+    data = excluded.data,
+    updated_at = ${sqlDatetimeNow()}
+`;
+
+const SELECT_SCENARIO_CHARACTER_GROUPS_SQL = `
+  SELECT *
+  FROM ${TABLE_SCENARIO_CHARACTER_GROUP}
+  WHERE scenario_id = ?
+`;
+
+const DELETE_SCENARIO_CHARACTER_GROUP_SQL = `
+  DELETE FROM ${TABLE_SCENARIO_CHARACTER_GROUP}
+  WHERE id = ?
+`;
+
+const UPSERT_MAP_ZONE_SQL = `
+  INSERT INTO ${TABLE_MAP_ZONE} (id, map_id, scenario_id, parent_zone_id, data, created_at, updated_at)
+  SELECT
+    json_extract(value, '$[0]'),
+    json_extract(value, '$[1]'),
+    json_extract(value, '$[2]'),
+    json_extract(value, '$[3]'),
+    json_extract(value, '$[4]'),
+    ${sqlDatetimeNow()},
+    ${sqlDatetimeNow()}
+  FROM json_each(?)
+  WHERE TRUE
+  ON CONFLICT(id)
+  DO UPDATE SET
+    map_id = excluded.map_id,
+    scenario_id = excluded.scenario_id,
+    parent_zone_id = excluded.parent_zone_id,
+    data = excluded.data,
+    updated_at = ${sqlDatetimeNow()}
+`;
+
+const SELECT_GLOBAL_MAP_ZONES_SQL = `
+  SELECT *
+  FROM ${TABLE_MAP_ZONE}
+  WHERE map_id = ? AND scenario_id IS NULL
+`;
+
+const SELECT_SCENARIO_MAP_ZONES_SQL = `
+  SELECT *
+  FROM ${TABLE_MAP_ZONE}
+  WHERE scenario_id = ?
+`;
+
+const DELETE_MAP_ZONE_SQL = `
+  DELETE FROM ${TABLE_MAP_ZONE}
+  WHERE id = ?
+`;
+
+const UPSERT_GROUP_SCHEDULE_SQL = `
+  INSERT INTO ${TABLE_SCENARIO_CHARACTER_GROUP_SCHEDULE} (id, scenario_id, group_id, data, created_at, updated_at)
+  VALUES (?, ?, ?, ?, ${sqlDatetimeNow()}, ${sqlDatetimeNow()})
+  ON CONFLICT(id)
+  DO UPDATE SET
+    data = excluded.data,
+    updated_at = ${sqlDatetimeNow()}
+`;
+
+const SELECT_GROUP_SCHEDULES_SQL = `
+  SELECT *
+  FROM ${TABLE_SCENARIO_CHARACTER_GROUP_SCHEDULE}
+  WHERE scenario_id = ?
+`;
+
+const DELETE_GROUP_SCHEDULE_SQL = `
+  DELETE FROM ${TABLE_SCENARIO_CHARACTER_GROUP_SCHEDULE}
+  WHERE id = ?
+`;
+
+export async function storeScenarioCharacterGroups(groups: ScenarioCharacterGroup[]) {
+  if (groups.length === 0) return;
+  await dbRun(UPSERT_SCENARIO_CHARACTER_GROUP_SQL, [
+    [
+      JSON.stringify(
+        groups.map((group) => [
+          group.id,
+          group.scenarioId,
+          encodeStoredData(group, scenarioCharacterGroupSchema),
+        ])
+      ),
+    ],
+  ]);
+}
+
+export async function loadScenarioCharacterGroups(scenarioId: string) {
+  return selectDataRows(SELECT_SCENARIO_CHARACTER_GROUPS_SQL, [[scenarioId]], scenarioCharacterGroupSchema);
+}
+
+export async function deleteScenarioCharacterGroup(id: string) {
+  await dbRun(DELETE_SCENARIO_CHARACTER_GROUP_SQL, [[id]]);
+}
+
+export async function storeMapZones(zones: MapZone[]) {
+  if (zones.length === 0) return;
+  await dbRun(UPSERT_MAP_ZONE_SQL, [
+    [
+      JSON.stringify(
+        zones.map((zone) => [
+          zone.id,
+          zone.mapId,
+          zone.scenarioId ?? null,
+          zone.parentZoneId ?? null,
+          encodeStoredData(zone, mapZoneSchema),
+        ])
+      ),
+    ],
+  ]);
+}
+
+export async function loadGlobalMapZones(mapId: string) {
+  return selectDataRows(SELECT_GLOBAL_MAP_ZONES_SQL, [[mapId]], mapZoneSchema);
+}
+
+export async function loadScenarioMapZones(scenarioId: string) {
+  return selectDataRows(SELECT_SCENARIO_MAP_ZONES_SQL, [[scenarioId]], mapZoneSchema);
+}
+
+export async function deleteMapZone(id: string) {
+  await dbRun(DELETE_MAP_ZONE_SQL, [[id]]);
+}
+
+export async function storeGroupSchedule(schedule: ScenarioCharacterGroupSchedule) {
+  await dbRun(UPSERT_GROUP_SCHEDULE_SQL, [
+    [
+      schedule.id,
+      schedule.scenarioId,
+      schedule.groupId,
+      encodeStoredData(schedule, scenarioCharacterGroupScheduleSchema),
+    ],
+  ]);
+}
+
+export async function loadGroupSchedules(scenarioId: string) {
+  return selectDataRows(
+    SELECT_GROUP_SCHEDULES_SQL,
+    [[scenarioId]],
+    scenarioCharacterGroupScheduleSchema
+  );
+}
+
+export async function deleteGroupSchedule(id: string) {
+  await dbRun(DELETE_GROUP_SCHEDULE_SQL, [[id]]);
 }
 
 export function createPersistedObject<

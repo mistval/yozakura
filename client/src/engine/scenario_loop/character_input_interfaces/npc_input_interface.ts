@@ -8,6 +8,7 @@ import { useSettingsStore } from '../../../state/settings_store';
 import { getRequiredActiveScenario, getRequiredActiveScenarioMap } from '../../../state/scenario_store';
 import { getRequiredRandomChoice, weightedSampleWithoutReplacement } from '../../../util/array';
 import { ChatCoordinator } from '../../chat/chat_coordinator';
+import { getScheduledMoveForNpc } from '../../character_schedule/get_scheduled_move';
 import { familiarityRelativeWeight, getDirectedRelationship } from '../../relationship';
 import type { Character, CharacterRelationships, WorldMapLocation } from '../../types';
 import { doScenarioLoopAsyncAction } from '../flow_control';
@@ -24,6 +25,15 @@ export class NPCInputInterface extends CharacterInputInterface {
     const currentLocation = this.getCharacterLocation(npc.id);
     const forcedConversationTargetId = npc.nextConversationWithCharacterId;
     const userCharacterId = useScenarioCharacterStore.getState().getUserCharacter()?.id;
+
+    const scheduledMove = getScheduledMoveForNpc(npc);
+
+    if (scheduledMove?.forceMove) {
+      return {
+        move: { actionType: 'move', destinationLocationId: scheduledMove.destinationLocationId },
+        persist: false,
+      };
+    }
 
     if (
       forcedConversationTargetId &&
@@ -116,7 +126,7 @@ export class NPCInputInterface extends CharacterInputInterface {
       }
     }
 
-    return { move: this.buildMoveMove(npc), persist: false };
+    return { move: this.buildMoveMove(npc, scheduledMove?.destinationLocationId), persist: false };
   }
 
   public async getNextChatInput(): Promise<ChatInputResult> {
@@ -177,7 +187,11 @@ export class NPCInputInterface extends CharacterInputInterface {
     };
   }
 
-  private buildMoveMove(npc: Character): TurnMove {
+  private buildMoveMove(npc: Character, destinationLocationId?: string): TurnMove {
+    if (destinationLocationId !== undefined) {
+      return { actionType: 'move', destinationLocationId };
+    }
+
     const location = this.getCharacterLocation(npc.id);
     const candidates = [location.id].concat(location.adjacency);
     const targetLocation = getRequiredRandomChoice(candidates);

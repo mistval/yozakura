@@ -7,8 +7,10 @@ import ConfirmDialog from '../components/ui/ConfirmDialog.js';
 import type { WorldMap, WorldMapLocation } from '../engine/types.js';
 import { getConnectivityIslands, validateWorldMap } from '../engine/map/world_map.js';
 import { useMapStore } from '../state/map_store.js';
+import { useMapZoneStore } from '../state/map_zone_store.js';
 import * as Database from '../backend_bridge/database.js';
 import { assert } from '../errors/application_error.js';
+import MapZoneEditor, { type ZoneEditorController } from '../components/map_zones/MapZoneEditor.js';
 
 function createEmptyLocation(): WorldMapLocation {
   return Database.createPersistedObject({
@@ -62,6 +64,30 @@ export default function MapEditor() {
 
   const connectivityIslands = useMemo(() => getConnectivityIslands(locations), [locations]);
   const graphTheme = useGraphTheme();
+
+  const editorZones = useMapZoneStore((s) => s.editorZones);
+
+  useEffect(() => {
+    if (id) {
+      void useMapZoneStore.getState().loadEditorGlobalZones(id);
+    }
+  }, [id]);
+
+  const zoneController: ZoneEditorController = useMemo(
+    () => ({
+      zones: editorZones.filter((zone) => zone.mapId === id),
+      groups: [],
+      allowPrivate: false,
+      allowResync: false,
+      createZone: (name) => useMapZoneStore.getState().createEditorZone(id!, name),
+      editZone: (zoneId, changes) => {
+        useMapZoneStore.getState().editEditorZone(zoneId, changes);
+        return zoneId;
+      },
+      deleteZone: (zoneId) => useMapZoneStore.getState().deleteEditorZone(zoneId),
+    }),
+    [editorZones, id]
+  );
 
   useEffect(() => {
     if (!mapsAreLoaded || !existingMap) {
@@ -306,6 +332,16 @@ export default function MapEditor() {
       <div className="relative w-full" style={{ height: '500px' }}>
         <GraphCanvas nodes={graphVisualization.nodes} edges={graphVisualization.edges} theme={graphTheme} />
       </div>
+
+      {!isNew && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold">Map Zones</h2>
+          <p className="text-sm text-muted">
+            Global zones are shared by every scenario on this map. Scenarios can override them locally.
+          </p>
+          <MapZoneEditor locations={locations} controller={zoneController} />
+        </div>
+      )}
 
       {connectivityIslands.length > 1 && (
         <div className="rounded-sm border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning-text space-y-2">

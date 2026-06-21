@@ -6,8 +6,12 @@ import { useGraphTheme } from '../theme/graph_themes.js';
 import type { Character } from '../engine/types.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import { useScenarioCharacterStore, useUserCharacter } from '../state/scenario_character_store.js';
+import { useMapZoneStore } from '../state/map_zone_store.js';
+import { useCharacterGroupStore } from '../state/character_group_store.js';
+import { getEffectiveZones } from '../engine/map/map_zone.js';
 import { useCharacterOverview } from './character_overview/CharacterOverviewContext.js';
 import { useMapModal } from './MapModalContext.js';
+import MapZoneEditor, { type ZoneEditorController } from './map_zones/MapZoneEditor.js';
 
 function CharacterAvatar({
   character,
@@ -41,7 +45,10 @@ function CharacterAvatar({
 export default function MapModal() {
   const { closeMap } = useMapModal();
   const map = useScenarioStore((state) => state.activeScenarioMap);
+  const scenario = useScenarioStore((state) => state.activeScenario);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
+  const zones = useMapZoneStore((state) => state.zones);
+  const groups = useCharacterGroupStore((state) => state.groups);
   const user = useUserCharacter();
   const graphTheme = useGraphTheme();
   const { showCharacterOverview } = useCharacterOverview();
@@ -51,6 +58,28 @@ export default function MapModal() {
 
   const [hoveredLocationId, setHoveredLocationId] = useState<string | undefined>(undefined);
   const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>(undefined);
+  const [view, setView] = useState<'characters' | 'zones'>('characters');
+
+  const zoneController: ZoneEditorController = useMemo(
+    () => ({
+      zones: scenario ? getEffectiveZones(scenario.id, scenario.mapId, zones) : [],
+      groups,
+      allowPrivate: true,
+      allowResync: true,
+      createZone: (name) => useMapZoneStore.getState().createScenarioZone(scenario!.mapId, name),
+      editZone: (zoneId, changes) => useMapZoneStore.getState().editScenarioZone(zoneId, changes).id,
+      deleteZone: (zoneId) => {
+        useCharacterGroupStore.getState().removeZoneFromAllSchedules(zoneId);
+        useMapZoneStore.getState().deleteZone(zoneId);
+      },
+      resyncZone: (zoneId, direction) => {
+        const parentId = useMapZoneStore.getState().zones.find((z) => z.id === zoneId)?.parentZoneId;
+        useMapZoneStore.getState().resyncZone(zoneId, direction);
+        return parentId ?? zoneId;
+      },
+    }),
+    [scenario, zones, groups]
+  );
 
   // Characters grouped by location, ordered to match the map's location list.
   // Only locations that actually contain characters are shown.
@@ -128,6 +157,20 @@ export default function MapModal() {
         <div className="inline-flex gap-2 rounded-sm border border-border-default bg-surface-frosted p-1 shadow-xs backdrop-blur-sm">
           <button
             type="button"
+            className={view === 'characters' ? 'button-emphasized' : ''}
+            onClick={() => setView('characters')}
+          >
+            Characters
+          </button>
+          <button
+            type="button"
+            className={view === 'zones' ? 'button-emphasized' : ''}
+            onClick={() => setView('zones')}
+          >
+            Zones
+          </button>
+          <button
+            type="button"
             className="button-emphasized"
             onClick={closeMap}
             aria-label="Close"
@@ -138,6 +181,14 @@ export default function MapModal() {
         </div>
       </div>
 
+      {view === 'zones' && (
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {map && <MapZoneEditor locations={map.locations} controller={zoneController} />}
+        </div>
+      )}
+
+      {view === 'characters' && (
+      <>
       <div className="flex min-h-0 flex-1 gap-4 p-4">
         <div className="w-72 shrink-0 space-y-3 overflow-y-auto pr-1 scrollbar-none">
           {locationGroups.length === 0 && <div className="text-sm text-muted">No locations to display.</div>}
@@ -225,6 +276,8 @@ export default function MapModal() {
             <div className="text-sm text-secondary">{selectedLocation.description}</div>
           )}
         </div>
+      )}
+      </>
       )}
     </RoutedModalFrame>
   );

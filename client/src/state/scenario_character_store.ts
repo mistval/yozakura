@@ -61,6 +61,7 @@ async function copyGlobalCharacterForScenario(character: Character, scenarioId: 
     locationId: getRequiredRandomChoice(map.locations).id,
     imagePath: await Files.copyCharacterImageForScenario(scenarioId, character),
     globalCharacterId: character.id,
+    groupIds: [],
   };
 }
 

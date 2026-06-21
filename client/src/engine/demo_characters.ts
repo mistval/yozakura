@@ -362,5 +362,6 @@ export const DEMO_CHARACTERS: Character[] = DEMO_CHARACTERS_RAW.map((character) 
     globalMemories: '',
     rollingConversationSummaries: [],
     nextConversationWithCharacterId: '',
+    groupIds: [],
   } satisfies Character;
 });

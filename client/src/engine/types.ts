@@ -151,6 +151,9 @@ Alice: I have a pet cat named Whiskers who is very mischievous.`,
     description:
       'Brief summaries of past conversations involving this character, used to help the model keep track of important past events and relationships. A new conversation is added after every conversation the character is involved in, and only the most recent ten (by default) summaries are kept in this array.',
   }),
+  groupIds: z.array(z.string()).meta({
+    description: 'The IDs of the character groups this character belongs to within the scenario.',
+  }),
 });
 
 export type Character = z.infer<typeof characterSchema>;
@@ -219,6 +222,46 @@ export type ScenarioSummary = {
   createdAt: string;
   updatedAt: string;
 };
+
+export const movementPolicySchema = z.enum(['teleport', 'rush', 'meander']);
+export type MovementPolicy = z.infer<typeof movementPolicySchema>;
+
+export const scenarioCharacterGroupSchema = basePersistedObjectSchema.extend({
+  scenarioId: z.string(),
+  name: z.string(),
+});
+
+export type ScenarioCharacterGroup = z.infer<typeof scenarioCharacterGroupSchema>;
+
+export const mapZoneSchema = basePersistedObjectSchema.extend({
+  mapId: z.string(),
+  scenarioId: z.string().optional(),
+  parentZoneId: z.string().optional(),
+  name: z.string(),
+  locationIds: z.array(z.string()),
+  privateToGroupIds: z.array(z.string()),
+});
+
+export type MapZone = z.infer<typeof mapZoneSchema>;
+
+export const scheduleSegmentSchema = z.object({
+  id: z.string(),
+  startTurn: z.number().int().nonnegative(),
+  endTurn: z.number().int().positive(),
+  zoneId: z.string(),
+  movementPolicy: movementPolicySchema,
+});
+
+export type ScheduleSegment = z.infer<typeof scheduleSegmentSchema>;
+
+export const scenarioCharacterGroupScheduleSchema = basePersistedObjectSchema.extend({
+  scenarioId: z.string(),
+  groupId: z.string(),
+  lengthInTurns: z.number().int().positive(),
+  segments: z.array(scheduleSegmentSchema),
+});
+
+export type ScenarioCharacterGroupSchedule = z.infer<typeof scenarioCharacterGroupScheduleSchema>;
 
 export const characterRelationshipSchema = basePersistedObjectSchema.extend({
   fromId: z.string(),

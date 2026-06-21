@@ -3,6 +3,7 @@ import { migration as migration0000InitialSchema } from './migrations/0000_initi
 import { migration as migration0001ImageSettingsScripts } from './migrations/0001_image_settings_scripts.js';
 import { migration as migration0002UserTextFiles } from './migrations/0002_user_text_files.js';
 import { migration as migration0003DeleteActiveChatKeys } from './migrations/0003_delete_active_chat_keys.js';
+import { migration as migration0004GroupsZonesSchedules } from './migrations/0004_groups_zones_schedules.js';
 import type { Migration } from './types.js';
 
 /**
@@ -17,6 +18,7 @@ const migrations: Migration[] = [
   migration0001ImageSettingsScripts,
   migration0002UserTextFiles,
   migration0003DeleteActiveChatKeys,
+  migration0004GroupsZonesSchedules,
 ];
 
 function getUserVersion(db: Database.Database): number {
