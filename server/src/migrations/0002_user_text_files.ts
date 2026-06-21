@@ -1,5 +1,6 @@
 import type { Migration } from '../types.js';
 import defaultWorkflow from '../external/SillyTavern/Default_Comfy_Workflow.json';
+import defaultLoRAWorkflow from '../external/SillyTavern/Default_LoRA_Workflow.json';
 
 const WORKFLOW_GROUP_KEY = 'imageGeneration::comfyui::workflow';
 
@@ -18,6 +19,12 @@ const CREATE_SQL = `
 
 const DEFAULT_WORKFLOWS = [
   { id: 'comfyui-default', fileName: 'Default', content: JSON.stringify(defaultWorkflow, null, 2) },
+  {
+    id: 'comfyui-default-lora',
+    fileName:
+      'Default with LoRA support (requires comfyui_lora_tag_loader custom ComfyUI node to be installed)',
+    content: JSON.stringify(defaultLoRAWorkflow, null, 2),
+  },
 ];
 
 export const migration: Migration = {

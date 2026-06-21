@@ -61,6 +61,7 @@ export default function MainMenuFtueModal() {
   const globalCharactersAreLoaded = useGlobalCharactersStore((s) => s.globalCharactersAreLoaded);
   const maps = useMapStore((s) => s.maps);
   const [demoStartLoading, setDemoStartLoading, demoStartLoadingRef] = useStateRef(false);
+  const [didOpenProviderDropdown, setDidOpenProviderDropdown] = useState(false);
   const [demoStartError, setDemoStartError] = useState('');
   const {
     loading: llmConnectionTestLoading,
@@ -297,6 +298,7 @@ export default function MainMenuFtueModal() {
                 id="ftue-image-api-shape"
                 value={imageSection.selectedScriptId}
                 onChange={(event) => setSelectedScriptId(IMAGE_GENERATION_SECTION_ID, event.target.value)}
+                onClick={() => setDidOpenProviderDropdown(true)}
                 className="w-full rounded-sm border px-3 py-2"
               >
                 {BUILTIN_IMAGE_SCRIPTS.map((script) => (
@@ -306,6 +308,21 @@ export default function MainMenuFtueModal() {
                 ))}
               </select>
             </div>
+
+            {didOpenProviderDropdown && (
+              <div className="text-sm text-warning-text-strong bg-warning-bg border border-warning-border-soft rounded-sm p-2 mt-1">
+                Didn't see your provider?{' '}
+                <a
+                  href="https://mistval.github.io/yozakura/docs/image-providers"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline hover:text-primary"
+                >
+                  Check here
+                </a>
+                .
+              </div>
+            )}
 
             <CustomScriptSettings
               sectionId={IMAGE_GENERATION_SECTION_ID}
