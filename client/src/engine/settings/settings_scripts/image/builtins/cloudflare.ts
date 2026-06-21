@@ -1,8 +1,28 @@
 import type { ImageGenerationSettingsScript } from '../image_script_types';
 
+const DEFAULT_MODEL = '@cf/black-forest-labs/flux-1-schnell';
+
+const buildEndpoint = (accountId: string, model: string) =>
+  `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`;
+
+/** Pull a human-readable detail out of a Cloudflare error response body. */
+const extractErrorDetail = (text: string): string => {
+  try {
+    const messages: string[] =
+      JSON.parse(text)
+        ?.errors?.map((e: { message?: string }) => e?.message)
+        .filter(Boolean) ?? [];
+    if (messages.length) return messages.join('; ');
+  } catch {
+    /* not JSON, fall through to the raw text */
+  }
+  return text.slice(0, 300);
+};
+
 export const cloudflareImageScript: ImageGenerationSettingsScript = {
   id: 'cloudflare-workers-ai',
   name: 'Cloudflare Workers AI',
+  ftueControlIds: ['accountId', 'apiToken', 'testConnection', 'model'],
   controls: () => [
     {
       id: 'accountId',
@@ -23,18 +43,13 @@ export const cloudflareImageScript: ImageGenerationSettingsScript = {
     },
     {
       id: 'model',
-      type: 'dropdown_select',
+      type: 'string',
       label: 'Model',
       width: 'full',
-      default: '@cf/black-forest-labs/flux-1-schnell',
+      default: DEFAULT_MODEL,
+      placeholder: DEFAULT_MODEL,
       tooltipHtml:
-        'FLUX models are fast/high-quality, output JPEG (re-encoded to PNG here), and <i>ignore</i> width/height/guidance/negative prompt. Stable Diffusion models output PNG and honour all of those, with up to 20 steps.',
-      options: [
-        { name: 'FLUX.1 [schnell] (fast, recommended)', value: '@cf/black-forest-labs/flux-1-schnell' },
-        { name: 'Stable Diffusion XL Base 1.0', value: '@cf/stabilityai/stable-diffusion-xl-base-1.0' },
-        { name: 'SDXL Lightning (ByteDance)', value: '@cf/bytedance/stable-diffusion-xl-lightning' },
-        { name: 'DreamShaper 8 LCM', value: '@cf/lykon/dreamshaper-8-lcm' },
-      ],
+        'Any Workers AI <b>text-to-image</b> model ID, e.g. @cf/black-forest-labs/flux-1-schnell<br />Browse the full catalog <a href="https://developers.cloudflare.com/workers-ai/models/?tasks=Text-to-Image">here</a>',
     },
     {
       id: 'sceneWidth',
@@ -44,7 +59,7 @@ export const cloudflareImageScript: ImageGenerationSettingsScript = {
       min: 256,
       max: 2048,
       step: 64,
-      tooltipHtml: 'Used for in-chat scene images (Stable Diffusion models only).',
+      tooltipHtml: 'Used for in-chat scene images (Stable Diffusion style only).',
     },
     {
       id: 'sceneHeight',
@@ -63,7 +78,7 @@ export const cloudflareImageScript: ImageGenerationSettingsScript = {
       min: 256,
       max: 2048,
       step: 64,
-      tooltipHtml: 'Used for character card portraits (Stable Diffusion models only).',
+      tooltipHtml: 'Used for character card portraits (Stable Diffusion style only).',
     },
     {
       id: 'cardHeight',
@@ -82,27 +97,18 @@ export const cloudflareImageScript: ImageGenerationSettingsScript = {
       min: 1,
       max: 20,
       step: 1,
-      tooltipHtml:
-        'Diffusion steps. Automatically clamped to the model limit: FLUX caps at 8, Stable Diffusion at 20.',
+      tooltipHtml: 'Diffusion steps. The max for FLUX models is 8, Stable Diffusion is 20.',
     },
     {
       id: 'guidance',
       type: 'number',
-      label: 'Guidance (SD only)',
+      label: 'Guidance (CFG Scale)',
       default: '7.5',
       min: 0,
       max: 20,
       step: 0.5,
       tooltipHtml:
-        'How strongly the image should follow the prompt. Used by Stable Diffusion models; ignored by FLUX.',
-    },
-    {
-      id: 'negativePrompt',
-      type: 'string',
-      label: 'Negative prompt (SD only)',
-      width: 'full',
-      placeholder: 'blurry, lowres, extra limbs, watermark, text',
-      tooltipHtml: 'Things to avoid. Used by Stable Diffusion models; ignored by FLUX.',
+        'How strongly the image should follow the prompt. Sent in Stable Diffusion style; ignored for FLUX.',
     },
     {
       id: 'seed',
@@ -111,7 +117,15 @@ export const cloudflareImageScript: ImageGenerationSettingsScript = {
       placeholder: 'leave blank for random',
       tooltipHtml: 'Fix a number to make generations reproducible. Leave blank for a random seed each time.',
     },
-    { id: 'testConnection', type: 'button', title: 'Test Connection (will generate small image)' },
+    {
+      id: 'negativePrompt',
+      type: 'string',
+      label: 'Negative prompt (SD style only)',
+      width: 'full',
+      placeholder: 'blurry, lowres, extra limbs, watermark, text',
+      tooltipHtml: 'Things to avoid. Sent in Stable Diffusion style; ignored for FLUX.',
+    },
+    { id: 'testConnection', type: 'button', title: 'Generate Test Image' },
   ],
 
   async buttonHandler(buttonId, controlValues, helpers) {
@@ -120,14 +134,13 @@ export const cloudflareImageScript: ImageGenerationSettingsScript = {
     }
     const accountId = controlValues.accountId?.trim() ?? '';
     const apiToken = controlValues.apiToken?.trim() ?? '';
-    const model = controlValues.model || '@cf/black-forest-labs/flux-1-schnell';
+    const model = controlValues.model?.trim() || DEFAULT_MODEL;
     if (!accountId)
       return { result: 'failure', resultDescription: 'Enter your Cloudflare Account ID first.' };
     if (!apiToken) return { result: 'failure', resultDescription: 'Enter your Cloudflare API token first.' };
 
-    const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`;
     try {
-      const response = await helpers.proxiedFetch(url, {
+      const response = await helpers.proxiedFetch(buildEndpoint(accountId, model), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiToken}` },
         body: JSON.stringify({ prompt: 'a small image' }),
@@ -138,17 +151,7 @@ export const cloudflareImageScript: ImageGenerationSettingsScript = {
           resultDescription: `Connected to Workers AI and generated a test image with ${model}.`,
         };
       }
-      const text = await response.text().catch(() => '');
-      let detail = '';
-      try {
-        detail = (
-          JSON.parse(text)
-            ?.errors?.map((e: Error) => e?.message)
-            .filter(Boolean) ?? []
-        ).join('; ');
-      } catch {
-        /* not JSON */
-      }
+      const detail = extractErrorDetail(await response.text().catch(() => ''));
       return {
         result: 'failure',
         resultDescription: `Connection failed: HTTP ${response.status}${detail ? ` - ${detail}` : ''}`,
@@ -164,14 +167,13 @@ export const cloudflareImageScript: ImageGenerationSettingsScript = {
   async generateImages(controlValues, request, helpers) {
     const accountId = controlValues.accountId?.trim() ?? '';
     const apiToken = controlValues.apiToken?.trim() ?? '';
-    const model = controlValues.model || '@cf/black-forest-labs/flux-1-schnell';
+    const model = controlValues.model?.trim() || DEFAULT_MODEL;
     if (!accountId) throw new Error('Cloudflare Account ID is required.');
     if (!apiToken) throw new Error('Cloudflare API token is required.');
 
     // promptType may be a plain string or an object with .promptType depending on context.
     const promptType = request.context?.promptType ?? request.context ?? 'scene';
     const isCard = promptType === 'character_card';
-    const isFlux = /flux/i.test(model);
 
     const num = <TFallbackType>(v: string | undefined, fallback: TFallbackType) => {
       const t = v?.trim() ?? '';
@@ -180,59 +182,45 @@ export const cloudflareImageScript: ImageGenerationSettingsScript = {
       return Number.isFinite(n) ? n : fallback;
     };
 
-    const width = isCard ? num(controlValues.cardWidth, 832) : num(controlValues.sceneWidth, 1216);
-    const height = isCard ? num(controlValues.cardHeight, 1216) : num(controlValues.sceneHeight, 832);
-    const steps = num(controlValues.steps, isFlux ? 8 : 20);
+    const width = isCard ? num(controlValues.cardWidth, 512) : num(controlValues.sceneWidth, 1024);
+    const height = isCard ? num(controlValues.cardHeight, 768) : num(controlValues.sceneHeight, 1024);
+    const steps = num(controlValues.steps, 8);
     const seed = num(controlValues.seed, null);
 
     const body: Record<string, unknown> = { prompt: request.prompt };
     if (seed !== null) body.seed = Math.trunc(seed);
-    if (isFlux) {
-      body.steps = Math.max(1, Math.min(8, Math.round(steps)));
-    } else {
-      body.num_steps = Math.max(1, Math.min(20, Math.round(steps)));
-      body.guidance = num(controlValues.guidance, 7.5);
-      body.width = Math.round(width);
-      body.height = Math.round(height);
-      const neg = controlValues.negativePrompt?.trim();
-      if (neg) body.negative_prompt = neg;
-    }
+    body.steps = Math.max(1, Math.min(8, Math.round(steps)));
+    body.num_steps = Math.max(1, Math.min(20, Math.round(steps)));
+    body.guidance = num(controlValues.guidance, 7.5);
+    body.width = Math.round(width);
+    body.height = Math.round(height);
+    const neg = controlValues.negativePrompt?.trim();
+    if (neg) body.negative_prompt = neg;
 
-    const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model}`;
-    const response = await helpers.proxiedFetch(url, {
+    const response = await helpers.proxiedFetch(buildEndpoint(accountId, model), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiToken}` },
       body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      const text = await response.text().catch(() => '');
-      let detail = text.slice(0, 300);
-      try {
-        const msgs =
-          JSON.parse(text)
-            ?.errors?.map((e: Error) => e?.message)
-            .filter(Boolean) ?? [];
-        if (msgs.length) detail = msgs.join('; ');
-      } catch {
-        /* not JSON, keep raw text */
-      }
+      const detail = extractErrorDetail(await response.text().catch(() => ''));
       throw new Error(
         `Cloudflare image generation failed: HTTP ${response.status}${detail ? ` - ${detail}` : ''}`
       );
     }
 
-    // Stable Diffusion family: raw image bytes (already PNG) -> stream straight through.
+    // Output format is read from the actual response, not assumed from the chosen style:
+    // Stable Diffusion returns raw image bytes (already PNG) -> stream straight through.
     if ((response.headers.get('content-type') ?? '').toLowerCase().startsWith('image/')) {
       const body = response.body;
       if (!body) {
-        throw new Error(`Response without body from CloudFlare`);
+        throw new Error('Response without body from Cloudflare');
       }
-
       return [{ readableStream: body }];
     }
 
-    // FLUX family / JSON envelope: { result: { image: "<base64>" } }
+    // FLUX returns a JSON envelope: { result: { image: "<base64>" } }
     const data = await response.json();
     const base64 = data?.result?.image ?? data?.image;
     if (!base64) throw new Error('Cloudflare response did not contain image data.');
