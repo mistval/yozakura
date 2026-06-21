@@ -13,10 +13,6 @@ export function persistTurn() {
   }
 
   const snapshot = useActiveChatStore.getState().serialize();
-  if (!snapshot) {
-    return;
-  }
-
   const key = turnPersistenceKey(scenario.id);
 
   void Database.doAsDataWrite(
@@ -25,7 +21,11 @@ export function persistTurn() {
         return;
       }
 
-      await Database.storeKeyValue(key, snapshot, serializedTurnSchema);
+      if (snapshot === undefined) {
+        await Database.deleteKeyValue(key);
+      } else {
+        await Database.storeKeyValue(key, snapshot, serializedTurnSchema);
+      }
     },
     'turn',
     { debouncerKey: key }
@@ -38,16 +38,4 @@ export async function loadPersistedTurn(scenarioId: string): Promise<SerializedT
   return Database.doAsDataRead(() => Database.loadKeyValue(key, serializedTurnSchema), 'turn', {
     debouncerKey: key,
   });
-}
-
-export function clearPersistedTurn(scenarioId: string) {
-  const key = turnPersistenceKey(scenarioId);
-
-  void Database.doAsDataWrite(
-    async () => {
-      await Database.deleteKeyValue(key);
-    },
-    'turn',
-    { debouncerKey: key }
-  );
 }

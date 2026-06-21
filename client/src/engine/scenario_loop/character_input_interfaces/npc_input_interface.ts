@@ -120,6 +120,10 @@ export class NPCInputInterface extends CharacterInputInterface {
   }
 
   public async getNextChatInput(): Promise<ChatInputResult> {
+    if (ChatCoordinator.isChatMessageLimitReached()) {
+      return { input: { actionType: 'request_end_chat' }, persist: false };
+    }
+
     ChatCoordinator.setStateNpcSpeaking();
     // While paused, the only way an NPC is the next speaker is because the user explicitly chose
     // them, so this generation is a user interaction that must bypass the pause gate.

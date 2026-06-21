@@ -19,6 +19,7 @@ import {
   getActiveChatParticipants,
   getAllActiveChatSpeakers,
   useActiveChatStore,
+  type StartChatSessionArgs,
 } from '../../state/active_chat_store';
 import { chatSceneImageChainGroup } from '../prompt_templates/chat/chat_scene_image';
 import { moderationNextSpeakerTemplatesGroup } from '../prompt_templates/chat/moderation_next_speaker';
@@ -31,13 +32,10 @@ import { getRequiredRandomChoice } from '../../util/array';
 import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
 
 export class ChatCoordinator {
-  public static async beginChat(participantIds: string[]) {
+  public static async prepareChatStart(participantIds: string[]): Promise<StartChatSessionArgs> {
     assert(participantIds.length >= 2, 'At least two participants are required to initialize chat');
-    assert(this.activeChatStore().chatState === 'inactive', 'Already active');
 
-    const scenarioCharacterState = useScenarioCharacterStore.getState();
-
-    const participants = scenarioCharacterState.getCharactersByIds(participantIds);
+    const participants = useScenarioCharacterStore.getState().getCharactersByIds(participantIds);
     const firstParticipant = participants[0];
     assertNonNullish(firstParticipant);
 
@@ -53,15 +51,34 @@ export class ChatCoordinator {
       return undefined;
     });
 
-    this.activeChatStore().beginChat({
+    return {
       participantIds,
       initiatorId: firstParticipant.id,
       gossipTargetCharacterId,
-    });
+    };
   }
 
   public static enterActiveChat() {
     this.activeChatStore().enterActiveChat();
+  }
+
+  public static isChatMessageLimitReached(): boolean {
+    return this.countChatMessages() >= this.getChatMessageLimit();
+  }
+
+  private static getChatMessageLimit(): number {
+    const chatState = this.activeChatStore();
+    const settings = useSettingsStore.getState();
+
+    if (chatState.userIsParticipant() || this.isChatPaused()) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+
+    if (chatState.participantIds.length > 2) {
+      return settings.groupChatMessageLimit;
+    }
+
+    return settings.richNpcMessageCount * 2;
   }
 
   public static deactivate() {

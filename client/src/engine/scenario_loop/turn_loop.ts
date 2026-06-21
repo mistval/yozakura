@@ -19,7 +19,7 @@ import {
   ScenarioLoopAbortSignalException,
   UserAbortSignalException,
 } from './flow_control';
-import { clearPersistedTurn, persistTurn } from './turn_persistence';
+import { persistTurn } from './turn_persistence';
 import type { TurnMove, TurnMoveOutcome } from './types';
 
 export async function runTurnLoop() {
@@ -32,7 +32,7 @@ export async function runTurnLoop() {
         loopState.setAutoMode(false);
         loopState.setUserRequestedPhaseTransition('none');
         useActiveChatStore.getState().reset();
-        clearPersistedTurn(getRequiredScenarioId());
+        persistTurn();
         continue;
       }
 
@@ -58,35 +58,29 @@ async function runTurnLoopTick() {
     startNewTurn(getTurnCharacterIds(), getRequiredUserCharacterId());
   }
 
-  // TODO: I'm noticing that current character ID is duplicated between useActiveChatStore
-  // and useScenarioLoopStateStore. Can we centralize it to useActiveChatStore?
-  // That's the more fitting place for it.
   const characterId = currentCharacterId();
   assertNonNullish(characterId, 'No current character to process');
-  useScenarioLoopStateStore.getState().setCurrentTurnCharacterId(characterId);
 
   const inputInterface = makeInputInterface(characterId);
 
   if (machineState === 'chatting') {
-    const outcome = await runChatLoop();
-    const move: TurnMove = {
+    const chatMove: TurnMove = {
       actionType: 'chat',
       participantIds: useActiveChatStore.getState().participantIds,
       rich: true,
     };
-
-    advanceAfterMove(inputInterface, move, outcome, true);
+    const outcome = await runChatLoop();
+    advanceAfterMove(inputInterface, chatMove, outcome, true);
     return;
   }
 
   const { move, persist } = await inputInterface.getNextTurnMove();
 
   if (move.actionType === 'chat' && move.rich) {
-    // TODO: It's not appropriate for ChatCoordinator to update the machine state in this call.
-    // Only turn loop should update the machine state, it owns that. I'd rather see chatcoordinator
-    // be more like "here are the details of this chat if you wanna start it. submitting it to
-    // useActiveChatStore is your job".
-    await doScenarioLoopAsyncAction(() => ChatCoordinator.beginChat(move.participantIds));
+    const chatStart = await doScenarioLoopAsyncAction(() =>
+      ChatCoordinator.prepareChatStart(move.participantIds)
+    );
+    useActiveChatStore.getState().beginChat(chatStart);
     persistTurn();
     return;
   }
@@ -95,13 +89,6 @@ async function runTurnLoopTick() {
   advanceAfterMove(inputInterface, move, outcome, persist);
 }
 
-// TODO: I really dislike this function because it takes in a flag for whether it should persist or not,
-// but it only respects that flag if it feels like it. It also doesn't always advance. There's too much coordination
-// happening between getNextTurnMove() and this turn loop in regards to whether persistence happens or not.
-// There should be one clear authority. If somebody returns a boolean "persist: true" then we should persist.
-// If you're concerned about repetitive or unnecessary calls to persist, I would say you don't need to be.
-// Persisting is never harmful. Sometimes it's unnecessary, but never harmful. So we should err on the side
-// of being simple about it.
 function advanceAfterMove(
   inputInterface: CharacterInputInterface,
   move: TurnMove,
@@ -110,19 +97,18 @@ function advanceAfterMove(
 ) {
   const store = useActiveChatStore.getState();
 
+  let turnEnded = false;
   if (inputInterface.continuesAfterMove(move, outcome)) {
     store.setMachineState('deciding');
-    if (persist) {
-      persistTurn();
-    }
-    return;
+  } else {
+    turnEnded = store.finishCurrentCharacter();
   }
 
-  const turnEnded = store.finishCurrentCharacter();
   if (turnEnded) {
     incrementTurnNumber();
-    clearPersistedTurn(getRequiredScenarioId());
-  } else if (persist) {
+  }
+
+  if (persist || turnEnded) {
     persistTurn();
   }
 }
@@ -138,15 +124,6 @@ async function runChatLoop(): Promise<{ noEffect: boolean }> {
     let nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
 
     while (true) {
-      // TODO: I would like to see the NPCInputInterface do this. I think that would
-      // be cleaner. NPCInputInterface can look at the current chat state and the NPC
-      // can "decide" to end the chat under the right conditions. That could also
-      // simplify the "persistence owner is unclear" issue, because the NPC would
-      // return false for persist when it wants to end the chat.
-      if (ChatCoordinator.countChatMessages() >= getChatMessageLimit()) {
-        return closeChatSession();
-      }
-
       const speakerInput = makeInputInterface(nextSpeaker.id);
       const { input, persist } = await speakerInput.getNextChatInput();
 
@@ -171,9 +148,6 @@ async function runChatLoop(): Promise<{ noEffect: boolean }> {
         assert(false, 'Unexpected chat input action');
       }
 
-      // TODO: FYI I moved this out here, for reasons I've discussed. If somebody says "persist"
-      // then we should persist. If somebody says persist in a situation where doing so is
-      // invalid, we should assert, not ignore.
       if (persist) {
         persistTurn();
       }
@@ -247,21 +221,6 @@ async function closeChatSession(forceNoEffect?: boolean): Promise<{ noEffect: bo
   return { noEffect };
 }
 
-function getChatMessageLimit() {
-  const chatState = useActiveChatStore.getState();
-  const settings = useSettingsStore.getState();
-
-  if (chatState.userIsParticipant() || ChatCoordinator.isChatPaused()) {
-    return Number.MAX_SAFE_INTEGER;
-  }
-
-  if (chatState.participantIds.length > 2) {
-    return settings.groupChatMessageLimit;
-  }
-
-  return settings.richNpcMessageCount * 2;
-}
-
 async function moveScenarioCharacter(characterId: string, toId: string) {
   useScenarioCharacterStore.getState().saveScenarioCharacterFields(characterId, {
     locationId: toId,
@@ -299,10 +258,4 @@ function getRequiredUserCharacterId(): string {
   const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();
   assertNonNullish(userCharacter, 'User character not found');
   return userCharacter.id;
-}
-
-function getRequiredScenarioId(): string {
-  const scenarioId = useScenarioStore.getState().activeScenario?.id;
-  assertNonNullish(scenarioId, 'No active scenario');
-  return scenarioId;
 }

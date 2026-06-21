@@ -22,7 +22,7 @@ import { useScenarioCharacterStore, useUserCharacter } from './scenario_characte
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
 import { assertNonNullish } from '../errors/application_error.js';
 
-type StartChatSessionArgs = {
+export type StartChatSessionArgs = {
   participantIds: string[];
   initiatorId: string;
   gossipTargetCharacterId: string | undefined;
@@ -36,8 +36,8 @@ export const persistedActiveChatSchema = z.object({
   preConversationWardrobeSnapshotByCharacterId: z.record(z.string(), z.array(wardrobeSchema)),
   ephemeralLocation: ephemeralLocationSchema.optional(),
   initiatorId: z.string().optional(),
-  chatInstructions: z.string().optional(),
-  chatInstructionsByCharacterId: z.record(z.string(), z.string()).optional(),
+  chatInstructions: z.string(),
+  chatInstructionsByCharacterId: z.record(z.string(), z.string()),
 });
 
 export type PersistedActiveChat = z.infer<typeof persistedActiveChatSchema>;
@@ -374,34 +374,24 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
   },
 
   hydrate(snapshot) {
-    const turnFields = {
+    const base = {
+      ...inactiveChatState,
       machineState: snapshot.machineState,
       pendingTurnCharacterIds: snapshot.pendingTurnCharacterIds,
       chatsSoFar: snapshot.chatsSoFar,
     };
 
-    const activeChat = snapshot.activeChat;
-    if (!activeChat) {
-      set({ ...inactiveChatState, ...turnFields });
+    if (!snapshot.activeChat) {
+      set(base);
       return;
     }
 
+    const { serializedTranscript, ...chatFields } = snapshot.activeChat;
     set({
-      ...inactiveChatState,
-      ...turnFields,
-      // TODO: Is there a way we can spread or something and get all these properties automatically?
-      // I just know we're going to forget to update this in the future otherwise.
+      ...base,
+      ...chatFields,
       chatState: 'awaiting_user_input',
-      participantIds: activeChat.participantIds,
-      removedParticipantIds: activeChat.removedParticipantIds,
-      gossipTargetCharacterId: activeChat.gossipTargetCharacterId,
-      transcript: ConversationTranscript.deserialize(activeChat.serializedTranscript),
-      preConversationWardrobeSnapshotByCharacterId: activeChat.preConversationWardrobeSnapshotByCharacterId,
-      ephemeralLocation: activeChat.ephemeralLocation,
-      initiatorId: activeChat.initiatorId,
-      // TODO: Let's make these non-optional if we're going to force defaults here.
-      chatInstructions: activeChat.chatInstructions ?? '',
-      chatInstructionsByCharacterId: activeChat.chatInstructionsByCharacterId ?? {},
+      transcript: ConversationTranscript.deserialize(serializedTranscript),
     });
   },
 
@@ -551,23 +541,15 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
   },
 }));
 
-// Pure serialization of the active chat for persistence. Database I/O and restore scheduling are
-// owned by the scenario loop (see engine/scenario_loop/turn_persistence.ts), which persists the
-// active chat together with the turn state in a single row.
 export function buildPersistedActiveChat(state: BaseChatStoreState): PersistedActiveChat {
   assertNonNullish(state.transcript, 'Cannot persist active chat without a transcript');
 
-  // TODO: Ditto, it's going to be annoying it we have to remember to update
-  // this whenever we add a field.
-  return {
-    participantIds: state.participantIds,
-    removedParticipantIds: state.removedParticipantIds,
-    gossipTargetCharacterId: state.gossipTargetCharacterId,
+  return persistedActiveChatSchema.parse({
+    ...state,
     serializedTranscript: state.transcript.serialize(),
-    preConversationWardrobeSnapshotByCharacterId: state.preConversationWardrobeSnapshotByCharacterId,
-    ephemeralLocation: state.ephemeralLocation,
-    initiatorId: state.initiatorId,
-    chatInstructions: state.chatInstructions,
-    chatInstructionsByCharacterId: state.chatInstructionsByCharacterId,
-  };
+  });
+}
+
+export function useCurrentTurnCharacterId(): string | undefined {
+  return useActiveChatStore((state) => state.pendingTurnCharacterIds[0]);
 }

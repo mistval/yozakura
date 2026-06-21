@@ -11,16 +11,12 @@ import { useActiveChatStore } from './active_chat_store';
 export type UserRequestedPhaseTransition = 'none' | 'paused' | 'stopped';
 
 type ScenarioLoopStateStoreState = {
-  // The character whose turn is currently being processed, or undefined when the loop is idle. The
-  // UI derives the "NPC phase" from whether this is the user character.
-  currentTurnCharacterId: string | undefined;
   autoMode: boolean;
   runState: ScenarioLoopRunState;
   runningForScenario: string | undefined;
   userRequestedPhaseTransition: UserRequestedPhaseTransition;
 
   setScenario: (scenarioId: string | undefined) => void;
-  setCurrentTurnCharacterId: (characterId: string | undefined) => void;
   setAutoMode: (enabled: boolean) => void;
   setRunState: (runState: ScenarioLoopRunState) => void;
   setUserRequestedPhaseTransition: (value: UserRequestedPhaseTransition) => void;
@@ -61,17 +57,10 @@ function resolveChatUserInputAction(action: ChatUserInputAction): boolean {
 }
 
 export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((set) => ({
-  currentTurnCharacterId: undefined,
   autoMode: false,
   runState: 'idle',
   runningForScenario: undefined,
   userRequestedPhaseTransition: 'none',
-
-  setCurrentTurnCharacterId(characterId: string | undefined) {
-    set({
-      currentTurnCharacterId: characterId,
-    });
-  },
 
   setAutoMode(enabled: boolean) {
     set({
@@ -89,7 +78,6 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
 
   resetLoopState() {
     set({
-      currentTurnCharacterId: undefined,
       runState: 'idle',
       userRequestedPhaseTransition: 'none',
     });

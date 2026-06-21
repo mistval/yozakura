@@ -11,7 +11,11 @@ import { getDirectedRelationship } from '../engine/relationship';
 import { getDayNumber, getTimePeriod, getTimePeriodLabel } from '../engine/schedule';
 import type { Character, CharacterPair, CharacterRelationships, WorldMapLocation } from '../engine/types';
 import { assertNonNullish } from '../errors/application_error';
-import { useActiveChatParticipants, useActiveChatStore } from '../state/active_chat_store';
+import {
+  useActiveChatParticipants,
+  useActiveChatStore,
+  useCurrentTurnCharacterId,
+} from '../state/active_chat_store';
 import { useScenarioStore } from '../state/scenario_store.js';
 import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
@@ -35,7 +39,7 @@ export default function ScenarioView() {
   const { openSettings } = useSettingsModal();
   const activeParticipants = useActiveChatParticipants();
   const hasActiveChatSession = useActiveChatStore((state) => state.chatState !== 'inactive');
-  const currentTurnCharacterId = useScenarioLoopStateStore((state) => state.currentTurnCharacterId);
+  const currentTurnCharacterId = useCurrentTurnCharacterId();
   const submitUserWait = useScenarioLoopStateStore((state) => state.submitUserWait);
   const submitUserMove = useScenarioLoopStateStore((state) => state.submitUserMove);
   const submitUserChatAction = useScenarioLoopStateStore((state) => state.submitUserChatAction);
