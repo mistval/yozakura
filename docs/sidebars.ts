@@ -16,7 +16,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'How To Guides',
-      items: ['how-to-different-models-per-prompt'],
+      items: ['image-providers', 'how-to-different-models-per-prompt'],
     },
     {
       type: 'category',

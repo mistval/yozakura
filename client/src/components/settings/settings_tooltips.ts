@@ -9,8 +9,6 @@ export const settingsTooltips = {
   'image.promptPrefix': 'This text is prepended to all image generation prompts.',
   'image.apiUrl':
     'Image API endpoint URL. For AUTOMATIC1111, typically you should use the <code>/sdapi/v1/txt2img</code> endpoint. For OpenRouter (or similar), use the <code>/v1/chat/completions</code> endpoint.',
-  'image.apiShape':
-    '<strong>AUTOMATIC1111</strong> is the most common API shape for local software. <strong>OpenRouter</strong> supports OpenRouter and possibly other similar providers, depending on the details of the provider API.',
   'image.authToken':
     'Optional bearer token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Required for most cloud  providers.',
   'image.metaOptions':

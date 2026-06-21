@@ -8,12 +8,9 @@ import {
   type DeepPartial,
 } from '../util/settings_merge';
 import {
-  imageApiShapeSchema,
-  automatic1111SettingsSchema,
-  openRouterSettingsSchema,
-  imageApiShapes,
-  type ImageApiShape,
-} from '../engine/settings/image_api.js';
+  settingsScriptsStateSchema,
+  DEFAULT_SETTINGS_SCRIPTS_STATE,
+} from '../engine/settings/settings_scripts/settings_scripts_state.js';
 import {
   llmConfigSchema,
   DEFAULT_LLM_CONFIGS,
@@ -22,8 +19,7 @@ import {
 import _ from 'lodash';
 import * as Database from '../backend_bridge/database.js';
 
-export type { ImageApiShape, LLMConfig as LLMOptionsGroup };
-export { imageApiShapes };
+export type { LLMConfig as LLMOptionsGroup };
 
 export type PromptTemplateOverride = {
   templateString?: string | undefined;
@@ -63,11 +59,7 @@ const settingsSchema = z.object({
   freedomOfMovement: z.boolean(),
   npcOnlyChatDelay: z.number(),
   imagePromptPrefix: z.string(),
-  imageApiShape: imageApiShapeSchema,
-  imageSettingsForShape: z.object({
-    automatic1111: automatic1111SettingsSchema,
-    openRouter: openRouterSettingsSchema,
-  }),
+  settingsScripts: settingsScriptsStateSchema,
   editImagePromptsBeforeDispatch: z.boolean(),
   autoImageRate: z.number(),
   autoImageNpcOnly: z.boolean(),
@@ -136,14 +128,7 @@ const DEFAULT_SETTINGS: Settings = {
   freedomOfMovement: false,
   npcOnlyChatDelay: 0,
   imagePromptPrefix: 'masterpiece, best quality, amazing quality, absurdres',
-  imageSettingsForShape: Object.fromEntries(
-    imageApiShapes.map((shape) => [shape.shape, shape.defaultSettings])
-  ) as {
-    [K in ImageApiShape]: K extends (typeof imageApiShapes)[number]['shape']
-      ? ((typeof imageApiShapes)[number] & { shape: K })['defaultSettings']
-      : never;
-  },
-  imageApiShape: 'automatic1111',
+  settingsScripts: DEFAULT_SETTINGS_SCRIPTS_STATE,
   editImagePromptsBeforeDispatch: false,
   autoImageRate: 0,
   autoImageNpcOnly: false,
