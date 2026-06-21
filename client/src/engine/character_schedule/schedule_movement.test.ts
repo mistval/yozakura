@@ -6,7 +6,11 @@ import type {
   ScheduleSegment,
   WorldMapLocation,
 } from '../types';
-import { resolveScheduleAllowedLocations, resolveScheduledMove } from './schedule_movement';
+import {
+  resolveScheduleAllowedLocations,
+  resolveScheduledMove,
+  resolveUserMovementSuggestion,
+} from './schedule_movement';
 
 function chooseFirst<T>(items: T[]): T {
   return items[0]!;
@@ -229,5 +233,142 @@ describe('resolveScheduledMove', () => {
 
     expect(build(1)).toEqual(build(5));
     expect(build(1)).toEqual({ forceMove: true, destinationLocationId: 'C' });
+  });
+});
+
+describe('resolveUserMovementSuggestion', () => {
+  it('returns undefined with no schedule and no private zones', () => {
+    const result = resolveUserMovementSuggestion({
+      character: { id: 'user', locationId: 'A', groupIds: [] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [],
+      groupSchedulesByGroupId: {},
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it('teleport surfaces the (non-adjacent) destination first, urgent', () => {
+    const result = resolveUserMovementSuggestion({
+      character: { id: 'user', locationId: 'A', groupIds: ['g1'] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4)]) },
+    });
+    expect(result).toEqual({
+      suggestedLocationIds: ['C'],
+      highlightByLocationId: { C: 'urgent' },
+      highlightWait: false,
+      forbiddenLocationIds: [],
+    });
+  });
+
+  it('rush surfaces the next step, urgent', () => {
+    const result = resolveUserMovementSuggestion({
+      character: { id: 'user', locationId: 'A', groupIds: ['g1'] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'rush', 0, 4)]) },
+    });
+    expect(result).toEqual({
+      suggestedLocationIds: ['B'],
+      highlightByLocationId: { B: 'urgent' },
+      highlightWait: false,
+      forbiddenLocationIds: [],
+    });
+  });
+
+  it('meander surfaces the next step, gentle', () => {
+    const result = resolveUserMovementSuggestion({
+      character: { id: 'user', locationId: 'A', groupIds: ['g1'] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'meander', 0, 4)]) },
+    });
+    expect(result).toEqual({
+      suggestedLocationIds: ['B'],
+      highlightByLocationId: { B: 'gentle' },
+      highlightWait: false,
+      forbiddenLocationIds: [],
+    });
+  });
+
+  it('highlights allowed moves and Wait when already in zone', () => {
+    const result = resolveUserMovementSuggestion({
+      character: { id: 'user', locationId: 'C', groupIds: ['g1'] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4)]) },
+    });
+    expect(result).toEqual({
+      suggestedLocationIds: [],
+      highlightByLocationId: { D: 'allowed' },
+      highlightWait: true,
+      forbiddenLocationIds: [],
+    });
+  });
+
+  it('reports a private zone as forbidden with no other guidance', () => {
+    const result = resolveUserMovementSuggestion({
+      character: { id: 'user', locationId: 'A', groupIds: [] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [makeZone('privateC', ['C'], { privateToGroupIds: ['insiders'] })],
+      groupSchedulesByGroupId: {},
+    });
+    expect(result).toEqual({
+      suggestedLocationIds: [],
+      highlightByLocationId: {},
+      highlightWait: false,
+      forbiddenLocationIds: ['C'],
+    });
+  });
+
+  it('reports locks even when the allowed zone is unreachable behind them', () => {
+    const result = resolveUserMovementSuggestion({
+      character: { id: 'user', locationId: 'A', groupIds: ['sched'] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [
+        makeZone('zoneD', ['D']),
+        makeZone('privateC', ['C'], { privateToGroupIds: ['insiders'] }),
+      ],
+      groupSchedulesByGroupId: { sched: makeSchedule('sched', 4, [makeSegment('zoneD', 'teleport', 0, 4)]) },
+    });
+    expect(result).toEqual({
+      suggestedLocationIds: [],
+      highlightByLocationId: {},
+      highlightWait: false,
+      forbiddenLocationIds: ['C'],
+    });
+  });
+
+  it('upgrades a shared first step to urgent when targets mix policies', () => {
+    const branch: WorldMapLocation[] = [
+      makeLocation('A', ['X']),
+      makeLocation('X', ['A', 'C', 'B']),
+      makeLocation('B', ['X']),
+      makeLocation('C', ['X']),
+    ];
+    const result = resolveUserMovementSuggestion({
+      character: { id: 'user', locationId: 'A', groupIds: ['rushers', 'wanderers'] },
+      turnNumber: 0,
+      locations: branch,
+      effectiveZones: [makeZone('zoneB', ['B']), makeZone('zoneC', ['C'])],
+      groupSchedulesByGroupId: {
+        rushers: makeSchedule('rushers', 4, [makeSegment('zoneB', 'rush', 0, 4)]),
+        wanderers: makeSchedule('wanderers', 4, [makeSegment('zoneC', 'meander', 0, 4)]),
+      },
+    });
+    expect(result).toEqual({
+      suggestedLocationIds: ['X'],
+      highlightByLocationId: { X: 'urgent' },
+      highlightWait: false,
+      forbiddenLocationIds: [],
+    });
   });
 });

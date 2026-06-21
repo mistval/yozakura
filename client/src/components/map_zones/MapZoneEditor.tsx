@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { GraphCanvas } from 'reagraph';
 import { useGraphTheme } from '../../theme/graph_themes.js';
 import type { MapZone, ScenarioCharacterGroup, WorldMapLocation } from '../../engine/types.js';
@@ -9,6 +9,7 @@ export type ZoneEdits = Partial<Pick<MapZone, 'name' | 'locationIds' | 'privateT
 export type ZoneEditorController = {
   zones: MapZone[];
   groups: ScenarioCharacterGroup[];
+  ready: boolean;
   allowPrivate: boolean;
   allowResync: boolean;
   createZone: (name: string) => MapZone;
@@ -29,9 +30,22 @@ export default function MapZoneEditor({
   const graphTheme = useGraphTheme();
   const [selectedZoneId, setSelectedZoneId] = useState<string | undefined>(controller.zones[0]?.id);
   const [pendingDeleteZoneId, setPendingDeleteZoneId] = useState<string | undefined>(undefined);
+  const didAutoCreateRef = useRef(false);
 
   const selectedZone = controller.zones.find((zone) => zone.id === selectedZoneId);
   const memberSet = useMemo(() => new Set(selectedZone?.locationIds ?? []), [selectedZone]);
+
+  useEffect(() => {
+    if (!controller.ready) {
+      didAutoCreateRef.current = false;
+      return;
+    }
+    if (controller.zones.length > 0 || didAutoCreateRef.current) {
+      return;
+    }
+    didAutoCreateRef.current = true;
+    setSelectedZoneId(controller.createZone('Default').id);
+  }, [controller.ready, controller.zones.length]);
 
   useEffect(() => {
     if (!selectedZone && controller.zones.length > 0) {
@@ -99,7 +113,7 @@ export default function MapZoneEditor({
       </div>
 
       {!selectedZone ? (
-        <div className="text-sm text-muted">Add a zone to begin grouping locations.</div>
+        controller.ready ? undefined : <div className="text-sm text-muted">Loading zones…</div>
       ) : (
         <div className="flex min-h-0 flex-col gap-4 lg:flex-row">
           <div className="w-full shrink-0 space-y-3 lg:w-72">
@@ -169,7 +183,11 @@ export default function MapZoneEditor({
             )}
 
             <div className="flex justify-end">
-              <button type="button" onClick={() => setPendingDeleteZoneId(selectedZone.id)}>
+              <button
+                type="button"
+                onClick={() => setPendingDeleteZoneId(selectedZone.id)}
+                disabled={controller.zones.length <= 1}
+              >
                 Delete Zone
               </button>
             </div>

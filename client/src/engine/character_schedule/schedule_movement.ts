@@ -14,6 +14,15 @@ export interface ScheduledMove {
   forceMove: boolean;
 }
 
+export type MoveHighlight = 'urgent' | 'gentle' | 'allowed';
+
+export interface UserMovementSuggestion {
+  suggestedLocationIds: string[];
+  highlightByLocationId: Record<string, MoveHighlight>;
+  highlightWait: boolean;
+  forbiddenLocationIds: string[];
+}
+
 interface ScheduleMovementInput {
   character: Pick<Character, 'id' | 'locationId' | 'groupIds'>;
   turnNumber: number;
@@ -159,4 +168,78 @@ export function resolveScheduledMove(
 
   const firstStep = firstStepToward(target)!;
   return { forceMove: policy === 'meander' ? false : true, destinationLocationId: firstStep };
+}
+
+export function resolveUserMovementSuggestion(
+  input: ScheduleMovementInput
+): UserMovementSuggestion | undefined {
+  const forbidden = resolveForbiddenLocationIds(input);
+  const { allowed, policyByLocationId } = resolveScheduleAllowedLocations(input);
+
+  for (const locationId of forbidden) {
+    allowed.delete(locationId);
+    policyByLocationId.delete(locationId);
+  }
+
+  const forbiddenLocationIds = [...forbidden];
+
+  const locksOnly = (): UserMovementSuggestion | undefined => {
+    if (forbiddenLocationIds.length === 0) {
+      return undefined;
+    }
+    return { suggestedLocationIds: [], highlightByLocationId: {}, highlightWait: false, forbiddenLocationIds };
+  };
+
+  if (allowed.size === 0) {
+    return locksOnly();
+  }
+
+  const adjacencyByLocationId = new Map(input.locations.map((l) => [l.id, l.adjacency] as const));
+  const getNeighbors = (locationId: string) => adjacencyByLocationId.get(locationId) ?? [];
+
+  const current = input.character.locationId;
+
+  if (allowed.has(current)) {
+    const highlightByLocationId: Record<string, MoveHighlight> = {};
+    for (const neighbor of getNeighbors(current)) {
+      if (allowed.has(neighbor)) {
+        highlightByLocationId[neighbor] = 'allowed';
+      }
+    }
+    return { suggestedLocationIds: [], highlightByLocationId, highlightWait: true, forbiddenLocationIds };
+  }
+
+  const { targets, firstStepToward } = findNearestReachable(
+    current,
+    getNeighbors,
+    (locationId) => allowed.has(locationId),
+    (locationId) => !forbidden.has(locationId)
+  );
+
+  if (targets.length === 0) {
+    return locksOnly();
+  }
+
+  const suggestedLocationIds: string[] = [];
+  const highlightByLocationId: Record<string, MoveHighlight> = {};
+
+  const surface = (locationId: string, highlight: MoveHighlight) => {
+    if (highlightByLocationId[locationId] === undefined) {
+      suggestedLocationIds.push(locationId);
+      highlightByLocationId[locationId] = highlight;
+    } else if (highlight === 'urgent') {
+      highlightByLocationId[locationId] = 'urgent';
+    }
+  };
+
+  for (const target of targets) {
+    const policy = policyByLocationId.get(target)!;
+    if (policy === 'teleport') {
+      surface(target, 'urgent');
+    } else {
+      surface(firstStepToward(target)!, policy === 'rush' ? 'urgent' : 'gentle');
+    }
+  }
+
+  return { suggestedLocationIds, highlightByLocationId, highlightWait: false, forbiddenLocationIds };
 }

@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { GraphCanvas, type GraphCanvasRef } from 'reagraph';
+import { StringParam, useQueryParam } from 'use-query-params';
 import RoutedModalFrame from './ui/RoutedModalFrame.js';
 import { useGraphTheme } from '../theme/graph_themes.js';
 import type { Character } from '../engine/types.js';
@@ -48,6 +49,7 @@ export default function MapModal() {
   const scenario = useScenarioStore((state) => state.activeScenario);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const zones = useMapZoneStore((state) => state.zones);
+  const zonesAreLoaded = useMapZoneStore((state) => state.zonesAreLoaded);
   const groups = useCharacterGroupStore((state) => state.groups);
   const user = useUserCharacter();
   const graphTheme = useGraphTheme();
@@ -58,12 +60,15 @@ export default function MapModal() {
 
   const [hoveredLocationId, setHoveredLocationId] = useState<string | undefined>(undefined);
   const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>(undefined);
-  const [view, setView] = useState<'characters' | 'zones'>('characters');
+  const [viewParam, setViewParam] = useQueryParam('mapview', StringParam);
+  const view = viewParam === 'zones' ? 'zones' : 'characters';
+  const setView = (next: 'characters' | 'zones') => setViewParam(next === 'characters' ? undefined : next);
 
   const zoneController: ZoneEditorController = useMemo(
     () => ({
       zones: scenario ? getEffectiveZones(scenario.id, scenario.mapId, zones) : [],
       groups,
+      ready: zonesAreLoaded,
       allowPrivate: true,
       allowResync: true,
       createZone: (name) => useMapZoneStore.getState().createScenarioZone(scenario!.mapId, name),
@@ -78,7 +83,7 @@ export default function MapModal() {
         return parentId ?? zoneId;
       },
     }),
-    [scenario, zones, groups]
+    [scenario, zones, zonesAreLoaded, groups]
   );
 
   // Characters grouped by location, ordered to match the map's location list.

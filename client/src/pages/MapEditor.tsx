@@ -66,6 +66,7 @@ export default function MapEditor() {
   const graphTheme = useGraphTheme();
 
   const editorZones = useMapZoneStore((s) => s.editorZones);
+  const editorZonesAreLoaded = useMapZoneStore((s) => s.editorZonesAreLoaded);
 
   useEffect(() => {
     if (id) {
@@ -77,6 +78,7 @@ export default function MapEditor() {
     () => ({
       zones: editorZones.filter((zone) => zone.mapId === id),
       groups: [],
+      ready: editorZonesAreLoaded,
       allowPrivate: false,
       allowResync: false,
       createZone: (name) => useMapZoneStore.getState().createEditorZone(id!, name),
@@ -86,7 +88,7 @@ export default function MapEditor() {
       },
       deleteZone: (zoneId) => useMapZoneStore.getState().deleteEditorZone(zoneId),
     }),
-    [editorZones, id]
+    [editorZones, editorZonesAreLoaded, id]
   );
 
   useEffect(() => {

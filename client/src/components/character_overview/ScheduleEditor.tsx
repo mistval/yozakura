@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Rnd } from 'react-rnd';
 import {
   movementPolicySchema,
   type MapZone,
@@ -13,6 +14,15 @@ import { newId } from '../../util/id.js';
 
 const SEGMENT_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#14b8a6'];
 const LANE_HEIGHT_PX = 28;
+const RULER_HEIGHT_PX = 18;
+const DEFAULT_PIXELS_PER_TURN = 56;
+const MIN_PIXELS_PER_TURN = 14;
+const MAX_PIXELS_PER_TURN = 220;
+const ZOOM_STEP = 1.15;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
 
 function parsePositiveInt(value: string, fallback: number): number {
   const parsed = Math.trunc(Number(value));
@@ -49,14 +59,48 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
   );
 
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | undefined>(undefined);
+  const [pixelsPerTurn, setPixelsPerTurn] = useState(DEFAULT_PIXELS_PER_TURN);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const lengthInTurns = storedSchedule?.lengthInTurns ?? 4;
   const segments = storedSchedule?.segments ?? [];
   const turnNumber = scenario?.turnNumber ?? 0;
-  const nowPercent = (((turnNumber % lengthInTurns) + lengthInTurns) % lengthInTurns / lengthInTurns) * 100;
+  const nowTurn = ((turnNumber % lengthInTurns) + lengthInTurns) % lengthInTurns;
 
   const { laneBySegmentId, laneCount } = useMemo(() => assignLanes(segments), [segments]);
   const selectedSegment = segments.find((segment) => segment.id === selectedSegmentId);
+
+  const contentWidth = lengthInTurns * pixelsPerTurn;
+  const contentHeight = RULER_HEIGHT_PX + laneCount * LANE_HEIGHT_PX + 8;
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) {
+      return;
+    }
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.deltaY === 0) {
+        return;
+      }
+      event.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const pointerOffset = event.clientX - rect.left;
+      const pointerContentX = pointerOffset + el.scrollLeft;
+      setPixelsPerTurn((prev) => {
+        const next = clamp(prev * (event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP), MIN_PIXELS_PER_TURN, MAX_PIXELS_PER_TURN);
+        const turnAtPointer = pointerContentX / prev;
+        const nextScrollLeft = turnAtPointer * next - pointerOffset;
+        requestAnimationFrame(() => {
+          el.scrollLeft = nextScrollLeft;
+        });
+        return next;
+      });
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   const mutate = (updater: (prev: ScenarioCharacterGroupSchedule) => ScenarioCharacterGroupSchedule) => {
     const base = useCharacterGroupStore.getState().ensureSchedule(groupId);
@@ -116,45 +160,80 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
       </div>
 
       <div className="space-y-1">
-        <div className="flex justify-between text-xs text-muted">
-          <span>Turn 0</span>
-          <span>Turn {lengthInTurns}</span>
-        </div>
-        <div
-          className="relative w-full rounded-sm border border-border-default bg-inset"
-          style={{ height: `${laneCount * LANE_HEIGHT_PX + 8}px` }}
-        >
-          {segments.map((segment, index) => {
-            const lane = laneBySegmentId[segment.id] ?? 0;
-            const left = (Math.min(segment.startTurn, lengthInTurns) / lengthInTurns) * 100;
-            const width = (Math.max(0, segment.endTurn - segment.startTurn) / lengthInTurns) * 100;
-            const zoneName = effectiveZones.find((zone) => zone.id === segment.zoneId)?.name ?? 'No zone';
-            return (
-              <button
-                key={segment.id}
-                type="button"
-                onClick={() => setSelectedSegmentId(segment.id)}
-                className={`absolute truncate rounded-sm px-2 text-left text-xs text-white ${
-                  segment.id === selectedSegmentId ? 'ring-2 ring-focus-ring' : ''
-                }`}
-                style={{
-                  left: `${left}%`,
-                  width: `${width}%`,
-                  top: `${lane * LANE_HEIGHT_PX + 4}px`,
-                  height: `${LANE_HEIGHT_PX - 4}px`,
-                  backgroundColor: SEGMENT_COLORS[index % SEGMENT_COLORS.length],
-                }}
-                title={`${zoneName} (${segment.movementPolicy})`}
+        <div className="text-xs text-muted">Drag a segment to move it, drag its edges to resize, scroll to zoom.</div>
+        <div ref={scrollRef} className="w-full overflow-x-auto rounded-sm border border-border-default bg-inset">
+          <div className="relative" style={{ width: `${contentWidth}px`, height: `${contentHeight}px` }}>
+            {Array.from({ length: lengthInTurns + 1 }, (_, turn) => (
+              <div
+                key={turn}
+                className="absolute top-0 bottom-0 border-l border-border-default/60"
+                style={{ left: `${turn * pixelsPerTurn}px` }}
               >
-                {zoneName} · {segment.movementPolicy}
-              </button>
-            );
-          })}
-          <div
-            className="absolute top-0 bottom-0 w-0.5 bg-error-text"
-            style={{ left: `${nowPercent}%` }}
-            title={`Now: turn ${turnNumber % lengthInTurns}`}
-          />
+                {turn < lengthInTurns && (
+                  <span className="absolute left-1 top-0 text-[10px] leading-none text-muted">{turn}</span>
+                )}
+              </div>
+            ))}
+
+            {segments.map((segment, index) => {
+              const lane = laneBySegmentId[segment.id] ?? 0;
+              const zoneName = effectiveZones.find((zone) => zone.id === segment.zoneId)?.name ?? 'No zone';
+              const isSelected = segment.id === selectedSegmentId;
+              return (
+                <Rnd
+                  key={segment.id}
+                  bounds="parent"
+                  dragAxis="x"
+                  dragGrid={[pixelsPerTurn, LANE_HEIGHT_PX]}
+                  resizeGrid={[pixelsPerTurn, LANE_HEIGHT_PX]}
+                  enableResizing={{ left: true, right: true }}
+                  minWidth={pixelsPerTurn}
+                  size={{
+                    width: Math.max(0, segment.endTurn - segment.startTurn) * pixelsPerTurn,
+                    height: LANE_HEIGHT_PX - 4,
+                  }}
+                  position={{
+                    x: segment.startTurn * pixelsPerTurn,
+                    y: RULER_HEIGHT_PX + lane * LANE_HEIGHT_PX + 4,
+                  }}
+                  onDragStop={(_event, data) => {
+                    const duration = segment.endTurn - segment.startTurn;
+                    const start = clamp(Math.round(data.x / pixelsPerTurn), 0, lengthInTurns - duration);
+                    if (start !== segment.startTurn) {
+                      updateSegment(segment.id, { startTurn: start, endTurn: start + duration });
+                    }
+                  }}
+                  onResizeStop={(_event, _direction, ref, _delta, position) => {
+                    const start = clamp(Math.round(position.x / pixelsPerTurn), 0, lengthInTurns - 1);
+                    const turns = Math.max(1, Math.round(ref.offsetWidth / pixelsPerTurn));
+                    const end = Math.min(lengthInTurns, start + turns);
+                    updateSegment(segment.id, { startTurn: start, endTurn: Math.max(start + 1, end) });
+                  }}
+                >
+                  <div
+                    onClick={() => setSelectedSegmentId(segment.id)}
+                    className={`h-full w-full cursor-pointer truncate rounded-sm px-2 text-left text-xs leading-6 text-white ${
+                      isSelected ? 'ring-2 ring-focus-ring' : ''
+                    }`}
+                    style={{ backgroundColor: SEGMENT_COLORS[index % SEGMENT_COLORS.length] }}
+                    title={`${zoneName} (${segment.movementPolicy})`}
+                  >
+                    {zoneName} · {segment.movementPolicy}
+                  </div>
+                </Rnd>
+              );
+            })}
+
+            <div
+              className="pointer-events-none absolute top-0 bottom-0 z-10 w-0.5 bg-danger-solid"
+              style={{ left: `${nowTurn * pixelsPerTurn}px` }}
+              title={`Now: turn ${nowTurn}`}
+            >
+              <span className="absolute left-0.5 top-0 rounded-sm bg-danger-solid px-1 text-[10px] leading-none text-white">
+                now
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

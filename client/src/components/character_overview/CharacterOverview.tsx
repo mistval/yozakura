@@ -35,7 +35,9 @@ export default function CharacterOverview() {
   } = useCharacterOverview();
 
   const userId = scenario?.userCharacterId || '';
-  const [tab, setTab] = useState<'overview' | 'groups'>('overview');
+  const [tabParam, setTabParam] = useQueryParam('cotab', StringParam);
+  const tab = tabParam === 'groups' ? 'groups' : 'overview';
+  const setTab = (next: 'overview' | 'groups') => setTabParam(next === 'overview' ? undefined : next);
   const [relationships, setRelationships] = useState<CharacterRelationships>({});
   const contentRef = useRef<HTMLDivElement>(undefined);
 
@@ -126,13 +128,8 @@ export default function CharacterOverview() {
         onClose={closeCharacterOverview}
         maxWidthClassName="max-w-6xl"
         contentRef={contentRef}
-      >
-        <>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Character Overview</h2>
-          </div>
-
-          <div className="inline-flex gap-2 rounded-sm border border-border-default p-1">
+        headerActions={
+          <>
             <button
               type="button"
               className={tab === 'overview' ? 'button-emphasized' : ''}
@@ -147,7 +144,11 @@ export default function CharacterOverview() {
             >
               Character Groups
             </button>
-          </div>
+          </>
+        }
+      >
+        <>
+          <h2 className="text-xl font-semibold">Character Overview</h2>
 
           {tab === 'overview' && (
             <>

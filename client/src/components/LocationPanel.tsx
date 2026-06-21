@@ -1,7 +1,16 @@
+import type { MoveHighlight } from '../engine/character_schedule/schedule_movement.js';
+
 type LocationItem = {
   id: string;
   name: string;
   description: string;
+};
+
+export type MoveSuggestion = {
+  suggestedLocations: LocationItem[];
+  highlightByLocationId: Record<string, MoveHighlight>;
+  highlightWait: boolean;
+  forbiddenLocationIds: string[];
 };
 
 type LocationPanelProps = {
@@ -11,6 +20,13 @@ type LocationPanelProps = {
   onWait?: () => void;
   disabled?: boolean;
   canMove?: boolean;
+  suggestion?: MoveSuggestion | undefined;
+};
+
+const HIGHLIGHT_RING: Record<MoveHighlight, string> = {
+  urgent: 'ring-2 ring-danger-border-accent',
+  gentle: 'ring-2 ring-warning-border',
+  allowed: 'ring-2 ring-success-ring',
 };
 
 export default function LocationPanel({
@@ -20,7 +36,15 @@ export default function LocationPanel({
   onWait,
   disabled,
   canMove = true,
+  suggestion,
 }: LocationPanelProps) {
+  const suggestedLocations = suggestion?.suggestedLocations ?? [];
+  const suggestedIds = new Set(suggestedLocations.map((entry) => entry.id));
+  const forbiddenIds = new Set(suggestion?.forbiddenLocationIds ?? []);
+  const orderedLocations = suggestedLocations.concat(
+    adjacentLocationIds.filter((entry) => !suggestedIds.has(entry.id))
+  );
+
   return (
     <div className="space-y-3">
       <div>
@@ -32,13 +56,28 @@ export default function LocationPanel({
         <div>
           <div className="font-semibold mb-1">Move to</div>
           <div className="flex gap-2 flex-wrap">
-            {adjacentLocationIds.map((location) => (
-              <button key={location.id} type="button" onClick={() => onMove(location.id)} disabled={disabled}>
-                {location.name}
-              </button>
-            ))}
+            {orderedLocations.map((entry) => {
+              const highlight = suggestion?.highlightByLocationId[entry.id];
+              const locked = forbiddenIds.has(entry.id);
+              return (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => onMove(entry.id)}
+                  disabled={disabled}
+                  className={highlight ? HIGHLIGHT_RING[highlight] : undefined}
+                >
+                  {locked ? `🔒 ${entry.name}` : entry.name}
+                </button>
+              );
+            })}
             {onWait && (
-              <button type="button" onClick={onWait} disabled={disabled}>
+              <button
+                type="button"
+                onClick={onWait}
+                disabled={disabled}
+                className={suggestion?.highlightWait ? HIGHLIGHT_RING.allowed : undefined}
+              >
                 Wait
               </button>
             )}
