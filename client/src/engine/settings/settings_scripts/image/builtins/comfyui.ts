@@ -168,8 +168,7 @@ function comfyControls({ buttonData }: ControlsContext): SettingsScriptControl[]
       label: 'ComfyUI URL',
       width: 'full',
       default: 'http://127.0.0.1:8188',
-      tooltipHtml:
-        'Base URL of your ComfyUI server. The standard endpoints (/object_info, /prompt, /history, /view) are appended automatically.',
+      tooltipHtml: 'Base URL of your ComfyUI server.',
     },
     {
       id: 'connect',

@@ -44,7 +44,7 @@ function testConnectionUrl(rawUrl: string): string {
 
 export const automatic1111Script: ImageGenerationSettingsScript = {
   id: 'automatic1111',
-  name: 'AUTOMATIC1111 Style',
+  name: 'AUTOMATIC1111 Style (Including KoboldCpp and Similar)',
   ftueControlIds: ['url', 'authToken', 'testConnection'],
   controls: () => [
     {

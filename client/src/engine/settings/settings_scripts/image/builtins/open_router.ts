@@ -43,7 +43,7 @@ function testConnectionUrl(rawUrl: string): string {
 
 export const openRouterScript: ImageGenerationSettingsScript = {
   id: 'openRouter',
-  name: 'OpenAI Completions Style (Including OpenRouter)',
+  name: 'OpenAI Completions Style (Including OpenRouter and Similar)',
   ftueControlIds: ['url', 'authToken', 'model', 'testConnection'],
   controls: () => [
     {

@@ -56,6 +56,19 @@ export default function ImageGenerationSettingsSection() {
           </select>
         </div>
 
+        <div className="text-sm text-warning-text-strong bg-warning-bg border border-warning-border-soft rounded-sm p-2 mt-1">
+          Don't see your provider?{' '}
+          <a
+            href="https://mistval.github.io/yozakura/docs/image-providers"
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-primary"
+          >
+            Check here
+          </a>
+          .
+        </div>
+
         <CustomScriptSettings
           sectionId={IMAGE_GENERATION_SECTION_ID}
           resolveScript={resolveImageScript}
