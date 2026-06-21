@@ -1,6 +1,6 @@
 import type { Migration } from '../types.js';
-import defaultWorkflow from '../external/SillyTavern/Default_Comfy_Workflow.json';
-import defaultLoRAWorkflow from '../external/SillyTavern/Default_LoRA_Workflow.json';
+import defaultWorkflow from '../external/SillyTavern/Default_Comfy_Workflow.json' with { type: 'json' };
+import defaultLoRAWorkflow from '../external/SillyTavern/Default_LoRA_Workflow.json' with { type: 'json' };
 
 const WORKFLOW_GROUP_KEY = 'imageGeneration::comfyui::workflow';
 
