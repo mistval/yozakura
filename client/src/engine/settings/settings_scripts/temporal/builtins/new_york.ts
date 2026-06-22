@@ -32,7 +32,7 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     const isDaylight = periodIndex >= 1 && periodIndex <= 4; // morning → evening
 
     // --- Resolve the current in-world date ---
-    const start = new Date((controlValues.startDate || '2026-06-01') + 'T00:00:00Z');
+    const start = new Date(`${controlValues.startDate ?? '2026-06-01'}T00:00:00Z`);
     start.setUTCDate(start.getUTCDate() + dayIndex);
     const year = start.getUTCFullYear();
     const month = start.getUTCMonth(); // 0–11
@@ -61,7 +61,7 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       { hi: 54, lo: 41, precip: 0.31 }, // Nov
       { hi: 44, lo: 33, precip: 0.34 }, // Dec
     ];
-    const m = MONTHLY[month]!;
+    const { hi: monthlyHi, lo: monthlyLo, precip: precipChance } = MONTHLY[month]!;
 
     // --- Deterministic per-month extreme-event scheduler ---
     // Each (year, month, type) is independently seeded, so an event occupies the
@@ -73,7 +73,7 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       cfg: { months: number[]; chance: number; minDur: number; maxDur: number }
     ) => {
       if (!cfg.months.includes(month)) return null;
-      const r = helpers.createSeededRandom(year + '-' + month + '-' + type);
+      const r = helpers.createSeededRandom(`${year}-${month}-${type}`);
       if (r() >= cfg.chance) return null;
       const duration = cfg.minDur + Math.floor(r() * (cfg.maxDur - cfg.minDur + 1));
       const latestStart = Math.max(1, daysInMonth - duration);
@@ -119,10 +119,10 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     } else {
       // Ordinary day: shift the whole day warmer or cooler than the monthly normal.
       const shift = Math.round((d() * 2 - 1) * 10); // ±10°F
-      hi = m.hi + shift;
-      lo = m.lo + shift;
+      hi = monthlyHi + shift;
+      lo = monthlyLo + shift;
       const avg = (hi + lo) / 2;
-      if (d() < m.precip) {
+      if (d() < precipChance) {
         if (avg <= 33) {
           cond = 'Snow';
           emoji = '🌨️';
@@ -157,8 +157,8 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     // Temperature for this period via the diurnal curve.
     const tempF = Math.round(lo + (hi - lo) * TEMP_FRAC[periodIndex]!);
 
-    const useC = (controlValues.units || 'F') === 'C';
-    const temp = (useC ? Math.round(((tempF - 32) * 5) / 9) : tempF) + (useC ? '°C' : '°F');
+    const useC = (controlValues.units ?? 'F') === 'C';
+    const temp = `${useC ? Math.round(((tempF - 32) * 5) / 9) : tempF}${useC ? '°C' : '°F'}`;
 
     let feel;
     if (tempF >= 90) feel = 'sweltering';
@@ -169,23 +169,10 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     else feel = 'frigid';
 
     // --- Build outputs ---
-    let displayHtml = '<b>' + dateLabel + '</b><br>' + emoji + ' ' + period + ' · ' + temp + ' · ' + cond;
-    if (alert) displayHtml += '<br><b>' + alert + '</b>';
+    let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}`;
+    if (alert) displayHtml += `<br><b>${alert}</b>`;
 
-    let plainText =
-      dateLabel +
-      ', ' +
-      period +
-      '. ' +
-      'Weather: ' +
-      temp +
-      ', ' +
-      cond.toLowerCase() +
-      ' (' +
-      feel +
-      ') — ' +
-      blurb +
-      '.';
+    let plainText = `${dateLabel}, ${period}. Weather: ${temp}, ${cond.toLowerCase()} (${feel}) — ${blurb}.`;
     if (alert) plainText += ' A severe weather alert is in effect.';
 
     return { displayHtml, plainText, dayIndex };
