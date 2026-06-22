@@ -3,28 +3,20 @@ import { useStateRef } from '../../hooks/useStateRef.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
 import { settingsTooltips } from './settings_tooltips.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
-import { useTemporalContextStore } from '../../state/temporal_context_store.js';
 import { getErrorMessage } from '../../errors/error_util.js';
 import { useMapStore } from '../../state/map_store.js';
 import CustomScriptSettings from './settingsScripts/CustomScriptSettings.js';
 import {
-  getTemporalScriptOptions,
-  resolveTemporalScript,
-} from '../../engine/settings/settings_scripts/temporal/temporal_scripts.js';
-import { getTemporalScriptDocumentation } from '../../engine/settings/settings_scripts/temporal/temporal_script_documentation.js';
-import { TEMPORAL_CONTEXT_SECTION_ID } from '../../engine/settings/settings_scripts/temporal/temporal_script_types.js';
-
-const temporalScriptOptions = getTemporalScriptOptions();
+  TEMPORAL_SCRIPT_DESCRIPTOR,
+  useTemporalScriptSelection,
+} from './settingsScripts/temporalScriptSection.js';
 
 export default function ScenarioSettingsSection() {
   const scenario = useScenarioStore((state) => state.activeScenario);
   const activeMap = useScenarioStore((state) => state.activeScenarioMap);
   const setScenarioMap = useScenarioStore((state) => state.setScenarioMap);
   const mergeMapOverrides = useScenarioStore((state) => state.mergeMapOverrides);
-  const setTemporalSelectedScriptId = useScenarioStore((state) => state.setTemporalSelectedScriptId);
-  const setTemporalControlValue = useScenarioStore((state) => state.setTemporalControlValue);
-  const resetTemporalControlValues = useScenarioStore((state) => state.resetTemporalControlValues);
-  const recomputeTemporalContext = useTemporalContextStore((state) => state.recompute);
+  const temporalSelection = useTemporalScriptSelection();
 
   const temporalSection = scenario?.temporalContext;
 
@@ -191,28 +183,7 @@ export default function ScenarioSettingsSection() {
             tooltipHtml="Controls the date, time of day, weather, and other environmental context shown in the header and injected into character prompts."
             className="text-sm font-medium text-primary"
           />
-          <CustomScriptSettings
-            sectionId={TEMPORAL_CONTEXT_SECTION_ID}
-            selectedScriptId={temporalSection.selectedScriptId}
-            controlValues={temporalSection.controlValues[temporalSection.selectedScriptId] ?? {}}
-            onSelectScript={(id) => {
-              setTemporalSelectedScriptId(id);
-              void recomputeTemporalContext();
-            }}
-            onSetControlValue={(controlId, value) => {
-              setTemporalControlValue(temporalSection.selectedScriptId, controlId, value);
-              void recomputeTemporalContext();
-            }}
-            onResetControlValues={() => {
-              resetTemporalControlValues(temporalSection.selectedScriptId);
-              void recomputeTemporalContext();
-            }}
-            builtinOptions={temporalScriptOptions}
-            resolveScript={resolveTemporalScript}
-            getDocumentation={getTemporalScriptDocumentation}
-            documentationTitle="Custom Temporal Context Script Documentation"
-            enableCustom
-          />
+          <CustomScriptSettings descriptor={TEMPORAL_SCRIPT_DESCRIPTOR} selection={temporalSelection} />
         </div>
       )}
     </div>

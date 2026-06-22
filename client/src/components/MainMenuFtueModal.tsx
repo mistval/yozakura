@@ -22,17 +22,12 @@ import { getRequiredRandomChoice } from '../util/array.js';
 import {
   BUILTIN_IMAGE_SCRIPTS,
   getBuiltinImageScript,
-  resolveImageScript,
 } from '../engine/settings/settings_scripts/image/image_scripts.js';
-import { getImageScriptDocumentation } from '../engine/settings/settings_scripts/image/image_script_documentation.js';
-import {
-  resetScriptControlValues,
-  setControlValue,
-  setSelectedScriptId,
-  useSettingsScriptSection,
-} from '../engine/settings/settings_scripts/settings_scripts_store.js';
-import { IMAGE_GENERATION_SECTION_ID } from '../engine/settings/settings_scripts/settings_scripts_state.js';
 import CustomScriptSettings from './settings/settingsScripts/CustomScriptSettings.js';
+import {
+  IMAGE_SCRIPT_DESCRIPTOR,
+  useImageScriptSelection,
+} from './settings/settingsScripts/imageScriptSection.js';
 
 const DEMO_MAP_ID = 'paradise_island';
 
@@ -58,7 +53,7 @@ export default function MainMenuFtueModal() {
   const mainMenuFtueSeen = useSettingsStore((s) => s.mainMenuFtueSeen);
   const setSettings = useSettingsStore((s) => s.setSettings);
 
-  const imageSection = useSettingsScriptSection(IMAGE_GENERATION_SECTION_ID);
+  const imageSelection = useImageScriptSelection();
 
   const globalCharactersAreLoaded = useGlobalCharactersStore((s) => s.globalCharactersAreLoaded);
   const maps = useMapStore((s) => s.maps);
@@ -81,7 +76,7 @@ export default function MainMenuFtueModal() {
     return typeof model === 'string' ? model : '';
   }, [baseDefaultsConfig?.llmMetaOptions]);
 
-  const ftueImageControlIds = getBuiltinImageScript(imageSection.selectedScriptId)?.ftueControlIds;
+  const ftueImageControlIds = getBuiltinImageScript(imageSelection.selectedScriptId)?.ftueControlIds;
 
   const [llmUrlDraft, setLlmUrlDraft] = useDraft(baseDefaultsConfig?.llmUrl ?? '');
   const [llmAuthTokenDraft, setLlmAuthTokenDraft] = useDraft(baseDefaultsConfig?.llmAuthToken ?? '');
@@ -298,8 +293,8 @@ export default function MainMenuFtueModal() {
               </div>
               <select
                 id="ftue-image-api-shape"
-                value={imageSection.selectedScriptId}
-                onChange={(event) => setSelectedScriptId(IMAGE_GENERATION_SECTION_ID, event.target.value)}
+                value={imageSelection.selectedScriptId}
+                onChange={(event) => imageSelection.onSelectScript(event.target.value)}
                 onClick={() => setDidOpenProviderDropdown(true)}
                 className="w-full rounded-sm border px-3 py-2"
               >
@@ -327,20 +322,8 @@ export default function MainMenuFtueModal() {
             )}
 
             <CustomScriptSettings
-              sectionId={IMAGE_GENERATION_SECTION_ID}
-              selectedScriptId={imageSection.selectedScriptId}
-              controlValues={imageSection.controlValues[imageSection.selectedScriptId] ?? {}}
-              onSelectScript={(id) => setSelectedScriptId(IMAGE_GENERATION_SECTION_ID, id)}
-              onSetControlValue={(controlId, value) =>
-                setControlValue(IMAGE_GENERATION_SECTION_ID, imageSection.selectedScriptId, controlId, value)
-              }
-              onResetControlValues={() =>
-                resetScriptControlValues(IMAGE_GENERATION_SECTION_ID, imageSection.selectedScriptId)
-              }
-              builtinOptions={BUILTIN_IMAGE_SCRIPTS.map((script) => ({ value: script.id, label: script.name }))}
-              resolveScript={resolveImageScript}
-              getDocumentation={getImageScriptDocumentation}
-              documentationTitle="Custom Image Generation Script Documentation"
+              descriptor={IMAGE_SCRIPT_DESCRIPTOR}
+              selection={imageSelection}
               visibleControlIds={ftueImageControlIds}
             />
           </section>

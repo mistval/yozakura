@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import type {
   ButtonHandlerResult,
-  SettingsControlValues,
-  SettingsScriptControlsDefinition,
+  ScriptSectionDescriptor,
+  ScriptSelection,
   SettingsScriptHelpers,
 } from '../../../engine/settings/settings_scripts/settings_script.js';
 import {
@@ -23,48 +23,32 @@ import { useUserTextFileList } from './useUserTextFileList.js';
 
 const NEW_CUSTOM_OPTION = '__new_custom_script__';
 
-export type ControlScript = {
-  controls?: SettingsScriptControlsDefinition | undefined;
-  buttonHandler?:
-    | ((
-        buttonId: string,
-        controlValues: SettingsControlValues,
-        helpers: SettingsScriptHelpers
-      ) => Promise<ButtonHandlerResult>)
-    | undefined;
-};
-
-export type ResolvedControlScript = { ok: true; script: ControlScript } | { ok: false; error: string };
-
 type CustomScriptSettingsProps = {
-  sectionId: string;
-  selectedScriptId: string;
-  controlValues: Record<string, string>;
-  onSelectScript: (scriptId: string) => void;
-  onSetControlValue: (controlId: string, value: string) => void;
-  onResetControlValues: () => void;
-  builtinOptions: { value: string; label: string }[];
-  resolveScript: (selectedScriptId: string, source: string) => ResolvedControlScript;
-  getDocumentation: () => string;
-  documentationTitle: string;
-  enableCustom?: boolean;
+  descriptor: ScriptSectionDescriptor;
+  selection: ScriptSelection;
   visibleControlIds?: string[] | undefined;
 };
 
 export default function CustomScriptSettings({
-  sectionId,
-  selectedScriptId,
-  controlValues,
-  onSelectScript,
-  onSetControlValue,
-  onResetControlValues,
-  builtinOptions,
-  resolveScript,
-  getDocumentation,
-  documentationTitle,
-  enableCustom = false,
+  descriptor,
+  selection,
   visibleControlIds,
 }: CustomScriptSettingsProps) {
+  const {
+    sectionId,
+    builtinOptions,
+    resolveScript,
+    getDocumentation,
+    documentationTitle,
+    enableCustom = false,
+  } = descriptor;
+  const {
+    selectedScriptId,
+    controlValues,
+    onSelectScript,
+    onSetControlValue,
+    onResetControlValues,
+  } = selection;
   const customScripts = useUserTextFileList(customScriptGroupKey(sectionId));
   const [documentationOpen, setDocumentationOpen] = useState(false);
   const [documentation, setDocumentation] = useState('');

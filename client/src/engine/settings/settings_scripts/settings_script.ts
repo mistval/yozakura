@@ -166,3 +166,33 @@ export type ControlsContext = {
 };
 
 export type SettingsScriptControlsDefinition = (context: ControlsContext) => SettingsScriptControl[];
+
+export type ControlScript = {
+  controls?: SettingsScriptControlsDefinition | undefined;
+  buttonHandler?:
+    | ((
+        buttonId: string,
+        controlValues: SettingsControlValues,
+        helpers: SettingsScriptHelpers
+      ) => Promise<ButtonHandlerResult>)
+    | undefined;
+};
+
+export type ResolvedControlScript = { ok: true; script: ControlScript } | { ok: false; error: string };
+
+export type ScriptSectionDescriptor = {
+  sectionId: string;
+  builtinOptions: { value: string; label: string }[];
+  resolveScript: (selectedScriptId: string, source: string) => ResolvedControlScript;
+  getDocumentation: () => string;
+  documentationTitle: string;
+  enableCustom?: boolean;
+};
+
+export type ScriptSelection = {
+  selectedScriptId: string;
+  controlValues: Record<string, string>;
+  onSelectScript: (scriptId: string) => void;
+  onSetControlValue: (controlId: string, value: string) => void;
+  onResetControlValues: () => void;
+};
