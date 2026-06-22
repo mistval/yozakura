@@ -128,10 +128,13 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
   };
 
   const addSegment = () => {
+    const el = scrollRef.current;
+    const middleTurn = el ? (el.scrollLeft + el.clientWidth / 2) / pixelsPerTurn : lengthInTurns / 2;
+    const startTurn = clamp(Math.round(middleTurn), 0, lengthInTurns - 1);
     const segment: ScheduleSegment = {
       id: newId(),
-      startTurn: 0,
-      endTurn: lengthInTurns,
+      startTurn,
+      endTurn: Math.min(lengthInTurns, startTurn + 1),
       zoneId: effectiveZones[0]?.id ?? '',
       movementPolicy: 'teleport',
     };
@@ -172,7 +175,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
           />
         </div>
         <button type="button" onClick={addSegment} disabled={effectiveZones.length === 0}>
-          ➕ Add Segment
+          ➕ Add Schedule Segment
         </button>
         {effectiveZones.length === 0 && (
           <span className="text-sm text-muted">Create a map zone first (Map → Zones).</span>
