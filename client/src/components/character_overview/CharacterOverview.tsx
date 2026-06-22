@@ -54,6 +54,7 @@ export default function CharacterOverview() {
     if (!open) {
       setSelectedIds([]);
       setRelationships({});
+      setTabParam(undefined);
     }
   }, [open]);
 
