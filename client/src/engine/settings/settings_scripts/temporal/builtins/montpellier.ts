@@ -2,11 +2,11 @@ import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
 import type { TemporalContext, TemporalContextSettingsScript } from '../temporal_script_types.js';
 
-export const newYorkTemporalScript: TemporalContextSettingsScript = {
-  id: 'nyc-weather',
-  name: 'New York City',
+export const montpellierTemporalScript: TemporalContextSettingsScript = {
+  id: 'montpellier-weather',
+  name: 'Montpellier',
   description:
-    'An 8-turn-long-day weather/season simulation for New York City. Tracks calendar date, time of day, temperature, and occasional severe weather events based on historical climate normals.',
+    'An 8-turn-long-day weather/season simulation for Montpellier, France. Tracks calendar date, time of day, temperature, and Mediterranean climate events like the summer Canicule and autumn Épisodes Cévenols.',
 
   controls: (() => [
     { id: 'startDate', type: 'calendar', label: 'Start date', default: '2026-06-01', width: 'full' },
@@ -14,10 +14,10 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       id: 'units',
       type: 'dropdown_select',
       label: 'Temperature units',
-      default: 'F',
+      default: 'C',
       options: [
-        { name: '°F (Fahrenheit)', value: 'F' },
         { name: '°C (Celsius)', value: 'C' },
+        { name: '°F (Fahrenheit)', value: 'F' },
       ],
     },
   ]) as SettingsScriptControlsDefinition,
@@ -26,7 +26,6 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     const TURNS_PER_DAY = 8;
     const PERIODS = ['Dawn', 'Morning', 'Midday', 'Afternoon', 'Evening', 'Dusk', 'Night', 'Midnight'];
     // Diurnal temperature curve across the 8 periods: 0 = daily low, 1 = daily high.
-    // Coldest around dawn, warmest mid-afternoon, dropping back overnight.
     const TEMP_FRAC = [0.05, 0.4, 0.8, 1.0, 0.8, 0.55, 0.3, 0.12];
 
     const dayIndex = Math.floor(request.turnNumber / TURNS_PER_DAY);
@@ -49,27 +48,25 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       timeZone: 'UTC',
     });
 
-    // --- NYC (Central Park) monthly climate normals, °F + daily precip probability ---
+    // --- Montpellier Mediterranean monthly climate normals, °F + daily precip probability ---
+    // Mild winters, hot and very dry summers.
     const MONTHLY = [
-      { hi: 39, lo: 27, precip: 0.34 }, // Jan
-      { hi: 42, lo: 29, precip: 0.32 }, // Feb
-      { hi: 50, lo: 35, precip: 0.36 }, // Mar
-      { hi: 61, lo: 44, precip: 0.34 }, // Apr
-      { hi: 71, lo: 54, precip: 0.36 }, // May
-      { hi: 79, lo: 63, precip: 0.33 }, // Jun
-      { hi: 85, lo: 69, precip: 0.34 }, // Jul
-      { hi: 83, lo: 68, precip: 0.35 }, // Aug
-      { hi: 76, lo: 60, precip: 0.3 }, // Sep
-      { hi: 65, lo: 50, precip: 0.28 }, // Oct
-      { hi: 54, lo: 41, precip: 0.31 }, // Nov
-      { hi: 44, lo: 33, precip: 0.34 }, // Dec
+      { hi: 53, lo: 37, precip: 0.2 }, // Jan
+      { hi: 55, lo: 38, precip: 0.18 }, // Feb
+      { hi: 61, lo: 43, precip: 0.18 }, // Mar
+      { hi: 66, lo: 48, precip: 0.22 }, // Apr
+      { hi: 73, lo: 55, precip: 0.18 }, // May
+      { hi: 81, lo: 62, precip: 0.12 }, // Jun
+      { hi: 86, lo: 66, precip: 0.05 }, // Jul
+      { hi: 86, lo: 66, precip: 0.08 }, // Aug
+      { hi: 79, lo: 60, precip: 0.18 }, // Sep
+      { hi: 70, lo: 54, precip: 0.25 }, // Oct
+      { hi: 60, lo: 45, precip: 0.22 }, // Nov
+      { hi: 54, lo: 39, precip: 0.2 }, // Dec
     ];
     const { hi: monthlyHi, lo: monthlyLo, precip: precipChance } = MONTHLY[month]!;
 
     // --- Deterministic per-month extreme-event scheduler ---
-    // Each (year, month, type) is independently seeded, so an event occupies the
-    // same span of days every time the same date is evaluated. Events are kept
-    // wholly inside their month to avoid cross-boundary bookkeeping.
     const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
     const monthlyEvent = (
       type: string,
@@ -84,9 +81,15 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       return dom >= startDom && dom < startDom + duration;
     };
 
-    const blizzard = monthlyEvent('blizzard', { months: [11, 0, 1, 2], chance: 0.22, minDur: 1, maxDur: 2 });
-    const hurricane = monthlyEvent('hurricane', { months: [7, 8, 9], chance: 0.12, minDur: 1, maxDur: 2 });
-    const heatWave = monthlyEvent('heatwave', { months: [5, 6, 7, 8], chance: 0.3, minDur: 3, maxDur: 6 });
+    // Extreme weather tailored to southern France
+    const canicule = monthlyEvent('canicule', { months: [5, 6, 7], chance: 0.35, minDur: 3, maxDur: 8 });
+    const cevenol = monthlyEvent('cevenol', { months: [8, 9, 10], chance: 0.2, minDur: 1, maxDur: 3 });
+    const tramontane = monthlyEvent('tramontane', {
+      months: [11, 0, 1, 2],
+      chance: 0.3,
+      minDur: 2,
+      maxDur: 5,
+    });
 
     // --- Per-day randomness, stable for a given calendar date ---
     const d = helpers.createSeededRandom(isoDate);
@@ -98,57 +101,62 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       blurb,
       alert = null;
 
-    if (blizzard) {
-      hi = 22 + Math.round(d() * 8); // 22–30
-      lo = hi - (8 + Math.round(d() * 6));
-      cond = 'Blizzard';
-      emoji = '❄️';
-      blurb = 'heavy snow, howling wind and near-zero visibility';
-      alert = '⚠️ BLIZZARD WARNING';
-    } else if (hurricane) {
-      hi = 68 + Math.round(d() * 10); // 68–78
-      lo = hi - (5 + Math.round(d() * 5));
-      cond = 'Hurricane';
-      emoji = '🌀';
-      blurb = 'torrential rain and violent wind lashing the city';
-      alert = '🌀 HURRICANE WARNING';
-    } else if (heatWave) {
-      hi = 93 + Math.round(d() * 9); // 93–102
-      lo = 74 + Math.round(d() * 8);
-      cond = 'Heat wave';
+    if (canicule) {
+      hi = 95 + Math.round(d() * 9); // 95-104°F (35-40°C)
+      lo = 73 + Math.round(d() * 6); // Warm, stagnant nights
+      cond = 'Canicule (Heatwave)';
       emoji = '🥵';
-      blurb = 'oppressive, hazy heat with little relief even after dark';
-      alert = '🔥 EXCESSIVE HEAT WARNING';
+      // FIX: Differentiate blurb based on daylight
+      blurb = isDaylight
+        ? 'blistering, stagnant heat under a relentless Mediterranean sun'
+        : 'stifling, stagnant heat with no relief even after dark';
+      alert = '🔥 CANICULE (HEATWAVE) ALERT - ALERTE ROUGE';
+    } else if (cevenol) {
+      hi = monthlyHi - 3;
+      lo = monthlyLo + 5;
+      cond = 'Mediterranean Storm';
+      emoji = '⛈️';
+      blurb = 'torrential, stationary thunderstorms bringing extreme rainfall';
+      alert = '⚠️ ÉPISODE CÉVENOL: FLASH FLOOD WARNING';
+    } else if (tramontane) {
+      hi = monthlyHi - (3 + Math.round(d() * 4));
+      lo = monthlyLo - (4 + Math.round(d() * 5));
+      cond = 'Tramontane Winds';
+      emoji = '🌬️';
+      blurb = 'fierce, biting northwesterly winds sweeping beneath crystal-clear skies';
+      alert = '⚠️ STRONG WIND WARNING (TRAMONTANE)';
     } else {
-      // Ordinary day: shift the whole day warmer or cooler than the monthly normal.
-      const shift = Math.round((d() * 2 - 1) * 10); // ±10°F
+      // Ordinary day
+      const shift = Math.round((d() * 2 - 1) * 7); // ±7°F variance
       hi = monthlyHi + shift;
       lo = monthlyLo + shift;
       const avg = (hi + lo) / 2;
+
       if (d() < precipChance) {
-        if (avg <= 33) {
-          cond = 'Snow';
+        if (avg <= 34) {
+          // Snow is exceptionally rare in Montpellier, but possible in dead of winter
+          cond = 'Sleet / Snow mix';
           emoji = '🌨️';
-          blurb = 'snow falling steadily';
-        } else if (avg <= 38) {
-          cond = 'Wintry mix';
-          emoji = '🌨️';
-          blurb = 'a cold, sloppy wintry mix';
+          blurb = 'a rare, wet wintry mix';
         } else {
           cond = 'Rain';
           emoji = '🌧️';
-          blurb = 'steady rain';
+          blurb = 'steady showers';
         }
       } else {
         const sky = d();
-        if (sky < 0.45) {
+        // The Mediterranean climate is famous for its sunshine
+        if (sky < 0.65) {
           cond = 'Clear';
           emoji = isDaylight ? '☀️' : '🌙';
-          blurb = isDaylight ? 'clear skies' : 'clear and calm';
-        } else if (sky < 0.78) {
+          blurb = isDaylight ? 'brilliantly sunny skies' : 'clear and calm';
+        } else if (sky < 0.85) {
           cond = 'Partly cloudy';
           emoji = isDaylight ? '⛅' : '☁️';
-          blurb = 'a mix of sun and clouds';
+          // FIX: Differentiate blurb based on daylight
+          blurb = isDaylight
+            ? 'sunshine mixed with a few passing clouds'
+            : 'stars peeking through a few passing clouds';
         } else {
           cond = 'Overcast';
           emoji = '☁️';
@@ -160,16 +168,16 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     // Temperature for this period via the diurnal curve.
     const tempF = Math.round(lo + (hi - lo) * TEMP_FRAC[periodIndex]!);
 
-    const useC = (controlValues.units ?? 'F') === 'C';
+    const useC = (controlValues.units ?? 'C') === 'C';
     const temp = `${useC ? Math.round(((tempF - 32) * 5) / 9) : tempF}${useC ? '°C' : '°F'}`;
 
     let feel;
     if (tempF >= 90) feel = 'sweltering';
-    else if (tempF >= 78) feel = 'warm';
-    else if (tempF >= 60) feel = 'mild';
-    else if (tempF >= 45) feel = 'cool';
-    else if (tempF >= 32) feel = 'cold';
-    else feel = 'frigid';
+    else if (tempF >= 78) feel = 'hot';
+    else if (tempF >= 65) feel = 'warm';
+    else if (tempF >= 55) feel = 'mild';
+    else if (tempF >= 42) feel = 'cool';
+    else feel = 'cold';
 
     // --- Build outputs ---
     let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}`;
@@ -182,14 +190,14 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
   },
 };
 
-if ((globalThis as any)?.process?.argv.includes('--simulate-weather-new-york')) {
+if ((globalThis as any)?.process?.argv.includes('--simulate-weather-montpellier')) {
   const startDate = '2025-01-01';
   const totalTurns = 365 * 8;
 
   for (let turnNumber = 0; turnNumber < totalTurns; ++turnNumber) {
     console.log(
       (
-        await newYorkTemporalScript.getTemporalContext({ startDate }, { turnNumber }, {
+        await montpellierTemporalScript.getTemporalContext({ startDate }, { turnNumber }, {
           createSeededRandom,
         } as Partial<SettingsScriptHelpers> as any)
       ).plainText

@@ -2,11 +2,11 @@ import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
 import type { TemporalContext, TemporalContextSettingsScript } from '../temporal_script_types.js';
 
-export const newYorkTemporalScript: TemporalContextSettingsScript = {
-  id: 'nyc-weather',
-  name: 'New York City',
+export const shizuokaTemporalScript: TemporalContextSettingsScript = {
+  id: 'shizuoka-weather',
+  name: 'Shizuoka',
   description:
-    'An 8-turn-long-day weather/season simulation for New York City. Tracks calendar date, time of day, temperature, and occasional severe weather events based on historical climate normals.',
+    'An 8-turn-long-day weather/season simulation for Shizuoka, Japan. Tracks calendar date, time of day, temperature, and seasonal events like the Tsuyu (rainy season) and typhoons based on Pacific coast climate normals.',
 
   controls: (() => [
     { id: 'startDate', type: 'calendar', label: 'Start date', default: '2026-06-01', width: 'full' },
@@ -14,10 +14,10 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       id: 'units',
       type: 'dropdown_select',
       label: 'Temperature units',
-      default: 'F',
+      default: 'C',
       options: [
-        { name: '°F (Fahrenheit)', value: 'F' },
         { name: '°C (Celsius)', value: 'C' },
+        { name: '°F (Fahrenheit)', value: 'F' },
       ],
     },
   ]) as SettingsScriptControlsDefinition,
@@ -26,7 +26,6 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     const TURNS_PER_DAY = 8;
     const PERIODS = ['Dawn', 'Morning', 'Midday', 'Afternoon', 'Evening', 'Dusk', 'Night', 'Midnight'];
     // Diurnal temperature curve across the 8 periods: 0 = daily low, 1 = daily high.
-    // Coldest around dawn, warmest mid-afternoon, dropping back overnight.
     const TEMP_FRAC = [0.05, 0.4, 0.8, 1.0, 0.8, 0.55, 0.3, 0.12];
 
     const dayIndex = Math.floor(request.turnNumber / TURNS_PER_DAY);
@@ -49,27 +48,25 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       timeZone: 'UTC',
     });
 
-    // --- NYC (Central Park) monthly climate normals, °F + daily precip probability ---
+    // --- Shizuoka Pacific Coast monthly climate normals, °F + daily precip probability ---
+    // Winters are mild and famously sunny. Summers are hot, muggy, and wet.
     const MONTHLY = [
-      { hi: 39, lo: 27, precip: 0.34 }, // Jan
-      { hi: 42, lo: 29, precip: 0.32 }, // Feb
-      { hi: 50, lo: 35, precip: 0.36 }, // Mar
-      { hi: 61, lo: 44, precip: 0.34 }, // Apr
-      { hi: 71, lo: 54, precip: 0.36 }, // May
-      { hi: 79, lo: 63, precip: 0.33 }, // Jun
-      { hi: 85, lo: 69, precip: 0.34 }, // Jul
-      { hi: 83, lo: 68, precip: 0.35 }, // Aug
-      { hi: 76, lo: 60, precip: 0.3 }, // Sep
-      { hi: 65, lo: 50, precip: 0.28 }, // Oct
-      { hi: 54, lo: 41, precip: 0.31 }, // Nov
-      { hi: 44, lo: 33, precip: 0.34 }, // Dec
+      { hi: 52, lo: 36, precip: 0.15 }, // Jan
+      { hi: 54, lo: 37, precip: 0.2 }, // Feb
+      { hi: 59, lo: 44, precip: 0.3 }, // Mar
+      { hi: 66, lo: 52, precip: 0.35 }, // Apr
+      { hi: 73, lo: 60, precip: 0.4 }, // May
+      { hi: 79, lo: 67, precip: 0.6 }, // Jun (Start of Tsuyu)
+      { hi: 86, lo: 75, precip: 0.5 }, // Jul (End of Tsuyu, heat starts)
+      { hi: 89, lo: 77, precip: 0.4 }, // Aug (Typhoon season)
+      { hi: 83, lo: 71, precip: 0.45 }, // Sep (Typhoon season)
+      { hi: 74, lo: 61, precip: 0.35 }, // Oct
+      { hi: 65, lo: 50, precip: 0.25 }, // Nov
+      { hi: 56, lo: 40, precip: 0.15 }, // Dec
     ];
     const { hi: monthlyHi, lo: monthlyLo, precip: precipChance } = MONTHLY[month]!;
 
     // --- Deterministic per-month extreme-event scheduler ---
-    // Each (year, month, type) is independently seeded, so an event occupies the
-    // same span of days every time the same date is evaluated. Events are kept
-    // wholly inside their month to avoid cross-boundary bookkeeping.
     const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
     const monthlyEvent = (
       type: string,
@@ -84,9 +81,10 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       return dom >= startDom && dom < startDom + duration;
     };
 
-    const blizzard = monthlyEvent('blizzard', { months: [11, 0, 1, 2], chance: 0.22, minDur: 1, maxDur: 2 });
-    const hurricane = monthlyEvent('hurricane', { months: [7, 8, 9], chance: 0.12, minDur: 1, maxDur: 2 });
-    const heatWave = monthlyEvent('heatwave', { months: [5, 6, 7, 8], chance: 0.3, minDur: 3, maxDur: 6 });
+    // Extreme/Seasonal weather tailored to Shizuoka
+    const typhoon = monthlyEvent('typhoon', { months: [7, 8, 9], chance: 0.25, minDur: 1, maxDur: 2 });
+    const plumRain = monthlyEvent('tsuyu', { months: [5, 6], chance: 0.6, minDur: 4, maxDur: 10 }); // Prolonged rainy season
+    const extremeHeat = monthlyEvent('heatwave', { months: [6, 7, 8], chance: 0.35, minDur: 3, maxDur: 7 });
 
     // --- Per-day randomness, stable for a given calendar date ---
     const d = helpers.createSeededRandom(isoDate);
@@ -98,57 +96,59 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       blurb,
       alert = null;
 
-    if (blizzard) {
-      hi = 22 + Math.round(d() * 8); // 22–30
-      lo = hi - (8 + Math.round(d() * 6));
-      cond = 'Blizzard';
-      emoji = '❄️';
-      blurb = 'heavy snow, howling wind and near-zero visibility';
-      alert = '⚠️ BLIZZARD WARNING';
-    } else if (hurricane) {
-      hi = 68 + Math.round(d() * 10); // 68–78
-      lo = hi - (5 + Math.round(d() * 5));
-      cond = 'Hurricane';
+    if (typhoon) {
+      hi = 78 + Math.round(d() * 8);
+      lo = hi - (4 + Math.round(d() * 4));
+      cond = 'Typhoon';
       emoji = '🌀';
-      blurb = 'torrential rain and violent wind lashing the city';
-      alert = '🌀 HURRICANE WARNING';
-    } else if (heatWave) {
-      hi = 93 + Math.round(d() * 9); // 93–102
-      lo = 74 + Math.round(d() * 8);
-      cond = 'Heat wave';
+      blurb = 'howling gales and horizontal, torrential rain sweeping in off the Pacific';
+      alert = '⚠️ TYPHOON WARNING (SEVERE WIND & RAIN)';
+    } else if (plumRain) {
+      hi = monthlyHi - (2 + Math.round(d() * 4)); // Clouds keep highs down
+      lo = monthlyLo + Math.round(d() * 3); // Clouds keep lows up
+      cond = 'Plum Rain (Tsuyu)';
+      emoji = '🌧️';
+      blurb = 'persistently damp, grey, and dripping with steady, gloomy rain';
+    } else if (extremeHeat) {
+      hi = 92 + Math.round(d() * 6); // 92–98
+      lo = 78 + Math.round(d() * 4); // Very warm nights
+      cond = 'Intense Heat';
       emoji = '🥵';
-      blurb = 'oppressive, hazy heat with little relief even after dark';
-      alert = '🔥 EXCESSIVE HEAT WARNING';
+      blurb = 'dangerously hot and thick with sweltering humidity';
+      alert = '🔥 HEAT STROKE ALERT';
     } else {
-      // Ordinary day: shift the whole day warmer or cooler than the monthly normal.
-      const shift = Math.round((d() * 2 - 1) * 10); // ±10°F
+      // Ordinary day
+      const shift = Math.round((d() * 2 - 1) * 7); // ±7°F variance
       hi = monthlyHi + shift;
       lo = monthlyLo + shift;
       const avg = (hi + lo) / 2;
+
       if (d() < precipChance) {
-        if (avg <= 33) {
-          cond = 'Snow';
+        if (avg <= 36) {
+          cond = 'Sleet / Snow mix';
           emoji = '🌨️';
-          blurb = 'snow falling steadily';
-        } else if (avg <= 38) {
-          cond = 'Wintry mix';
-          emoji = '🌨️';
-          blurb = 'a cold, sloppy wintry mix';
+          blurb = 'a rare, damp mix of cold rain and wet snow flakes';
         } else {
           cond = 'Rain';
           emoji = '🌧️';
-          blurb = 'steady rain';
+          blurb = 'steady showers';
         }
       } else {
         const sky = d();
-        if (sky < 0.45) {
+        if (sky < 0.5) {
           cond = 'Clear';
           emoji = isDaylight ? '☀️' : '🌙';
-          blurb = isDaylight ? 'clear skies' : 'clear and calm';
-        } else if (sky < 0.78) {
+          // FIX: Differentiate blurb based on daylight
+          blurb = isDaylight
+            ? month < 3 || month > 9
+              ? 'crisp, beautifully clear skies'
+              : 'bright and sunny'
+            : 'clear and calm';
+        } else if (sky < 0.8) {
           cond = 'Partly cloudy';
           emoji = isDaylight ? '⛅' : '☁️';
-          blurb = 'a mix of sun and clouds';
+          // FIX: Differentiate blurb based on daylight
+          blurb = isDaylight ? 'a mix of sun and passing clouds' : 'stars peeking through passing clouds';
         } else {
           cond = 'Overcast';
           emoji = '☁️';
@@ -160,16 +160,16 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     // Temperature for this period via the diurnal curve.
     const tempF = Math.round(lo + (hi - lo) * TEMP_FRAC[periodIndex]!);
 
-    const useC = (controlValues.units ?? 'F') === 'C';
+    const useC = (controlValues.units ?? 'C') === 'C';
     const temp = `${useC ? Math.round(((tempF - 32) * 5) / 9) : tempF}${useC ? '°C' : '°F'}`;
 
     let feel;
-    if (tempF >= 90) feel = 'sweltering';
-    else if (tempF >= 78) feel = 'warm';
-    else if (tempF >= 60) feel = 'mild';
-    else if (tempF >= 45) feel = 'cool';
-    else if (tempF >= 32) feel = 'cold';
-    else feel = 'frigid';
+    if (tempF >= 90) feel = 'oppressively hot';
+    else if (tempF >= 80) feel = 'hot and muggy';
+    else if (tempF >= 68) feel = 'warm and pleasant';
+    else if (tempF >= 55) feel = 'mild';
+    else if (tempF >= 42) feel = 'cool';
+    else feel = 'chilly';
 
     // --- Build outputs ---
     let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}`;
@@ -182,14 +182,14 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
   },
 };
 
-if ((globalThis as any)?.process?.argv.includes('--simulate-weather-new-york')) {
+if ((globalThis as any)?.process?.argv.includes('--simulate-weather-shizuoka')) {
   const startDate = '2025-01-01';
   const totalTurns = 365 * 8;
 
   for (let turnNumber = 0; turnNumber < totalTurns; ++turnNumber) {
     console.log(
       (
-        await newYorkTemporalScript.getTemporalContext({ startDate }, { turnNumber }, {
+        await shizuokaTemporalScript.getTemporalContext({ startDate }, { turnNumber }, {
           createSeededRandom,
         } as Partial<SettingsScriptHelpers> as any)
       ).plainText

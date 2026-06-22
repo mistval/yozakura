@@ -1,6 +1,11 @@
 import { getErrorMessage } from '../../../../errors/error_util.js';
 import type { SettingsScriptSectionState } from '../settings_scripts_state.js';
+import { baliTemporalScript } from './builtins/bali.js';
+import { montpellierTemporalScript } from './builtins/montpellier.js';
 import { newYorkTemporalScript } from './builtins/new_york.js';
+import { saharaTemporalScript } from './builtins/sahara.js';
+import { shizuokaTemporalScript } from './builtins/shizuoka.js';
+import { stPetersburgTemporalScript } from './builtins/st_petersburg.js';
 import {
   DEFAULT_TEMPORAL_SCRIPT_ID,
   temporalContextSettingsScriptSchema,
@@ -18,7 +23,14 @@ export function createDefaultTemporalSectionState(): SettingsScriptSectionState 
   };
 }
 
-export const BUILTIN_TEMPORAL_SCRIPTS: TemporalContextSettingsScript[] = [newYorkTemporalScript];
+export const BUILTIN_TEMPORAL_SCRIPTS: TemporalContextSettingsScript[] = [
+  baliTemporalScript,
+  newYorkTemporalScript,
+  montpellierTemporalScript,
+  saharaTemporalScript,
+  shizuokaTemporalScript,
+  stPetersburgTemporalScript,
+];
 
 export function getBuiltinTemporalScript(scriptId: string): TemporalContextSettingsScript | undefined {
   return BUILTIN_TEMPORAL_SCRIPTS.find((script) => script.id === scriptId);

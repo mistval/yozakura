@@ -6,7 +6,7 @@ import type {
 } from '../settings_script.js';
 
 export const TEMPORAL_CONTEXT_SECTION_ID = 'temporalContext';
-export const DEFAULT_TEMPORAL_SCRIPT_ID = 'new-york';
+export const DEFAULT_TEMPORAL_SCRIPT_ID = 'bali-weather';
 
 export type TemporalContextRequest = { turnNumber: number };
 

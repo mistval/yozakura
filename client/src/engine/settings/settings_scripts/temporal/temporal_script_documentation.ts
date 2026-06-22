@@ -81,7 +81,8 @@ ${EXAMPLE_CUSTOM_TEMPORAL_SCRIPT}
 
 ## Instructions
 
-- The script runs in the browser so you may use browser APIs such as fetch and localStorage, but do not expect localStorage to persist between application restarts.
+- The script runs in a browser so you may use browser APIs such as fetch and localStorage, but do not expect localStorage to persist between application restarts.
+- It's generally okay if it's not 100% deterministic between application restarts, so if the user wants to use live weather data, it's possible to do that and cache in localStorage while accepting the tradeoff of possible inconsistency between sessions.
 - You can use the latest JavaScript features and don't need to worry about supporting old browsers.
 - You can expect the script to run roughly once per minute on average, so caching isn't normally necessary, but you may cache in localStorage if you wish to.
 - Write the script as the user asks, but if you think they might be missing out on some fun opportunity for more colorful customization, let them know at the end.
