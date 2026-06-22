@@ -80,6 +80,20 @@ const settingsScriptDropdownSelectControlSchema = z
     description: 'A dropdown selector. Defaults to the first option when no default is given.',
   });
 
+const settingsScriptCalendarControlSchema = z
+  .object({
+    id: z.string(),
+    type: z.literal('calendar'),
+    label: z.string().optional(),
+    default: z.string().optional(),
+    tooltipHtml: z.string().optional(),
+    width: z.enum(['full']).optional(),
+  })
+  .meta({
+    description:
+      'A calendar date picker. The stored value is an ISO date string (YYYY-MM-DD). `default` is an ISO date string.',
+  });
+
 const settingsScriptButtonControlSchema = z
   .object({
     id: z.string(),
@@ -112,6 +126,7 @@ export const settingsScriptControlSchema = z.discriminatedUnion('type', [
   settingsScriptPasswordControlSchema,
   settingsScriptJsonControlSchema,
   settingsScriptDropdownSelectControlSchema,
+  settingsScriptCalendarControlSchema,
   settingsScriptButtonControlSchema,
   settingsScriptTextFileListControlSchema,
 ]);
@@ -142,6 +157,7 @@ export type SettingsScriptHelpers = {
   proxiedFetch: ProxiedFetch;
   abortSignal: AbortSignal | undefined;
   loadUserTextFile: (controlId: string, fileId: string) => Promise<string | undefined>;
+  createSeededRandom: (seed: string | number) => () => number;
 };
 
 export type ControlsContext = {

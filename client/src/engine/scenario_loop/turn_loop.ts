@@ -3,13 +3,12 @@ import { useActiveChatStore } from '../../state/active_chat_store';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
-import { getRequiredActiveScenario, useScenarioStore } from '../../state/scenario_store';
+import { useScenarioStore } from '../../state/scenario_store';
 import { useSettingsStore } from '../../state/settings_store';
+import { useTemporalContextStore } from '../../state/temporal_context_store';
 import { ChatCoordinator } from '../chat/chat_coordinator';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry';
 import { buildSimpleInteractionRelationshipUpdates } from '../relationship';
-import { TURNS_PER_PERIOD } from '../schedule';
-import { timeOfDaySchema } from '../types';
 import { applyDailyWardrobeAutoselect, applyPostConversationWardrobeAutoRevert } from '../wardrobes';
 import { CharacterInputInterface } from './character_input_interfaces/character_input_interface';
 import { NPCInputInterface } from './character_input_interfaces/npc_input_interface';
@@ -54,7 +53,7 @@ async function runTurnLoopTick() {
   const { machineState, currentCharacterId, startNewTurn } = useActiveChatStore.getState();
 
   if (machineState === undefined) {
-    runWardrobeAutoselect();
+    await recomputeTemporalContextAndAutoselectWardrobes();
     startNewTurn(getTurnCharacterIds(), getRequiredUserCharacterId());
   }
 
@@ -227,18 +226,26 @@ async function moveScenarioCharacter(characterId: string, toId: string) {
   });
 }
 
-function runWardrobeAutoselect() {
-  const turnsPerDay = TURNS_PER_PERIOD * timeOfDaySchema.options.length;
-  const isNewDay = getRequiredActiveScenario().turnNumber % turnsPerDay === 0;
+async function recomputeTemporalContextAndAutoselectWardrobes() {
+  await useTemporalContextStore.getState().recompute();
 
-  if (isNewDay) {
-    for (const c of useScenarioCharacterStore.getState().scenarioCharacters) {
-      const updatedWardrobes = applyDailyWardrobeAutoselect(c.wardrobes);
-      if (updatedWardrobes) {
-        useScenarioCharacterStore
-          .getState()
-          .saveScenarioCharacterFields(c.id, { wardrobes: updatedWardrobes });
-      }
+  const dayIndex = useTemporalContextStore.getState().dayIndex;
+  if (dayIndex === undefined) {
+    return;
+  }
+
+  const loopState = useScenarioLoopStateStore.getState();
+  const lastDayIndex = loopState.lastTemporalDayIndex;
+  loopState.setLastTemporalDayIndex(dayIndex);
+
+  if (lastDayIndex === undefined || dayIndex === lastDayIndex) {
+    return;
+  }
+
+  for (const c of useScenarioCharacterStore.getState().scenarioCharacters) {
+    const updatedWardrobes = applyDailyWardrobeAutoselect(c.wardrobes);
+    if (updatedWardrobes) {
+      useScenarioCharacterStore.getState().saveScenarioCharacterFields(c.id, { wardrobes: updatedWardrobes });
     }
   }
 }

@@ -1,13 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  deleteUserTextFile,
-  listUserTextFiles,
-  loadUserTextFileContent,
-  saveUserTextFile,
-  type UserTextFileSummary,
-} from '../../../backend_bridge/database.js';
-import { getErrorMessage } from '../../../errors/error_util.js';
-import { newId } from '../../../util/id.js';
+import { useEffect, useState } from 'react';
+import { useUserTextFileList } from './useUserTextFileList.js';
 import { SpoilerSection } from '../../ui/SpoilerSection.js';
 import SettingFieldLabel from '../ui/SettingFieldLabel.js';
 
@@ -30,24 +22,10 @@ export default function TextFileListField({
   tooltipHtml,
   htmlFor,
 }: TextFileListFieldProps) {
-  const [files, setFiles] = useState<UserTextFileSummary[]>([]);
+  const { files, error, busy, create, save, remove, loadContent } = useUserTextFileList(groupKey);
   const [isCreating, setIsCreating] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [content, setContent] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const refreshFiles = useCallback(async () => {
-    try {
-      setFiles(await listUserTextFiles(groupKey));
-    } catch (e) {
-      setError(getErrorMessage(e));
-    }
-  }, [groupKey]);
-
-  useEffect(() => {
-    void refreshFiles();
-  }, [refreshFiles]);
 
   const selectedFile = files.find((file) => file.id === value);
 
@@ -59,21 +37,15 @@ export default function TextFileListField({
 
     let cancelled = false;
     void (async () => {
-      try {
-        const text = await loadUserTextFileContent(groupKey, value);
-        if (!cancelled) {
-          setContent(text ?? '');
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(getErrorMessage(e));
-        }
+      const text = await loadContent(value);
+      if (!cancelled) {
+        setContent(text ?? '');
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [groupKey, value, isCreating]);
+  }, [value, isCreating, loadContent]);
 
   useEffect(() => {
     if (!isCreating) {
@@ -93,18 +65,10 @@ export default function TextFileListField({
   };
 
   const handleCreate = async () => {
-    setBusy(true);
-    setError('');
-    try {
-      const id = newId();
-      await saveUserTextFile({ id, groupKey, fileName: nameDraft.trim() || 'Untitled', fileContent: '' });
-      await refreshFiles();
+    const id = await create(nameDraft);
+    if (id) {
       setIsCreating(false);
       onChange(id);
-    } catch (e) {
-      setError(getErrorMessage(e));
-    } finally {
-      setBusy(false);
     }
   };
 
@@ -112,51 +76,22 @@ export default function TextFileListField({
     if (!selectedFile) {
       return;
     }
-    setBusy(true);
-    setError('');
-    try {
-      await saveUserTextFile({
-        id: selectedFile.id,
-        groupKey,
-        fileName: nameDraft.trim() || selectedFile.fileName,
-        fileContent: content,
-      });
-      await refreshFiles();
-    } catch (e) {
-      setError(getErrorMessage(e));
-    } finally {
-      setBusy(false);
-    }
+    await save(selectedFile.id, nameDraft.trim() || selectedFile.fileName, content);
   };
 
   const handleDelete = async () => {
     if (!selectedFile) {
       return;
     }
-    setBusy(true);
-    setError('');
-    try {
-      await deleteUserTextFile(selectedFile.id);
-      const remaining = await listUserTextFiles(groupKey);
-      setFiles(remaining);
-      onChange(remaining[0]?.id ?? '');
-    } catch (e) {
-      setError(getErrorMessage(e));
-    } finally {
-      setBusy(false);
-    }
+    const nextId = await remove(selectedFile.id);
+    onChange(nextId ?? '');
   };
 
   const handleSaveContent = async (nextContent: string) => {
     if (!selectedFile) {
       return;
     }
-    await saveUserTextFile({
-      id: selectedFile.id,
-      groupKey,
-      fileName: selectedFile.fileName,
-      fileContent: nextContent,
-    });
+    await save(selectedFile.id, selectedFile.fileName, nextContent);
     setContent(nextContent);
   };
 

@@ -8,7 +8,6 @@ import { useConversationLog } from '../components/conversation_log/ConversationL
 import { useMapModal } from '../components/MapModalContext';
 import { useSettingsModal } from '../components/settings/SettingsModalContext';
 import { getDirectedRelationship } from '../engine/relationship';
-import { getDayNumber, getTimePeriod, getTimePeriodLabel } from '../engine/schedule';
 import type { Character, CharacterPair, CharacterRelationships, WorldMapLocation } from '../engine/types';
 import { assertNonNullish } from '../errors/application_error';
 import {
@@ -22,6 +21,7 @@ import { useScenarioCharacterStore } from '../state/scenario_character_store.js'
 import { useScenarioCharacterRelationshipStore } from '../state/scenario_character_relationship_store.js';
 import { useMapZoneStore } from '../state/map_zone_store.js';
 import { useCharacterGroupStore } from '../state/character_group_store.js';
+import { useTemporalContextStore } from '../state/temporal_context_store.js';
 import { getUserMovementSuggestion } from '../engine/character_schedule/get_scheduled_move';
 import { ChatCoordinator } from '../engine/chat/chat_coordinator';
 import { startScenarioLoop } from '../engine/scenario_loop/scenario_loop';
@@ -38,6 +38,8 @@ export default function ScenarioView() {
   );
   const zones = useMapZoneStore((state) => state.zones);
   const schedulesByGroupId = useCharacterGroupStore((state) => state.schedulesByGroupId);
+  const temporalDisplayHtml = useTemporalContextStore((state) => state.displayHtml);
+  const recomputeTemporalContext = useTemporalContextStore((state) => state.recompute);
   const { showCharacterOverview } = useCharacterOverview();
   const { showConversationLog } = useConversationLog();
   const { showMap } = useMapModal();
@@ -80,6 +82,12 @@ export default function ScenarioView() {
   }, [scenario?.id]);
 
   useEffect(() => {
+    if (scenario) {
+      void recomputeTemporalContext();
+    }
+  }, [scenario?.id, scenario?.turnNumber, recomputeTemporalContext]);
+
+  useEffect(() => {
     if (!scenario) {
       previousUserIdRef.current = null;
       return;
@@ -112,8 +120,6 @@ export default function ScenarioView() {
   const perspectiveLocationId: string | undefined = perspectiveCharacter
     ? charactersById[perspectiveCharacter.id]?.locationId
     : undefined;
-  const dayNumber = scenario ? getDayNumber(scenario.turnNumber) : 1;
-  const currentTimePeriod = scenario ? getTimePeriod(scenario.turnNumber) : 'morning';
   const locationById = useMemo(
     () =>
       Object.fromEntries((activeMap?.locations || []).map((location) => [location.id, location] as const)),
@@ -244,9 +250,7 @@ export default function ScenarioView() {
 
   const renderSessionHeader = ({ includeMenu = false }: { includeMenu?: boolean } = {}) => (
     <div className="flex justify-between items-center">
-      <div className="font-semibold">
-        Day {dayNumber} · Turn: {scenario.turnNumber} · {getTimePeriodLabel(currentTimePeriod)}
-      </div>
+      <div className="font-semibold" dangerouslySetInnerHTML={{ __html: temporalDisplayHtml }} />
       <div className="flex gap-2">
         <button type="button" onClick={() => showCharacterOverview()}>
           Character Overview

@@ -15,11 +15,13 @@ type ScenarioLoopStateStoreState = {
   runState: ScenarioLoopRunState;
   runningForScenario: string | undefined;
   userRequestedPhaseTransition: UserRequestedPhaseTransition;
+  lastTemporalDayIndex: number | undefined;
 
   setScenario: (scenarioId: string | undefined) => void;
   setAutoMode: (enabled: boolean) => void;
   setRunState: (runState: ScenarioLoopRunState) => void;
   setUserRequestedPhaseTransition: (value: UserRequestedPhaseTransition) => void;
+  setLastTemporalDayIndex: (dayIndex: number | undefined) => void;
   resetLoopState: () => void;
   submitChatMessage: (message: string) => boolean;
   submitChatSkipTurn: () => boolean;
@@ -61,6 +63,7 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
   runState: 'idle',
   runningForScenario: undefined,
   userRequestedPhaseTransition: 'none',
+  lastTemporalDayIndex: undefined,
 
   setAutoMode(enabled: boolean) {
     set({
@@ -76,10 +79,15 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
     set({ userRequestedPhaseTransition: value });
   },
 
+  setLastTemporalDayIndex(dayIndex: number | undefined) {
+    set({ lastTemporalDayIndex: dayIndex });
+  },
+
   resetLoopState() {
     set({
       runState: 'idle',
       userRequestedPhaseTransition: 'none',
+      lastTemporalDayIndex: undefined,
     });
   },
 
@@ -131,6 +139,6 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
   },
 
   setScenario: (scenarioId) => {
-    set({ runningForScenario: scenarioId });
+    set({ runningForScenario: scenarioId, lastTemporalDayIndex: undefined });
   },
 }));

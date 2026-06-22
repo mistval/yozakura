@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { settingsScriptSectionStateSchema } from './settings/settings_scripts/settings_scripts_state.js';
 
 export type OpenAIChatCompletionRequestMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -199,6 +200,10 @@ export const scenarioSchema = basePersistedObjectSchema.extend({
   mapId: z.string(),
   userCharacterId: z.string(),
   turnNumber: z.number(),
+  temporalContext: settingsScriptSectionStateSchema.meta({
+    description:
+      'The temporal/environmental context configuration for this scenario: the selected temporal script and its control values.',
+  }),
   mapOverrides: z
     .object({
       name: z.string().optional().meta({
@@ -361,9 +366,6 @@ const conversationStateUpdateNodeSchema: z.ZodType<ConversationStateUpdateNode> 
     })
     .passthrough()
 );
-
-export const timeOfDaySchema = z.enum(['morning', 'afternoon', 'evening', 'night']);
-export type TimeOfDay = z.infer<typeof timeOfDaySchema>;
 
 const baseMessageSchema = basePersistedObjectSchema.extend({
   id: z.string(),

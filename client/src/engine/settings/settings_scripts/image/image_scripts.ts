@@ -1,7 +1,6 @@
 import { getErrorMessage } from '../../../../errors/error_util.js';
 import { automatic1111Script } from './builtins/automatic1111.js';
 import { openRouterScript } from './builtins/open_router.js';
-import { CUSTOM_SCRIPT_ID } from '../settings_scripts_state.js';
 import {
   imageGenerationSettingsScriptSchema,
   type ImageGenerationSettingsScript,
@@ -23,10 +22,7 @@ export function getBuiltinImageScript(scriptId: string): ImageGenerationSettings
 }
 
 export function getImageScriptOptions(): Array<{ value: string; label: string }> {
-  return [
-    ...BUILTIN_IMAGE_SCRIPTS.map((script) => ({ value: script.id, label: script.name })),
-    // { value: CUSTOM_SCRIPT_ID, label: 'Custom' }, // Disable custom script input for now, want to get data structures into more final state first
-  ];
+  return BUILTIN_IMAGE_SCRIPTS.map((script) => ({ value: script.id, label: script.name }));
 }
 
 export function evaluateCustomImageScript(source: string): ImageGenerationSettingsScript {
@@ -39,28 +35,21 @@ export type ResolvedImageScript =
   | { ok: true; script: ImageGenerationSettingsScript }
   | { ok: false; error: string };
 
-export function resolveImageScript(
-  selectedScriptId: string,
-  customScriptSource: string
-): ResolvedImageScript {
-  if (selectedScriptId === CUSTOM_SCRIPT_ID) {
-    if (!customScriptSource.trim()) {
-      return { ok: false, error: 'Enter a custom script to configure this provider.' };
-    }
-
-    try {
-      return { ok: true, script: evaluateCustomImageScript(customScriptSource) };
-    } catch (error) {
-      return { ok: false, error: getErrorMessage(error) };
-    }
-  }
-
+export function resolveImageScript(selectedScriptId: string, source: string): ResolvedImageScript {
   const builtin = getBuiltinImageScript(selectedScriptId);
-  if (!builtin) {
-    return { ok: false, error: `Unknown image provider: ${selectedScriptId}` };
+  if (builtin) {
+    return { ok: true, script: builtin };
   }
 
-  return { ok: true, script: builtin };
+  if (!source.trim()) {
+    return { ok: false, error: 'Enter a custom script to configure this provider.' };
+  }
+
+  try {
+    return { ok: true, script: evaluateCustomImageScript(source) };
+  } catch (error) {
+    return { ok: false, error: getErrorMessage(error) };
+  }
 }
 
 export function validateImageGenerationSettingsScript(candidate: unknown): ImageGenerationSettingsScript {

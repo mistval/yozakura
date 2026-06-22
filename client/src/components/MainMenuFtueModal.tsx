@@ -26,6 +26,8 @@ import {
 } from '../engine/settings/settings_scripts/image/image_scripts.js';
 import { getImageScriptDocumentation } from '../engine/settings/settings_scripts/image/image_script_documentation.js';
 import {
+  resetScriptControlValues,
+  setControlValue,
   setSelectedScriptId,
   useSettingsScriptSection,
 } from '../engine/settings/settings_scripts/settings_scripts_store.js';
@@ -326,6 +328,16 @@ export default function MainMenuFtueModal() {
 
             <CustomScriptSettings
               sectionId={IMAGE_GENERATION_SECTION_ID}
+              selectedScriptId={imageSection.selectedScriptId}
+              controlValues={imageSection.controlValues[imageSection.selectedScriptId] ?? {}}
+              onSelectScript={(id) => setSelectedScriptId(IMAGE_GENERATION_SECTION_ID, id)}
+              onSetControlValue={(controlId, value) =>
+                setControlValue(IMAGE_GENERATION_SECTION_ID, imageSection.selectedScriptId, controlId, value)
+              }
+              onResetControlValues={() =>
+                resetScriptControlValues(IMAGE_GENERATION_SECTION_ID, imageSection.selectedScriptId)
+              }
+              builtinOptions={BUILTIN_IMAGE_SCRIPTS.map((script) => ({ value: script.id, label: script.name }))}
               resolveScript={resolveImageScript}
               getDocumentation={getImageScriptDocumentation}
               documentationTitle="Custom Image Generation Script Documentation"

@@ -62,6 +62,10 @@ const contextSchemaFields = z.object({
   scenario: scenarioSchema.meta({
     description: 'The overall scenario that the current conversation is taking place within.',
   }),
+  temporalContext: z.string().meta({
+    description:
+      "The current temporal/environmental context (date, time of day, weather, etc.) as plain text, produced by the scenario's temporal context script. May be empty.",
+  }),
   chatMedium: chatMediumSchema,
   worldMap: worldMapSchema.meta({
     description: 'The world map that scenario takes place in, including all locations and their connections.',
@@ -197,6 +201,7 @@ const scenarioExecutionContextSchema = globalExecutionContextSchema.and(
     allCharacters: true,
     userCharacter: true,
     scenario: true,
+    temporalContext: true,
     worldMap: true,
     getRelationship: true,
   })

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
-import { GraphCanvas } from 'reagraph';
-import { useGraphTheme } from '../theme/graph_themes.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.js';
 import type { WorldMap, WorldMapLocation } from '../engine/types.js';
 import { getConnectivityIslands, validateWorldMap } from '../engine/map/world_map.js';
@@ -19,24 +17,6 @@ function createEmptyLocation(): WorldMapLocation {
     adjacency: [] as string[],
     isEphemeral: false,
   });
-}
-
-function constructGraph(locations: WorldMapLocation[]) {
-  const nodes = locations.map((l) => ({
-    id: l.id,
-    label: l.name,
-  }));
-
-  const edges = locations.flatMap((l) =>
-    l.adjacency.map((a) => ({
-      id: `${l.id}->${a}`,
-      source: l.id,
-      target: a,
-      label: `${l.id} > ${a}`,
-    }))
-  );
-
-  return { nodes, edges };
 }
 
 export default function MapEditor() {
@@ -58,12 +38,7 @@ export default function MapEditor() {
     return maps.find((m) => m.id === id);
   }, [maps]);
 
-  const graphVisualization = useMemo(() => {
-    return constructGraph(locations);
-  }, [locations]);
-
   const connectivityIslands = useMemo(() => getConnectivityIslands(locations), [locations]);
-  const graphTheme = useGraphTheme();
 
   const editorZones = useMapZoneStore((s) => s.editorZones);
   const editorZonesAreLoaded = useMapZoneStore((s) => s.editorZonesAreLoaded);

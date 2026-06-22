@@ -22,6 +22,7 @@ import type {
   TargetedConversationExecutionContext,
 } from './prompt_template_context_fields.js';
 import { useSettingsStore } from '../../state/settings_store.js';
+import { useTemporalContextStore } from '../../state/temporal_context_store.js';
 import { generatePersonalityTraits } from '../../util/personality.js';
 import { getCharacterMovementConstraint } from '../character_schedule/get_scheduled_move.js';
 import _ from 'lodash';
@@ -124,6 +125,7 @@ function buildScenarioTemplateContext(): ScenarioExecutionContext {
     allCharacters: Object.values(scenarioCharacterStore.scenarioCharactersById).map(toContextCharacter),
     userCharacter: toContextCharacter(userCharacter),
     scenario: scenarioStore.activeScenario,
+    temporalContext: useTemporalContextStore.getState().plainText,
     worldMap: scenarioStore.activeScenarioMap,
     getRelationship: (characterAId: string, characterBId: string) =>
       useScenarioCharacterRelationshipStore.getState().getCharacterRelationship(characterAId, characterBId),

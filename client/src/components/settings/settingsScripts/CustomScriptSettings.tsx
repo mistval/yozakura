@@ -9,20 +9,19 @@ import {
   getControlDefault,
   resolveControls,
   resolveControlValues,
-  resetScriptControlValues,
-  setControlValue,
-  setCustomScriptSource,
-  useSettingsScriptSection,
 } from '../../../engine/settings/settings_scripts/settings_scripts_store.js';
 import {
-  CUSTOM_SCRIPT_ID,
+  customScriptGroupKey,
   makeTextFileGroupKey,
 } from '../../../engine/settings/settings_scripts/settings_scripts_state.js';
 import { createProxiedFetch } from '../../../backend_bridge/proxied_fetch.js';
 import { loadUserTextFileContent } from '../../../backend_bridge/database.js';
+import { createSeededRandom } from '../../../engine/settings/settings_scripts/seeded_random.js';
 import Modal from '../../ui/Modal.js';
-import TextSettingEditor from '../ui/TextSettingEditor.js';
 import SettingsScriptControls from './SettingsScriptControls.js';
+import { useUserTextFileList } from './useUserTextFileList.js';
+
+const NEW_CUSTOM_OPTION = '__new_custom_script__';
 
 export type ControlScript = {
   controls?: SettingsScriptControlsDefinition | undefined;
@@ -39,39 +38,68 @@ export type ResolvedControlScript = { ok: true; script: ControlScript } | { ok: 
 
 type CustomScriptSettingsProps = {
   sectionId: string;
-  resolveScript: (selectedScriptId: string, customScriptSource: string) => ResolvedControlScript;
+  selectedScriptId: string;
+  controlValues: Record<string, string>;
+  onSelectScript: (scriptId: string) => void;
+  onSetControlValue: (controlId: string, value: string) => void;
+  onResetControlValues: () => void;
+  builtinOptions: { value: string; label: string }[];
+  resolveScript: (selectedScriptId: string, source: string) => ResolvedControlScript;
   getDocumentation: () => string;
   documentationTitle: string;
-  customSourceLabel?: string;
-  customSourceTooltipHtml?: string;
+  enableCustom?: boolean;
   visibleControlIds?: string[] | undefined;
 };
 
 export default function CustomScriptSettings({
   sectionId,
+  selectedScriptId,
+  controlValues,
+  onSelectScript,
+  onSetControlValue,
+  onResetControlValues,
+  builtinOptions,
   resolveScript,
   getDocumentation,
   documentationTitle,
-  customSourceLabel = 'Custom Script',
-  customSourceTooltipHtml,
+  enableCustom = false,
   visibleControlIds,
 }: CustomScriptSettingsProps) {
-  const section = useSettingsScriptSection(sectionId);
+  const customScripts = useUserTextFileList(customScriptGroupKey(sectionId));
   const [documentationOpen, setDocumentationOpen] = useState(false);
   const [documentation, setDocumentation] = useState('');
   const [buttonData, setButtonData] = useState<Record<string, unknown>>({});
+  const [customSource, setCustomSource] = useState('');
 
-  const selectedScriptId = section.selectedScriptId;
-  const isCustom = selectedScriptId === CUSTOM_SCRIPT_ID;
-  const resolved = resolveScript(selectedScriptId, section.customScriptSource);
-  const storedValues = section.controlValues[selectedScriptId] ?? {};
+  const isBuiltin = builtinOptions.some((option) => option.value === selectedScriptId);
+  const selectedCustom = customScripts.files.find((file) => file.id === selectedScriptId);
+  const isCustomSelected = enableCustom && !isBuiltin && Boolean(selectedScriptId);
 
   useEffect(() => {
     setButtonData({});
   }, [selectedScriptId]);
 
+  useEffect(() => {
+    if (!isCustomSelected) {
+      setCustomSource('');
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const text = await customScripts.loadContent(selectedScriptId);
+      if (!cancelled) {
+        setCustomSource(text ?? '');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isCustomSelected, selectedScriptId, customScripts.loadContent]);
+
+  const resolved = resolveScript(selectedScriptId, isCustomSelected ? customSource : '');
   const controls = resolved.ok
-    ? resolveControls(resolved.script.controls, { controlValues: storedValues, buttonData })
+    ? resolveControls(resolved.script.controls, { controlValues, buttonData })
     : [];
 
   const makeHelpers = (): SettingsScriptHelpers => ({
@@ -79,6 +107,7 @@ export default function CustomScriptSettings({
     abortSignal: undefined,
     loadUserTextFile: (controlId, fileId) =>
       loadUserTextFileContent(makeTextFileGroupKey(sectionId, selectedScriptId, controlId), fileId),
+    createSeededRandom,
   });
 
   const handleButtonClick = async (buttonId: string): Promise<ButtonHandlerResult> => {
@@ -90,8 +119,8 @@ export default function CustomScriptSettings({
       return { result: 'failure', resultDescription: 'This provider has no handler for that button.' };
     }
 
-    const controlValues = resolveControlValues(controls, storedValues);
-    const result = await resolved.script.buttonHandler(buttonId, controlValues, makeHelpers());
+    const liveControlValues = resolveControlValues(controls, controlValues);
+    const result = await resolved.script.buttonHandler(buttonId, liveControlValues, makeHelpers());
     if (result.data !== undefined) {
       const nextButtonData = { ...buttonData, [buttonId]: result.data };
       setButtonData(nextButtonData);
@@ -106,16 +135,13 @@ export default function CustomScriptSettings({
     }
 
     const liveControls = resolveControls(resolved.script.controls, {
-      controlValues: storedValues,
+      controlValues,
       buttonData: nextButtonData,
     });
-    const baselineControls = resolveControls(resolved.script.controls, {
-      controlValues: storedValues,
-      buttonData: {},
-    });
+    const baselineControls = resolveControls(resolved.script.controls, { controlValues, buttonData: {} });
 
     for (const control of liveControls) {
-      if (control.type === 'button' || storedValues[control.id] !== undefined) {
+      if (control.type === 'button' || controlValues[control.id] !== undefined) {
         continue;
       }
 
@@ -127,15 +153,77 @@ export default function CustomScriptSettings({
       const baseline = baselineControls.find((candidate) => candidate.id === control.id);
       const baselineValue = baseline ? getControlDefault(baseline) : '';
       if (liveValue !== baselineValue) {
-        setControlValue(sectionId, selectedScriptId, control.id, liveValue);
+        onSetControlValue(control.id, liveValue);
       }
     }
   };
 
+  const handleProviderChange = async (next: string) => {
+    if (next === NEW_CUSTOM_OPTION) {
+      const id = await customScripts.create('Untitled script');
+      if (id) {
+        onSelectScript(id);
+      }
+      return;
+    }
+    onSelectScript(next);
+  };
+
+  const handleDeleteCustom = async () => {
+    if (!selectedCustom) {
+      return;
+    }
+    const nextId = await customScripts.remove(selectedCustom.id);
+    onSelectScript(nextId ?? builtinOptions[0]?.value ?? '');
+  };
+
   return (
     <div className="space-y-3">
-      {isCustom && (
-        <>
+      {enableCustom && (
+        <select
+          aria-label="Script provider"
+          value={selectedScriptId}
+          onChange={(event) => void handleProviderChange(event.target.value)}
+          className="rounded-input"
+        >
+          {!isBuiltin && !selectedCustom && selectedScriptId && (
+            <option value={selectedScriptId}>{selectedScriptId}</option>
+          )}
+          {builtinOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+          {customScripts.files.map((file) => (
+            <option key={file.id} value={file.id}>
+              {file.fileName}
+            </option>
+          ))}
+          <option value={NEW_CUSTOM_OPTION}>+ New custom script…</option>
+        </select>
+      )}
+
+      {isCustomSelected && selectedCustom && (
+        <div className="space-y-2 bordered-section">
+          <div className="flex gap-2 items-center">
+            <input
+              aria-label="Custom script name"
+              value={selectedCustom.fileName}
+              onChange={(event) =>
+                void customScripts.save(selectedCustom.id, event.target.value, customSource)
+              }
+              className="rounded-input"
+            />
+            <button
+              type="button"
+              onClick={() => void handleDeleteCustom()}
+              disabled={customScripts.busy}
+              className="shrink-0 px-3 py-1 border rounded-sm"
+            >
+              Delete
+            </button>
+          </div>
+
           <button
             type="button"
             className="px-3 py-1 border rounded-sm w-full h-12 button-emphasized"
@@ -147,28 +235,29 @@ export default function CustomScriptSettings({
             🤖 AI Assistant Instructions 🗒️
           </button>
 
-          <TextSettingEditor
-            label={customSourceLabel}
-            htmlFor={`${sectionId}-custom-script-source`}
-            tooltipHtml={customSourceTooltipHtml}
-            value={section.customScriptSource}
-            onChange={(nextValue) => setCustomScriptSource(sectionId, nextValue)}
-            textareaRows={16}
+          <textarea
+            aria-label="Custom script source"
+            rows={16}
             spellCheck={false}
-            enablePasteWarning
+            value={customSource}
+            onChange={(event) => setCustomSource(event.target.value)}
+            onBlur={() => void customScripts.save(selectedCustom.id, selectedCustom.fileName, customSource)}
+            className="rounded-input font-mono text-sm w-full"
           />
-        </>
+
+          {customScripts.error && <div className="error-card">{customScripts.error}</div>}
+        </div>
       )}
 
       {resolved.ok ? (
         <SettingsScriptControls
           controls={controls}
-          values={storedValues}
+          values={controlValues}
           sectionId={sectionId}
           scriptId={selectedScriptId}
           idPrefix={`${sectionId}-${selectedScriptId}`}
           visibleControlIds={visibleControlIds}
-          onChange={(controlId, value) => setControlValue(sectionId, selectedScriptId, controlId, value)}
+          onChange={(controlId, value) => onSetControlValue(controlId, value)}
           onButtonClick={handleButtonClick}
         />
       ) : (
@@ -177,11 +266,7 @@ export default function CustomScriptSettings({
 
       {!visibleControlIds && (
         <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => resetScriptControlValues(sectionId, selectedScriptId)}
-            className="px-3 py-1 border rounded-sm"
-          >
+          <button type="button" onClick={onResetControlValues} className="px-3 py-1 border rounded-sm">
             Reset to Default
           </button>
         </div>
@@ -196,17 +281,8 @@ export default function CustomScriptSettings({
           <header className="space-y-2">
             <h3 className="font-semibold">{documentationTitle}</h3>
             <p className="text-sm text-secondary">
-              Copy these instructions into a powerful LLM, tell it which provider you want to support, and let
-              it write the script for you. Alternatively, see{' '}
-              <a
-                target="_blank"
-                rel="noreferrer"
-                className="underline hover:text-primary"
-                href="https://github.com/mistval/yozakura/tree/dev/client/src/engine/settings/settings_scripts/image/builtins"
-              >
-                here
-              </a>{' '}
-              where you can find the built-in scripts for reference.
+              Copy these instructions into a powerful LLM, tell it what you want the script to do, and let it
+              write the script for you.
             </p>
           </header>
 
@@ -227,21 +303,6 @@ export default function CustomScriptSettings({
               }}
             >
               Copy
-            </button>
-            <button
-              type="button"
-              className="px-3 py-1 border rounded-sm"
-              onClick={() => {
-                const blob = new Blob([documentation], { type: 'text/markdown;charset=utf-8' });
-                const downloadUrl = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = `${sectionId}-custom-script-instructions.md`;
-                link.click();
-                URL.revokeObjectURL(downloadUrl);
-              }}
-            >
-              Download
             </button>
             <button
               type="button"

@@ -64,6 +64,9 @@ World name: <%= it.worldMap.name %>
 
 World description: <%= it.worldMap.description %>
 
+<% if (it.temporalContext) { %>
+The current date and time: <%= it.temporalContext %>
+<% } %>
 
 <%= it.focusedCharacter.firstName %>'s current location is:
 Location name:  <%= it.currentLocation.name %>
