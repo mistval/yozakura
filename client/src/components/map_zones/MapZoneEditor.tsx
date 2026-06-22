@@ -92,31 +92,31 @@ export default function MapZoneEditor({
   const isOverride = Boolean(selectedZone?.parentZoneId);
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        {controller.zones.map((zone) => (
-          <button
-            key={zone.id}
-            type="button"
-            className={zone.id === selectedZoneId ? 'button-emphasized' : ''}
-            onClick={() => setSelectedZoneId(zone.id)}
-          >
-            {zone.name || 'Untitled Zone'}
-            {zone.privateToGroupIds.length > 0 ? ' 🔒' : ''}
+    <div className="flex h-full gap-4">
+      <div className="flex w-72 shrink-0 flex-col gap-3 min-h-0 overflow-y-auto">
+        <div className="flex flex-wrap items-center gap-2">
+          {controller.zones.map((zone) => (
+            <button
+              key={zone.id}
+              type="button"
+              className={zone.id === selectedZoneId ? 'button-emphasized' : ''}
+              onClick={() => setSelectedZoneId(zone.id)}
+            >
+              {zone.name || 'Untitled Zone'}
+              {zone.privateToGroupIds.length > 0 ? ' 🔒' : ''}
+            </button>
+          ))}
+          <button type="button" onClick={() => setSelectedZoneId(controller.createZone('New Zone').id)}>
+            + Add Zone
           </button>
-        ))}
-        <button type="button" onClick={() => setSelectedZoneId(controller.createZone('New Zone').id)}>
-          + Add Zone
-        </button>
-      </div>
+        </div>
 
-      {!selectedZone ? (
-        controller.ready ? undefined : (
-          <div className="text-sm text-muted">Loading zones…</div>
-        )
-      ) : (
-        <div className="flex min-h-0 flex-col gap-4 lg:flex-row">
-          <div className="w-full shrink-0 space-y-3 lg:w-72">
+        {!selectedZone ? (
+          controller.ready ? undefined : (
+            <div className="text-sm text-muted">Loading zones…</div>
+          )
+        ) : (
+          <div className="space-y-3">
             <div className="space-y-1">
               <label className="block text-sm font-medium" htmlFor="zone-name">
                 Zone Name
@@ -194,24 +194,23 @@ export default function MapZoneEditor({
 
             <div className="text-xs text-muted">Click a location on the graph to toggle its membership.</div>
           </div>
-
-          <div className="relative min-h-100 min-w-0 flex-1 overflow-hidden rounded-sm border border-border-default bg-inset">
-            {graph.nodes.length === 0 ? (
-              <div className="absolute inset-0 flex items-center justify-center text-sm text-muted">
-                No locations to display.
-              </div>
-            ) : (
-              <GraphCanvas
-                nodes={graph.nodes}
-                edges={graph.edges}
-                theme={graphTheme}
-                actives={selectedZone.locationIds}
-                onNodeClick={(node) => toggleMembership(node.id)}
-              />
-            )}
+        )}
+      </div>
+      <div className="relative min-h-100 min-w-0 flex-1 overflow-hidden rounded-sm border border-border-default bg-inset">
+        {graph.nodes.length === 0 || !selectedZone ? (
+          <div className="absolute inset-0 flex items-center justify-center text-sm text-muted">
+            No locations to display.
           </div>
-        </div>
-      )}
+        ) : (
+          <GraphCanvas
+            nodes={graph.nodes}
+            edges={graph.edges}
+            theme={graphTheme}
+            actives={selectedZone.locationIds}
+            onNodeClick={(node) => toggleMembership(node.id)}
+          />
+        )}
+      </div>
 
       <ConfirmDialog
         open={Boolean(pendingDeleteZoneId)}
