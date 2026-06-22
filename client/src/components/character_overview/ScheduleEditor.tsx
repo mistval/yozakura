@@ -148,9 +148,15 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
-          <label className="block text-sm font-medium" htmlFor="schedule-length">
-            Length in turns
-          </label>
+          <div className="flex items-center gap-2">
+            <label className="block text-sm font-medium" htmlFor="schedule-length">
+              Length in turns
+            </label>
+            <InfoTooltip
+              label="About length in turns"
+              html="The schedule will repeat from the beginning after this many turns. Check the vertical <b>now</b> indicator line on the calendar bar to see where on the schedule we currently are. By default, there are eight turns per day, so set this to 8 if you want a single-day schedule, or 56 (8 x 7) if you want a week-long schedule. The number of turns per day may be different if you have changed the <b>Temporal / Environmental Context</b> in Scenario Settings."
+            />
+          </div>
           <input
             id="schedule-length"
             type="number"
@@ -259,7 +265,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
       {selectedSegment ? (
         <div className="space-y-3 rounded-sm border border-border-default bg-surface-soft p-3">
           <div className="flex items-center justify-between">
-            <h4 className="font-semibold">Segment</h4>
+            <h4 className="font-semibold">Schedule Segment</h4>
             <DeleteButton
               onConfirm={() => deleteSegment(selectedSegment.id)}
               confirmMessage="Are you sure you want to delete this schedule segment?"
