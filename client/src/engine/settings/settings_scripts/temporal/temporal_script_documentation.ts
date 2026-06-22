@@ -79,7 +79,8 @@ ${EXAMPLE_CUSTOM_TEMPORAL_SCRIPT}
 
 ## Instructions
 
-- The script runs in the browser so you may use browser APIs such as fetch and localStorage, but do not expect localStorage to persist between executions.
+- The script runs in the browser so you may use browser APIs such as fetch and localStorage, but do not expect localStorage to persist between application restarts.
+- You can use the latest JavaScript features and don't need to worry about supporting old browsers.
 - You can expect the script to run roughly once per minute on average, so caching isn't normally necessary, but you may cache in localStorage if you wish to.
 - Write the script as the user asks, but if you think they might be missing out on some fun opportunity for more colorful customization, let them know at the end.
 - Where there's a fitting emoji, use emojis in the displayHtml for added color.
