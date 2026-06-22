@@ -1,5 +1,25 @@
 import type { Migration } from '../types.js';
 
+/**
+ * Combined migration (dev-branch squash of former 0003, 0004, and 0005):
+ *
+ * 1. Delete stale `scenario_*_active_chat` key_value entries.
+ * 2. Create tables/indexes/triggers for character groups, map zones, and
+ *    group schedules; backfill `groupIds` defaults on character and
+ *    scenario_character blobs.
+ * 3. Backfill per-scenario temporal context configuration onto existing
+ *    scenario blobs.
+ *
+ * Every statement is idempotent (IF NOT EXISTS / guarded UPDATEs / DELETE),
+ * so re-running this migration on a database that already had the individual
+ * migrations applied is safe.
+ */
+
+const DELETE_ACTIVE_CHAT_KEYS_SQL = `
+  DELETE FROM key_value
+  WHERE key LIKE 'scenario_%_active_chat';
+`;
+
 const CREATE_SQL = `
   CREATE TABLE IF NOT EXISTS scenario_character_group (
     id TEXT PRIMARY KEY,
@@ -54,16 +74,33 @@ const CREATE_SQL = `
   END;
 `;
 
-const BACKFILL_SQL = `
+const BACKFILL_GROUP_IDS_SQL = `
   UPDATE character SET data = json_set(data, '$.groupIds', json('[]'))
     WHERE json_extract(data, '$.groupIds') IS NULL;
   UPDATE scenario_character SET data = json_set(data, '$.groupIds', json('[]'))
     WHERE json_extract(data, '$.groupIds') IS NULL;
 `;
 
+const BACKFILL_TEMPORAL_CONTEXT_SQL = `
+  UPDATE scenario
+  SET data = json_set(
+    data,
+    '$.temporalContext',
+    json_object(
+      'selectedScriptId', 'new-york',
+      'controlValues', json_object(
+        'new-york', json_object('startDate', substr(created_at, 1, 10))
+      )
+    )
+  )
+  WHERE json_extract(data, '$.temporalContext') IS NULL;
+`;
+
 export const migration: Migration = {
   doMigration(db) {
+    db.exec(DELETE_ACTIVE_CHAT_KEYS_SQL);
     db.exec(CREATE_SQL);
-    db.exec(BACKFILL_SQL);
+    db.exec(BACKFILL_GROUP_IDS_SQL);
+    db.exec(BACKFILL_TEMPORAL_CONTEXT_SQL);
   },
 };
