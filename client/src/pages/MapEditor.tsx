@@ -331,10 +331,6 @@ export default function MapEditor() {
 
       {error && <div className="error-card">{error}</div>}
 
-      <div className="relative w-full" style={{ height: '500px' }}>
-        <GraphCanvas nodes={graphVisualization.nodes} edges={graphVisualization.edges} theme={graphTheme} />
-      </div>
-
       {!isNew && (
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Map Zones</h2>
