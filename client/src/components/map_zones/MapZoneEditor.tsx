@@ -165,7 +165,7 @@ export default function MapZoneEditor({
                 {controller.groups.length === 0 ? (
                   <div className="text-sm text-muted">No character groups yet.</div>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     {controller.groups.map((group) => (
                       <label key={group.id} className="flex items-center gap-2 text-sm">
                         <input
@@ -208,7 +208,6 @@ export default function MapZoneEditor({
           />
         )}
       </div>
-
     </div>
   );
 }
