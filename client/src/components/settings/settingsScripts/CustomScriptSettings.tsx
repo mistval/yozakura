@@ -43,13 +43,8 @@ export default function CustomScriptSettings({
     documentationTitle,
     enableCustom = false,
   } = descriptor;
-  const {
-    selectedScriptId,
-    controlValues,
-    onSelectScript,
-    onSetControlValue,
-    onResetControlValues,
-  } = selection;
+  const { selectedScriptId, controlValues, onSelectScript, onSetControlValue, onResetControlValues } =
+    selection;
   const customScripts = useUserTextFileList(customScriptGroupKey(sectionId));
   const [documentationOpen, setDocumentationOpen] = useState(false);
   const [documentation, setDocumentation] = useState('');
@@ -83,6 +78,7 @@ export default function CustomScriptSettings({
   }, [isCustomSelected, selectedScriptId, customScripts.loadContent]);
 
   const resolved = resolveScript(selectedScriptId, isCustomSelected ? customSource : '');
+  const selectedDescription = resolved.ok ? resolved.script.description : undefined;
   const controls = resolved.ok
     ? resolveControls(resolved.script.controls, { controlValues, buttonData })
     : [];
@@ -187,6 +183,8 @@ export default function CustomScriptSettings({
           <option value={NEW_CUSTOM_OPTION}>+ New custom script…</option>
         </select>
       )}
+
+      {selectedDescription && <div className="border rounded-sm p-3">{selectedDescription}</div>}
 
       {isCustomSelected && selectedCustom && (
         <div className="space-y-2 bordered-section">

@@ -168,6 +168,7 @@ export type ControlsContext = {
 export type SettingsScriptControlsDefinition = (context: ControlsContext) => SettingsScriptControl[];
 
 export type ControlScript = {
+  description?: string | undefined;
   controls?: SettingsScriptControlsDefinition | undefined;
   buttonHandler?:
     | ((

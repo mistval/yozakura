@@ -4,6 +4,7 @@ import { temporalContextSettingsScriptJSONSchema } from './temporal_script_types
 const EXAMPLE_CUSTOM_TEMPORAL_SCRIPT = `({
   id: 'my-calendar',
   name: 'My Calendar',
+  description: 'A simple calendar and weather example. Replace this with what your script actually does.',
   controls: () => [
     { id: 'startDate', type: 'calendar', label: 'Start date', width: 'full' },
   ],
@@ -48,6 +49,7 @@ A single JavaScript object expression (wrapped in parentheses, e.g. \`({ ... })\
 
 - \`id\` (string) — unique id.
 - \`name\` (string) — display name.
+- \`description\` (string, optional) — a short human-readable description of what the script does. Shown in the settings UI below the script selector.
 - \`controls\` (optional) — a function \`(context) => controls[]\` returning the settings controls to render. Each control's value is passed to \`getTemporalContext\` keyed by its id (always strings). This allows the script to expose controls for the user to customize its behavior.
 - \`getTemporalContext(controlValues, request, helpers)\` (async) — returns
   \`{ displayHtml, plainText, dayIndex? }\`:

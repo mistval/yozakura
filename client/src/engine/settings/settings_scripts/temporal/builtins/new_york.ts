@@ -4,6 +4,8 @@ import type { TemporalContext, TemporalContextSettingsScript } from '../temporal
 export const newYorkTemporalScript: TemporalContextSettingsScript = {
   id: 'nyc-weather',
   name: 'New York City',
+  description:
+    'An 8-turn-long-day weather/season simulation for New York City. Tracks calendar date, time of day, temperature, and occasional severe weather events based on historical climate normals.',
 
   controls: (() => [
     { id: 'startDate', type: 'calendar', label: 'Start date', default: '2026-06-01', width: 'full' },

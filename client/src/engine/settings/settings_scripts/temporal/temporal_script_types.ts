@@ -23,6 +23,10 @@ export const temporalContextSettingsScriptSchema = z.object({
   name: z.string().meta({
     description: 'The display name of the temporal context provider (e.g. "New York").',
   }),
+  description: z.string().optional().meta({
+    description:
+      'A short human-readable description of what this temporal context provider does. Shown in the settings UI.',
+  }),
   controls: z.any().optional().meta({
     description:
       'A function `(context) => controls[]` returning the controls to render in the settings UI. The user-entered value of each control is passed to getTemporalContext keyed by control id.',
@@ -38,6 +42,7 @@ export const temporalContextSettingsScriptJSONSchema = temporalContextSettingsSc
 export type TemporalContextSettingsScript = {
   id: string;
   name: string;
+  description?: string | undefined;
   controls?: SettingsScriptControlsDefinition | undefined;
   getTemporalContext: (
     controlValues: SettingsControlValues,
