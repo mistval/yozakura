@@ -26,7 +26,6 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     const TURNS_PER_DAY = 8;
     const PERIODS = ['Dawn', 'Morning', 'Midday', 'Afternoon', 'Evening', 'Dusk', 'Night', 'Midnight'];
     // Diurnal temperature curve across the 8 periods: 0 = daily low, 1 = daily high.
-    // Coldest around dawn, warmest mid-afternoon, dropping back overnight.
     const TEMP_FRAC = [0.05, 0.4, 0.8, 1.0, 0.8, 0.55, 0.3, 0.12];
 
     const dayIndex = Math.floor(request.turnNumber / TURNS_PER_DAY);
@@ -67,9 +66,6 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     const { hi: monthlyHi, lo: monthlyLo, precip: precipChance } = MONTHLY[month]!;
 
     // --- Deterministic per-month extreme-event scheduler ---
-    // Each (year, month, type) is independently seeded, so an event occupies the
-    // same span of days every time the same date is evaluated. Events are kept
-    // wholly inside their month to avoid cross-boundary bookkeeping.
     const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
     const monthlyEvent = (
       type: string,
@@ -117,14 +113,17 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       lo = 74 + Math.round(d() * 8);
       cond = 'Heat wave';
       emoji = '🥵';
-      blurb = 'oppressive, hazy heat with little relief even after dark';
+      // FIX: Differentiate blurb based on daylight
+      blurb = isDaylight
+        ? 'oppressive, hazy heat under the baking sun'
+        : 'oppressive, stagnant heat with little relief even after dark';
       alert = '🔥 EXCESSIVE HEAT WARNING';
     } else {
-      // Ordinary day: shift the whole day warmer or cooler than the monthly normal.
       const shift = Math.round((d() * 2 - 1) * 10); // ±10°F
       hi = monthlyHi + shift;
       lo = monthlyLo + shift;
       const avg = (hi + lo) / 2;
+
       if (d() < precipChance) {
         if (avg <= 33) {
           cond = 'Snow';
@@ -148,7 +147,8 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
         } else if (sky < 0.78) {
           cond = 'Partly cloudy';
           emoji = isDaylight ? '⛅' : '☁️';
-          blurb = 'a mix of sun and clouds';
+          // FIX: Differentiate blurb based on daylight
+          blurb = isDaylight ? 'a mix of sun and clouds' : 'clouds drifting under the night sky';
         } else {
           cond = 'Overcast';
           emoji = '☁️';
@@ -157,9 +157,7 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       }
     }
 
-    // Temperature for this period via the diurnal curve.
     const tempF = Math.round(lo + (hi - lo) * TEMP_FRAC[periodIndex]!);
-
     const useC = (controlValues.units ?? 'F') === 'C';
     const temp = `${useC ? Math.round(((tempF - 32) * 5) / 9) : tempF}${useC ? '°C' : '°F'}`;
 
@@ -171,7 +169,6 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     else if (tempF >= 32) feel = 'cold';
     else feel = 'frigid';
 
-    // --- Build outputs ---
     let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}`;
     if (alert) displayHtml += `<br><b>${alert}</b>`;
 

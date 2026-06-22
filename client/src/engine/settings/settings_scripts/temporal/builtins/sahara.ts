@@ -50,7 +50,6 @@ export const saharaTemporalScript: TemporalContextSettingsScript = {
     });
 
     // --- Central Sahara monthly climate normals, °F + daily precip probability ---
-    // Massive diurnal swings. Extremely low precipitation year-round.
     const MONTHLY = [
       { hi: 70, lo: 40, precip: 0.01 }, // Jan
       { hi: 75, lo: 45, precip: 0.01 }, // Feb
@@ -82,7 +81,6 @@ export const saharaTemporalScript: TemporalContextSettingsScript = {
       return dom >= startDom && dom < startDom + duration;
     };
 
-    // Extreme weather tailored to the Sahara
     const sandstorm = monthlyEvent('sandstorm', {
       months: [2, 3, 4, 5, 6, 7],
       chance: 0.25,
@@ -103,29 +101,31 @@ export const saharaTemporalScript: TemporalContextSettingsScript = {
       alert = null;
 
     if (sandstorm) {
-      hi = monthlyHi - 5; // Dust blocks out some sunlight
-      lo = monthlyLo + 5; // Dust traps heat at night
+      hi = monthlyHi - 5;
+      lo = monthlyLo + 5;
       cond = 'Sandstorm';
       emoji = '🌪️';
       blurb = 'howling winds whipping up a blinding wall of sand and dust';
       alert = '⚠️ SEVERE SANDSTORM WARNING (HABOOB)';
     } else if (extremeHeat) {
-      hi = 118 + Math.round(d() * 8); // 118–126
+      hi = 118 + Math.round(d() * 8);
       lo = 88 + Math.round(d() * 6);
       cond = 'Extreme Heat';
       emoji = '🔥';
-      blurb = 'lethal, blistering heat with relentless sun baking the dunes';
+      // FIX: Differentiate blurb based on daylight
+      blurb = isDaylight
+        ? 'lethal, blistering heat with relentless sun baking the dunes'
+        : 'oppressive, stagnant heat holding onto the day’s warmth';
       alert = '🔥 EXTREME HEAT WARNING';
     } else if (desertFreeze) {
       hi = 60 + Math.round(d() * 5);
-      lo = 28 + Math.round(d() * 5); // 28-33 (Freezing nights)
+      lo = 28 + Math.round(d() * 5);
       cond = 'Cold Snap';
       emoji = '🥶';
       blurb = 'bitterly cold winds sweeping across the desert floor';
       alert = '❄️ FREEZE WARNING FOR NIGHTFALL';
     } else {
-      // Ordinary desert day
-      const shift = Math.round((d() * 2 - 1) * 6); // ±6°F variance
+      const shift = Math.round((d() * 2 - 1) * 6);
       hi = monthlyHi + shift;
       lo = monthlyLo + shift;
 
@@ -147,14 +147,15 @@ export const saharaTemporalScript: TemporalContextSettingsScript = {
         } else {
           cond = 'High Clouds';
           emoji = isDaylight ? '⛅' : '☁️';
-          blurb = 'thin, wispy clouds providing no relief from the sun';
+          // FIX: Differentiate blurb based on daylight
+          blurb = isDaylight
+            ? 'thin, wispy clouds providing no relief from the sun'
+            : 'wispy clouds drifting over the cooling dunes';
         }
       }
     }
 
-    // Temperature for this period via the diurnal curve.
     const tempF = Math.round(lo + (hi - lo) * TEMP_FRAC[periodIndex]!);
-
     const useC = (controlValues.units ?? 'C') === 'C';
     const temp = `${useC ? Math.round(((tempF - 32) * 5) / 9) : tempF}${useC ? '°C' : '°F'}`;
 
@@ -167,7 +168,6 @@ export const saharaTemporalScript: TemporalContextSettingsScript = {
     else if (tempF >= 35) feel = 'chilly';
     else feel = 'freezing cold';
 
-    // --- Build outputs ---
     let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}`;
     if (alert) displayHtml += `<br><b>${alert}</b>`;
 
