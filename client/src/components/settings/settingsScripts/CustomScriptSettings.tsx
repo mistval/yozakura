@@ -18,6 +18,7 @@ import { createProxiedFetch } from '../../../backend_bridge/proxied_fetch.js';
 import { loadUserTextFileContent } from '../../../backend_bridge/database.js';
 import { createSeededRandom } from '../../../engine/settings/settings_scripts/seeded_random.js';
 import Modal from '../../ui/Modal.js';
+import DeleteButton from '../../ui/DeleteButton.js';
 import SettingsScriptControls from './SettingsScriptControls.js';
 import { useUserTextFileList } from './useUserTextFileList.js';
 
@@ -198,14 +199,14 @@ export default function CustomScriptSettings({
               }
               className="rounded-input"
             />
-            <button
-              type="button"
-              onClick={() => void handleDeleteCustom()}
+            <DeleteButton
+              onConfirm={handleDeleteCustom}
               disabled={customScripts.busy}
-              className="shrink-0 px-3 py-1 border rounded-sm"
-            >
-              Delete
-            </button>
+              confirmTitle="Delete Script"
+              confirmLabel="Delete Script"
+              label="Delete script"
+              confirmMessage={`Delete script "${selectedCustom.fileName || 'Untitled script'}"? This cannot be undone.`}
+            />
           </div>
 
           <button

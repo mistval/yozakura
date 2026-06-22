@@ -54,6 +54,7 @@ export default function MapEditor() {
       zones: editorZones.filter((zone) => zone.mapId === id),
       groups: [],
       ready: editorZonesAreLoaded,
+      mapClasses: ['min-h-200'],
       allowPrivate: false,
       allowResync: false,
       createZone: (name) => useMapZoneStore.getState().createEditorZone(id!, name),

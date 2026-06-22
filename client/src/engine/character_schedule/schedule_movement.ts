@@ -98,7 +98,10 @@ export function resolveScheduleAllowedLocations(input: {
     }
 
     for (const segment of schedule.segments) {
-      if (!isSegmentActive(segment, schedule.lengthInTurns, input.turnNumber)) {
+      const activeNowOrNextTurn =
+        isSegmentActive(segment, schedule.lengthInTurns, input.turnNumber) ||
+        isSegmentActive(segment, schedule.lengthInTurns, input.turnNumber + 1);
+      if (!activeNowOrNextTurn) {
         continue;
       }
 

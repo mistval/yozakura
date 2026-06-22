@@ -12,6 +12,7 @@ import { useMapZoneStore } from '../../state/map_zone_store.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import InfoTooltip from './../ui/InfoTooltip';
 import { newId } from '../../util/id.js';
+import DeleteButton from '../ui/DeleteButton.js';
 
 const SEGMENT_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#14b8a6'];
 const LANE_HEIGHT_PX = 28;
@@ -165,7 +166,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
           />
         </div>
         <button type="button" onClick={addSegment} disabled={effectiveZones.length === 0}>
-          + Add Segment
+          ➕ Add Segment
         </button>
         {effectiveZones.length === 0 && (
           <span className="text-sm text-muted">Create a map zone first (Map → Zones).</span>
@@ -259,9 +260,10 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
         <div className="space-y-3 rounded-sm border border-border-default bg-surface-soft p-3">
           <div className="flex items-center justify-between">
             <h4 className="font-semibold">Segment</h4>
-            <button type="button" onClick={() => deleteSegment(selectedSegment.id)}>
-              Delete Segment
-            </button>
+            <DeleteButton
+              onConfirm={() => deleteSegment(selectedSegment.id)}
+              confirmMessage="Are you sure you want to delete this schedule segment?"
+            />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -296,7 +298,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
                 </label>
                 <InfoTooltip
                   label="About movement policy"
-                  html="<strong>Teleport</strong> means the character will instantly move to the zone whenever they are not in one. <strong>Rush</strong> means the character will move towards the zone one hop at a time, never stopping to initiate chats (although other characters can still initiate chats with them). <strong>Meander</strong> means the character will move towards the zone one hop a time, while occasionally stopping to initiate chats, at the rate specific in Behavior Settings."
+                  html="<strong>Teleport</strong> means the character will instantly warp to the zone when their schedule requires them to be there. <strong>Rush</strong> means the character will move towards the zone one hop at a time, never stopping to initiate chats (although other characters can still initiate chats with them). <strong>Meander</strong> means the character will move towards the zone one hop a time, while occasionally stopping to initiate chats, at the rate specified in Behavior Settings."
                 />
               </div>
               <select

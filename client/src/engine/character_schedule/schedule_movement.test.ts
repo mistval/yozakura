@@ -86,7 +86,7 @@ describe('resolveScheduledMove', () => {
     const result = resolveScheduledMove(
       {
         character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
-        turnNumber: 3,
+        turnNumber: 2,
         locations: LINE_LOCATIONS,
         effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
         groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 2)]) },
@@ -246,6 +246,59 @@ describe('resolveScheduledMove', () => {
 
     expect(build(1)).toEqual(build(5));
     expect(build(1)).toEqual({ forceMove: true, destinationLocationId: 'C' });
+  });
+
+  describe('starts moving one turn before a segment begins', () => {
+    const earlyInput = (movementPolicy: MovementPolicy) => ({
+      character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
+      turnNumber: 3,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      groupSchedulesByGroupId: {
+        g1: makeSchedule('g1', 4, [makeSegment('zoneCD', movementPolicy, 0, 2)]),
+      },
+    });
+
+    it('teleports into place the turn before', () => {
+      expect(resolveScheduledMove(earlyInput('teleport'), chooseFirst)).toEqual({
+        forceMove: true,
+        destinationLocationId: 'C',
+      });
+    });
+
+    it('rushes one step the turn before', () => {
+      expect(resolveScheduledMove(earlyInput('rush'), chooseFirst)).toEqual({
+        forceMove: true,
+        destinationLocationId: 'B',
+      });
+    });
+
+    it('meanders one step the turn before', () => {
+      expect(resolveScheduledMove(earlyInput('meander'), chooseFirst)).toEqual({
+        forceMove: false,
+        destinationLocationId: 'B',
+      });
+    });
+
+    it('does not move early when already inside a back-to-back zone', () => {
+      const result = resolveScheduledMove(
+        {
+          character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
+          turnNumber: 1,
+          locations: LINE_LOCATIONS,
+          effectiveZones: [makeZone('zoneAB', ['A', 'B']), makeZone('zoneCD', ['C', 'D'])],
+          groupSchedulesByGroupId: {
+            g1: makeSchedule('g1', 4, [
+              makeSegment('zoneAB', 'teleport', 0, 2),
+              makeSegment('zoneCD', 'teleport', 2, 4),
+            ]),
+          },
+        },
+        chooseFirst
+      );
+      expect(result?.forceMove).toBe(false);
+      expect(['A', 'B']).toContain(result?.destinationLocationId);
+    });
   });
 });
 
