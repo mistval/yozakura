@@ -3,6 +3,12 @@ import { ApplicationError } from '../errors/application_error';
 
 type LlmTokenCallback = (fullText: string) => void;
 
+function buildAuthHeader(authToken: string | undefined): string | undefined {
+  const trimmed = authToken?.trim();
+  if (!trimmed) return undefined;
+  return trimmed.toLowerCase().startsWith('bearer ') ? trimmed : `Bearer ${trimmed}`;
+}
+
 export type LlmChatOptions = {
   targetUrl?: string | undefined;
   authToken?: string | undefined;
@@ -163,14 +169,19 @@ export async function executeLlmChat(payload: Record<string, unknown>, options: 
     stream: streamingRequested,
   };
 
-  const response = await fetch('/api/llm/chat', {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (targetUrl) {
+    headers['X-Target-URL'] = targetUrl;
+  }
+  const authHeader = buildAuthHeader(authToken);
+  if (authHeader) {
+    headers['Authorization'] = authHeader;
+  }
+
+  const response = await fetch('/api/proxy/fetch', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      ...requestPayload,
-      targetUrl,
-      authToken,
-    }),
+    headers,
+    body: JSON.stringify(requestPayload),
     signal: signal ?? null,
   });
 
