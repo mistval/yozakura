@@ -15,6 +15,15 @@ const EXCLUDED_REQUEST_HEADERS = new Set([
   'x-target-url',
 ]);
 
+const EXCLUDED_RESPONSE_HEADERS = new Set([
+  'content-encoding',
+  'content-length',
+  'connection',
+  'keep-alive',
+  'transfer-encoding',
+  'upgrade',
+]);
+
 export default function proxyRouter(): Router {
   const router = express.Router();
 
@@ -58,7 +67,9 @@ export default function proxyRouter(): Router {
 
       res.status(response.status);
       for (const [name, value] of response.headers.entries()) {
-        res.setHeader(name, value);
+        if (!EXCLUDED_RESPONSE_HEADERS.has(name.toLowerCase())) {
+          res.setHeader(name, value);
+        }
       }
 
       if (!response.body) {

@@ -23,8 +23,7 @@ import {
 } from './settings/settings_scripts/settings_scripts_state.js';
 import type { ImagePromptType } from './settings/settings_scripts/image/image_script_types';
 
-const IMAGE_GENERATION_RETRY_HINT =
-  'The backend server might not be running or the image provider might be unavailable.';
+const IMAGE_GENERATION_RETRY_HINT = 'The image provider might be unavailable or misconfigured.';
 
 function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -48,7 +47,7 @@ async function dispatchImageGeneration(
       const section = getSettingsScriptSection(IMAGE_GENERATION_SECTION_ID);
       const source = getBuiltinImageScript(section.selectedScriptId)
         ? ''
-        : (await loadCustomScriptSource(IMAGE_GENERATION_SECTION_ID, section.selectedScriptId)) ?? '';
+        : ((await loadCustomScriptSource(IMAGE_GENERATION_SECTION_ID, section.selectedScriptId)) ?? '');
       const resolved = resolveImageScript(section.selectedScriptId, source);
       if (!resolved.ok) {
         throw new Error(resolved.error);
