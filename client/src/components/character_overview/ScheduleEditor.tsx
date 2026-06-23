@@ -254,7 +254,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
 
             <div
               className="pointer-events-none absolute top-0 bottom-0 z-10 w-0.5 bg-danger-solid"
-              style={{ left: `${nowTurn * pixelsPerTurn}px` }}
+              style={{ left: `${nowTurn * pixelsPerTurn + Math.floor(pixelsPerTurn / 2)}px` }}
               title={`Now: turn ${nowTurn}`}
             >
               <span className="absolute left-0.5 top-0 rounded-sm bg-danger-solid px-1 text-[10px] leading-none text-white">
