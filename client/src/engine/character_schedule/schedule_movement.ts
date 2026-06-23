@@ -40,11 +40,11 @@ const POLICY_PERMISSIVENESS: Record<MovementPolicy, number> = {
   casual: 3,
 };
 
-function mostPermissivePolicy(a: MovementPolicy | undefined, b: MovementPolicy): MovementPolicy {
+function mostUrgentPolicy(a: MovementPolicy | undefined, b: MovementPolicy): MovementPolicy {
   if (a === undefined) {
     return b;
   }
-  return POLICY_PERMISSIVENESS[a] >= POLICY_PERMISSIVENESS[b] ? a : b;
+  return POLICY_PERMISSIVENESS[a] >= POLICY_PERMISSIVENESS[b] ? b : a;
 }
 
 function isSegmentActive(
@@ -80,17 +80,19 @@ export function resolveForbiddenLocationIds(input: {
   return forbidden;
 }
 
-export function resolveScheduleAllowedLocations(input: {
+// Return locations the character is scheduled to be in
+// along with a policy for how to move to each location
+export function resolveScheduledLocations(input: {
   character: Pick<Character, 'groupIds'>;
   turnNumber: number;
   groupSchedulesByGroupId: Record<string, ScenarioCharacterGroupSchedule>;
   effectiveZones: MapZone[];
 }): {
-  allowed: Set<string>;
+  scheduledLocations: Set<string>;
   policyByLocationId: Map<string, MovementPolicy>;
   reasonByLocationId: Map<string, string>;
 } {
-  const allowed = new Set<string>();
+  const scheduledLocations = new Set<string>();
   const policyByLocationId = new Map<string, MovementPolicy>();
   const reasonByLocationId = new Map<string, string>();
 
@@ -110,15 +112,17 @@ export function resolveScheduleAllowedLocations(input: {
 
       const zone = resolveZoneById(segment.zoneId, input.effectiveZones);
       if (!zone) {
+        // TODO: Warning log
         continue;
       }
 
       for (const locationId of zone.locationIds) {
-        allowed.add(locationId);
+        scheduledLocations.add(locationId);
         policyByLocationId.set(
           locationId,
-          mostPermissivePolicy(policyByLocationId.get(locationId), segment.movementPolicy)
+          mostUrgentPolicy(policyByLocationId.get(locationId), segment.movementPolicy)
         );
+
         if (segment.reason && !reasonByLocationId.has(locationId)) {
           reasonByLocationId.set(locationId, segment.reason);
         }
@@ -126,18 +130,18 @@ export function resolveScheduleAllowedLocations(input: {
     }
   }
 
-  return { allowed, policyByLocationId, reasonByLocationId };
+  return { scheduledLocations, policyByLocationId, reasonByLocationId };
 }
 
 export function resolveScheduledMove(
   input: ScheduleMovementInput,
   choose: <T>(items: T[]) => T = getRequiredRandomChoice
-): ScheduledMove | undefined {
+): ScheduledMove {
   const forbidden = resolveForbiddenLocationIds(input);
-  const { allowed, policyByLocationId } = resolveScheduleAllowedLocations(input);
+  const { scheduledLocations, policyByLocationId } = resolveScheduledLocations(input);
 
   for (const locationId of forbidden) {
-    allowed.delete(locationId);
+    scheduledLocations.delete(locationId);
     policyByLocationId.delete(locationId);
   }
 
@@ -147,30 +151,30 @@ export function resolveScheduledMove(
   const current = input.character.locationId;
   const currentAdjacency = getNeighbors(current);
 
-  const plainMove = (): ScheduledMove => {
+  const moveWithoutScheduledLocations = (): ScheduledMove => {
     const candidates = [current, ...currentAdjacency].filter((id) => !forbidden.has(id));
     const pool = candidates.length > 0 ? candidates : [current];
-    return { forceMove: false, destinationLocationId: choose(pool), consumesTurn: false };
+    return { forceMove: false, destinationLocationId: choose(pool), consumesTurn: true };
   };
 
-  if (allowed.size === 0) {
-    return forbidden.size === 0 ? undefined : plainMove();
+  if (scheduledLocations.size === 0) {
+    return moveWithoutScheduledLocations();
   }
 
-  if (allowed.has(current)) {
-    const candidates = [current, ...currentAdjacency.filter((id) => allowed.has(id))];
-    return { forceMove: false, destinationLocationId: choose(candidates), consumesTurn: false };
+  if (scheduledLocations.has(current)) {
+    const candidates = [current, ...currentAdjacency.filter((id) => scheduledLocations.has(id))];
+    return { forceMove: false, destinationLocationId: choose(candidates), consumesTurn: true };
   }
 
   const { targets, firstStepsToward } = findNearestReachable(
     current,
     getNeighbors,
-    (locationId) => allowed.has(locationId),
+    (locationId) => scheduledLocations.has(locationId),
     (locationId) => !forbidden.has(locationId)
   );
 
   if (targets.length === 0) {
-    return plainMove();
+    return moveWithoutScheduledLocations();
   }
 
   const target = choose(targets);
@@ -181,19 +185,19 @@ export function resolveScheduledMove(
   }
 
   const firstSteps = firstStepsToward(target);
-  const firstStep = policy === 'casual' ? choose(firstSteps) : firstSteps[0]!;
+  const firstStep = choose(firstSteps);
   const forceMove = policy === 'rush';
-  return { forceMove, destinationLocationId: firstStep, consumesTurn: forceMove };
+  return { forceMove, destinationLocationId: firstStep, consumesTurn: true };
 }
 
 export function resolveUserMovementSuggestion(
   input: ScheduleMovementInput
 ): UserMovementSuggestion | undefined {
   const forbidden = resolveForbiddenLocationIds(input);
-  const { allowed, policyByLocationId } = resolveScheduleAllowedLocations(input);
+  const { scheduledLocations, policyByLocationId } = resolveScheduledLocations(input);
 
   for (const locationId of forbidden) {
-    allowed.delete(locationId);
+    scheduledLocations.delete(locationId);
     policyByLocationId.delete(locationId);
   }
 
@@ -212,7 +216,7 @@ export function resolveUserMovementSuggestion(
     };
   };
 
-  if (allowed.size === 0) {
+  if (scheduledLocations.size === 0) {
     return locksOnly();
   }
 
@@ -221,13 +225,13 @@ export function resolveUserMovementSuggestion(
 
   const current = input.character.locationId;
 
-  if (allowed.has(current)) {
+  if (scheduledLocations.has(current)) {
     const highlightByLocationId: Record<string, MoveHighlight> = {};
     const consumesTurnByLocationId: Record<string, boolean> = {};
     for (const neighbor of getNeighbors(current)) {
-      if (allowed.has(neighbor)) {
+      if (scheduledLocations.has(neighbor)) {
         highlightByLocationId[neighbor] = 'allowed';
-        consumesTurnByLocationId[neighbor] = false;
+        consumesTurnByLocationId[neighbor] = true;
       }
     }
     return {
@@ -242,7 +246,7 @@ export function resolveUserMovementSuggestion(
   const { targets, firstStepsToward } = findNearestReachable(
     current,
     getNeighbors,
-    (locationId) => allowed.has(locationId),
+    (locationId) => scheduledLocations.has(locationId),
     (locationId) => !forbidden.has(locationId)
   );
 
@@ -275,7 +279,7 @@ export function resolveUserMovementSuggestion(
       surface(target, 'urgent', policy === 'jump');
     } else if (policy === 'casual') {
       for (const step of firstStepsToward(target)) {
-        surface(step, 'gentle', false);
+        surface(step, 'gentle', true);
       }
     } else {
       surface(firstStepsToward(target)[0]!, 'urgent', true);
@@ -301,19 +305,19 @@ export function resolveCharacterMovementConstraint(
   input: ScheduleMovementInput
 ): CharacterMovementConstraint | undefined {
   const forbidden = resolveForbiddenLocationIds(input);
-  const { allowed, reasonByLocationId } = resolveScheduleAllowedLocations(input);
+  const { scheduledLocations, reasonByLocationId } = resolveScheduledLocations(input);
 
   for (const locationId of forbidden) {
-    allowed.delete(locationId);
+    scheduledLocations.delete(locationId);
   }
 
-  if (allowed.size === 0) {
+  if (scheduledLocations.size === 0) {
     return undefined;
   }
 
   const current = input.character.locationId;
 
-  if (allowed.has(current)) {
+  if (scheduledLocations.has(current)) {
     return { status: 'in_designated_zone', reason: reasonByLocationId.get(current) };
   }
 
@@ -323,7 +327,7 @@ export function resolveCharacterMovementConstraint(
   const { targets } = findNearestReachable(
     current,
     getNeighbors,
-    (locationId) => allowed.has(locationId),
+    (locationId) => scheduledLocations.has(locationId),
     (locationId) => !forbidden.has(locationId)
   );
 

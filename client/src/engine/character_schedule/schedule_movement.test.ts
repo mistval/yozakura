@@ -8,7 +8,7 @@ import type {
 } from '../types';
 import {
   resolveCharacterMovementConstraint,
-  resolveScheduleAllowedLocations,
+  resolveScheduledLocations,
   resolveScheduledMove,
   resolveUserMovementSuggestion,
 } from './schedule_movement';
@@ -79,7 +79,7 @@ function makeSchedule(
 }
 
 describe('resolveScheduledMove', () => {
-  it('returns undefined with no groups and no zones', () => {
+  it('returns wait with no groups and no zones', () => {
     const result = resolveScheduledMove(
       {
         character: { id: 'npc', locationId: 'A', groupIds: [] },
@@ -90,21 +90,11 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toBeUndefined();
-  });
-
-  it('returns undefined during a schedule gap with no private zones', () => {
-    const result = resolveScheduledMove(
-      {
-        character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
-        turnNumber: 2,
-        locations: LINE_LOCATIONS,
-        effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
-        groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 2)]) },
-      },
-      chooseFirst
-    );
-    expect(result).toBeUndefined();
+    expect(result).toEqual({
+      forceMove: false,
+      destinationLocationId: 'A',
+      consumesTurn: true,
+    });
   });
 
   it('teleports straight to the nearest allowed location when out of zone', () => {
@@ -160,10 +150,10 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toEqual({ forceMove: false, destinationLocationId: 'B', consumesTurn: false });
+    expect(result).toEqual({ forceMove: false, destinationLocationId: 'B', consumesTurn: true });
   });
 
-  it('casual can take any step that still moves closer, not just the most direct one', () => {
+  it('returns multiple valid moves', () => {
     const casualMove = (choose: <T>(items: T[]) => T) =>
       resolveScheduledMove(
         {
@@ -179,12 +169,12 @@ describe('resolveScheduledMove', () => {
     expect(casualMove(chooseFirst)).toEqual({
       forceMove: false,
       destinationLocationId: 'B',
-      consumesTurn: false,
+      consumesTurn: true,
     });
     expect(casualMove(chooseLast)).toEqual({
       forceMove: false,
       destinationLocationId: 'C',
-      consumesTurn: false,
+      consumesTurn: true,
     });
   });
 
@@ -204,7 +194,7 @@ describe('resolveScheduledMove', () => {
   });
 
   it('unions overlapping segments into one allowed set', () => {
-    const { allowed } = resolveScheduleAllowedLocations({
+    const { scheduledLocations: allowed } = resolveScheduledLocations({
       character: { groupIds: ['g1'] },
       turnNumber: 0,
       effectiveZones: [makeZone('zoneC', ['C']), makeZone('zoneD', ['D'])],
@@ -310,7 +300,11 @@ describe('resolveScheduledMove', () => {
     });
 
     it('does not start early for teleport (no headstart)', () => {
-      expect(resolveScheduledMove(earlyInput('teleport'), chooseFirst)).toBeUndefined();
+      expect(resolveScheduledMove(earlyInput('teleport'), chooseFirst)).toEqual({
+        forceMove: false,
+        destinationLocationId: 'A',
+        consumesTurn: true,
+      });
     });
 
     it('rushes one step the turn before', () => {
@@ -325,7 +319,7 @@ describe('resolveScheduledMove', () => {
       expect(resolveScheduledMove(earlyInput('casual'), chooseFirst)).toEqual({
         forceMove: false,
         destinationLocationId: 'B',
-        consumesTurn: false,
+        consumesTurn: true,
       });
     });
 
@@ -408,7 +402,7 @@ describe('resolveUserMovementSuggestion', () => {
     expect(result).toEqual({
       suggestedLocationIds: ['B'],
       highlightByLocationId: { B: 'gentle' },
-      consumesTurnByLocationId: { B: false },
+      consumesTurnByLocationId: { B: true },
       highlightWait: false,
       forbiddenLocationIds: [],
     });
@@ -425,7 +419,7 @@ describe('resolveUserMovementSuggestion', () => {
     expect(result).toEqual({
       suggestedLocationIds: ['B', 'C'],
       highlightByLocationId: { B: 'gentle', C: 'gentle' },
-      consumesTurnByLocationId: { B: false, C: false },
+      consumesTurnByLocationId: { B: true, C: true },
       highlightWait: false,
       forbiddenLocationIds: [],
     });
@@ -442,7 +436,7 @@ describe('resolveUserMovementSuggestion', () => {
     expect(result).toEqual({
       suggestedLocationIds: [],
       highlightByLocationId: { D: 'allowed' },
-      consumesTurnByLocationId: { D: false },
+      consumesTurnByLocationId: { D: true },
       highlightWait: true,
       forbiddenLocationIds: [],
     });

@@ -6,7 +6,7 @@ import { useScenarioCharacterRelationshipStore } from '../../../state/scenario_c
 import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_store';
 import { useSettingsStore } from '../../../state/settings_store';
 import { getRequiredActiveScenario, getRequiredActiveScenarioMap } from '../../../state/scenario_store';
-import { getRequiredRandomChoice, weightedSampleWithoutReplacement } from '../../../util/array';
+import { weightedSampleWithoutReplacement } from '../../../util/array';
 import { ChatCoordinator } from '../../chat/chat_coordinator';
 import { getScheduledMoveForNpc } from '../../character_schedule/get_scheduled_move';
 import { familiarityRelativeWeight, getDirectedRelationship } from '../../relationship';
@@ -14,7 +14,6 @@ import type { Character, CharacterRelationships, WorldMapLocation } from '../../
 import { doScenarioLoopAsyncAction } from '../flow_control';
 import type { ChatInputResult, TurnMove, TurnMoveResult } from '../types';
 import { CharacterInputInterface } from './character_input_interface';
-import type { ScheduledMove } from '../../character_schedule/schedule_movement';
 
 export class NPCInputInterface extends CharacterInputInterface {
   public constructor(private readonly characterId: string) {
@@ -26,15 +25,7 @@ export class NPCInputInterface extends CharacterInputInterface {
     const currentLocation = this.getCharacterLocation(npc.id);
     const forcedConversationTargetId = npc.nextConversationWithCharacterId;
     const userCharacterId = useScenarioCharacterStore.getState().getUserCharacter()?.id;
-
     const scheduledMove = getScheduledMoveForNpc(npc);
-
-    if (scheduledMove?.forceMove) {
-      return {
-        move: { actionType: 'move', ...scheduledMove },
-        persist: false,
-      };
-    }
 
     if (
       forcedConversationTargetId &&
@@ -75,6 +66,13 @@ export class NPCInputInterface extends CharacterInputInterface {
           };
         }
       }
+    }
+
+    if (scheduledMove.forceMove) {
+      return {
+        move: { actionType: 'move', ...scheduledMove },
+        persist: false,
+      };
     }
 
     const chatDecider = Math.random();
@@ -133,7 +131,7 @@ export class NPCInputInterface extends CharacterInputInterface {
       }
     }
 
-    return { move: this.buildMoveMove(npc, scheduledMove), persist: false };
+    return { move: { actionType: 'move', ...scheduledMove }, persist: false };
   }
 
   public async getNextChatInput(): Promise<ChatInputResult> {
@@ -192,18 +190,6 @@ export class NPCInputInterface extends CharacterInputInterface {
       participantIds: allParticipants.map((p) => p.id),
       rich: isRich,
     };
-  }
-
-  private buildMoveMove(npc: Character, scheduledMove?: ScheduledMove): TurnMove {
-    if (scheduledMove) {
-      return { actionType: 'move', ...scheduledMove };
-    }
-
-    const location = this.getCharacterLocation(npc.id);
-    const candidates = [location.id].concat(location.adjacency);
-    const targetLocation = getRequiredRandomChoice(candidates);
-
-    return { actionType: 'move', destinationLocationId: targetLocation, consumesTurn: true };
   }
 
   private getCharacterLocation(characterId: string): WorldMapLocation {

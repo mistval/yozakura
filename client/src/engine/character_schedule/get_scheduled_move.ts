@@ -7,7 +7,6 @@ import {
   resolveScheduledMove,
   resolveUserMovementSuggestion,
   type CharacterMovementConstraint,
-  type ScheduledMove,
   type UserMovementSuggestion,
 } from './schedule_movement.js';
 
@@ -24,9 +23,7 @@ function getScheduleMovementInput(character: Pick<Character, 'id' | 'locationId'
   };
 }
 
-export function getScheduledMoveForNpc(
-  npc: Pick<Character, 'id' | 'locationId' | 'groupIds'>
-): ScheduledMove | undefined {
+export function getScheduledMoveForNpc(npc: Pick<Character, 'id' | 'locationId' | 'groupIds'>) {
   return resolveScheduledMove(getScheduleMovementInput(npc));
 }
 
