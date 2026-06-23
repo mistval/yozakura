@@ -162,7 +162,7 @@ export function resolveScheduledMove(
     return { forceMove: false, destinationLocationId: choose(candidates), consumesTurn: false };
   }
 
-  const { targets, firstStepToward } = findNearestReachable(
+  const { targets, firstStepsToward } = findNearestReachable(
     current,
     getNeighbors,
     (locationId) => allowed.has(locationId),
@@ -180,8 +180,9 @@ export function resolveScheduledMove(
     return { forceMove: true, destinationLocationId: target, consumesTurn: policy === 'jump' };
   }
 
-  const firstStep = firstStepToward(target)!;
-  const forceMove = policy !== 'casual';
+  const firstSteps = firstStepsToward(target);
+  const firstStep = policy === 'casual' ? choose(firstSteps) : firstSteps[0]!;
+  const forceMove = policy === 'rush';
   return { forceMove, destinationLocationId: firstStep, consumesTurn: forceMove };
 }
 
@@ -238,7 +239,7 @@ export function resolveUserMovementSuggestion(
     };
   }
 
-  const { targets, firstStepToward } = findNearestReachable(
+  const { targets, firstStepsToward } = findNearestReachable(
     current,
     getNeighbors,
     (locationId) => allowed.has(locationId),
@@ -272,8 +273,12 @@ export function resolveUserMovementSuggestion(
     const policy = policyByLocationId.get(target)!;
     if (policy === 'teleport' || policy === 'jump') {
       surface(target, 'urgent', policy === 'jump');
+    } else if (policy === 'casual') {
+      for (const step of firstStepsToward(target)) {
+        surface(step, 'gentle', false);
+      }
     } else {
-      surface(firstStepToward(target)!, policy === 'rush' ? 'urgent' : 'gentle', policy === 'rush');
+      surface(firstStepsToward(target)[0]!, 'urgent', true);
     }
   }
 

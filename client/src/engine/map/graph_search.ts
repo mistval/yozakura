@@ -3,44 +3,30 @@ export function breadthFirstSearch<T>(
   getNeighbors: (node: T) => Iterable<T>,
   options?: {
     canEnter?: (node: T) => boolean;
-    shouldStop?: (node: T, distance: number) => boolean;
   }
 ): {
   order: T[];
   distance: Map<T, number>;
-  predecessor: Map<T, T>;
 } {
   const order: T[] = [];
   const distance = new Map<T, number>([[start, 0]]);
-  const predecessor = new Map<T, T>();
   const queue: T[] = [start];
 
-  while (queue.length > 0) {
-    const node = queue.shift()!;
-    const nodeDistance = distance.get(node)!;
-
-    if (options?.shouldStop?.(node, nodeDistance)) {
-      break;
-    }
-
+  for (let head = 0; head < queue.length; head++) {
+    const node = queue[head]!;
     order.push(node);
 
+    const nextDistance = distance.get(node)! + 1;
     for (const neighbor of getNeighbors(node)) {
-      if (distance.has(neighbor)) {
+      if (distance.has(neighbor) || (options?.canEnter && !options.canEnter(neighbor))) {
         continue;
       }
-
-      if (options?.canEnter && !options.canEnter(neighbor)) {
-        continue;
-      }
-
-      distance.set(neighbor, nodeDistance + 1);
-      predecessor.set(neighbor, node);
+      distance.set(neighbor, nextDistance);
       queue.push(neighbor);
     }
   }
 
-  return { order, distance, predecessor };
+  return { order, distance };
 }
 
 export function findNearestReachable<T>(
@@ -50,38 +36,38 @@ export function findNearestReachable<T>(
   canEnter: (node: T) => boolean
 ): {
   targets: T[];
-  firstStepToward: (target: T) => T | undefined;
+  firstStepsToward: (target: T) => T[];
 } {
-  let nearestDistance: number | undefined;
-  const targets: T[] = [];
+  const { order, distance } = breadthFirstSearch(start, getNeighbors, { canEnter });
 
-  const { predecessor } = breadthFirstSearch(start, getNeighbors, {
-    canEnter,
-    shouldStop: (node, nodeDistance) => {
-      if (nearestDistance !== undefined && nodeDistance > nearestDistance) {
-        return true;
-      }
+  const nearest = order.find(isTarget);
+  const nearestDistance = nearest === undefined ? undefined : distance.get(nearest);
+  const targets =
+    nearestDistance === undefined
+      ? []
+      : order.filter((node) => distance.get(node) === nearestDistance && isTarget(node));
 
-      if (isTarget(node)) {
-        nearestDistance ??= nodeDistance;
-        targets.push(node);
-      }
-
-      return false;
-    },
-  });
-
-  const firstStepToward = (target: T): T | undefined => {
-    let node = target;
-    let parent = predecessor.get(node);
-
-    while (parent !== undefined && parent !== start) {
-      node = parent;
-      parent = predecessor.get(node);
+  const firstStepsToward = (target: T): T[] => {
+    const targetDistance = distance.get(target);
+    if (targetDistance === undefined || targetDistance === 0) {
+      return [];
     }
 
-    return parent === start ? node : undefined;
+    let frontier = [target];
+    for (let depth = targetDistance; depth > 1; depth--) {
+      const closer = new Set<T>();
+      for (const node of frontier) {
+        for (const neighbor of getNeighbors(node)) {
+          if (distance.get(neighbor) === depth - 1) {
+            closer.add(neighbor);
+          }
+        }
+      }
+      frontier = [...closer];
+    }
+
+    return frontier;
   };
 
-  return { targets, firstStepToward };
+  return { targets, firstStepsToward };
 }

@@ -28,6 +28,17 @@ const LINE_LOCATIONS: WorldMapLocation[] = [
   makeLocation('D', ['C']),
 ];
 
+const DIAMOND_LOCATIONS: WorldMapLocation[] = [
+  makeLocation('A', ['B', 'C']),
+  makeLocation('B', ['A', 'D']),
+  makeLocation('C', ['A', 'D']),
+  makeLocation('D', ['B', 'C']),
+];
+
+function chooseLast<T>(items: T[]): T {
+  return items[items.length - 1]!;
+}
+
 function makeZone(id: string, locationIds: string[], extra: Partial<MapZone> = {}): MapZone {
   return {
     id,
@@ -150,6 +161,31 @@ describe('resolveScheduledMove', () => {
       chooseFirst
     );
     expect(result).toEqual({ forceMove: false, destinationLocationId: 'B', consumesTurn: false });
+  });
+
+  it('casual can take any step that still moves closer, not just the most direct one', () => {
+    const casualMove = (choose: <T>(items: T[]) => T) =>
+      resolveScheduledMove(
+        {
+          character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
+          turnNumber: 0,
+          locations: DIAMOND_LOCATIONS,
+          effectiveZones: [makeZone('zoneD', ['D'])],
+          groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneD', 'casual', 0, 4)]) },
+        },
+        choose
+      );
+
+    expect(casualMove(chooseFirst)).toEqual({
+      forceMove: false,
+      destinationLocationId: 'B',
+      consumesTurn: false,
+    });
+    expect(casualMove(chooseLast)).toEqual({
+      forceMove: false,
+      destinationLocationId: 'C',
+      consumesTurn: false,
+    });
   });
 
   it('does not force a move when already in an allowed zone', () => {
@@ -338,6 +374,7 @@ describe('resolveUserMovementSuggestion', () => {
     expect(result).toEqual({
       suggestedLocationIds: ['C'],
       highlightByLocationId: { C: 'urgent' },
+      consumesTurnByLocationId: { C: false },
       highlightWait: false,
       forbiddenLocationIds: [],
     });
@@ -354,6 +391,7 @@ describe('resolveUserMovementSuggestion', () => {
     expect(result).toEqual({
       suggestedLocationIds: ['B'],
       highlightByLocationId: { B: 'urgent' },
+      consumesTurnByLocationId: { B: true },
       highlightWait: false,
       forbiddenLocationIds: [],
     });
@@ -370,6 +408,24 @@ describe('resolveUserMovementSuggestion', () => {
     expect(result).toEqual({
       suggestedLocationIds: ['B'],
       highlightByLocationId: { B: 'gentle' },
+      consumesTurnByLocationId: { B: false },
+      highlightWait: false,
+      forbiddenLocationIds: [],
+    });
+  });
+
+  it('casual surfaces every closer next step, gentle', () => {
+    const result = resolveUserMovementSuggestion({
+      character: { id: 'user', locationId: 'A', groupIds: ['g1'] },
+      turnNumber: 0,
+      locations: DIAMOND_LOCATIONS,
+      effectiveZones: [makeZone('zoneD', ['D'])],
+      groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneD', 'casual', 0, 4)]) },
+    });
+    expect(result).toEqual({
+      suggestedLocationIds: ['B', 'C'],
+      highlightByLocationId: { B: 'gentle', C: 'gentle' },
+      consumesTurnByLocationId: { B: false, C: false },
       highlightWait: false,
       forbiddenLocationIds: [],
     });
@@ -386,6 +442,7 @@ describe('resolveUserMovementSuggestion', () => {
     expect(result).toEqual({
       suggestedLocationIds: [],
       highlightByLocationId: { D: 'allowed' },
+      consumesTurnByLocationId: { D: false },
       highlightWait: true,
       forbiddenLocationIds: [],
     });
@@ -402,6 +459,7 @@ describe('resolveUserMovementSuggestion', () => {
     expect(result).toEqual({
       suggestedLocationIds: [],
       highlightByLocationId: {},
+      consumesTurnByLocationId: {},
       highlightWait: false,
       forbiddenLocationIds: ['C'],
     });
@@ -421,6 +479,7 @@ describe('resolveUserMovementSuggestion', () => {
     expect(result).toEqual({
       suggestedLocationIds: [],
       highlightByLocationId: {},
+      consumesTurnByLocationId: {},
       highlightWait: false,
       forbiddenLocationIds: ['C'],
     });
@@ -446,6 +505,7 @@ describe('resolveUserMovementSuggestion', () => {
     expect(result).toEqual({
       suggestedLocationIds: ['X'],
       highlightByLocationId: { X: 'urgent' },
+      consumesTurnByLocationId: { X: true },
       highlightWait: false,
       forbiddenLocationIds: [],
     });
