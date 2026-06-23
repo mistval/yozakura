@@ -4,7 +4,7 @@ import { temporalContextSettingsScriptJSONSchema } from './temporal_script_types
 const EXAMPLE_CUSTOM_TEMPORAL_SCRIPT = `({
   id: 'my-calendar',
   name: 'My Calendar',
-  description: 'A simple calendar and weather example. Replace this with what your script actually does.',
+  description: 'A simple calendar and weather example.',
   controls: () => [
     { id: 'startDate', type: 'calendar', label: 'Start date', width: 'full' },
   ],
