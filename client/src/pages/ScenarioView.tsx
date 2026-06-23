@@ -25,6 +25,7 @@ import { useTemporalContextStore } from '../state/temporal_context_store.js';
 import { getUserMovementSuggestion } from '../engine/character_schedule/get_scheduled_move';
 import { ChatCoordinator } from '../engine/chat/chat_coordinator';
 import { startScenarioLoop } from '../engine/scenario_loop/scenario_loop';
+import { useSettingsStore } from '../state/settings_store';
 
 export default function ScenarioView() {
   const navigate = useNavigate();
@@ -45,6 +46,7 @@ export default function ScenarioView() {
   const { showMap } = useMapModal();
   const { openSettings } = useSettingsModal();
   const activeParticipants = useActiveChatParticipants();
+  const freedomOfMovement = useSettingsStore((s) => s.freedomOfMovement);
   const hasActiveChatSession = useTurnMachineStore((state) => state.chatState !== 'inactive');
   const currentTurnCharacterId = useCurrentTurnCharacterId();
   const submitUserWait = useScenarioLoopStateStore((state) => state.submitUserWait);
@@ -282,7 +284,10 @@ export default function ScenarioView() {
             location={resolvedLocation}
             adjacentLocationIds={adjacentLocations}
             onMove={(locationId) => {
-              submitUserMove(locationId, moveSuggestion?.consumesTurnByLocationId[locationId] ?? false);
+              submitUserMove(
+                locationId,
+                moveSuggestion?.consumesTurnByLocationId[locationId] ?? !freedomOfMovement
+              );
             }}
             onWait={() => {
               submitUserWait();

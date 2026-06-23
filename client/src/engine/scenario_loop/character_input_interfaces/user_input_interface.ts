@@ -47,7 +47,7 @@ export class UserInputInterface extends CharacterInputInterface {
     const freedomOfMovement = useSettingsStore.getState().freedomOfMovement;
 
     if (move.actionType === 'move') {
-      return freedomOfMovement || !move.consumesTurn;
+      return !move.consumesTurn;
     }
 
     if (move.actionType === 'chat') {

@@ -98,7 +98,7 @@ function advanceAfterMove(
 
   let turnEnded = false;
   if (inputInterface.continuesAfterMove(move, outcome)) {
-    store.setMachineState('deciding');
+    store.setTurnMachineState('deciding');
   } else {
     turnEnded = store.finishCurrentCharacter();
   }

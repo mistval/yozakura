@@ -45,7 +45,7 @@ export type PersistedActiveChat = z.infer<typeof persistedActiveChatSchema>;
 export type TurnMachineState = 'deciding' | 'chatting';
 
 export const serializedTurnSchema = z.object({
-  machineState: z.enum(['deciding', 'chatting']),
+  turnMachineState: z.enum(['deciding', 'chatting']),
   pendingTurnCharacterIds: z.array(z.string()),
   chatsSoFar: z.record(z.string(), z.array(z.object({ withIds: z.array(z.string()) }))),
   activeChat: persistedActiveChatSchema.optional(),
@@ -76,7 +76,7 @@ type BaseTurnMachineStoreState = {
   startNewTurn: (allCharacterIds: string[], userCharacterId: string) => void;
   currentCharacterId: () => string | undefined;
   finishCurrentCharacter: () => boolean;
-  setMachineState: (machineState: TurnMachineState) => void;
+  setTurnMachineState: (turnMachineState: TurnMachineState) => void;
   recordChat: (initiatorId: string, withIds: string[]) => void;
   hasChatted: (characterAId: string, characterBId: string) => boolean;
   beginChat: (args: StartChatSessionArgs) => void;
@@ -274,7 +274,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       turnMachineState: 'deciding',
       pendingTurnCharacterIds: ordered,
       chatsSoFar: {},
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   currentCharacterId() {
@@ -291,7 +291,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       pendingTurnCharacterIds: [characterId].concat(
         get().pendingTurnCharacterIds.filter((id) => id !== characterId)
       ),
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   finishCurrentCharacter() {
@@ -300,12 +300,12 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     set({
       pendingTurnCharacterIds: remaining,
       turnMachineState: turnEnded ? undefined : 'deciding',
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
     return turnEnded;
   },
 
-  setMachineState(machineState) {
-    set({ turnMachineState: machineState });
+  setTurnMachineState(machineState) {
+    set({ turnMachineState: machineState } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   recordChat(initiatorId, withIds) {
@@ -315,7 +315,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
         ...get().chatsSoFar,
         [initiatorId]: existing.concat({ withIds }),
       },
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   hasChatted(characterAId, characterBId) {
@@ -342,7 +342,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       preConversationWardrobeSnapshotByCharacterId: Object.fromEntries(
         participants.map((p) => [p.id, p.wardrobes])
       ),
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   enterActiveChat() {
@@ -356,7 +356,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       }
     }
 
-    set({ memoryRagHelper });
+    set({ memoryRagHelper } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   deactivateChat() {
@@ -371,7 +371,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       turnMachineState: undefined,
       pendingTurnCharacterIds: [],
       chatsSoFar: {},
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   serialize() {
@@ -381,7 +381,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     }
 
     return {
-      machineState: state.turnMachineState,
+      turnMachineState: state.turnMachineState,
       pendingTurnCharacterIds: state.pendingTurnCharacterIds,
       chatsSoFar: state.chatsSoFar,
       activeChat: state.turnMachineState === 'chatting' ? buildPersistedActiveChat(state) : undefined,
@@ -391,10 +391,10 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
   hydrate(snapshot) {
     const base = {
       ...inactiveChatTurnMachineState,
-      machineState: snapshot.machineState,
+      turnMachineState: snapshot.turnMachineState,
       pendingTurnCharacterIds: snapshot.pendingTurnCharacterIds,
       chatsSoFar: snapshot.chatsSoFar,
-    };
+    } satisfies Partial<BaseTurnMachineStoreState>;
 
     if (!snapshot.activeChat) {
       set(base);
@@ -407,28 +407,28 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       ...chatFields,
       chatState: 'awaiting_user_input',
       transcript: ConversationTranscript.deserialize(serializedTranscript),
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   setStateAwaitingUserInput() {
     set({
       chatState: 'awaiting_user_input',
       processingMemoryStatusInfo: undefined,
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   setStateProcessingMemories(statusInfo: string) {
     set({
       chatState: 'processing_memories',
       processingMemoryStatusInfo: statusInfo,
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   setStateNpcSpeaking() {
     set({
       chatState: 'npc_speaking',
       processingMemoryStatusInfo: undefined,
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   async doWithStateGenerationImage<T>(action: () => Promise<T>) {
@@ -440,7 +440,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     set({
       chatState: 'generating_image',
       processingMemoryStatusInfo: undefined,
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
 
     try {
       return await action();
@@ -474,7 +474,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
         ...activeState.preConversationWardrobeSnapshotByCharacterId,
         [participantId]: participant.wardrobes,
       },
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   removeChatParticipant(participantId: string) {
@@ -499,17 +499,17 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       removedParticipantIds: didPurge
         ? currentState.removedParticipantIds
         : currentState.removedParticipantIds.concat(participantId),
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   setTranscript(transcript: ConversationTranscript) {
     set({
       transcript,
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   setChatInstructions(instructions: string) {
-    set({ chatInstructions: instructions });
+    set({ chatInstructions: instructions } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   setCharacterChatInstructions(characterId: string, instructions: string) {
@@ -518,7 +518,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
         ...get().chatInstructionsByCharacterId,
         [characterId]: instructions,
       },
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation) {
@@ -535,7 +535,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
           ephemeral: true,
         }
       ),
-    });
+    } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   getChatCharacterLocation(
