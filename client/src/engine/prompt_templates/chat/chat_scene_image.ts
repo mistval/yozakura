@@ -25,6 +25,8 @@ class ChatSceneImageUserTemplate extends PromptTemplateBase<
 <location_description>
 <%= it.currentLocation.name %>: <%= it.currentLocation.description %>
 
+Current environmental info: <%= it.temporalContext %>
+
 </location_description>
 
 The conversation medium is <%= it.chatMedium %>.
