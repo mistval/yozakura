@@ -53,5 +53,15 @@ export function concatUniqueById<TElementType extends { id: string }>(
   arr: TElementType[],
   newElement: TElementType
 ) {
-  return arr.filter((e) => e.id !== newElement.id).concat(newElement);
+  let found = false;
+  return arr
+    .map((el) => {
+      if (el.id === newElement.id) {
+        found = true;
+        return newElement;
+      }
+
+      return el;
+    })
+    .concat(found ? [] : newElement);
 }

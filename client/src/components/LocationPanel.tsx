@@ -9,6 +9,7 @@ type LocationItem = {
 export type MoveSuggestion = {
   suggestedLocations: LocationItem[];
   highlightByLocationId: Record<string, MoveHighlight>;
+  consumesTurnByLocationId: Record<string, boolean>;
   highlightWait: boolean;
   forbiddenLocationIds: string[];
 };

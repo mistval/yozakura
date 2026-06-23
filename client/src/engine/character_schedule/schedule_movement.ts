@@ -12,6 +12,7 @@ import type {
 export interface ScheduledMove {
   destinationLocationId: string;
   forceMove: boolean;
+  consumesTurn: boolean;
 }
 
 export type MoveHighlight = 'urgent' | 'gentle' | 'allowed';
@@ -19,6 +20,7 @@ export type MoveHighlight = 'urgent' | 'gentle' | 'allowed';
 export interface UserMovementSuggestion {
   suggestedLocationIds: string[];
   highlightByLocationId: Record<string, MoveHighlight>;
+  consumesTurnByLocationId: Record<string, boolean>;
   highlightWait: boolean;
   forbiddenLocationIds: string[];
 }
@@ -33,8 +35,9 @@ interface ScheduleMovementInput {
 
 const POLICY_PERMISSIVENESS: Record<MovementPolicy, number> = {
   teleport: 0,
-  rush: 1,
-  meander: 2,
+  jump: 1,
+  rush: 2,
+  meander: 3,
 };
 
 function mostPermissivePolicy(a: MovementPolicy | undefined, b: MovementPolicy): MovementPolicy {
@@ -98,10 +101,10 @@ export function resolveScheduleAllowedLocations(input: {
     }
 
     for (const segment of schedule.segments) {
-      const activeNowOrNextTurn =
-        isSegmentActive(segment, schedule.lengthInTurns, input.turnNumber) ||
-        isSegmentActive(segment, schedule.lengthInTurns, input.turnNumber + 1);
-      if (!activeNowOrNextTurn) {
+      const activeNow = isSegmentActive(segment, schedule.lengthInTurns, input.turnNumber);
+      const activeNextTurn = isSegmentActive(segment, schedule.lengthInTurns, input.turnNumber + 1);
+      const active = segment.movementPolicy === 'teleport' ? activeNow : activeNow || activeNextTurn;
+      if (!active) {
         continue;
       }
 
@@ -147,7 +150,7 @@ export function resolveScheduledMove(
   const plainMove = (): ScheduledMove => {
     const candidates = [current, ...currentAdjacency].filter((id) => !forbidden.has(id));
     const pool = candidates.length > 0 ? candidates : [current];
-    return { forceMove: false, destinationLocationId: choose(pool) };
+    return { forceMove: false, destinationLocationId: choose(pool), consumesTurn: false };
   };
 
   if (allowed.size === 0) {
@@ -156,7 +159,7 @@ export function resolveScheduledMove(
 
   if (allowed.has(current)) {
     const candidates = [current, ...currentAdjacency.filter((id) => allowed.has(id))];
-    return { forceMove: false, destinationLocationId: choose(candidates) };
+    return { forceMove: false, destinationLocationId: choose(candidates), consumesTurn: false };
   }
 
   const { targets, firstStepToward } = findNearestReachable(
@@ -173,12 +176,13 @@ export function resolveScheduledMove(
   const target = choose(targets);
   const policy = policyByLocationId.get(target)!;
 
-  if (policy === 'teleport') {
-    return { forceMove: true, destinationLocationId: target };
+  if (policy === 'teleport' || policy === 'jump') {
+    return { forceMove: true, destinationLocationId: target, consumesTurn: policy === 'jump' };
   }
 
   const firstStep = firstStepToward(target)!;
-  return { forceMove: policy === 'meander' ? false : true, destinationLocationId: firstStep };
+  const forceMove = policy !== 'meander';
+  return { forceMove, destinationLocationId: firstStep, consumesTurn: forceMove };
 }
 
 export function resolveUserMovementSuggestion(
@@ -201,6 +205,7 @@ export function resolveUserMovementSuggestion(
     return {
       suggestedLocationIds: [],
       highlightByLocationId: {},
+      consumesTurnByLocationId: {},
       highlightWait: false,
       forbiddenLocationIds,
     };
@@ -217,12 +222,14 @@ export function resolveUserMovementSuggestion(
 
   if (allowed.has(current)) {
     const highlightByLocationId: Record<string, MoveHighlight> = {};
+    const consumesTurnByLocationId: Record<string, boolean> = {};
     for (const neighbor of getNeighbors(current)) {
       if (allowed.has(neighbor)) {
         highlightByLocationId[neighbor] = 'allowed';
+        consumesTurnByLocationId[neighbor] = false;
       }
     }
-    return { suggestedLocationIds: [], highlightByLocationId, highlightWait: true, forbiddenLocationIds };
+    return { suggestedLocationIds: [], highlightByLocationId, consumesTurnByLocationId, highlightWait: true, forbiddenLocationIds };
   }
 
   const { targets, firstStepToward } = findNearestReachable(
@@ -238,26 +245,33 @@ export function resolveUserMovementSuggestion(
 
   const suggestedLocationIds: string[] = [];
   const highlightByLocationId: Record<string, MoveHighlight> = {};
+  const consumesTurnByLocationId: Record<string, boolean> = {};
 
-  const surface = (locationId: string, highlight: MoveHighlight) => {
+  const surface = (locationId: string, highlight: MoveHighlight, consumesTurn: boolean) => {
     if (highlightByLocationId[locationId] === undefined) {
       suggestedLocationIds.push(locationId);
       highlightByLocationId[locationId] = highlight;
-    } else if (highlight === 'urgent') {
-      highlightByLocationId[locationId] = 'urgent';
+      consumesTurnByLocationId[locationId] = consumesTurn;
+    } else {
+      if (highlight === 'urgent') {
+        highlightByLocationId[locationId] = 'urgent';
+      }
+      if (consumesTurn) {
+        consumesTurnByLocationId[locationId] = true;
+      }
     }
   };
 
   for (const target of targets) {
     const policy = policyByLocationId.get(target)!;
-    if (policy === 'teleport') {
-      surface(target, 'urgent');
+    if (policy === 'teleport' || policy === 'jump') {
+      surface(target, 'urgent', policy === 'jump');
     } else {
-      surface(firstStepToward(target)!, policy === 'rush' ? 'urgent' : 'gentle');
+      surface(firstStepToward(target)!, policy === 'rush' ? 'urgent' : 'gentle', policy === 'rush');
     }
   }
 
-  return { suggestedLocationIds, highlightByLocationId, highlightWait: false, forbiddenLocationIds };
+  return { suggestedLocationIds, highlightByLocationId, consumesTurnByLocationId, highlightWait: false, forbiddenLocationIds };
 }
 
 export interface CharacterMovementConstraint {

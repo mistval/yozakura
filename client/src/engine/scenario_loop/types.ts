@@ -5,6 +5,7 @@ interface UserTurnActionWait {
 interface UserTurnActionMove {
   actionType: 'move';
   destinationLocationId: string;
+  consumesTurn: boolean;
 }
 
 interface UserTurnActionInitiateChat {
@@ -47,6 +48,7 @@ interface TurnMoveWait {
 interface TurnMoveMove {
   actionType: 'move';
   destinationLocationId: string;
+  consumesTurn: boolean;
 }
 
 interface TurnMoveChat {

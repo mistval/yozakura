@@ -14,6 +14,7 @@ import type { Character, CharacterRelationships, WorldMapLocation } from '../../
 import { doScenarioLoopAsyncAction } from '../flow_control';
 import type { ChatInputResult, TurnMove, TurnMoveResult } from '../types';
 import { CharacterInputInterface } from './character_input_interface';
+import type { ScheduledMove } from '../../character_schedule/schedule_movement';
 
 export class NPCInputInterface extends CharacterInputInterface {
   public constructor(private readonly characterId: string) {
@@ -30,7 +31,7 @@ export class NPCInputInterface extends CharacterInputInterface {
 
     if (scheduledMove?.forceMove) {
       return {
-        move: { actionType: 'move', destinationLocationId: scheduledMove.destinationLocationId },
+        move: { actionType: 'move', ...scheduledMove },
         persist: false,
       };
     }
@@ -132,7 +133,7 @@ export class NPCInputInterface extends CharacterInputInterface {
       }
     }
 
-    return { move: this.buildMoveMove(npc, scheduledMove?.destinationLocationId), persist: false };
+    return { move: this.buildMoveMove(npc, scheduledMove), persist: false };
   }
 
   public async getNextChatInput(): Promise<ChatInputResult> {
@@ -151,8 +152,8 @@ export class NPCInputInterface extends CharacterInputInterface {
     return { input: { actionType: 'spoke' }, persist: true };
   }
 
-  public continuesAfterMove(): boolean {
-    return false;
+  public continuesAfterMove(move: TurnMove): boolean {
+    return move.actionType === 'move' && !move.consumesTurn;
   }
 
   private get autoModeEnabled(): boolean {
@@ -193,16 +194,16 @@ export class NPCInputInterface extends CharacterInputInterface {
     };
   }
 
-  private buildMoveMove(npc: Character, destinationLocationId?: string): TurnMove {
-    if (destinationLocationId !== undefined) {
-      return { actionType: 'move', destinationLocationId };
+  private buildMoveMove(npc: Character, scheduledMove?: ScheduledMove): TurnMove {
+    if (scheduledMove) {
+      return { actionType: 'move', ...scheduledMove };
     }
 
     const location = this.getCharacterLocation(npc.id);
     const candidates = [location.id].concat(location.adjacency);
     const targetLocation = getRequiredRandomChoice(candidates);
 
-    return { actionType: 'move', destinationLocationId: targetLocation };
+    return { actionType: 'move', destinationLocationId: targetLocation, consumesTurn: true };
   }
 
   private getCharacterLocation(characterId: string): WorldMapLocation {

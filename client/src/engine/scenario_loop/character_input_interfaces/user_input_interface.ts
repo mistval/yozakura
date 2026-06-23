@@ -47,7 +47,7 @@ export class UserInputInterface extends CharacterInputInterface {
     const freedomOfMovement = useSettingsStore.getState().freedomOfMovement;
 
     if (move.actionType === 'move') {
-      return freedomOfMovement;
+      return freedomOfMovement || !move.consumesTurn;
     }
 
     if (move.actionType === 'chat') {
@@ -77,7 +77,7 @@ export class UserInputInterface extends CharacterInputInterface {
         rich: true,
       };
     } else if (userAction.actionType === 'move') {
-      return { actionType: 'move', destinationLocationId: userAction.destinationLocationId };
+      return userAction;
     } else if (userAction.actionType === 'wait') {
       return { actionType: 'wait' };
     }

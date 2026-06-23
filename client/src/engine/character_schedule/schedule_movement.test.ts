@@ -107,7 +107,21 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toEqual({ forceMove: true, destinationLocationId: 'C' });
+    expect(result).toEqual({ forceMove: true, destinationLocationId: 'C', consumesTurn: false });
+  });
+
+  it('jumps straight to the nearest allowed location, consuming the turn', () => {
+    const result = resolveScheduledMove(
+      {
+        character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
+        turnNumber: 0,
+        locations: LINE_LOCATIONS,
+        effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+        groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'jump', 0, 4)]) },
+      },
+      chooseFirst
+    );
+    expect(result).toEqual({ forceMove: true, destinationLocationId: 'C', consumesTurn: true });
   });
 
   it('rushes one step toward the nearest allowed location when out of zone', () => {
@@ -121,7 +135,7 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toEqual({ forceMove: true, destinationLocationId: 'B' });
+    expect(result).toEqual({ forceMove: true, destinationLocationId: 'B', consumesTurn: true });
   });
 
   it('meanders one step toward the nearest allowed location, allowing chat', () => {
@@ -135,7 +149,7 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toEqual({ forceMove: false, destinationLocationId: 'B' });
+    expect(result).toEqual({ forceMove: false, destinationLocationId: 'B', consumesTurn: false });
   });
 
   it('does not force a move when already in an allowed zone', () => {
@@ -182,7 +196,7 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toEqual({ forceMove: true, destinationLocationId: 'B' });
+    expect(result).toEqual({ forceMove: true, destinationLocationId: 'B', consumesTurn: true });
   });
 
   it('keeps a non-member out of a private zone but lets a member through', () => {
@@ -213,7 +227,7 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(member).toEqual({ forceMove: true, destinationLocationId: 'D' });
+    expect(member).toEqual({ forceMove: true, destinationLocationId: 'D', consumesTurn: false });
   });
 
   it('falls back to plain movement when the allowed zone is unreachable', () => {
@@ -245,7 +259,7 @@ describe('resolveScheduledMove', () => {
       );
 
     expect(build(1)).toEqual(build(5));
-    expect(build(1)).toEqual({ forceMove: true, destinationLocationId: 'C' });
+    expect(build(1)).toEqual({ forceMove: true, destinationLocationId: 'C', consumesTurn: false });
   });
 
   describe('starts moving one turn before a segment begins', () => {
@@ -259,17 +273,15 @@ describe('resolveScheduledMove', () => {
       },
     });
 
-    it('teleports into place the turn before', () => {
-      expect(resolveScheduledMove(earlyInput('teleport'), chooseFirst)).toEqual({
-        forceMove: true,
-        destinationLocationId: 'C',
-      });
+    it('does not start early for teleport (no headstart)', () => {
+      expect(resolveScheduledMove(earlyInput('teleport'), chooseFirst)).toBeUndefined();
     });
 
     it('rushes one step the turn before', () => {
       expect(resolveScheduledMove(earlyInput('rush'), chooseFirst)).toEqual({
         forceMove: true,
         destinationLocationId: 'B',
+        consumesTurn: true,
       });
     });
 
@@ -277,6 +289,7 @@ describe('resolveScheduledMove', () => {
       expect(resolveScheduledMove(earlyInput('meander'), chooseFirst)).toEqual({
         forceMove: false,
         destinationLocationId: 'B',
+        consumesTurn: false,
       });
     });
 

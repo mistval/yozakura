@@ -228,7 +228,7 @@ export type ScenarioSummary = {
   updatedAt: string;
 };
 
-export const movementPolicySchema = z.enum(['teleport', 'rush', 'meander']);
+export const movementPolicySchema = z.enum(['teleport', 'jump', 'rush', 'meander']);
 export type MovementPolicy = z.infer<typeof movementPolicySchema>;
 
 export const scenarioCharacterGroupSchema = basePersistedObjectSchema.extend({

@@ -28,7 +28,7 @@ type ScenarioLoopStateStoreState = {
   submitChatSpeakAs: (characterId: string) => boolean;
   submitChatRequestEnd: (opts?: Pick<ChatUserInputRequestEnd, 'forceNoEffect'>) => boolean;
   submitUserWait: () => boolean;
-  submitUserMove: (destinationLocationId: string) => boolean;
+  submitUserMove: (destinationLocationId: string, consumesTurn: boolean) => boolean;
   submitUserChatAction: (characterId: string) => boolean;
 };
 
@@ -124,10 +124,11 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
     });
   },
 
-  submitUserMove(destinationLocationId: string) {
+  submitUserMove(destinationLocationId: string, consumesTurn: boolean) {
     return resolveUserTurnAction({
       actionType: 'move',
       destinationLocationId,
+      consumesTurn,
     });
   },
 

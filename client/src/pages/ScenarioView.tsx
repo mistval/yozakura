@@ -282,7 +282,7 @@ export default function ScenarioView() {
             location={resolvedLocation}
             adjacentLocationIds={adjacentLocations}
             onMove={(locationId) => {
-              submitUserMove(locationId);
+              submitUserMove(locationId, moveSuggestion?.consumesTurnByLocationId[locationId] ?? false);
             }}
             onWait={() => {
               submitUserWait();

@@ -307,7 +307,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
                 </label>
                 <InfoTooltip
                   label="About movement policy"
-                  html="<strong>Teleport</strong> means the character will instantly warp to the zone when their schedule requires them to be there. <strong>Rush</strong> means the character will move towards the zone one hop at a time, never stopping to initiate chats (although other characters can still initiate chats with them). <strong>Meander</strong> means the character will move towards the zone one hop a time, while occasionally stopping to initiate chats, at the rate specified in Behavior Settings."
+                  html="<strong>Teleport</strong> means the character will instantly warp to the zone when their schedule requires them to be there, and then they still get a turn. <strong>Jump</strong> similarly means the character will instantly warp, but it consumes their turn. <strong>Rush</strong> means the character will move towards the zone one hop at a time, never stopping to initiate chats (although other characters can still initiate chats with them). <strong>Meander</strong> means the character will move towards the zone one hop a time, while occasionally stopping to initiate chats, at the rate specified in Behavior Settings."
                 />
               </div>
               <select
