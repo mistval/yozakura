@@ -54,6 +54,10 @@ export default function ChatPane() {
   const submitChatSkipTurn = useScenarioLoopStateStore((state) => state.submitChatSkipTurn);
   const submitChatSpeakAs = useScenarioLoopStateStore((state) => state.submitChatSpeakAs);
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
+  const submitChatDeleteMessage = useScenarioLoopStateStore((state) => state.submitChatDeleteMessage);
+  const submitChatRedoMessage = useScenarioLoopStateStore((state) => state.submitChatRedoMessage);
+  const submitChatEditMessage = useScenarioLoopStateStore((state) => state.submitChatEditMessage);
+  const submitChatGenerateImage = useScenarioLoopStateStore((state) => state.submitChatGenerateImage);
   const userRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.userRequestedPhaseTransition
   );
@@ -143,35 +147,36 @@ export default function ChatPane() {
       return;
     }
 
-    await ChatCoordinator.generateImageFromPrompt(fullPrompt, { isUserInteraction: true });
+    submitChatGenerateImage(fullPrompt);
   };
 
-  const generateImageNow = async () => {
+  const generateImageNow = () => {
     setShowImagePrompt(false);
-    await ChatCoordinator.generateImageFromPrompt(imagePrompt, { isUserInteraction: true });
+    submitChatGenerateImage(imagePrompt);
   };
 
   const deleteMessage = (id: string) => {
-    ChatCoordinator.deleteMessageById(id);
     setEditingMessageId(undefined);
     setEditingMessageDraft('');
+    submitChatDeleteMessage(id);
   };
 
-  const redoMessage = async (id: string) => {
-    await ChatCoordinator.redoMessageById(id);
+  const redoMessage = (id: string) => {
     setEditingMessageId(undefined);
     setEditingMessageDraft('');
+    submitChatRedoMessage(id);
   };
 
-  const saveEditingMessageEdit = async () => {
+  const saveEditingMessageEdit = () => {
     const trimmed = editingMessageDraft.trim();
     if (!trimmed || !editingMessageId) {
       return;
     }
 
-    await ChatCoordinator.editMessageById(editingMessageId, trimmed);
+    const id = editingMessageId;
     setEditingMessageId(undefined);
     setEditingMessageDraft('');
+    submitChatEditMessage(id, trimmed);
   };
 
   const requestEndChat = () => {

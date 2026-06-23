@@ -27,6 +27,10 @@ type ScenarioLoopStateStoreState = {
   submitChatSkipTurn: () => boolean;
   submitChatSpeakAs: (characterId: string) => boolean;
   submitChatRequestEnd: (opts?: Pick<ChatUserInputRequestEnd, 'forceNoEffect'>) => boolean;
+  submitChatDeleteMessage: (messageId: string) => boolean;
+  submitChatRedoMessage: (messageId: string) => boolean;
+  submitChatEditMessage: (messageId: string, newContent: string) => boolean;
+  submitChatGenerateImage: (prompt: string) => boolean;
   submitUserWait: () => boolean;
   submitUserMove: (destinationLocationId: string, consumesTurn: boolean) => boolean;
   submitUserChatAction: (characterId: string) => boolean;
@@ -116,6 +120,22 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
       actionType: 'request_end_chat',
       ...opts,
     } satisfies ChatUserInputRequestEnd);
+  },
+
+  submitChatDeleteMessage(messageId: string) {
+    return resolveChatUserInputAction({ actionType: 'delete_message', messageId });
+  },
+
+  submitChatRedoMessage(messageId: string) {
+    return resolveChatUserInputAction({ actionType: 'redo_message', messageId });
+  },
+
+  submitChatEditMessage(messageId: string, newContent: string) {
+    return resolveChatUserInputAction({ actionType: 'edit_message', messageId, newContent });
+  },
+
+  submitChatGenerateImage(prompt: string) {
+    return resolveChatUserInputAction({ actionType: 'generate_image', prompt });
   },
 
   submitUserWait() {

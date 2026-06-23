@@ -178,7 +178,7 @@ export default function ScenarioSettingsSection() {
       {temporalSection && (
         <div className="bordered-section space-y-2">
           <SettingFieldLabel
-            text="Temporal / Environmental Context"
+            text="Temporal Context"
             htmlFor="scenario-temporal-context"
             tooltipHtml="Controls the date, time of day, weather, and other environmental context shown in the header and injected into character prompts."
             className="text-sm font-medium text-primary"

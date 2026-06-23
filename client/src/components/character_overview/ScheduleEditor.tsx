@@ -159,7 +159,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
             </label>
             <InfoTooltip
               label="About length in turns"
-              html="The schedule will repeat from the beginning after this many turns. Check the vertical <b>now</b> indicator line on the calendar bar to see where on the schedule we currently are. By default, there are eight turns per day, so set this to 8 if you want a single-day schedule, or 56 (8 x 7) if you want a week-long schedule. The number of turns per day may be different if you have changed the <b>Temporal / Environmental Context</b> in Scenario Settings."
+              html="The schedule will repeat from the beginning after this many turns. Check the vertical <b>now</b> indicator line on the calendar bar to see where on the schedule we currently are. By default, there are eight turns per day, so set this to 8 if you want a single-day schedule, or 56 (8 x 7) if you want a week-long schedule. The number of turns per day may be different if you have changed the <b>Temporal Context</b> in Scenario Settings."
             />
           </div>
           <input

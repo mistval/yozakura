@@ -34,11 +34,36 @@ export interface ChatUserInputRequestEnd {
   forceNoEffect?: boolean;
 }
 
+interface ChatUserInputDeleteMessage {
+  actionType: 'delete_message';
+  messageId: string;
+}
+
+interface ChatUserInputRedoMessage {
+  actionType: 'redo_message';
+  messageId: string;
+}
+
+interface ChatUserInputEditMessage {
+  actionType: 'edit_message';
+  messageId: string;
+  newContent: string;
+}
+
+interface ChatUserInputGenerateImage {
+  actionType: 'generate_image';
+  prompt: string;
+}
+
 export type ChatUserInputAction =
   | ChatUserInputSendMessage
   | ChatUserInputSkipTurn
   | ChatUserInputSpeakAs
-  | ChatUserInputRequestEnd;
+  | ChatUserInputRequestEnd
+  | ChatUserInputDeleteMessage
+  | ChatUserInputRedoMessage
+  | ChatUserInputEditMessage
+  | ChatUserInputGenerateImage;
 
 // A unified move that any character (user or NPC) can take on their turn.
 interface TurnMoveWait {

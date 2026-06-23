@@ -146,6 +146,19 @@ async function runChatLoop(): Promise<{ noEffect: boolean }> {
         nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
       } else if (input.actionType === 'spoke') {
         nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+      } else if (input.actionType === 'delete_message') {
+        ChatCoordinator.deleteMessageById(input.messageId);
+      } else if (input.actionType === 'redo_message') {
+        await doScenarioLoopAsyncAction(() => ChatCoordinator.redoMessageById(input.messageId));
+        nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+      } else if (input.actionType === 'edit_message') {
+        await doScenarioLoopAsyncAction(() =>
+          ChatCoordinator.editMessageById(input.messageId, input.newContent)
+        );
+      } else if (input.actionType === 'generate_image') {
+        await doScenarioLoopAsyncAction(() =>
+          ChatCoordinator.generateImageFromPrompt(input.prompt, { isUserInteraction: true })
+        );
       } else {
         assert(false, 'Unexpected chat input action');
       }

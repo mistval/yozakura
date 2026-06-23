@@ -33,13 +33,13 @@ const EXAMPLE_CUSTOM_TEMPORAL_SCRIPT = `({
 })`;
 
 export function getTemporalScriptDocumentation(): string {
-  return `# Custom Temporal / Environmental Context Script
+  return `# Custom Temporal Context Script
 
-You are being provided this document because the user needs your help customizing the temporal / environment context in their Yozakura scenario.
+You are being provided this document because the user needs your help customizing the temporal context in their Yozakura scenario.
 
 Yozakura is an LLM-powered social simulation in which characters travel around a map and have conversations with each other via LLM completions. Each turn, every character gets to make a move. A "scenario" is the overall context that this happens in and is analogous to a save slot in a video game. Users can have multiple scenarios, but world state is completely separate between them.
 
-The "temporal / environmental context" encapsulates diverse concepts including "date", "day of the week", "weather", and can also include more human elements, such economic conditions, wars breaking out, etc. Basically any scenario-wide state that changes over time (independently of the rest of the state) can be modeled as part of the temporal / environmental context. Date and weather are just the most obvious ones.
+The "temporal context" encapsulates diverse concepts including "date", "day of the week", "weather", and can also include more human elements, such economic conditions, wars breaking out, etc. Basically any scenario-wide state that changes over time (independently of the rest of the state) can be modeled as part of the temporal context. Date and weather are just the most obvious ones.
 
 To achieve that level of customization, the user can provide a custom JavaScript script, which is what this document covers. The custom script receives the current turn number and returns a string shown in the scenario header and injected into AI character prompts, so AI characters are aware of the current state.
 
