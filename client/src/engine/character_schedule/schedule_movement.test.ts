@@ -138,14 +138,14 @@ describe('resolveScheduledMove', () => {
     expect(result).toEqual({ forceMove: true, destinationLocationId: 'B', consumesTurn: true });
   });
 
-  it('meanders one step toward the nearest allowed location, allowing chat', () => {
+  it('casually moves one step toward the nearest allowed location, allowing chat', () => {
     const result = resolveScheduledMove(
       {
         character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
         turnNumber: 0,
         locations: LINE_LOCATIONS,
         effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
-        groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'meander', 0, 4)]) },
+        groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'casual', 0, 4)]) },
       },
       chooseFirst
     );
@@ -285,8 +285,8 @@ describe('resolveScheduledMove', () => {
       });
     });
 
-    it('meanders one step the turn before', () => {
-      expect(resolveScheduledMove(earlyInput('meander'), chooseFirst)).toEqual({
+    it('casual one step the turn before', () => {
+      expect(resolveScheduledMove(earlyInput('casual'), chooseFirst)).toEqual({
         forceMove: false,
         destinationLocationId: 'B',
         consumesTurn: false,
@@ -359,13 +359,13 @@ describe('resolveUserMovementSuggestion', () => {
     });
   });
 
-  it('meander surfaces the next step, gentle', () => {
+  it('casual surfaces the next step, gentle', () => {
     const result = resolveUserMovementSuggestion({
       character: { id: 'user', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
       effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
-      groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'meander', 0, 4)]) },
+      groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'casual', 0, 4)]) },
     });
     expect(result).toEqual({
       suggestedLocationIds: ['B'],
@@ -440,7 +440,7 @@ describe('resolveUserMovementSuggestion', () => {
       effectiveZones: [makeZone('zoneB', ['B']), makeZone('zoneC', ['C'])],
       groupSchedulesByGroupId: {
         rushers: makeSchedule('rushers', 4, [makeSegment('zoneB', 'rush', 0, 4)]),
-        wanderers: makeSchedule('wanderers', 4, [makeSegment('zoneC', 'meander', 0, 4)]),
+        wanderers: makeSchedule('wanderers', 4, [makeSegment('zoneC', 'casual', 0, 4)]),
       },
     });
     expect(result).toEqual({

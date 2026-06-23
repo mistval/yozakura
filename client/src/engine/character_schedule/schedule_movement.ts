@@ -37,7 +37,7 @@ const POLICY_PERMISSIVENESS: Record<MovementPolicy, number> = {
   teleport: 0,
   jump: 1,
   rush: 2,
-  meander: 3,
+  casual: 3,
 };
 
 function mostPermissivePolicy(a: MovementPolicy | undefined, b: MovementPolicy): MovementPolicy {
@@ -181,7 +181,7 @@ export function resolveScheduledMove(
   }
 
   const firstStep = firstStepToward(target)!;
-  const forceMove = policy !== 'meander';
+  const forceMove = policy !== 'casual';
   return { forceMove, destinationLocationId: firstStep, consumesTurn: forceMove };
 }
 
@@ -229,7 +229,13 @@ export function resolveUserMovementSuggestion(
         consumesTurnByLocationId[neighbor] = false;
       }
     }
-    return { suggestedLocationIds: [], highlightByLocationId, consumesTurnByLocationId, highlightWait: true, forbiddenLocationIds };
+    return {
+      suggestedLocationIds: [],
+      highlightByLocationId,
+      consumesTurnByLocationId,
+      highlightWait: true,
+      forbiddenLocationIds,
+    };
   }
 
   const { targets, firstStepToward } = findNearestReachable(
@@ -271,7 +277,13 @@ export function resolveUserMovementSuggestion(
     }
   }
 
-  return { suggestedLocationIds, highlightByLocationId, consumesTurnByLocationId, highlightWait: false, forbiddenLocationIds };
+  return {
+    suggestedLocationIds,
+    highlightByLocationId,
+    consumesTurnByLocationId,
+    highlightWait: false,
+    forbiddenLocationIds,
+  };
 }
 
 export interface CharacterMovementConstraint {
