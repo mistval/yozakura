@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { assert, assertNonNullish } from '../../../errors/application_error';
-import { useTurnMachineStore } from '../../../state/active_chat_store';
+import { useTurnMachineStore } from '../../../state/turn_machine_store';
 import { useScenarioCharacterStore } from '../../../state/scenario_character_store';
 import { useScenarioCharacterRelationshipStore } from '../../../state/scenario_character_relationship_store';
 import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_store';

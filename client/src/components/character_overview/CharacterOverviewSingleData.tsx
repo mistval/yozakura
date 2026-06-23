@@ -6,7 +6,7 @@ import { useScenarioCharacterStore } from '../../state/scenario_character_store.
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
-import { useTurnMachineStore } from '../../state/active_chat_store.js';
+import { useTurnMachineStore } from '../../state/turn_machine_store.js';
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 
 import ConversationSearchList from '../conversation_log/ConversationSearchList.js';

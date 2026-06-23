@@ -3,7 +3,7 @@ import SettingFieldLabel from '../settings/ui/SettingFieldLabel.js';
 import { settingsTooltips } from '../settings/settings_tooltips.js';
 import { useSettingsStore } from '../../state/settings_store.js';
 import type { ChatPaneWidth, SpeakerSelectionMode } from '../../state/settings_store.js';
-import { useTurnMachineStore, useChatUserLocation } from '../../state/active_chat_store.js';
+import { useTurnMachineStore, useChatUserLocation } from '../../state/turn_machine_store.js';
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';

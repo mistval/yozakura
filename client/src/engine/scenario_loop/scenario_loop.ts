@@ -1,4 +1,4 @@
-import { useTurnMachineStore } from '../../state/active_chat_store';
+import { useTurnMachineStore } from '../../state/turn_machine_store';
 import { whenScenarioCharactersLoaded } from '../../state/scenario_character_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
 import { useScenarioStore } from '../../state/scenario_store';

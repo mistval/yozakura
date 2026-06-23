@@ -11,7 +11,7 @@ import {
   useActiveChatParticipants,
   useTurnMachineStore,
   useChatUserLocation,
-} from '../state/active_chat_store.js';
+} from '../state/turn_machine_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import ChatSettings from './chat/chat_settings.js';
 import CharacterChatSettings from './chat/character_chat_settings.js';

@@ -3,11 +3,7 @@ import { useScenarioCharacterStore } from '../../../state/scenario_character_sto
 import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_store';
 import { useSettingsStore } from '../../../state/settings_store';
 import { ChatCoordinator } from '../../chat/chat_coordinator';
-import {
-  doWithScenarioLoopPromise,
-  scenarioLoopPromiseCallbacks,
-  UserAbortSignalException,
-} from '../flow_control';
+import { doWithScenarioLoopPromise, scenarioLoopPromiseCallbacks } from '../flow_control';
 import type {
   ChatInputResult,
   ChatUserInputAction,
@@ -28,16 +24,7 @@ export class UserInputInterface extends CharacterInputInterface {
 
     const input = await doWithScenarioLoopPromise<ChatUserInputAction>(async (userChatActionPromise) => {
       scenarioLoopPromiseCallbacks.userChatAction = userChatActionPromise;
-      const unsubscribe = useScenarioLoopStateStore.subscribe((state) => {
-        if (state.userRequestedPhaseTransition === 'stopped') {
-          userChatActionPromise.reject(new UserAbortSignalException());
-        }
-      });
-      try {
-        return await userChatActionPromise.promise;
-      } finally {
-        unsubscribe();
-      }
+      return await userChatActionPromise.promise;
     });
 
     return { input, persist: true };

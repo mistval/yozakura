@@ -8,7 +8,7 @@ import {
   getActiveChatMedium,
   getActiveChatParticipants,
   useTurnMachineStore,
-} from '../../state/active_chat_store.js';
+} from '../../state/turn_machine_store.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import type {
   CharacterEditorExecutionContext,

@@ -1,6 +1,6 @@
 import * as Database from '../../backend_bridge/database';
 import { assert } from '../../errors/application_error';
-import { getActiveChatMedium, getActiveChatParticipants } from '../../state/active_chat_store';
+import { getActiveChatMedium, getActiveChatParticipants } from '../../state/turn_machine_store';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store';
 import { useScenarioStore } from '../../state/scenario_store';

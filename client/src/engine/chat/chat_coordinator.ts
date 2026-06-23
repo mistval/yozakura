@@ -20,7 +20,7 @@ import {
   getAllActiveChatSpeakers,
   useTurnMachineStore,
   type StartChatSessionArgs,
-} from '../../state/active_chat_store';
+} from '../../state/turn_machine_store';
 import { chatSceneImageChainGroup } from '../prompt_templates/chat/chat_scene_image';
 import { moderationNextSpeakerTemplatesGroup } from '../prompt_templates/chat/moderation_next_speaker';
 import { chatSystemPromptChain } from '../prompt_templates/chat/chat_system_prompt';

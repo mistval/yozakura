@@ -1,5 +1,5 @@
 import { assertNonNullish } from '../errors/application_error';
-import { getActiveChatParticipants, useTurnMachineStore } from '../state/active_chat_store';
+import { getActiveChatParticipants, useTurnMachineStore } from '../state/turn_machine_store';
 import { useScenarioCharacterStore } from '../state/scenario_character_store';
 import { useSettingsStore } from '../state/settings_store.js';
 import { buildCharacterNameIndex, matchStringToIndex } from './tokenization';

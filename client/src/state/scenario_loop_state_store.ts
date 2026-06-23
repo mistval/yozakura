@@ -6,7 +6,7 @@ import type {
   UserTurnAction,
 } from '../engine/scenario_loop/types';
 import { scenarioLoopPromiseCallbacks } from '../engine/scenario_loop/flow_control';
-import { useTurnMachineStore } from './active_chat_store';
+import { useTurnMachineStore } from './turn_machine_store';
 
 export type UserRequestedPhaseTransition = 'none' | 'paused' | 'stopped';
 

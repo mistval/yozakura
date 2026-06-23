@@ -14,7 +14,7 @@ import {
   useActiveChatParticipants,
   useTurnMachineStore,
   useCurrentTurnCharacterId,
-} from '../state/active_chat_store';
+} from '../state/turn_machine_store';
 import { useScenarioStore } from '../state/scenario_store.js';
 import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';

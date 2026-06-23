@@ -3,7 +3,7 @@ import {
   serializedTurnSchema,
   useTurnMachineStore,
   type SerializedTurn,
-} from '../../state/active_chat_store';
+} from '../../state/turn_machine_store';
 import { useScenarioStore } from '../../state/scenario_store';
 
 function turnPersistenceKey(scenarioId: string) {

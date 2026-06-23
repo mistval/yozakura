@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useCharacterEditorModal } from './CharacterEditorModalContext';
 import ConfirmDialog from '../ui/ConfirmDialog';
-import { useTurnMachineStore, useCurrentTurnCharacterId } from '../../state/active_chat_store';
+import { useTurnMachineStore, useCurrentTurnCharacterId } from '../../state/turn_machine_store';
 import { useScenarioStore } from '../../state/scenario_store';
 
 export default function HeaderSection() {
