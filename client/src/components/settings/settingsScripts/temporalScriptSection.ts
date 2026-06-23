@@ -25,7 +25,7 @@ export function useTemporalScriptSelection(): ScriptSelection {
   const setTemporalSelectedScriptId = useScenarioStore((state) => state.setTemporalSelectedScriptId);
   const setTemporalControlValue = useScenarioStore((state) => state.setTemporalControlValue);
   const resetTemporalControlValues = useScenarioStore((state) => state.resetTemporalControlValues);
-  const recompute = useTemporalContextStore((state) => state.recompute);
+  const recompute = useTemporalContextStore((state) => state.computeAndSet);
 
   const selectedScriptId = temporalSection?.selectedScriptId ?? '';
   return {

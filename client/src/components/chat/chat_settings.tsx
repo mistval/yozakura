@@ -3,7 +3,7 @@ import SettingFieldLabel from '../settings/ui/SettingFieldLabel.js';
 import { settingsTooltips } from '../settings/settings_tooltips.js';
 import { useSettingsStore } from '../../state/settings_store.js';
 import type { ChatPaneWidth, SpeakerSelectionMode } from '../../state/settings_store.js';
-import { useActiveChatStore, useChatUserLocation } from '../../state/active_chat_store.js';
+import { useTurnMachineStore, useChatUserLocation } from '../../state/active_chat_store.js';
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
@@ -17,10 +17,10 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
   const speakerSelectionMode = useSettingsStore((s) => s.speakerSelectionMode);
   const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
   const setSettings = useSettingsStore((s) => s.setSettings);
-  const chatInstructions = useActiveChatStore((s) => s.chatInstructions);
+  const chatInstructions = useTurnMachineStore((s) => s.chatInstructions);
   const userLocation = useChatUserLocation();
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
-  const canEndChat = useActiveChatStore((state) => state.chatState === 'awaiting_user_input');
+  const canEndChat = useTurnMachineStore((state) => state.chatState === 'awaiting_user_input');
 
   const updateSpeakerSelectionMode = (nextMode: SpeakerSelectionMode) => {
     setSettings({ speakerSelectionMode: nextMode });

@@ -20,7 +20,7 @@ import type { OmitFunctions } from '../util/types.js';
 import { getRequiredActiveScenario, useScenarioStore } from './scenario_store.js';
 import { useScenarioCharacterStore, useUserCharacter } from './scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
-import { assertNonNullish } from '../errors/application_error.js';
+import { assert, assertNonNullish } from '../errors/application_error.js';
 
 export type StartChatSessionArgs = {
   participantIds: string[];
@@ -53,8 +53,8 @@ export const serializedTurnSchema = z.object({
 
 export type SerializedTurn = z.infer<typeof serializedTurnSchema>;
 
-type BaseChatStoreState = {
-  machineState: TurnMachineState | undefined;
+type BaseTurnMachineStoreState = {
+  turnMachineState: TurnMachineState | undefined;
   pendingTurnCharacterIds: string[];
   chatsSoFar: Record<string, { withIds: string[] }[]>;
 
@@ -81,13 +81,14 @@ type BaseChatStoreState = {
   hasChatted: (characterAId: string, characterBId: string) => boolean;
   beginChat: (args: StartChatSessionArgs) => void;
   enterActiveChat: () => void;
-  deactivate: () => void;
+  deactivateChat: () => void;
   reset: () => void;
   serialize: () => SerializedTurn | undefined;
   hydrate: (snapshot: SerializedTurn) => void;
   setEphemeralLocation: (setter: (prev: EphemeralLocation) => EphemeralLocation) => void;
   userIsParticipant: () => boolean;
   addChatParticipant: (participantId: string) => void;
+  setCurrentCharacter: (characterId: string) => void;
   removeChatParticipant: (participantId: string) => void;
   setChatInstructions: (instructions: string) => void;
   setCharacterChatInstructions: (characterId: string, instructions: string) => void;
@@ -103,7 +104,7 @@ type BaseChatStoreState = {
   ) => WorldMapLocation | undefined;
 };
 
-type ActiveChatStoreState = OmitFunctions<BaseChatStoreState> & {
+type ActiveChatTurnMachineStoreState = OmitFunctions<BaseTurnMachineStoreState> & {
   chatState: 'awaiting_user_input' | 'generating_image' | 'processing_memories' | 'npc_speaking';
   participantIds: string[];
   removedParticipantIds: string[];
@@ -116,11 +117,11 @@ type ActiveChatStoreState = OmitFunctions<BaseChatStoreState> & {
 };
 
 type InactiveChatFields = Omit<
-  OmitFunctions<BaseChatStoreState>,
-  'machineState' | 'pendingTurnCharacterIds' | 'chatsSoFar'
+  OmitFunctions<BaseTurnMachineStoreState>,
+  'turnMachineState' | 'pendingTurnCharacterIds' | 'chatsSoFar'
 >;
 
-const inactiveChatState: InactiveChatFields = {
+const inactiveChatTurnMachineState: InactiveChatFields = {
   chatState: 'inactive',
   removedParticipantIds: [],
   processingMemoryStatusInfo: undefined,
@@ -143,12 +144,14 @@ function getCharactersByIds(characterIds: string[]): Character[] {
   return useScenarioCharacterStore.getState().getCharactersByIds(characterIds);
 }
 
-function getActiveChatStateSnapshotFromState(state: BaseChatStoreState): ActiveChatStoreState {
+function getActiveChatStateSnapshotFromState(
+  state: BaseTurnMachineStoreState
+): ActiveChatTurnMachineStoreState {
   if (state.chatState === 'inactive') {
     throw new Error('Requesting active chat state, but chat is not active');
   }
 
-  return state as ActiveChatStoreState;
+  return state as ActiveChatTurnMachineStoreState;
 }
 
 export function getActiveChatParticipants(
@@ -157,7 +160,7 @@ export function getActiveChatParticipants(
     includeUser?: boolean;
   } = {}
 ): Character[] {
-  const state = useActiveChatStore.getState();
+  const state = useTurnMachineStore.getState();
   const scenarioState = useScenarioStore.getState();
   const { includeRemoved = false, includeUser = true } = options;
 
@@ -169,7 +172,7 @@ export function getActiveChatParticipants(
 }
 
 export function useActiveChatParticipants(): Character[] {
-  const participantIds = useActiveChatStore((state) => state.participantIds);
+  const participantIds = useTurnMachineStore((state) => state.participantIds);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
 
   return participantIds
@@ -178,11 +181,11 @@ export function useActiveChatParticipants(): Character[] {
 }
 
 export function getActiveChatMedium(
-  participants = useActiveChatStore.getState().participantIds,
+  participants = useTurnMachineStore.getState().participantIds,
   getRequiredCharacterById = useScenarioCharacterStore.getState().getRequiredCharacterById,
-  getCharacterLocation = useActiveChatStore.getState().getChatCharacterLocation,
+  getCharacterLocation = useTurnMachineStore.getState().getChatCharacterLocation,
   map = useScenarioStore.getState().activeScenarioMap,
-  ephemeralLocation = useActiveChatStore.getState().ephemeralLocation
+  ephemeralLocation = useTurnMachineStore.getState().ephemeralLocation
 ): ChatMedium {
   const allLocations = new Set(
     participants.map((p) => getCharacterLocation(p, getRequiredCharacterById, map, ephemeralLocation)?.id)
@@ -192,9 +195,9 @@ export function getActiveChatMedium(
 }
 
 export function useActiveChatMedium(): ChatMedium {
-  const getCharacterLocation = useActiveChatStore((s) => s.getChatCharacterLocation);
+  const getCharacterLocation = useTurnMachineStore((s) => s.getChatCharacterLocation);
   const getRequiredCharacterById = useScenarioCharacterStore((s) => s.getRequiredCharacterById);
-  const ephemeralLocation = useActiveChatStore((s) => s.ephemeralLocation);
+  const ephemeralLocation = useTurnMachineStore((s) => s.ephemeralLocation);
   const map = useScenarioStore((s) => s.activeScenarioMap);
   const participants = useActiveChatParticipants();
 
@@ -208,9 +211,9 @@ export function useActiveChatMedium(): ChatMedium {
 }
 
 export function useChatUserLocation() {
-  const getCharacterLocation = useActiveChatStore((s) => s.getChatCharacterLocation);
+  const getCharacterLocation = useTurnMachineStore((s) => s.getChatCharacterLocation);
   const getRequiredCharacterById = useScenarioCharacterStore((s) => s.getRequiredCharacterById);
-  const ephemeralLocation = useActiveChatStore((s) => s.ephemeralLocation);
+  const ephemeralLocation = useTurnMachineStore((s) => s.ephemeralLocation);
   const userCharacter = useUserCharacter();
   const map = useScenarioStore((s) => s.activeScenarioMap);
 
@@ -222,7 +225,7 @@ export function useChatUserLocation() {
 }
 
 export async function getActiveChatGossipCharacter(fromCharacterId?: string) {
-  const activeChatStore = useActiveChatStore.getState();
+  const activeChatStore = useTurnMachineStore.getState();
   if (!activeChatStore.gossipTargetCharacterId) {
     return {};
   }
@@ -241,7 +244,7 @@ export async function getActiveChatGossipCharacter(fromCharacterId?: string) {
 }
 
 export function getAllActiveChatSpeakers(): Character[] {
-  const transcript = useActiveChatStore.getState().transcript;
+  const transcript = useTurnMachineStore.getState().transcript;
   assertNonNullish(transcript, 'Expected transcript to be available when getting all speakers');
 
   const speakerIds = transcript.getAllSpeakerIds();
@@ -252,9 +255,9 @@ export function getAllActiveChatSpeakers(): Character[] {
     .filter((character): character is Character => Boolean(character));
 }
 
-export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
-  ...inactiveChatState,
-  machineState: undefined,
+export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) => ({
+  ...inactiveChatTurnMachineState,
+  turnMachineState: undefined,
   pendingTurnCharacterIds: [],
   chatsSoFar: {},
 
@@ -264,12 +267,11 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
 
   startNewTurn(allCharacterIds, userCharacterId) {
     const otherCharacterIds = allCharacterIds.filter((id) => id !== userCharacterId);
-    const ordered = [userCharacterId, ..._.shuffle(otherCharacterIds)];
+    const ordered = [userCharacterId].concat(_.shuffle(otherCharacterIds));
 
-    get().memoryRagHelper?.teardown();
     set({
-      ...inactiveChatState,
-      machineState: 'deciding',
+      ...inactiveChatTurnMachineState,
+      turnMachineState: 'deciding',
       pendingTurnCharacterIds: ordered,
       chatsSoFar: {},
     });
@@ -279,18 +281,31 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
     return get().pendingTurnCharacterIds[0];
   },
 
+  setCurrentCharacter(characterId: string) {
+    assert(
+      get().turnMachineState === 'deciding',
+      'Cannot change current character while not in the deciding state'
+    );
+
+    set({
+      pendingTurnCharacterIds: [characterId].concat(
+        get().pendingTurnCharacterIds.filter((id) => id !== characterId)
+      ),
+    });
+  },
+
   finishCurrentCharacter() {
     const remaining = get().pendingTurnCharacterIds.slice(1);
     const turnEnded = remaining.length === 0;
     set({
       pendingTurnCharacterIds: remaining,
-      machineState: turnEnded ? undefined : 'deciding',
+      turnMachineState: turnEnded ? undefined : 'deciding',
     });
     return turnEnded;
   },
 
   setMachineState(machineState) {
-    set({ machineState });
+    set({ turnMachineState: machineState });
   },
 
   recordChat(initiatorId, withIds) {
@@ -317,8 +332,8 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
     const initiatorIsUser = args.initiatorId === userCharacter?.id;
 
     set({
-      ...inactiveChatState,
-      machineState: 'chatting',
+      ...inactiveChatTurnMachineState,
+      turnMachineState: 'chatting',
       participantIds: args.participantIds,
       initiatorId: args.initiatorId,
       gossipTargetCharacterId: args.gossipTargetCharacterId,
@@ -344,16 +359,16 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
     set({ memoryRagHelper });
   },
 
-  deactivate() {
+  deactivateChat() {
     get().memoryRagHelper?.teardown();
-    set(inactiveChatState);
+    set(inactiveChatTurnMachineState);
   },
 
   reset() {
     get().memoryRagHelper?.teardown();
     set({
-      ...inactiveChatState,
-      machineState: undefined,
+      ...inactiveChatTurnMachineState,
+      turnMachineState: undefined,
       pendingTurnCharacterIds: [],
       chatsSoFar: {},
     });
@@ -361,21 +376,21 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
 
   serialize() {
     const state = get();
-    if (state.machineState === undefined) {
+    if (state.turnMachineState === undefined) {
       return undefined;
     }
 
     return {
-      machineState: state.machineState,
+      machineState: state.turnMachineState,
       pendingTurnCharacterIds: state.pendingTurnCharacterIds,
       chatsSoFar: state.chatsSoFar,
-      activeChat: state.machineState === 'chatting' ? buildPersistedActiveChat(state) : undefined,
+      activeChat: state.turnMachineState === 'chatting' ? buildPersistedActiveChat(state) : undefined,
     };
   },
 
   hydrate(snapshot) {
     const base = {
-      ...inactiveChatState,
+      ...inactiveChatTurnMachineState,
       machineState: snapshot.machineState,
       pendingTurnCharacterIds: snapshot.pendingTurnCharacterIds,
       chatsSoFar: snapshot.chatsSoFar,
@@ -541,7 +556,7 @@ export const useActiveChatStore = create<BaseChatStoreState>((set, get) => ({
   },
 }));
 
-export function buildPersistedActiveChat(state: BaseChatStoreState): PersistedActiveChat {
+export function buildPersistedActiveChat(state: BaseTurnMachineStoreState): PersistedActiveChat {
   assertNonNullish(state.transcript, 'Cannot persist active chat without a transcript');
 
   return persistedActiveChatSchema.parse({
@@ -551,5 +566,27 @@ export function buildPersistedActiveChat(state: BaseChatStoreState): PersistedAc
 }
 
 export function useCurrentTurnCharacterId(): string | undefined {
-  return useActiveChatStore((state) => state.pendingTurnCharacterIds[0]);
+  return useTurnMachineStore((state) => state.pendingTurnCharacterIds[0]);
 }
+
+useScenarioStore.subscribe((newState, prevState) => {
+  if (!newState.activeScenario || !prevState.activeScenario) {
+    return;
+  }
+
+  if (newState.activeScenario.id !== prevState.activeScenario.id) {
+    return;
+  }
+
+  if (newState.activeScenario.userCharacterId === prevState.activeScenario.userCharacterId) {
+    return;
+  }
+
+  const turnMachineState = useTurnMachineStore.getState();
+  assert(
+    turnMachineState.turnMachineState === 'deciding',
+    'User character changed when turn machine was not in the deciding state'
+  );
+
+  turnMachineState.setCurrentCharacter(newState.activeScenario.userCharacterId);
+});

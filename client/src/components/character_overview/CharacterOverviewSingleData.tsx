@@ -6,7 +6,7 @@ import { useScenarioCharacterStore } from '../../state/scenario_character_store.
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
-import { useActiveChatStore } from '../../state/active_chat_store.js';
+import { useTurnMachineStore } from '../../state/active_chat_store.js';
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 
 import ConversationSearchList from '../conversation_log/ConversationSearchList.js';
@@ -34,8 +34,8 @@ export default function CharacterOverviewSingleData({
     (state) => state.getCharacterRelationship
   );
   const requestDirectNpcChat = useScenarioLoopStateStore((state) => state.submitUserChatAction);
-  const chatSessionIsActive = useActiveChatStore((state) => state.chatState !== 'inactive');
-  const activeChatParticipants = useActiveChatStore((state) => state.participantIds);
+  const chatSessionIsActive = useTurnMachineStore((state) => state.chatState !== 'inactive');
+  const activeChatParticipants = useTurnMachineStore((state) => state.participantIds);
   const { closeCharacterOverview, openCharacterOverviewEditor } = useCharacterOverview();
   const [relationshipToUser, setRelationshipToUser] = useState<CharacterRelationship | undefined>(undefined);
 

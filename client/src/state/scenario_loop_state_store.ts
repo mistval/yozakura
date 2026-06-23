@@ -6,7 +6,7 @@ import type {
   UserTurnAction,
 } from '../engine/scenario_loop/types';
 import { scenarioLoopPromiseCallbacks } from '../engine/scenario_loop/flow_control';
-import { useActiveChatStore } from './active_chat_store';
+import { useTurnMachineStore } from './active_chat_store';
 
 export type UserRequestedPhaseTransition = 'none' | 'paused' | 'stopped';
 
@@ -49,7 +49,7 @@ function resolveChatUserInputAction(action: ChatUserInputAction): boolean {
     return false;
   }
 
-  if (useActiveChatStore.getState().chatState !== 'awaiting_user_input') {
+  if (useTurnMachineStore.getState().chatState !== 'awaiting_user_input') {
     return false;
   }
 

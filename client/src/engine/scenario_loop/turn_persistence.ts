@@ -1,5 +1,9 @@
 import * as Database from '../../backend_bridge/database';
-import { serializedTurnSchema, useActiveChatStore, type SerializedTurn } from '../../state/active_chat_store';
+import {
+  serializedTurnSchema,
+  useTurnMachineStore,
+  type SerializedTurn,
+} from '../../state/active_chat_store';
 import { useScenarioStore } from '../../state/scenario_store';
 
 function turnPersistenceKey(scenarioId: string) {
@@ -12,7 +16,7 @@ export function persistTurn() {
     return;
   }
 
-  const snapshot = useActiveChatStore.getState().serialize();
+  const snapshot = useTurnMachineStore.getState().serialize();
   const key = turnPersistenceKey(scenario.id);
 
   void Database.doAsDataWrite(

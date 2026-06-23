@@ -13,31 +13,31 @@ import {
   getBuiltinTemporalScript,
   resolveTemporalScript,
 } from '../engine/settings/settings_scripts/temporal/temporal_scripts.js';
-import { TEMPORAL_CONTEXT_SECTION_ID } from '../engine/settings/settings_scripts/temporal/temporal_script_types.js';
+import {
+  TEMPORAL_CONTEXT_SECTION_ID,
+  type TemporalContext,
+} from '../engine/settings/settings_scripts/temporal/temporal_script_types.js';
 import { useScenarioStore } from './scenario_store.js';
+import { runWithInteractiveRetry } from '../engine/interative_retry.js';
+import type { Scenario } from '../engine/types.js';
 
 type TemporalContextStoreState = {
   displayHtml: string;
   plainText: string;
   dayIndex: number | undefined;
-  recompute: () => Promise<void>;
+  compute: (scenario: Scenario) => Promise<TemporalContext | undefined>;
+  computeAndSet: () => Promise<TemporalContextStoreState>;
   reset: () => void;
 };
 
 const EMPTY = { displayHtml: '', plainText: '', dayIndex: undefined };
 
-export const useTemporalContextStore = create<TemporalContextStoreState>((set) => ({
+export const useTemporalContextStore = create<TemporalContextStoreState>((set, get) => ({
   ...EMPTY,
 
   reset: () => set(EMPTY),
 
-  recompute: async () => {
-    const scenario = useScenarioStore.getState().activeScenario;
-    if (!scenario) {
-      set(EMPTY);
-      return;
-    }
-
+  compute: async (scenario: Scenario) => {
     const section = scenario.temporalContext;
     const source = getBuiltinTemporalScript(section.selectedScriptId)
       ? ''
@@ -45,8 +45,7 @@ export const useTemporalContextStore = create<TemporalContextStoreState>((set) =
 
     const resolved = resolveTemporalScript(section.selectedScriptId, source);
     if (!resolved.ok) {
-      set(EMPTY);
-      return;
+      return undefined;
     }
 
     const stored = section.controlValues[section.selectedScriptId] ?? {};
@@ -64,16 +63,30 @@ export const useTemporalContextStore = create<TemporalContextStoreState>((set) =
       createSeededRandom,
     };
 
-    try {
-      const result = await resolved.script.getTemporalContext(controlValues, { scenario }, helpers);
+    return runWithInteractiveRetry({
+      operationType: 'temporal_context.compute',
+      run: async () => {
+        const result = await resolved.script.getTemporalContext(controlValues, { scenario }, helpers);
+        return result;
+      },
+    });
+  },
 
-      if (useScenarioStore.getState().activeScenario?.id !== scenario.id) {
-        return;
-      }
-
-      set({ displayHtml: result.displayHtml, plainText: result.plainText, dayIndex: result.dayIndex });
-    } catch {
+  computeAndSet: async () => {
+    const scenario = useScenarioStore.getState().activeScenario;
+    if (!scenario) {
       set(EMPTY);
+      return get();
     }
+
+    const result = await get().compute(scenario);
+    const newScenario = useScenarioStore.getState().activeScenario;
+    if (!result || newScenario?.id !== scenario.id) {
+      set(EMPTY);
+      return get();
+    }
+
+    set({ displayHtml: result.displayHtml, plainText: result.plainText, dayIndex: result.dayIndex });
+    return get();
   },
 }));

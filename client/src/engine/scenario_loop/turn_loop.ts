@@ -1,5 +1,5 @@
 import { assert, assertNonNullish } from '../../errors/application_error';
-import { useActiveChatStore } from '../../state/active_chat_store';
+import { useTurnMachineStore } from '../../state/active_chat_store';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
@@ -30,7 +30,7 @@ export async function runTurnLoop() {
         const loopState = useScenarioLoopStateStore.getState();
         loopState.setAutoMode(false);
         loopState.setUserRequestedPhaseTransition('none');
-        useActiveChatStore.getState().reset();
+        useTurnMachineStore.getState().reset();
         persistTurn();
         continue;
       }
@@ -40,7 +40,7 @@ export async function runTurnLoop() {
       }
 
       await showNonRetriableErrorCardIfNeeded({
-        operationType: 'chat_loop_top_level',
+        operationType: 'turn_loop_top_level',
         error: err as Error,
       });
 
@@ -50,9 +50,9 @@ export async function runTurnLoop() {
 }
 
 async function runTurnLoopTick() {
-  const { machineState, currentCharacterId, startNewTurn } = useActiveChatStore.getState();
+  const { turnMachineState, currentCharacterId, startNewTurn } = useTurnMachineStore.getState();
 
-  if (machineState === undefined) {
+  if (turnMachineState === undefined) {
     await recomputeTemporalContextAndAutoselectWardrobes();
     startNewTurn(getTurnCharacterIds(), getRequiredUserCharacterId());
   }
@@ -62,10 +62,10 @@ async function runTurnLoopTick() {
 
   const inputInterface = makeInputInterface(characterId);
 
-  if (machineState === 'chatting') {
+  if (turnMachineState === 'chatting') {
     const chatMove: TurnMove = {
       actionType: 'chat',
-      participantIds: useActiveChatStore.getState().participantIds,
+      participantIds: useTurnMachineStore.getState().participantIds,
       rich: true,
     };
     const outcome = await runChatLoop();
@@ -79,7 +79,7 @@ async function runTurnLoopTick() {
     const chatStart = await doScenarioLoopAsyncAction(() =>
       ChatCoordinator.prepareChatStart(move.participantIds)
     );
-    useActiveChatStore.getState().beginChat(chatStart);
+    useTurnMachineStore.getState().beginChat(chatStart);
     persistTurn();
     return;
   }
@@ -94,7 +94,7 @@ function advanceAfterMove(
   outcome: TurnMoveOutcome,
   persist: boolean
 ) {
-  const store = useActiveChatStore.getState();
+  const store = useTurnMachineStore.getState();
 
   let turnEnded = false;
   if (inputInterface.continuesAfterMove(move, outcome)) {
@@ -115,7 +115,10 @@ function advanceAfterMove(
 async function runChatLoop(): Promise<{ noEffect: boolean }> {
   ChatCoordinator.enterActiveChat();
 
-  if (useSettingsStore.getState().pauseAtNpcChatStart && !useActiveChatStore.getState().userIsParticipant()) {
+  if (
+    useSettingsStore.getState().pauseAtNpcChatStart &&
+    !useTurnMachineStore.getState().userIsParticipant()
+  ) {
     useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
   }
 
@@ -194,7 +197,7 @@ function makeInputInterface(characterId: string): CharacterInputInterface {
 }
 
 function doPostConversationWardrobeAutoRevert() {
-  const activeChatState = useActiveChatStore.getState();
+  const activeChatState = useTurnMachineStore.getState();
 
   const snapshot = activeChatState.preConversationWardrobeSnapshotByCharacterId;
   const idsToAutoRevert = activeChatState.participantIds.concat(activeChatState.removedParticipantIds);
@@ -211,7 +214,7 @@ function doPostConversationWardrobeAutoRevert() {
 async function closeChatSession(forceNoEffect?: boolean): Promise<{ noEffect: boolean }> {
   useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('none');
 
-  const activeChatStore = useActiveChatStore.getState();
+  const activeChatStore = useTurnMachineStore.getState();
   const noEffect = forceNoEffect || (activeChatStore.transcript?.countCharacterChatMessages() ?? 0) < 2;
 
   doPostConversationWardrobeAutoRevert();
@@ -227,19 +230,39 @@ async function moveScenarioCharacter(characterId: string, toId: string) {
 }
 
 async function recomputeTemporalContextAndAutoselectWardrobes() {
-  await useTemporalContextStore.getState().recompute();
+  const temporalContext = await useTemporalContextStore.getState().computeAndSet();
 
-  const dayIndex = useTemporalContextStore.getState().dayIndex;
-  if (dayIndex === undefined) {
+  // If no temporal context, no wardrobe autoselect
+  if (temporalContext.dayIndex === undefined) {
     return;
   }
 
   const loopState = useScenarioLoopStateStore.getState();
   const lastDayIndex = loopState.lastTemporalDayIndex;
-  loopState.setLastTemporalDayIndex(dayIndex);
+  loopState.setLastTemporalDayIndex(temporalContext.dayIndex);
 
-  if (lastDayIndex === undefined || dayIndex === lastDayIndex) {
+  // If day index has not changed, don't trigger auto select
+  if (temporalContext.dayIndex === lastDayIndex) {
     return;
+  }
+
+  // If we don't have a lastDayIndex, it could just be because application
+  // we just launched, so try computing lastDayIndex based on previous turn number
+  if (lastDayIndex === undefined) {
+    const activeScenario = useScenarioStore.getState().activeScenario;
+
+    // If turn number in non-zero, we can compute the dayIndex of
+    // previous turn
+    if (activeScenario && (activeScenario?.turnNumber ?? 0) > 0) {
+      const computedLastDayContext = await temporalContext.compute({
+        ...activeScenario,
+        turnNumber: activeScenario.turnNumber - 1,
+      });
+
+      if (computedLastDayContext?.dayIndex === temporalContext.dayIndex) {
+        return;
+      }
+    }
   }
 
   for (const c of useScenarioCharacterStore.getState().scenarioCharacters) {

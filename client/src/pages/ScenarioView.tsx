@@ -12,7 +12,7 @@ import type { Character, CharacterPair, CharacterRelationships, WorldMapLocation
 import { assertNonNullish } from '../errors/application_error';
 import {
   useActiveChatParticipants,
-  useActiveChatStore,
+  useTurnMachineStore,
   useCurrentTurnCharacterId,
 } from '../state/active_chat_store';
 import { useScenarioStore } from '../state/scenario_store.js';
@@ -39,13 +39,13 @@ export default function ScenarioView() {
   const zones = useMapZoneStore((state) => state.zones);
   const schedulesByGroupId = useCharacterGroupStore((state) => state.schedulesByGroupId);
   const temporalDisplayHtml = useTemporalContextStore((state) => state.displayHtml);
-  const recomputeTemporalContext = useTemporalContextStore((state) => state.recompute);
+  const recomputeTemporalContext = useTemporalContextStore((state) => state.computeAndSet);
   const { showCharacterOverview } = useCharacterOverview();
   const { showConversationLog } = useConversationLog();
   const { showMap } = useMapModal();
   const { openSettings } = useSettingsModal();
   const activeParticipants = useActiveChatParticipants();
-  const hasActiveChatSession = useActiveChatStore((state) => state.chatState !== 'inactive');
+  const hasActiveChatSession = useTurnMachineStore((state) => state.chatState !== 'inactive');
   const currentTurnCharacterId = useCurrentTurnCharacterId();
   const submitUserWait = useScenarioLoopStateStore((state) => state.submitUserWait);
   const submitUserMove = useScenarioLoopStateStore((state) => state.submitUserMove);

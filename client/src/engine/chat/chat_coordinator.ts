@@ -18,7 +18,7 @@ import {
   getActiveChatMedium,
   getActiveChatParticipants,
   getAllActiveChatSpeakers,
-  useActiveChatStore,
+  useTurnMachineStore,
   type StartChatSessionArgs,
 } from '../../state/active_chat_store';
 import { chatSceneImageChainGroup } from '../prompt_templates/chat/chat_scene_image';
@@ -82,7 +82,7 @@ export class ChatCoordinator {
   }
 
   public static deactivate() {
-    this.activeChatStore().deactivate();
+    this.activeChatStore().deactivateChat();
   }
 
   public static addParticipant(participantId: string) {
@@ -438,7 +438,7 @@ export class ChatCoordinator {
   }
 
   private static activeChatStore() {
-    return useActiveChatStore.getState();
+    return useTurnMachineStore.getState();
   }
 
   private static memoryRagHelper() {

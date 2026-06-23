@@ -9,7 +9,7 @@ import { ChatCoordinator } from '../engine/chat/chat_coordinator.js';
 import {
   useActiveChatMedium,
   useActiveChatParticipants,
-  useActiveChatStore,
+  useTurnMachineStore,
   useChatUserLocation,
 } from '../state/active_chat_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
@@ -30,11 +30,11 @@ export default function ChatPane() {
   const groupChatMessageLimit = useSettingsStore((s) => s.groupChatMessageLimit);
   const richNpcMessageCount = useSettingsStore((s) => s.richNpcMessageCount);
   const editImagePromptsBeforeDispatch = useSettingsStore((s) => s.editImagePromptsBeforeDispatch);
-  const transcript = useActiveChatStore((state) => state.transcript);
+  const transcript = useTurnMachineStore((state) => state.transcript);
   const chatMode = useActiveChatMedium();
   const participants = useActiveChatParticipants();
-  const chatState = useActiveChatStore((state) => state.chatState);
-  const processingMemoryStatusInfo = useActiveChatStore((state) => state.processingMemoryStatusInfo);
+  const chatState = useTurnMachineStore((state) => state.chatState);
+  const processingMemoryStatusInfo = useTurnMachineStore((state) => state.processingMemoryStatusInfo);
   const userCharacter = useUserCharacter();
   const scenario = useScenarioStore((state) => state.activeScenario);
   const userLocation = useChatUserLocation();

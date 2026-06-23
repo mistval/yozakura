@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { assert, assertNonNullish } from '../../../errors/application_error';
-import { useActiveChatStore } from '../../../state/active_chat_store';
+import { useTurnMachineStore } from '../../../state/active_chat_store';
 import { useScenarioCharacterStore } from '../../../state/scenario_character_store';
 import { useScenarioCharacterRelationshipStore } from '../../../state/scenario_character_relationship_store';
 import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_store';
@@ -59,8 +59,8 @@ export class NPCInputInterface extends CharacterInputInterface {
           nextConversationWithCharacterId: '',
         });
 
-        if (!useActiveChatStore.getState().hasChatted(npc.id, forcedConversationTarget.id)) {
-          useActiveChatStore.getState().recordChat(npc.id, [forcedConversationTarget.id]);
+        if (!useTurnMachineStore.getState().hasChatted(npc.id, forcedConversationTarget.id)) {
+          useTurnMachineStore.getState().recordChat(npc.id, [forcedConversationTarget.id]);
           return {
             move: this.buildChatMove(
               npc,
@@ -93,7 +93,7 @@ export class NPCInputInterface extends CharacterInputInterface {
         .scenarioCharacters.filter(
           (c) =>
             c.id !== npc.id &&
-            !useActiveChatStore.getState().hasChatted(c.id, npc.id) &&
+            !useTurnMachineStore.getState().hasChatted(c.id, npc.id) &&
             (!this.autoModeEnabled || c.id !== scenario.userCharacterId)
         );
 
@@ -122,7 +122,7 @@ export class NPCInputInterface extends CharacterInputInterface {
 
       // If there are no chat candidates, fall through and do a move instead
       if (chatCandidates.length > 0) {
-        useActiveChatStore.getState().recordChat(
+        useTurnMachineStore.getState().recordChat(
           npc.id,
           chatCandidates.map((c) => c.id)
         );

@@ -1,4 +1,4 @@
-import { useActiveChatStore } from '../../state/active_chat_store';
+import { useTurnMachineStore } from '../../state/active_chat_store';
 import { whenScenarioCharactersLoaded } from '../../state/scenario_character_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
 import { useScenarioStore } from '../../state/scenario_store';
@@ -37,12 +37,12 @@ export async function startScenarioLoop() {
   loopState.setScenario(activeScenarioId);
 
   try {
-    useActiveChatStore.getState().reset();
+    useTurnMachineStore.getState().reset();
     await doScenarioLoopAsyncAction(() => whenScenarioCharactersLoaded());
 
     const restored = await doScenarioLoopAsyncAction(() => loadPersistedTurn(activeScenarioId));
     if (restored) {
-      useActiveChatStore.getState().hydrate(restored);
+      useTurnMachineStore.getState().hydrate(restored);
     }
 
     await runTurnLoop();
