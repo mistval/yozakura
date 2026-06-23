@@ -8,7 +8,7 @@ import type {
 export const TEMPORAL_CONTEXT_SECTION_ID = 'temporalContext';
 export const DEFAULT_TEMPORAL_SCRIPT_ID = 'bali-weather';
 
-export type TemporalContextRequest = { turnNumber: number };
+export type TemporalContextRequest = { scenario: { turnNumber: number; id: string } };
 
 export type TemporalContext = {
   displayHtml: string;

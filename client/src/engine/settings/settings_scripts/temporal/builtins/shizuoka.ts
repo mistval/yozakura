@@ -28,8 +28,8 @@ export const shizuokaTemporalScript: TemporalContextSettingsScript = {
     // Diurnal temperature curve across the 8 periods: 0 = daily low, 1 = daily high.
     const TEMP_FRAC = [0.05, 0.4, 0.8, 1.0, 0.8, 0.55, 0.3, 0.12];
 
-    const dayIndex = Math.floor(request.turnNumber / TURNS_PER_DAY);
-    const periodIndex = ((request.turnNumber % TURNS_PER_DAY) + TURNS_PER_DAY) % TURNS_PER_DAY;
+    const dayIndex = Math.floor(request.scenario.turnNumber / TURNS_PER_DAY);
+    const periodIndex = ((request.scenario.turnNumber % TURNS_PER_DAY) + TURNS_PER_DAY) % TURNS_PER_DAY;
     const period = PERIODS[periodIndex];
     const isDaylight = periodIndex >= 1 && periodIndex <= 4; // morning → evening
 
@@ -73,7 +73,7 @@ export const shizuokaTemporalScript: TemporalContextSettingsScript = {
       cfg: { months: number[]; chance: number; minDur: number; maxDur: number }
     ) => {
       if (!cfg.months.includes(month)) return null;
-      const r = helpers.createSeededRandom(`${year}-${month}-${type}`);
+      const r = helpers.createSeededRandom(`${request.scenario.id}-${year}-${month}-${type}`);
       if (r() >= cfg.chance) return null;
       const duration = cfg.minDur + Math.floor(r() * (cfg.maxDur - cfg.minDur + 1));
       const latestStart = Math.max(1, daysInMonth - duration);
@@ -87,7 +87,7 @@ export const shizuokaTemporalScript: TemporalContextSettingsScript = {
     const extremeHeat = monthlyEvent('heatwave', { months: [6, 7, 8], chance: 0.35, minDur: 3, maxDur: 7 });
 
     // --- Per-day randomness, stable for a given calendar date ---
-    const d = helpers.createSeededRandom(isoDate);
+    const d = helpers.createSeededRandom(`${request.scenario.id}-${isoDate}`);
 
     let hi,
       lo,
@@ -189,7 +189,7 @@ if ((globalThis as any)?.process?.argv.includes('--simulate-weather-shizuoka')) 
   for (let turnNumber = 0; turnNumber < totalTurns; ++turnNumber) {
     console.log(
       (
-        await shizuokaTemporalScript.getTemporalContext({ startDate }, { turnNumber }, {
+        await shizuokaTemporalScript.getTemporalContext({ startDate }, { scenario: { turnNumber, id: 'simulate' } }, {
           createSeededRandom,
         } as Partial<SettingsScriptHelpers> as any)
       ).plainText

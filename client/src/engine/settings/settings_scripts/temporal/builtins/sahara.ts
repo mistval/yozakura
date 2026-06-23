@@ -29,8 +29,8 @@ export const saharaTemporalScript: TemporalContextSettingsScript = {
     // Deserts heat up rapidly during the day and lose heat just as rapidly at night.
     const TEMP_FRAC = [0.0, 0.45, 0.85, 1.0, 0.75, 0.45, 0.2, 0.05];
 
-    const dayIndex = Math.floor(request.turnNumber / TURNS_PER_DAY);
-    const periodIndex = ((request.turnNumber % TURNS_PER_DAY) + TURNS_PER_DAY) % TURNS_PER_DAY;
+    const dayIndex = Math.floor(request.scenario.turnNumber / TURNS_PER_DAY);
+    const periodIndex = ((request.scenario.turnNumber % TURNS_PER_DAY) + TURNS_PER_DAY) % TURNS_PER_DAY;
     const period = PERIODS[periodIndex];
     const isDaylight = periodIndex >= 1 && periodIndex <= 4; // morning → evening
 
@@ -73,7 +73,7 @@ export const saharaTemporalScript: TemporalContextSettingsScript = {
       cfg: { months: number[]; chance: number; minDur: number; maxDur: number }
     ) => {
       if (!cfg.months.includes(month)) return null;
-      const r = helpers.createSeededRandom(`${year}-${month}-${type}`);
+      const r = helpers.createSeededRandom(`${request.scenario.id}-${year}-${month}-${type}`);
       if (r() >= cfg.chance) return null;
       const duration = cfg.minDur + Math.floor(r() * (cfg.maxDur - cfg.minDur + 1));
       const latestStart = Math.max(1, daysInMonth - duration);
@@ -91,7 +91,7 @@ export const saharaTemporalScript: TemporalContextSettingsScript = {
     const desertFreeze = monthlyEvent('freeze', { months: [11, 0, 1], chance: 0.15, minDur: 2, maxDur: 4 });
 
     // --- Per-day randomness, stable for a given calendar date ---
-    const d = helpers.createSeededRandom(isoDate);
+    const d = helpers.createSeededRandom(`${request.scenario.id}-${isoDate}`);
 
     let hi,
       lo,
@@ -185,7 +185,7 @@ if ((globalThis as any)?.process?.argv.includes('--simulate-weather-sahara')) {
   for (let turnNumber = 0; turnNumber < totalTurns; ++turnNumber) {
     console.log(
       (
-        await saharaTemporalScript.getTemporalContext({ startDate }, { turnNumber }, {
+        await saharaTemporalScript.getTemporalContext({ startDate }, { scenario: { turnNumber, id: 'simulate' } }, {
           createSeededRandom,
         } as Partial<SettingsScriptHelpers> as any)
       ).plainText

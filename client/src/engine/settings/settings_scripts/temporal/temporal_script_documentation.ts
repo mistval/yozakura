@@ -11,8 +11,8 @@ const EXAMPLE_CUSTOM_TEMPORAL_SCRIPT = `({
   async getTemporalContext(controlValues, request, helpers) {
     const TURNS_PER_DAY = 4;
     const PERIODS = ['Morning', 'Afternoon', 'Evening', 'Night'];
-    const dayIndex = Math.floor(request.turnNumber / TURNS_PER_DAY);
-    const period = PERIODS[request.turnNumber % TURNS_PER_DAY];
+    const dayIndex = Math.floor(request.scenario.turnNumber / TURNS_PER_DAY);
+    const period = PERIODS[request.scenario.turnNumber % TURNS_PER_DAY];
 
     const start = new Date((controlValues.startDate || '2026-01-01') + 'T00:00:00Z');
     start.setUTCDate(start.getUTCDate() + dayIndex);
@@ -20,8 +20,8 @@ const EXAMPLE_CUSTOM_TEMPORAL_SCRIPT = `({
       weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC',
     });
 
-    // Deterministic per-day weather: same date always yields the same result.
-    const random = helpers.createSeededRandom(dateLabel);
+    // Deterministic per-day weather: same scenario+date always yields the same result.
+    const random = helpers.createSeededRandom(request.scenario.id + '-' + dateLabel);
     const sunny = random() > 0.5;
 
     return {
@@ -56,10 +56,10 @@ A single JavaScript object expression (wrapped in parentheses, e.g. \`({ ... })\
   - \`displayHtml\`: shown in the header; may contain HTML such as \`<b>\` and \`<br>\`.
   - \`plainText\`: injected into prompts; no markup.
   - \`dayIndex\` (optional integer): increments once per in-world day. This is used to trigger a separate wardrobe autoselect feature which is intended to run "once per day".
-  - \`request\` is \`{ turnNumber }\`.
+  - \`request\` is \`{ scenario: { turnNumber, id } }\`. \`turnNumber\` is the current turn index. \`id\` is a unique string identifier for the scenario — include it in random seeds (e.g. \`\`\${request.scenario.id}-\${dateLabel}\`\`\`) so that two scenarios on the same date produce different weather.
   - \`helpers\` is \`{ proxiedFetch, abortSignal, createSeededRandom }\`.
     \`createSeededRandom(seed)\` returns a deterministic \`() => number\` in [0, 1) — use it (seeded on
-    the date) so the same date always yields the same weather.
+    the scenario id + date) so the same scenario+date always yields the same weather.
 
 ## Control schema
 

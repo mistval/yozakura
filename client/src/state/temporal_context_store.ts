@@ -41,7 +41,7 @@ export const useTemporalContextStore = create<TemporalContextStoreState>((set) =
     const section = scenario.temporalContext;
     const source = getBuiltinTemporalScript(section.selectedScriptId)
       ? ''
-      : (await loadCustomScriptSource(TEMPORAL_CONTEXT_SECTION_ID, section.selectedScriptId)) ?? '';
+      : ((await loadCustomScriptSource(TEMPORAL_CONTEXT_SECTION_ID, section.selectedScriptId)) ?? '');
 
     const resolved = resolveTemporalScript(section.selectedScriptId, source);
     if (!resolved.ok) {
@@ -65,11 +65,7 @@ export const useTemporalContextStore = create<TemporalContextStoreState>((set) =
     };
 
     try {
-      const result = await resolved.script.getTemporalContext(
-        controlValues,
-        { turnNumber: scenario.turnNumber },
-        helpers
-      );
+      const result = await resolved.script.getTemporalContext(controlValues, { scenario }, helpers);
 
       if (useScenarioStore.getState().activeScenario?.id !== scenario.id) {
         return;

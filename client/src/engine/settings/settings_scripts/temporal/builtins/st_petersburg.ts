@@ -28,8 +28,8 @@ export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
     // Diurnal temperature curve: Coldest at dawn (0), warmest at mid-afternoon (1).
     const TEMP_FRAC = [0.05, 0.4, 0.8, 1.0, 0.8, 0.55, 0.3, 0.12];
 
-    const dayIndex = Math.floor(request.turnNumber / TURNS_PER_DAY);
-    const periodIndex = ((request.turnNumber % TURNS_PER_DAY) + TURNS_PER_DAY) % TURNS_PER_DAY;
+    const dayIndex = Math.floor(request.scenario.turnNumber / TURNS_PER_DAY);
+    const periodIndex = ((request.scenario.turnNumber % TURNS_PER_DAY) + TURNS_PER_DAY) % TURNS_PER_DAY;
     const period = PERIODS[periodIndex];
 
     // --- Resolve the current in-world date ---
@@ -90,7 +90,7 @@ export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
       cfg: { months: number[]; chance: number; minDur: number; maxDur: number }
     ) => {
       if (!cfg.months.includes(month)) return null;
-      const r = helpers.createSeededRandom(`${year}-${month}-${type}`);
+      const r = helpers.createSeededRandom(`${request.scenario.id}-${year}-${month}-${type}`);
       if (r() >= cfg.chance) return null;
       const duration = cfg.minDur + Math.floor(r() * (cfg.maxDur - cfg.minDur + 1));
       const latestStart = Math.max(1, daysInMonth - duration);
@@ -113,7 +113,7 @@ export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
     const summerStorm = monthlyEvent('storm', { months: [5, 6, 7], chance: 0.25, minDur: 1, maxDur: 2 });
 
     // --- Per-day randomness, stable for a given calendar date ---
-    const d = helpers.createSeededRandom(isoDate);
+    const d = helpers.createSeededRandom(`${request.scenario.id}-${isoDate}`);
 
     let hi,
       lo,
@@ -224,7 +224,7 @@ if ((globalThis as any)?.process?.argv.includes('--simulate-weather-st-petersbur
   for (let turnNumber = 0; turnNumber < totalTurns; ++turnNumber) {
     console.log(
       (
-        await stPetersburgTemporalScript.getTemporalContext({ startDate }, { turnNumber }, {
+        await stPetersburgTemporalScript.getTemporalContext({ startDate }, { scenario: { turnNumber, id: 'simulate' } }, {
           createSeededRandom,
         } as Partial<SettingsScriptHelpers> as any)
       ).plainText
