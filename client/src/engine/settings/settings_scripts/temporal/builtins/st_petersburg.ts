@@ -224,9 +224,13 @@ if ((globalThis as any)?.process?.argv.includes('--simulate-weather-st-petersbur
   for (let turnNumber = 0; turnNumber < totalTurns; ++turnNumber) {
     console.log(
       (
-        await stPetersburgTemporalScript.getTemporalContext({ startDate }, { scenario: { turnNumber, id: 'simulate' } }, {
-          createSeededRandom,
-        } as Partial<SettingsScriptHelpers> as any)
+        await stPetersburgTemporalScript.getTemporalContext(
+          { startDate },
+          { scenario: { turnNumber, id: 'simulate' } },
+          {
+            createSeededRandom,
+          } as Partial<SettingsScriptHelpers> as any
+        )
       ).plainText
     );
   }

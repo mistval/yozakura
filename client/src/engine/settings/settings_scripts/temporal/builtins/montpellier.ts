@@ -197,9 +197,13 @@ if ((globalThis as any)?.process?.argv.includes('--simulate-weather-montpellier'
   for (let turnNumber = 0; turnNumber < totalTurns; ++turnNumber) {
     console.log(
       (
-        await montpellierTemporalScript.getTemporalContext({ startDate }, { scenario: { turnNumber, id: 'simulate' } }, {
-          createSeededRandom,
-        } as Partial<SettingsScriptHelpers> as any)
+        await montpellierTemporalScript.getTemporalContext(
+          { startDate },
+          { scenario: { turnNumber, id: 'simulate' } },
+          {
+            createSeededRandom,
+          } as Partial<SettingsScriptHelpers> as any
+        )
       ).plainText
     );
   }

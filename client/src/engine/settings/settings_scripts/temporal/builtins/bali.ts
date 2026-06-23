@@ -193,9 +193,13 @@ if ((globalThis as any)?.process?.argv.includes('--simulate-weather-bali')) {
   for (let turnNumber = 0; turnNumber < totalTurns; ++turnNumber) {
     console.log(
       (
-        await baliTemporalScript.getTemporalContext({ startDate }, { scenario: { turnNumber, id: 'simulate' } }, {
-          createSeededRandom,
-        } as Partial<SettingsScriptHelpers> as any)
+        await baliTemporalScript.getTemporalContext(
+          { startDate },
+          { scenario: { turnNumber, id: 'simulate' } },
+          {
+            createSeededRandom,
+          } as Partial<SettingsScriptHelpers> as any
+        )
       ).plainText
     );
   }

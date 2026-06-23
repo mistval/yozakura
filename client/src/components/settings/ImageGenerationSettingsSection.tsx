@@ -4,10 +4,7 @@ import RangeNumberInput from './ui/RangeNumberInput.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
 import { settingsTooltips } from './settings_tooltips.js';
 import CustomScriptSettings from './settingsScripts/CustomScriptSettings.js';
-import {
-  IMAGE_SCRIPT_DESCRIPTOR,
-  useImageScriptSelection,
-} from './settingsScripts/imageScriptSection.js';
+import { IMAGE_SCRIPT_DESCRIPTOR, useImageScriptSelection } from './settingsScripts/imageScriptSection.js';
 
 import { clampUnitRate, toPercent } from '../../util/numeric.js';
 

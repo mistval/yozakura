@@ -80,10 +80,7 @@ export function useUserTextFileList(groupKey: string) {
     [groupKey]
   );
 
-  const loadContent = useCallback(
-    (id: string) => loadUserTextFileContent(groupKey, id),
-    [groupKey]
-  );
+  const loadContent = useCallback((id: string) => loadUserTextFileContent(groupKey, id), [groupKey]);
 
   return { files, error, busy, setError, refresh, create, save, remove, loadContent };
 }

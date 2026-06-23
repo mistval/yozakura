@@ -186,9 +186,13 @@ if ((globalThis as any)?.process?.argv.includes('--simulate-weather-new-york')) 
   for (let turnNumber = 0; turnNumber < totalTurns; ++turnNumber) {
     console.log(
       (
-        await newYorkTemporalScript.getTemporalContext({ startDate }, { scenario: { turnNumber, id: 'simulate' } }, {
-          createSeededRandom,
-        } as Partial<SettingsScriptHelpers> as any)
+        await newYorkTemporalScript.getTemporalContext(
+          { startDate },
+          { scenario: { turnNumber, id: 'simulate' } },
+          {
+            createSeededRandom,
+          } as Partial<SettingsScriptHelpers> as any
+        )
       ).plainText
     );
   }
