@@ -34,6 +34,7 @@ export default function ChatPane() {
   const chatMode = useActiveChatMedium();
   const participants = useActiveChatParticipants();
   const chatState = useTurnMachineStore((state) => state.chatState);
+  const isAwaitingUserInput = useTurnMachineStore((state) => state.isChatUserTurn());
   const processingMemoryStatusInfo = useTurnMachineStore((state) => state.processingMemoryStatusInfo);
   const userCharacter = useUserCharacter();
   const scenario = useScenarioStore((state) => state.activeScenario);
@@ -68,7 +69,6 @@ export default function ChatPane() {
   const generatingAutoImage = chatState === 'generating_image';
   const processingMemories = chatState === 'processing_memories';
   const chatMemoryUpdateStatus = processingMemories ? (processingMemoryStatusInfo ?? '') : '';
-  const isAwaitingUserInput = chatState === 'awaiting_user_input';
 
   const participantById = useMemo(
     () => Object.fromEntries(participants.map((participant) => [participant.id, participant])),

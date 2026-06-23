@@ -58,7 +58,7 @@ type BaseTurnMachineStoreState = {
   pendingTurnCharacterIds: string[];
   chatsSoFar: Record<string, { withIds: string[] }[]>;
 
-  chatState: 'inactive' | 'awaiting_user_input' | 'generating_image' | 'processing_memories' | 'npc_speaking';
+  chatState: 'inactive' | 'generating_image' | 'processing_memories' | 'character_speaking';
   processingMemoryStatusInfo: string | undefined;
   participantIds: string[];
   removedParticipantIds: string[];
@@ -72,6 +72,7 @@ type BaseTurnMachineStoreState = {
   chatInstructionsByCharacterId: Record<string, string>;
 
   isActive: () => boolean;
+  isChatUserTurn: () => boolean;
   setTranscript: (transcript: ConversationTranscript) => void;
   startNewTurn: (allCharacterIds: string[], userCharacterId: string) => void;
   currentCharacterId: () => string | undefined;
@@ -93,8 +94,7 @@ type BaseTurnMachineStoreState = {
   setChatInstructions: (instructions: string) => void;
   setCharacterChatInstructions: (characterId: string, instructions: string) => void;
   setStateProcessingMemories: (info: string) => void;
-  setStateAwaitingUserInput: () => void;
-  setStateNpcSpeaking: () => void;
+  setStateCharacterSpeaking: () => void;
   doWithStateGenerationImage: <T>(action: () => Promise<T>) => Promise<T>;
   getChatCharacterLocation: (
     charId: string,
@@ -326,10 +326,15 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     );
   },
 
+  isChatUserTurn() {
+    const currentId = get().currentCharacterId();
+    const userId = useScenarioCharacterStore.getState().getUserCharacter()?.id;
+
+    return Boolean(currentId && userId) && currentId === userId;
+  },
+
   beginChat(args) {
-    const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();
     const participants = getCharactersByIds(args.participantIds);
-    const initiatorIsUser = args.initiatorId === userCharacter?.id;
 
     set({
       ...inactiveChatTurnMachineState,
@@ -337,7 +342,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       participantIds: args.participantIds,
       initiatorId: args.initiatorId,
       gossipTargetCharacterId: args.gossipTargetCharacterId,
-      chatState: initiatorIsUser ? 'awaiting_user_input' : 'npc_speaking',
+      chatState: 'character_speaking',
       transcript: ConversationTranscript.new(),
       preConversationWardrobeSnapshotByCharacterId: Object.fromEntries(
         participants.map((p) => [p.id, p.wardrobes])
@@ -405,15 +410,8 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     set({
       ...base,
       ...chatFields,
-      chatState: 'awaiting_user_input',
+      chatState: 'character_speaking',
       transcript: ConversationTranscript.deserialize(serializedTranscript),
-    } satisfies Partial<BaseTurnMachineStoreState>);
-  },
-
-  setStateAwaitingUserInput() {
-    set({
-      chatState: 'awaiting_user_input',
-      processingMemoryStatusInfo: undefined,
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
@@ -424,9 +422,9 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
-  setStateNpcSpeaking() {
+  setStateCharacterSpeaking() {
     set({
-      chatState: 'npc_speaking',
+      chatState: 'character_speaking',
       processingMemoryStatusInfo: undefined,
     } satisfies Partial<BaseTurnMachineStoreState>);
   },

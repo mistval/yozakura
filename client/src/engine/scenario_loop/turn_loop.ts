@@ -68,6 +68,7 @@ async function runTurnLoopTick() {
       participantIds: useTurnMachineStore.getState().participantIds,
       rich: true,
     };
+
     const outcome = await runChatLoop();
     advanceAfterMove(inputInterface, chatMove, outcome, true);
     return;

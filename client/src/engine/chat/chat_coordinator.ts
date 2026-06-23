@@ -42,14 +42,7 @@ export class ChatCoordinator {
     const gossipTargetCharacterId = await this.selectChatStartGossipTargetCharacterId(
       participantIds,
       getRequiredActiveScenario().userCharacterId
-    ).catch((err) => {
-      showNonRetriableErrorCardIfNeeded({
-        error: err,
-        operationType: 'get_gossip_target',
-      });
-
-      return undefined;
-    });
+    );
 
     return {
       participantIds,
@@ -97,12 +90,8 @@ export class ChatCoordinator {
     return this.activeChatStore().removeChatParticipant(participantId);
   }
 
-  public static setStateAwaitingUserInput() {
-    this.activeChatStore().setStateAwaitingUserInput();
-  }
-
-  public static setStateNpcSpeaking() {
-    this.activeChatStore().setStateNpcSpeaking();
+  public static setStateCharacterSpeaking() {
+    this.activeChatStore().setStateCharacterSpeaking();
   }
 
   public static setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation) {

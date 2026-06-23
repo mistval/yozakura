@@ -20,7 +20,7 @@ export class UserInputInterface extends CharacterInputInterface {
   }
 
   public async getNextChatInput(): Promise<ChatInputResult> {
-    ChatCoordinator.setStateAwaitingUserInput();
+    ChatCoordinator.setStateCharacterSpeaking();
 
     const input = await doWithScenarioLoopPromise<ChatUserInputAction>(async (userChatActionPromise) => {
       scenarioLoopPromiseCallbacks.userChatAction = userChatActionPromise;
