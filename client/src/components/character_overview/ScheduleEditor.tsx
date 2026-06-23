@@ -13,6 +13,7 @@ import { useScenarioStore } from '../../state/scenario_store.js';
 import InfoTooltip from './../ui/InfoTooltip';
 import { newId } from '../../util/id.js';
 import DeleteButton from '../ui/DeleteButton.js';
+import ConfirmDialog from '../ui/ConfirmDialog.js';
 
 const SEGMENT_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#14b8a6'];
 const LANE_HEIGHT_PX = 28;
@@ -66,6 +67,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
   );
 
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | undefined>(undefined);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | undefined>(undefined);
   const [pixelsPerTurn, setPixelsPerTurn] = useState(DEFAULT_PIXELS_PER_TURN);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -127,10 +129,10 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
     }));
   };
 
-  const addSegment = () => {
+  const addSegment = (atTurn?: number) => {
     const el = scrollRef.current;
-    const middleTurn = el ? (el.scrollLeft + el.clientWidth / 2) / pixelsPerTurn : lengthInTurns / 2;
-    const startTurn = clamp(Math.round(middleTurn), 0, lengthInTurns - 1);
+    const defaultTurn = el ? (el.scrollLeft + el.clientWidth / 2) / pixelsPerTurn : lengthInTurns / 2;
+    const startTurn = clamp(Math.round(atTurn ?? defaultTurn), 0, lengthInTurns - 1);
     const segment: ScheduleSegment = {
       id: newId(),
       startTurn,
@@ -174,7 +176,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
             }
           />
         </div>
-        <button type="button" onClick={addSegment} disabled={effectiveZones.length === 0}>
+        <button type="button" onClick={() => addSegment()} disabled={effectiveZones.length === 0}>
           ➕ Add Schedule Segment
         </button>
         {effectiveZones.length === 0 && (
@@ -190,7 +192,18 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
           ref={scrollRef}
           className="w-full overflow-x-auto rounded-sm border border-border-default bg-inset"
         >
-          <div className="relative" style={{ width: `${contentWidth}px`, height: `${contentHeight}px` }}>
+          <div
+            className="relative"
+            style={{ width: `${contentWidth}px`, height: `${contentHeight}px` }}
+            onDoubleClick={(event) => {
+              if (effectiveZones.length === 0) return;
+              const el = scrollRef.current;
+              if (!el) return;
+              const rect = el.getBoundingClientRect();
+              const clickX = event.clientX - rect.left + el.scrollLeft;
+              addSegment(clickX / pixelsPerTurn - 0.5);
+            }}
+          >
             {Array.from({ length: lengthInTurns + 1 }, (_, turn) => (
               <div
                 key={turn}
@@ -240,6 +253,11 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
                 >
                   <div
                     onClick={() => setSelectedSegmentId(segment.id)}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setPendingDeleteId(segment.id);
+                    }}
                     className={`h-full w-full cursor-pointer truncate rounded-sm px-2 text-left text-xs leading-6 text-white ${
                       isSelected ? 'ring-2 ring-focus-ring' : ''
                     }`}
@@ -396,6 +414,20 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
       ) : (
         <div className="text-sm text-muted">Select a segment to edit it, or add a new one.</div>
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteId !== undefined}
+        title="Delete Schedule Segment"
+        message="Are you sure you want to delete this schedule segment?"
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (pendingDeleteId) {
+            deleteSegment(pendingDeleteId);
+          }
+          setPendingDeleteId(undefined);
+        }}
+        onClose={() => setPendingDeleteId(undefined)}
+      />
     </div>
   );
 }
