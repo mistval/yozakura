@@ -132,7 +132,7 @@ export class ChatCoordinator {
     return this.speakAsNpc(forcedSpeakerId, { isUserInteraction: true });
   }
 
-  public static async editMessageById(id: string, newContent: string) {
+  public static editMessageById(id: string, newContent: string) {
     const { updatedTranscript } = this.transcript().editMessageById(id, newContent);
     this.setTranscript(updatedTranscript);
   }
