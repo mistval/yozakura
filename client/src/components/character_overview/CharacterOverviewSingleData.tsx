@@ -13,6 +13,14 @@ import ConversationSearchList from '../conversation_log/ConversationSearchList.j
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
+import { StringParam, useQueryParams } from 'use-query-params';
+
+function buildGroupQuery(groupId: string): string {
+  const params = new URLSearchParams(window.location.search);
+  params.set('cotab', 'groups');
+  params.set('cogroup', groupId);
+  return params.toString();
+}
 
 type CharacterOverviewSingleDataProps = {
   selectedSingleCharacter: Character;
@@ -39,13 +47,15 @@ export default function CharacterOverviewSingleData({
   const activeChatParticipants = useTurnMachineStore((state) => state.participantIds);
   const { closeCharacterOverview, openCharacterOverviewEditor } = useCharacterOverview();
   const groups = useCharacterGroupStore((state) => state.groups);
+  const [, setOverviewParams] = useQueryParams({ cotab: StringParam, cogroup: StringParam });
   const [relationshipToUser, setRelationshipToUser] = useState<CharacterRelationship | undefined>(undefined);
 
-  const memberGroupNames = useMemo(
+  const memberGroups = useMemo(
     () =>
       selectedSingleCharacter.groupIds
-        .map((groupId) => groups.find((group) => group.id === groupId)?.name)
-        .filter((name): name is string => Boolean(name)),
+        .map((groupId) => groups.find((group) => group.id === groupId))
+        .filter((group): group is NonNullable<typeof group> => Boolean(group))
+        .map((group) => ({ id: group.id, name: group.name || 'Untitled Group' })),
     [selectedSingleCharacter.groupIds, groups]
   );
 
@@ -116,9 +126,24 @@ export default function CharacterOverviewSingleData({
       {selectedSingleCharacter.externalDescription && (
         <div className={`border rounded-sm p-3`}>{selectedSingleCharacter.externalDescription}</div>
       )}
-      {memberGroupNames.length > 0 && (
+      {memberGroups.length > 0 && (
         <div className="border rounded-sm p-3">
-          <span className="font-medium">Groups:</span> {memberGroupNames.join(', ')}
+          <span className="font-medium">Groups:</span>{' '}
+          {memberGroups.map((group, index) => (
+            <span key={group.id}>
+              {index > 0 && ', '}
+              <a
+                href={`${window.location.pathname}?${buildGroupQuery(group.id)}`}
+                onClick={(event) => {
+                  event.preventDefault();
+                  setOverviewParams({ cotab: 'groups', cogroup: group.id });
+                }}
+                className="underline hover:text-primary"
+              >
+                {group.name}
+              </a>
+            </span>
+          ))}
         </div>
       )}
       <div className="flex gap-2 flex-wrap">

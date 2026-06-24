@@ -14,6 +14,7 @@ export interface ScheduledMove {
   destinationLocationId: string;
   forceMove: boolean;
   consumesTurn: boolean;
+  movementPolicy?: MovementPolicy | undefined;
 }
 
 export type MoveHighlight = 'urgent' | 'gentle' | 'allowed';
@@ -255,7 +256,12 @@ export function resolveScheduledMove(
   if (warpTargets.length > 0) {
     const target = choose(warpTargets);
     const policy = policyByLocationId.get(target)!;
-    return { forceMove: true, destinationLocationId: target, consumesTurn: policy === 'jump' };
+    return {
+      forceMove: true,
+      destinationLocationId: target,
+      consumesTurn: policy === 'jump',
+      movementPolicy: policy,
+    };
   }
 
   const { targets, firstStepsToward } = findNearestReachable(
@@ -272,7 +278,12 @@ export function resolveScheduledMove(
   const target = choose(targets);
   const policy = policyByLocationId.get(target)!;
   const firstStep = choose(firstStepsToward(target));
-  return { forceMove: policy === 'rush', destinationLocationId: firstStep, consumesTurn: true };
+  return {
+    forceMove: policy === 'rush',
+    destinationLocationId: firstStep,
+    consumesTurn: true,
+    movementPolicy: policy,
+  };
 }
 
 export function resolveUserMovementSuggestion(

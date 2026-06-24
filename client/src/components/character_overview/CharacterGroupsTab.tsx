@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { StringParam, useQueryParam } from 'use-query-params';
 import type { Character } from '../../engine/types.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
@@ -10,13 +11,13 @@ export default function CharacterGroupsTab() {
   const groups = useCharacterGroupStore((state) => state.groups);
   const characters = useScenarioCharacterStore((state) => state.scenarioCharacters);
 
-  const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>(undefined);
+  const [selectedGroupId, setSelectedGroupId] = useQueryParam('cogroup', StringParam);
   const [subTab, setSubTab] = useState<'members' | 'schedule'>('members');
 
   const selectedGroup = groups.find((group) => group.id === selectedGroupId);
 
   const toggleGroupSelection = (groupId: string) => {
-    setSelectedGroupId((current) => (current === groupId ? undefined : groupId));
+    setSelectedGroupId(selectedGroupId === groupId ? undefined : groupId);
   };
 
   const orderedCharacters = useMemo(() => {

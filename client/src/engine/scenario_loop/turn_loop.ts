@@ -4,6 +4,7 @@ import { useScenarioCharacterStore } from '../../state/scenario_character_store'
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
 import { useScenarioStore } from '../../state/scenario_store';
+import { useMovementLogStore } from '../../state/movement_log_store';
 import { useSettingsStore } from '../../state/settings_store';
 import { useTemporalContextStore } from '../../state/temporal_context_store';
 import { ChatCoordinator } from '../chat/chat_coordinator';
@@ -20,6 +21,7 @@ import {
 } from './flow_control';
 import { persistTurn } from './turn_persistence';
 import type { TurnMove, TurnMoveOutcome } from './types';
+import type { MovementPolicy } from '../types';
 
 export async function runTurnLoop() {
   while (true) {
@@ -179,6 +181,7 @@ async function applySimpleTurnMove(characterId: string, move: TurnMove): Promise
   }
 
   if (move.actionType === 'move') {
+    recordMovement(characterId, move.destinationLocationId, move.movementPolicy);
     await moveScenarioCharacter(characterId, move.destinationLocationId);
     return { noEffect: true };
   }
@@ -239,6 +242,25 @@ async function closeChatSession(forceNoEffect?: boolean): Promise<{ noEffect: bo
 async function moveScenarioCharacter(characterId: string, toId: string) {
   useScenarioCharacterStore.getState().saveScenarioCharacterFields(characterId, {
     locationId: toId,
+  });
+}
+
+function recordMovement(characterId: string, toId: string, movementPolicy: MovementPolicy | undefined) {
+  const character = useScenarioCharacterStore.getState().scenarioCharactersById[characterId];
+  const map = useScenarioStore.getState().activeScenarioMap;
+  if (!character || !map || character.locationId === toId) {
+    return;
+  }
+
+  const locationName = (locationId: string) =>
+    map.locations.find((location) => location.id === locationId)?.name ?? locationId;
+
+  useMovementLogStore.getState().recordMovement({
+    characterId,
+    characterName: `${character.firstName} ${character.lastName}`,
+    movementPolicy,
+    fromLocationName: locationName(character.locationId),
+    toLocationName: locationName(toId),
   });
 }
 

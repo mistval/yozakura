@@ -9,10 +9,23 @@ import { useScenarioStore } from '../state/scenario_store.js';
 import { useScenarioCharacterStore, useUserCharacter } from '../state/scenario_character_store.js';
 import { useMapZoneStore } from '../state/map_zone_store.js';
 import { useCharacterGroupStore } from '../state/character_group_store.js';
+import { useMovementLogStore } from '../state/movement_log_store.js';
 import { getEffectiveZones } from '../engine/map/map_zone.js';
+import type { MovementPolicy } from '../engine/types.js';
 import { useCharacterOverview } from './character_overview/CharacterOverviewContext.js';
 import { useMapModal } from './MapModalContext.js';
 import MapZoneEditor, { type ZoneEditorController } from './map_zones/MapZoneEditor.js';
+
+const MOVEMENT_VERB: Record<MovementPolicy, string> = {
+  teleport: 'teleported',
+  jump: 'jumped',
+  rush: 'rushed',
+  casual: 'strolled',
+};
+
+function movementVerb(policy: MovementPolicy | undefined): string {
+  return policy ? MOVEMENT_VERB[policy] : 'moved';
+}
 
 function CharacterAvatar({
   character,
@@ -51,6 +64,7 @@ export default function MapModal() {
   const zones = useMapZoneStore((state) => state.zones);
   const zonesAreLoaded = useMapZoneStore((state) => state.zonesAreLoaded);
   const groups = useCharacterGroupStore((state) => state.groups);
+  const movementLog = useMovementLogStore((state) => state.entries);
   const user = useUserCharacter();
   const graphTheme = useGraphTheme();
   const { showCharacterOverview } = useCharacterOverview();
@@ -61,8 +75,9 @@ export default function MapModal() {
   const [hoveredLocationId, setHoveredLocationId] = useState<string | undefined>(undefined);
   const [selectedLocationId, setSelectedLocationId] = useState<string | undefined>(undefined);
   const [viewParam, setViewParam] = useQueryParam('mapview', StringParam);
-  const view = viewParam === 'zones' ? 'zones' : 'characters';
-  const setView = (next: 'characters' | 'zones') => setViewParam(next === 'characters' ? undefined : next);
+  const view = viewParam === 'zones' ? 'zones' : viewParam === 'log' ? 'log' : 'characters';
+  const setView = (next: 'characters' | 'zones' | 'log') =>
+    setViewParam(next === 'characters' ? undefined : next);
 
   const zoneController: ZoneEditorController = useMemo(
     () => ({
@@ -176,6 +191,13 @@ export default function MapModal() {
           </button>
           <button
             type="button"
+            className={view === 'log' ? 'button-emphasized' : ''}
+            onClick={() => setView('log')}
+          >
+            Movement Log
+          </button>
+          <button
+            type="button"
             className="button-emphasized"
             onClick={closeMap}
             aria-label="Close"
@@ -189,6 +211,41 @@ export default function MapModal() {
       {view === 'zones' && (
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {map && <MapZoneEditor locations={map.locations} controller={zoneController} />}
+        </div>
+      )}
+
+      {view === 'log' && (
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {movementLog.length === 0 ? (
+            <div className="text-sm text-muted">No movements recorded yet.</div>
+          ) : (
+            <div className="space-y-2">
+              {movementLog.map((entry) => {
+                const character = charactersById[entry.characterId];
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex items-center gap-2 rounded-sm border border-border-default bg-inset p-2"
+                  >
+                    <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-border-default bg-emphasized">
+                      {character && (
+                        <img
+                          src={character.imagePath}
+                          alt={entry.characterName}
+                          className="h-full w-full object-cover object-top"
+                        />
+                      )}
+                    </div>
+                    <div className="min-w-0 text-sm">
+                      <span className="font-medium">{entry.characterName}</span>{' '}
+                      {movementVerb(entry.movementPolicy)} from {entry.fromLocationName} to{' '}
+                      {entry.toLocationName}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

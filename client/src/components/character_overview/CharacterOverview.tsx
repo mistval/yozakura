@@ -36,6 +36,7 @@ export default function CharacterOverview() {
 
   const userId = scenario?.userCharacterId || '';
   const [tabParam, setTabParam] = useQueryParam('cotab', StringParam);
+  const [, setGroupParam] = useQueryParam('cogroup', StringParam);
   const tab = tabParam === 'groups' ? 'groups' : 'overview';
   const setTab = (next: 'overview' | 'groups') => setTabParam(next === 'overview' ? undefined : next);
   const [relationships, setRelationships] = useState<CharacterRelationships>({});
@@ -55,6 +56,7 @@ export default function CharacterOverview() {
       setSelectedIds([]);
       setRelationships({});
       setTabParam(undefined);
+      setGroupParam(undefined);
     }
   }, [open]);
 

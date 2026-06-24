@@ -109,7 +109,12 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toEqual({ forceMove: true, destinationLocationId: 'C', consumesTurn: false });
+    expect(result).toEqual({
+      forceMove: true,
+      destinationLocationId: 'C',
+      consumesTurn: false,
+      movementPolicy: 'teleport',
+    });
   });
 
   it('jumps straight to the nearest allowed location, consuming the turn', () => {
@@ -123,7 +128,12 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toEqual({ forceMove: true, destinationLocationId: 'C', consumesTurn: true });
+    expect(result).toEqual({
+      forceMove: true,
+      destinationLocationId: 'C',
+      consumesTurn: true,
+      movementPolicy: 'jump',
+    });
   });
 
   it('rushes one step toward the nearest allowed location when out of zone', () => {
@@ -137,7 +147,12 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toEqual({ forceMove: true, destinationLocationId: 'B', consumesTurn: true });
+    expect(result).toEqual({
+      forceMove: true,
+      destinationLocationId: 'B',
+      consumesTurn: true,
+      movementPolicy: 'rush',
+    });
   });
 
   it('casually moves one step toward the nearest allowed location, allowing chat', () => {
@@ -151,7 +166,12 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toEqual({ forceMove: false, destinationLocationId: 'B', consumesTurn: true });
+    expect(result).toEqual({
+      forceMove: false,
+      destinationLocationId: 'B',
+      consumesTurn: true,
+      movementPolicy: 'casual',
+    });
   });
 
   it('returns multiple valid moves', () => {
@@ -171,11 +191,13 @@ describe('resolveScheduledMove', () => {
       forceMove: false,
       destinationLocationId: 'B',
       consumesTurn: true,
+      movementPolicy: 'casual',
     });
     expect(casualMove(chooseLast)).toEqual({
       forceMove: false,
       destinationLocationId: 'C',
       consumesTurn: true,
+      movementPolicy: 'casual',
     });
   });
 
@@ -223,7 +245,12 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toEqual({ forceMove: true, destinationLocationId: 'D', consumesTurn: false });
+    expect(result).toEqual({
+      forceMove: true,
+      destinationLocationId: 'D',
+      consumesTurn: false,
+      movementPolicy: 'teleport',
+    });
   });
 
   it('keeps a non-member from teleporting into a private zone but lets a member in', () => {
@@ -253,7 +280,12 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(member).toEqual({ forceMove: true, destinationLocationId: 'D', consumesTurn: false });
+    expect(member).toEqual({
+      forceMove: true,
+      destinationLocationId: 'D',
+      consumesTurn: false,
+      movementPolicy: 'teleport',
+    });
   });
 
   it('teleports into a disconnected zone, ignoring connectivity', () => {
@@ -267,7 +299,12 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toEqual({ forceMove: true, destinationLocationId: 'Z', consumesTurn: false });
+    expect(result).toEqual({
+      forceMove: true,
+      destinationLocationId: 'Z',
+      consumesTurn: false,
+      movementPolicy: 'teleport',
+    });
   });
 
   it('falls back to plain movement when a walked-to zone is unreachable', () => {
@@ -301,7 +338,12 @@ describe('resolveScheduledMove', () => {
     expect(['A', 'B']).toContain(disobeyed.destinationLocationId);
 
     const obeyed = resolveScheduledMove(input, chooseFirst, () => 0.1);
-    expect(obeyed).toEqual({ forceMove: true, destinationLocationId: 'C', consumesTurn: false });
+    expect(obeyed).toEqual({
+      forceMove: true,
+      destinationLocationId: 'C',
+      consumesTurn: false,
+      movementPolicy: 'teleport',
+    });
   });
 
   it('selects the same segment after a full period wrap', () => {
@@ -318,7 +360,12 @@ describe('resolveScheduledMove', () => {
       );
 
     expect(build(1)).toEqual(build(5));
-    expect(build(1)).toEqual({ forceMove: true, destinationLocationId: 'C', consumesTurn: false });
+    expect(build(1)).toEqual({
+      forceMove: true,
+      destinationLocationId: 'C',
+      consumesTurn: false,
+      movementPolicy: 'teleport',
+    });
   });
 
   describe('starts moving one turn before a segment begins', () => {
@@ -345,6 +392,7 @@ describe('resolveScheduledMove', () => {
         forceMove: true,
         destinationLocationId: 'B',
         consumesTurn: true,
+        movementPolicy: 'rush',
       });
     });
 
@@ -353,6 +401,7 @@ describe('resolveScheduledMove', () => {
         forceMove: false,
         destinationLocationId: 'B',
         consumesTurn: true,
+        movementPolicy: 'casual',
       });
     });
 
@@ -372,7 +421,12 @@ describe('resolveScheduledMove', () => {
       // 4 turns out, a 3-hop journey: still has slack, so it waits.
       expect(farRush(0)).toEqual({ forceMove: false, destinationLocationId: 'A', consumesTurn: true });
       // 3 turns out, a 3-hop journey: must leave now.
-      expect(farRush(1)).toEqual({ forceMove: true, destinationLocationId: 'B', consumesTurn: true });
+      expect(farRush(1)).toEqual({
+        forceMove: true,
+        destinationLocationId: 'B',
+        consumesTurn: true,
+        movementPolicy: 'rush',
+      });
     });
 
     it('factors NPC chat rate into the casual head start', () => {
@@ -400,6 +454,7 @@ describe('resolveScheduledMove', () => {
         forceMove: false,
         destinationLocationId: 'B',
         consumesTurn: true,
+        movementPolicy: 'casual',
       });
     });
 

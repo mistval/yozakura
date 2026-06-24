@@ -1,3 +1,5 @@
+import type { MovementPolicy } from '../types.js';
+
 interface UserTurnActionWait {
   actionType: 'wait';
 }
@@ -74,6 +76,7 @@ interface TurnMoveMove {
   actionType: 'move';
   destinationLocationId: string;
   consumesTurn: boolean;
+  movementPolicy?: MovementPolicy | undefined;
 }
 
 interface TurnMoveChat {
