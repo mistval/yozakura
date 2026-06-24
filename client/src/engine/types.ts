@@ -443,3 +443,14 @@ export const storedConversationSchema = basePersistedObjectSchema.extend({
 });
 
 export type StoredConversation = z.infer<typeof storedConversationSchema>;
+
+export const movementLogEntrySchema = basePersistedObjectSchema.extend({
+  turnNumber: z.number(),
+  characterId: z.string(),
+  characterName: z.string(),
+  movementPolicy: movementPolicySchema.optional(),
+  fromLocationName: z.string(),
+  toLocationName: z.string(),
+});
+
+export type MovementLogEntry = z.infer<typeof movementLogEntrySchema>;

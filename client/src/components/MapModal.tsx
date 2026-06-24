@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { GraphCanvas, type GraphCanvasRef } from 'reagraph';
 import { StringParam, useQueryParam } from 'use-query-params';
 import RoutedModalFrame from './ui/RoutedModalFrame.js';
@@ -9,9 +9,9 @@ import { useScenarioStore } from '../state/scenario_store.js';
 import { useScenarioCharacterStore, useUserCharacter } from '../state/scenario_character_store.js';
 import { useMapZoneStore } from '../state/map_zone_store.js';
 import { useCharacterGroupStore } from '../state/character_group_store.js';
-import { useMovementLogStore } from '../state/movement_log_store.js';
+import * as Database from '../backend_bridge/database.js';
 import { getEffectiveZones } from '../engine/map/map_zone.js';
-import type { MovementPolicy } from '../engine/types.js';
+import type { MovementLogEntry, MovementPolicy } from '../engine/types.js';
 import { useCharacterOverview } from './character_overview/CharacterOverviewContext.js';
 import { useMapModal } from './MapModalContext.js';
 import MapZoneEditor, { type ZoneEditorController } from './map_zones/MapZoneEditor.js';
@@ -64,7 +64,6 @@ export default function MapModal() {
   const zones = useMapZoneStore((state) => state.zones);
   const zonesAreLoaded = useMapZoneStore((state) => state.zonesAreLoaded);
   const groups = useCharacterGroupStore((state) => state.groups);
-  const movementLog = useMovementLogStore((state) => state.entries);
   const user = useUserCharacter();
   const graphTheme = useGraphTheme();
   const { showCharacterOverview } = useCharacterOverview();
@@ -78,6 +77,44 @@ export default function MapModal() {
   const view = viewParam === 'zones' ? 'zones' : viewParam === 'log' ? 'log' : 'characters';
   const setView = (next: 'characters' | 'zones' | 'log') =>
     setViewParam(next === 'characters' ? undefined : next);
+
+  const [logPage, setLogPage] = useState(1);
+  const [logEntries, setLogEntries] = useState<MovementLogEntry[]>([]);
+  const [logHasNextPage, setLogHasNextPage] = useState(false);
+  const [logLoading, setLogLoading] = useState(false);
+
+  useEffect(() => {
+    setLogPage(1);
+  }, [scenario?.id, view]);
+
+  useEffect(() => {
+    if (view !== 'log' || !scenario) {
+      return;
+    }
+
+    let cancelled = false;
+    setLogLoading(true);
+    void (async () => {
+      try {
+        const result = await Database.doAsDataRead(
+          () => Database.loadMovementLogPage(scenario.id, logPage),
+          'movement_log'
+        );
+        if (!cancelled) {
+          setLogEntries(result.entries);
+          setLogHasNextPage(result.hasNextPage);
+        }
+      } finally {
+        if (!cancelled) {
+          setLogLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [view, scenario?.id, logPage]);
 
   const zoneController: ZoneEditorController = useMemo(
     () => ({
@@ -215,35 +252,65 @@ export default function MapModal() {
       )}
 
       {view === 'log' && (
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {movementLog.length === 0 ? (
-            <div className="text-sm text-muted">No movements recorded yet.</div>
-          ) : (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            {logLoading && logEntries.length === 0 && (
+              <div className="text-sm text-secondary">Loading movements...</div>
+            )}
+            {!logLoading && logEntries.length === 0 && (
+              <div className="text-sm text-muted">No movements recorded yet.</div>
+            )}
             <div className="space-y-2">
-              {movementLog.map((entry) => {
+              {logEntries.map((entry, index) => {
                 const character = charactersById[entry.characterId];
+                const previous = logEntries[index - 1];
+                const showTurnHeader = !previous || previous.turnNumber !== entry.turnNumber;
                 return (
-                  <div
-                    key={entry.id}
-                    className="flex items-center gap-2 rounded-sm border border-border-default bg-inset p-2"
-                  >
-                    <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-border-default bg-emphasized">
-                      {character && (
-                        <img
-                          src={character.imagePath}
-                          alt={entry.characterName}
-                          className="h-full w-full object-cover object-top"
-                        />
-                      )}
+                  <Fragment key={entry.id}>
+                    {showTurnHeader && (
+                      <div className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                        {entry.turnNumber === undefined ? 'Unknown turn' : `Turn ${entry.turnNumber}`}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 rounded-sm border border-border-default bg-inset p-2">
+                      <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-border-default bg-emphasized">
+                        {character && (
+                          <img
+                            src={character.imagePath}
+                            alt={entry.characterName}
+                            className="h-full w-full object-cover object-top"
+                          />
+                        )}
+                      </div>
+                      <div className="min-w-0 text-sm">
+                        <span className="font-medium">{entry.characterName}</span>{' '}
+                        {movementVerb(entry.movementPolicy)} from {entry.fromLocationName} to{' '}
+                        {entry.toLocationName}
+                      </div>
                     </div>
-                    <div className="min-w-0 text-sm">
-                      <span className="font-medium">{entry.characterName}</span>{' '}
-                      {movementVerb(entry.movementPolicy)} from {entry.fromLocationName} to{' '}
-                      {entry.toLocationName}
-                    </div>
-                  </div>
+                  </Fragment>
                 );
               })}
+            </div>
+          </div>
+
+          {(logPage > 1 || logHasNextPage) && (
+            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border-default px-4 py-3">
+              <span className="mr-auto text-sm text-muted">Page {logPage}</span>
+              <button
+                type="button"
+                disabled={logLoading || logPage <= 1}
+                onClick={() => setLogPage((page) => Math.max(1, page - 1))}
+              >
+                Previous Page
+              </button>
+              <button
+                type="button"
+                disabled={logLoading || !logHasNextPage}
+                onClick={() => setLogPage((page) => page + 1)}
+              >
+                Next Page
+              </button>
             </div>
           )}
         </div>

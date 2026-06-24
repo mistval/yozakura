@@ -9,10 +9,12 @@ import {
   scenarioCharacterGroupSchema,
   mapZoneSchema,
   scenarioCharacterGroupScheduleSchema,
+  movementLogEntrySchema,
   type CharacterPair,
   type Character,
   type CharacterRelationship,
   type StoredConversation,
+  type MovementLogEntry,
   type Scenario,
   type WorldMap,
   type RootPersistedObject,
@@ -37,6 +39,7 @@ const TABLE_KEY_VALUE = 'key_value';
 const TABLE_SCENARIO_CHARACTER_GROUP = 'scenario_character_group';
 const TABLE_MAP_ZONE = 'map_zone';
 const TABLE_SCENARIO_CHARACTER_GROUP_SCHEDULE = 'scenario_character_group_schedule';
+const TABLE_MOVEMENT_LOG = 'movement_log';
 
 function buildSqlPlaceholders(count: number): string {
   return Array(count).fill('?').join(', ');
@@ -209,6 +212,24 @@ const SELECT_CONVERSATION_BY_ID_SQL = `
   LIMIT 1
 `;
 
+const UPSERT_MOVEMENT_LOG_SQL = `
+  INSERT INTO ${TABLE_MOVEMENT_LOG} (id, scenario_id, data, created_at, updated_at)
+  VALUES (?, ?, ?, ${sqlDatetimeNow()}, ${sqlDatetimeNow()})
+  ON CONFLICT(id)
+  DO UPDATE SET
+    data = excluded.data,
+    scenario_id = excluded.scenario_id,
+    updated_at = ${sqlDatetimeNow()}
+`;
+
+const SELECT_MOVEMENT_LOG_PAGE_SQL = `
+  SELECT *
+  FROM ${TABLE_MOVEMENT_LOG}
+  WHERE scenario_id = ?
+  ORDER BY rowid DESC
+  LIMIT ? OFFSET ?
+`;
+
 const SELECT_MAP_BY_ID_SQL = `
   SELECT *
   FROM ${TABLE_MAP}
@@ -265,6 +286,13 @@ const dataRowSchema = baseRowSchema.extend({
 
 type ConversationPageResult = {
   entries: StoredConversation[];
+  page: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+};
+
+export type MovementLogPageResult = {
+  entries: MovementLogEntry[];
   page: number;
   hasPreviousPage: boolean;
   hasNextPage: boolean;
@@ -622,6 +650,36 @@ export async function storeConversation(scenarioId: string, entry: StoredConvers
       ),
     ],
   ]);
+}
+
+export async function storeMovementLogEntry(scenarioId: string, entry: MovementLogEntry) {
+  const parsedEntry = movementLogEntrySchema.parse(entry);
+  await dbRun(UPSERT_MOVEMENT_LOG_SQL, [
+    [parsedEntry.id, scenarioId, encodeStoredData(parsedEntry, movementLogEntrySchema)],
+  ]);
+}
+
+export async function loadMovementLogPage(
+  scenarioId: string,
+  page: number,
+  pageSize: number = 100
+): Promise<MovementLogPageResult> {
+  const coercedPage = coerceToPositiveInteger(page, 1);
+  const coercedPageSize = coerceToPositiveInteger(pageSize, 100);
+  const offset = (coercedPage - 1) * coercedPageSize;
+
+  const entries = await selectDataRows(
+    SELECT_MOVEMENT_LOG_PAGE_SQL,
+    [[scenarioId, coercedPageSize + 1, offset]],
+    movementLogEntrySchema
+  );
+
+  return {
+    entries: entries.slice(0, coercedPageSize),
+    page: coercedPage,
+    hasPreviousPage: coercedPage > 1,
+    hasNextPage: entries.length > coercedPageSize,
+  };
 }
 
 export async function deleteScenarioDatabase(scenarioId: string) {

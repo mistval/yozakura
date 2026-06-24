@@ -4,7 +4,7 @@ import { useScenarioCharacterStore } from '../../state/scenario_character_store'
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
 import { useScenarioStore } from '../../state/scenario_store';
-import { useMovementLogStore } from '../../state/movement_log_store';
+import * as Database from '../../backend_bridge/database';
 import { useSettingsStore } from '../../state/settings_store';
 import { useTemporalContextStore } from '../../state/temporal_context_store';
 import { ChatCoordinator } from '../chat/chat_coordinator';
@@ -246,22 +246,26 @@ async function moveScenarioCharacter(characterId: string, toId: string) {
 }
 
 function recordMovement(characterId: string, toId: string, movementPolicy: MovementPolicy | undefined) {
+  const scenario = useScenarioStore.getState().activeScenario;
   const character = useScenarioCharacterStore.getState().scenarioCharactersById[characterId];
   const map = useScenarioStore.getState().activeScenarioMap;
-  if (!character || !map || character.locationId === toId) {
+  if (!scenario || !character || !map || character.locationId === toId) {
     return;
   }
 
   const locationName = (locationId: string) =>
     map.locations.find((location) => location.id === locationId)?.name ?? locationId;
 
-  useMovementLogStore.getState().recordMovement({
+  const entry = Database.createPersistedObject({
+    turnNumber: scenario.turnNumber,
     characterId,
     characterName: `${character.firstName} ${character.lastName}`,
     movementPolicy,
     fromLocationName: locationName(character.locationId),
     toLocationName: locationName(toId),
   });
+
+  void Database.doAsDataWrite(() => Database.storeMovementLogEntry(scenario.id, entry), 'movement_log');
 }
 
 async function recomputeTemporalContextAndAutoselectWardrobes() {
