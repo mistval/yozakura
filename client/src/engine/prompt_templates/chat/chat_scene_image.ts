@@ -8,7 +8,7 @@ class ChatSceneImageSystemTemplate extends PromptTemplateBase<
   z.infer<typeof focusedConversationExecutionContextSchema>
 > {
   public readonly defaultTemplateString =
-    'You write Stable Diffusion prompts. Return only the prompt text, with no quotes, no markdown, and no extra commentary.';
+    'You write natural language image prompts. Return only the prompt text, with no quotes, no markdown, and no extra commentary.';
   public readonly contextSchema = focusedConversationExecutionContextSchema;
 
   public readonly templateName = 'Chat Scene Image (System)';
@@ -43,7 +43,10 @@ The focus of the image prompt should be <%= it.focusedCharacter.firstName %>, wh
 
 </appearance>
 
-Output a single stable diffusion image generation prompt that describes the current scene and mood with concrete visual details (composition, expressions, body language, environment).`;
+<final_instruction>
+Describe only <%= it.focusedCharacter.firstName %> and their place in the current scene, including what they are wearing and what they are doing (verbs/gerunds). The image model can understand directions (left, right, top, bottom, in front, behind, etc) so place <%= it.focusedCharacter.firstName %> in the image wherever you wish for an interesting composition. Use full English sentences written in sparse language when writing your prompt, focus purely on the concrete details of the scene.
+
+</final_instruction>`;
   public readonly contextSchema = focusedConversationExecutionContextSchema;
 
   public readonly templateName = 'Chat Scene Image (User)';

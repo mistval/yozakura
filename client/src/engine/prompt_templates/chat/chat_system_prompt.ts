@@ -72,12 +72,14 @@ The current date and time: <%= it.temporalContext %>
 Location name:  <%= it.currentLocation.name %>
 
 Location description: <%= it.currentLocation.description %>
-<% if (it.characterMovementConstraint) { %>
-<% if (it.characterMovementConstraint.status === 'in_designated_zone') { %>
-<%= it.focusedCharacter.firstName %> is currently here<%= it.characterMovementConstraint.reason ? ' because ' + it.characterMovementConstraint.reason : '' %>.
-<% } else { %>
-<%= it.focusedCharacter.firstName %> is currently moving towards <%= it.characterMovementConstraint.targetLocationName %><%= it.characterMovementConstraint.reason ? ' because ' + it.characterMovementConstraint.reason : '' %>.
-<% } %>
+<% const movement = it.characterMovementConstraint; %>
+
+<% if (movement?.status === 'in_designated_zone' && movement.reason) { %>
+<%= it.focusedCharacter.firstName %> is currently here because <%= movement.reason %>
+<% } else if (movement?.status !== 'in_designated_zone' && movement?.reason) { %>
+<%= it.focusedCharacter.firstName %> is currently moving towards <%= movement.targetLocationName %> because <%= movement.reason %>
+<% } else if (movement?.status !== 'in_designated_zone' && movement?.targetLocationName) { %>
+<%= it.focusedCharacter.firstName %> is currently moving towards <%= movement.targetLocationName %>
 <% } %>
 </setting>
 

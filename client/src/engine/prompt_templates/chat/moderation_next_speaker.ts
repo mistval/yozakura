@@ -53,7 +53,7 @@ class ModerationNextSpeakerUserTemplate extends PromptTemplateBase<ModerationNex
 <%= it.speakerCandidates.map(c => c.firstName).join('\\n') %>
 </eligible_candidates>
 
-Analyze the flow of the conversation and decide who speaks next. Output the next speaker's first name only.`;
+Analyze the flow of the conversation and decide who speaks next. Output the next speaker's first name only, nothing else.`;
   public readonly contextSchema = moderationNextSpeakerExecutionContextSchema;
 
   public readonly templateName = 'Moderation Next Speaker (User)';

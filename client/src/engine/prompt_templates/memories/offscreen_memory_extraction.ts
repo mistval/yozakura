@@ -7,15 +7,15 @@ import { targetedConversationExecutionContextSchema } from '../prompt_template_c
 class OffscreenMemoryExtractionSystemTemplate extends PromptTemplateBase<
   z.infer<typeof targetedConversationExecutionContextSchema>
 > {
-  public readonly defaultTemplateString = `Given a conversation transcript and character persona information, identify one novel piece of information about <%= it.targetCharacter.firstName %>, or about <%= it.targetCharacter.firstName %>'s relationship with other characters (including but not limited to <%= it.focusedCharacter.firstName %> and other speakers in the transcript). The information learned should be from the perspective of <%= it.focusedCharacter.firstName %>.
+  public readonly defaultTemplateString = `You will be given a conversation transcript in which <%= it.targetCharacter.firstName %> may have been mentioned. You will also be given memories and persona information about one of the participants in the conversation, named <%= it.focusedCharacter.firstName %>. Your job is to identify one new piece of information that <%= it.focusedCharacter.firstName %> learned about <%= it.targetCharacter.firstName %> via the conversation. This can be information pertaining to <%= it.targetCharacter.firstName %>'s relationship with other characters (including but not limited to <%= it.focusedCharacter.firstName %> and other speakers in the transcript), or general facts and hearsay about <%= it.targetCharacter.firstName %>.
 
 Rules:
-- Identify and output at most one piece of information about <%= it.targetCharacter.firstName %>.
-- The information must be novel compared to what <%= it.focusedCharacter.firstName %> already knows about <%= it.targetCharacter.firstName %>.
-- The information should be something that can be added to <%= it.focusedCharacter.firstName %>'s memory to help guide their future interactions with <%= it.targetCharacter.firstName %>.
-- Prioritize anything that provides narrative momentum, such as relationship details between <%= it.targetCharacter.firstName %> and other characters, actionable intentions between characters, plans, insights, or facts.
+- Identify and output at most one new piece of information about <%= it.targetCharacter.firstName %>.
+- The information should be something that can help color <%= it.focusedCharacter.firstName %>'s future interactions with <%= it.targetCharacter.firstName %>, or their future conversations about <%= it.targetCharacter.firstName %>.
+- Prioritize information that provides narrative momentum, such as relationship details between <%= it.targetCharacter.firstName %> and other characters, actionable intentions between characters, plans, insights, or facts. Anything that would make for good "gossip" is valuable.
 - If the information is hearsay or inferred rather than explicit, include appropriate hedging and qualifications in the output.
-- When in doubt, err on the side of finding something to output even if it doesn't feel important.
+- Consider <%= it.focusedCharacter.firstName %>'s unique personality and what kind of information they might want to remember.
+- The information must come from the conversation transcript.
 
 Output format:
 - Output a single plain string containing only the information.
@@ -39,21 +39,19 @@ class OffscreenMemoryExtractionUserTemplate extends PromptTemplateBase<
 
 </persona>
 
+Here are the current memories that <%= it.focusedCharacter.firstName %> has about <%= it.targetCharacter.firstName %>:
+<current_memory>
+<%= it.targetCharacterRelationship?.memory || (it.focusedCharacter.firstName + ' does not have any memories about ' + it.targetCharacter.firstName + ' yet.') %>
+
+</current_memory>
+
 Here is the conversation transcript:
 <transcript>
 <%= it.transcript %>
 
 </transcript>
 
-And here are the current memories that <%= it.focusedCharacter.firstName %> has about <%= it.targetCharacter.firstName %> <%= it.targetCharacter.lastName %>:
-<current_memory>
-<%= it.targetCharacterRelationship?.memory || (it.focusedCharacter.firstName + ' does not have any memories about ' + it.targetCharacter.firstName + ' ' + it.targetCharacter.lastName + ' yet.') %>
-
-</current_memory>
-
-Return only one line:
-- Either the extracted information string
-- Or NONE if there is no relevant novel information.`;
+Return the new piece of information you identified in the transcript. Alternatively, you may return "NONE" only if you could not identify any new information in the transcript.`;
   public readonly contextSchema = targetedConversationExecutionContextSchema;
 
   public readonly templateName = 'Offscreen Memory Extraction (User)';

@@ -13,15 +13,14 @@ class RollingPairwiseMemoryRewriteSystemTemplate extends PromptTemplateBase<
 3. A list of secondhand information that <%= it.focusedCharacter.firstName %> has heard about <%= it.targetCharacter.firstName %> (if any).
 4. A goal for <%= it.focusedCharacter.firstName %> in their next interaction with <%= it.targetCharacter.firstName %> (if any) 
 
-Your job is to use the available information to rewrite <%= it.focusedCharacter.firstName %>'s consolidated memory about <%= it.targetCharacter.firstName %>. The existing consolidated memory is now stale and needs rewriting to include newer details.
+Your job is to use the available information to update <%= it.focusedCharacter.firstName %>'s consolidated memory about <%= it.targetCharacter.firstName %>. The existing consolidated memory is now stale and needs updating to include newer details.
 
 Rules:
 - Your goal is to crystallize the current state of <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %> based on the provided logs.
-- First, prioritize information that is relevant to <%= it.focusedCharacter.firstName %>'s goal in their next interaction with <%= it.targetCharacter.firstName %> (if any).
+- First, prioritize information that is relevant to <%= it.focusedCharacter.firstName %>'s goal in their next interaction with <%= it.targetCharacter.firstName %> (if any), without restating the goal.
 - Second, prioritize <%= it.focusedCharacter.firstName %>'s broader goals and intentions towards <%= it.targetCharacter.firstName %>, relationship status, memories, and emotional trajectory relevant to the relationship.
 - From the existing consolidated memory, keep important details that remain plausible, even if they are not substantiated in the most recent conversation summaries.
 - Write in third person. Be specific and direct.
-- Output up to five paragraphs.
 - Output only the updated memory.`;
   public readonly contextSchema = targetedConversationExecutionContextSchema;
 

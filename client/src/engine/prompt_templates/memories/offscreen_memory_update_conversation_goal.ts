@@ -38,10 +38,10 @@ class OffscreenMemoryUpdateConversationGoalUserTemplate extends PromptTemplateBa
 </current_aggregate_memories>
 
 Existing goal that <%= it.focusedCharacter.firstName %> wanted to pursue with <%= it.targetCharacter.firstName %>:
-<existing_conversation_topic>
+<existing_goal>
 <%= it.targetCharacterRelationship?.nextConversationGoal || (it.focusedCharacter.firstName + ' does not have a goal to pursue with ' + it.targetCharacter.firstName + ' yet.') %>
 
-</existing_conversation_topic>
+</existing_goal>
 
 Newly learned information about <%= it.targetCharacter.firstName %>:
 <new_information>
