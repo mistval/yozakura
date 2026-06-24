@@ -12,6 +12,7 @@ import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import ConversationSearchList from '../conversation_log/ConversationSearchList.js';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { assertNonNullish } from '../../errors/application_error.js';
+import { useCharacterGroupStore } from '../../state/character_group_store.js';
 
 type CharacterOverviewSingleDataProps = {
   selectedSingleCharacter: Character;
@@ -37,7 +38,16 @@ export default function CharacterOverviewSingleData({
   const chatSessionIsActive = useTurnMachineStore((state) => state.chatState !== 'inactive');
   const activeChatParticipants = useTurnMachineStore((state) => state.participantIds);
   const { closeCharacterOverview, openCharacterOverviewEditor } = useCharacterOverview();
+  const groups = useCharacterGroupStore((state) => state.groups);
   const [relationshipToUser, setRelationshipToUser] = useState<CharacterRelationship | undefined>(undefined);
+
+  const memberGroupNames = useMemo(
+    () =>
+      selectedSingleCharacter.groupIds
+        .map((groupId) => groups.find((group) => group.id === groupId)?.name)
+        .filter((name): name is string => Boolean(name)),
+    [selectedSingleCharacter.groupIds, groups]
+  );
 
   const sortedLocations = useMemo(() => {
     if (activeMap) {
@@ -105,6 +115,11 @@ export default function CharacterOverviewSingleData({
     <div className="space-y-3">
       {selectedSingleCharacter.externalDescription && (
         <div className={`border rounded-sm p-3`}>{selectedSingleCharacter.externalDescription}</div>
+      )}
+      {memberGroupNames.length > 0 && (
+        <div className="border rounded-sm p-3">
+          <span className="font-medium">Groups:</span> {memberGroupNames.join(', ')}
+        </div>
       )}
       <div className="flex gap-2 flex-wrap">
         {!isUser && (

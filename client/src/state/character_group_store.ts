@@ -26,7 +26,7 @@ type CharacterGroupStoreState = {
   removeZoneFromAllSchedules: (zoneId: string) => void;
 };
 
-const DEFAULT_SCHEDULE_LENGTH_IN_TURNS = 4;
+const DEFAULT_SCHEDULE_LENGTH_IN_TURNS = 56;
 
 export const useCharacterGroupStore = create<CharacterGroupStoreState>((set, get) => ({
   groups: [],

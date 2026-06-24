@@ -47,9 +47,10 @@ Click a segment to edit its details:
 - **Allowed zone**: the zone members should be in while this segment is active.
 - **Movement policy**: how members travel to the zone (see below).
 - **Start turn** and **End turn**: the span the segment covers (this is another way to control the segment size and location, in addition to clicking/dragging).
+- **Obedience rate**: how often members actually follow this segment (see below).
 - **Reason** (optional): free text explaining why the character is there.
 
-Segments are allowed to overlap. When more than one of a character's segments is active at the same time, they may be in any of those zones, and they will head toward the nearest one. During any stretch of turns with no active schedule segment, members move randomly.
+Segments are allowed to overlap. When more than one of a character's segments is active at the same time, they may be in any of those zones. If any active segment uses **teleport** or **jump**, the character warps to one of those zones; otherwise they walk toward the nearest **rush** or **casual** zone. During any stretch of turns with no active schedule segment, members move randomly.
 
 ![Placeholder: the schedule timeline with a few segments, the now marker, and a segment's detail panel open](/img/schedule-editor.png)
 
@@ -61,6 +62,18 @@ Each schedule segment has a movement policy that controls how a member gets to t
 - **Jump**: the character instantly warps to the zone, but warping uses up their turn.
 - **Rush**: the character walks toward the zone one location at a time and never stops to start a conversation along the way. Other characters can still start conversations with them.
 - **Casual**: the character walks toward the zone one location at a time, occasionally stopping to start conversations on the way, at the rate set in Behavior Settings.
+
+**Teleport** and **jump** ignore the map's connectivity entirely. The character warps to any location within the target zone, chosen at random, no matter how far away it is — and even if there is no walkable path to it at all. This makes them well suited to zones that are meant to be disconnected from the rest of the map, such as a character's home in another town. **Rush** and **casual** walk along map connections, so if no path to the zone exists, the character simply can't get there and moves freely instead.
+
+When teleport or jump would land the character in a [private zone](#private-zones) they aren't allowed to enter, the warp is blocked, just like walking in would be.
+
+## Obedience rate
+
+Each schedule segment has an **obedience rate**, from 0% to 100%, defaulting to 100%. It is the chance that a character actually follows the segment on any given turn.
+
+At 100% the segment is always honored. Lower it to add spontaneity: each turn, the segment rolls against its obedience rate, and if the roll fails the segment is ignored for that turn as if it weren't scheduled at all. With no other active segment to keep them in place, the character is then free to wander or stay put — which enables interactions like "I couldn't sleep, so I didn't go to bed." The roll is independent every turn, so a character with a 70% obedience rate will usually be where they're supposed to be, but will occasionally stray.
+
+Obedience only affects AI-controlled movement. The move suggestions for the user character always reflect the schedule, since you decide whether to follow it.
 
 ## The reason field
 
@@ -78,7 +91,7 @@ For AI-controlled characters, schedules are followed automatically according to 
 
 The user character is also _supposed_ to follow their schedule, but isn't forced to. If your character belongs to a group with a schedule, the move buttons highlight where the schedule suggests you go, in the following conditions:
 
-1. If you're scheduled to be somewhere else with `teleport`, `jump`, or `rush` policy, the suggested move button(s) are outlined in red (in the default UI theme). For teleport and jump policies, the final destination will appear as a button even if it's far away.
+1. If you're scheduled to be somewhere else with `teleport`, `jump`, or `rush` policy, the suggested move button(s) are outlined in red (in the default UI theme). For teleport and jump policies, every destination in the target zone appears as a button, even ones that are far away or have no walkable path from where you are.
 2. If you're scheduled to be somewhere else with `casual` policy, the suggested move button(s) are outlined in yellow.
 3. If you're already in your schedule zone, the buttons that will keep you there (including the wait button) get a magenta outline.
 4. Any private zones that you're not supposed to enter will have a lock icon.

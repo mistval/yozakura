@@ -14,6 +14,8 @@ import InfoTooltip from './../ui/InfoTooltip';
 import { newId } from '../../util/id.js';
 import DeleteButton from '../ui/DeleteButton.js';
 import ConfirmDialog from '../ui/ConfirmDialog.js';
+import RangeNumberInput from '../settings/ui/RangeNumberInput.js';
+import { clampUnitRate, toPercent } from '../../util/numeric.js';
 
 const SEGMENT_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#14b8a6'];
 const LANE_HEIGHT_PX = 28;
@@ -71,7 +73,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
   const [pixelsPerTurn, setPixelsPerTurn] = useState(DEFAULT_PIXELS_PER_TURN);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const lengthInTurns = storedSchedule?.lengthInTurns ?? 4;
+  const lengthInTurns = storedSchedule?.lengthInTurns ?? 56;
   const segments = storedSchedule?.segments ?? [];
   const turnNumber = scenario?.turnNumber ?? 0;
   const nowTurn = ((turnNumber % lengthInTurns) + lengthInTurns) % lengthInTurns;
@@ -139,6 +141,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
       endTurn: Math.min(lengthInTurns, startTurn + 1),
       zoneId: effectiveZones[0]?.id ?? '',
       movementPolicy: 'teleport',
+      obedienceRate: 1,
     };
     mutate((prev) => ({ ...prev, segments: prev.segments.concat(segment) }));
     setSelectedSegmentId(segment.id);
@@ -389,6 +392,29 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
                 }
               />
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <label className="block text-sm" htmlFor="segment-obedience">
+                Obedience rate ({toPercent(selectedSegment.obedienceRate)}%)
+              </label>
+              <InfoTooltip
+                label="About obedience rate"
+                html="How often characters actually follow this schedule segment. At 100% they always obey. Lower it to add spontaneity: on a turn where the roll fails, the segment is ignored as if it weren't scheduled, so the character is free to wander or stay put — like deciding not to go to bed because they couldn't sleep."
+              />
+            </div>
+            <RangeNumberInput
+              id="segment-obedience"
+              ariaLabel="Obedience rate value"
+              min={0}
+              max={100}
+              step={1}
+              value={toPercent(selectedSegment.obedienceRate)}
+              onChange={(next) =>
+                updateSegment(selectedSegment.id, { obedienceRate: clampUnitRate(next / 100) })
+              }
+            />
           </div>
 
           <div className="space-y-1">

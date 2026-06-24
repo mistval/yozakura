@@ -255,6 +255,7 @@ export const scheduleSegmentSchema = z.object({
   endTurn: z.number().int().positive(),
   zoneId: z.string(),
   movementPolicy: movementPolicySchema,
+  obedienceRate: z.number(),
   reason: z.string().optional(),
 });
 

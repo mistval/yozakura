@@ -57,9 +57,10 @@ function makeSegment(
   movementPolicy: MovementPolicy,
   startTurn: number,
   endTurn: number,
-  reason?: string
+  reason?: string,
+  obedienceRate = 1
 ): ScheduleSegment {
-  return { id: `${zoneId}-seg`, startTurn, endTurn, zoneId, movementPolicy, reason };
+  return { id: `${zoneId}-seg`, startTurn, endTurn, zoneId, movementPolicy, obedienceRate, reason };
 }
 
 function makeSchedule(
@@ -208,7 +209,7 @@ describe('resolveScheduledMove', () => {
     expect([...allowed].sort()).toEqual(['C', 'D']);
   });
 
-  it('unions zones across groups and applies the nearest target policy', () => {
+  it('prioritizes a teleport target over a closer rush target across groups', () => {
     const result = resolveScheduledMove(
       {
         character: { id: 'npc', locationId: 'A', groupIds: ['g1', 'g2'] },
@@ -222,19 +223,18 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
-    expect(result).toEqual({ forceMove: true, destinationLocationId: 'B', consumesTurn: true });
+    expect(result).toEqual({ forceMove: true, destinationLocationId: 'D', consumesTurn: false });
   });
 
-  it('keeps a non-member out of a private zone but lets a member through', () => {
+  it('keeps a non-member from teleporting into a private zone but lets a member in', () => {
     const baseInput = {
       locationId: 'A',
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [
-        makeZone('zoneD', ['D']),
-        makeZone('privateC', ['C'], { privateToGroupIds: ['insiders'] }),
-      ],
-      groupSchedulesByGroupId: { sched: makeSchedule('sched', 4, [makeSegment('zoneD', 'teleport', 0, 4)]) },
+      effectiveZones: [makeZone('privateD', ['D'], { privateToGroupIds: ['insiders'] })],
+      groupSchedulesByGroupId: {
+        sched: makeSchedule('sched', 4, [makeSegment('privateD', 'teleport', 0, 4)]),
+      },
     };
 
     const nonMember = resolveScheduledMove(
@@ -256,7 +256,7 @@ describe('resolveScheduledMove', () => {
     expect(member).toEqual({ forceMove: true, destinationLocationId: 'D', consumesTurn: false });
   });
 
-  it('falls back to plain movement when the allowed zone is unreachable', () => {
+  it('teleports into a disconnected zone, ignoring connectivity', () => {
     const result = resolveScheduledMove(
       {
         character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
@@ -267,8 +267,41 @@ describe('resolveScheduledMove', () => {
       },
       chooseFirst
     );
+    expect(result).toEqual({ forceMove: true, destinationLocationId: 'Z', consumesTurn: false });
+  });
+
+  it('falls back to plain movement when a walked-to zone is unreachable', () => {
+    const result = resolveScheduledMove(
+      {
+        character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
+        turnNumber: 0,
+        locations: [...LINE_LOCATIONS, makeLocation('Z', [])],
+        effectiveZones: [makeZone('zoneZ', ['Z'])],
+        groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneZ', 'rush', 0, 4)]) },
+      },
+      chooseFirst
+    );
     expect(result?.forceMove).toBe(false);
     expect(['A', 'B']).toContain(result?.destinationLocationId);
+  });
+
+  it('ignores a segment when the obedience roll fails', () => {
+    const input = {
+      character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      groupSchedulesByGroupId: {
+        g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4, undefined, 0.5)]),
+      },
+    };
+
+    const disobeyed = resolveScheduledMove(input, chooseFirst, () => 0.9);
+    expect(disobeyed.forceMove).toBe(false);
+    expect(['A', 'B']).toContain(disobeyed.destinationLocationId);
+
+    const obeyed = resolveScheduledMove(input, chooseFirst, () => 0.1);
+    expect(obeyed).toEqual({ forceMove: true, destinationLocationId: 'C', consumesTurn: false });
   });
 
   it('selects the same segment after a full period wrap', () => {
@@ -357,7 +390,7 @@ describe('resolveUserMovementSuggestion', () => {
     expect(result).toBeUndefined();
   });
 
-  it('teleport surfaces the (non-adjacent) destination first, urgent', () => {
+  it('teleport surfaces every (non-adjacent) zone destination, urgent', () => {
     const result = resolveUserMovementSuggestion({
       character: { id: 'user', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
@@ -366,9 +399,9 @@ describe('resolveUserMovementSuggestion', () => {
       groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4)]) },
     });
     expect(result).toEqual({
-      suggestedLocationIds: ['C'],
-      highlightByLocationId: { C: 'urgent' },
-      consumesTurnByLocationId: { C: false },
+      suggestedLocationIds: ['C', 'D'],
+      highlightByLocationId: { C: 'urgent', D: 'urgent' },
+      consumesTurnByLocationId: { C: false, D: false },
       highlightWait: false,
       forbiddenLocationIds: [],
     });
@@ -459,7 +492,7 @@ describe('resolveUserMovementSuggestion', () => {
     });
   });
 
-  it('reports locks even when the allowed zone is unreachable behind them', () => {
+  it('surfaces a teleport destination even when the walking path is locked', () => {
     const result = resolveUserMovementSuggestion({
       character: { id: 'user', locationId: 'A', groupIds: ['sched'] },
       turnNumber: 0,
@@ -469,6 +502,26 @@ describe('resolveUserMovementSuggestion', () => {
         makeZone('privateC', ['C'], { privateToGroupIds: ['insiders'] }),
       ],
       groupSchedulesByGroupId: { sched: makeSchedule('sched', 4, [makeSegment('zoneD', 'teleport', 0, 4)]) },
+    });
+    expect(result).toEqual({
+      suggestedLocationIds: ['D'],
+      highlightByLocationId: { D: 'urgent' },
+      consumesTurnByLocationId: { D: false },
+      highlightWait: false,
+      forbiddenLocationIds: ['C'],
+    });
+  });
+
+  it('reports locks only when a walked-to zone is unreachable behind them', () => {
+    const result = resolveUserMovementSuggestion({
+      character: { id: 'user', locationId: 'A', groupIds: ['sched'] },
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      effectiveZones: [
+        makeZone('zoneD', ['D']),
+        makeZone('privateC', ['C'], { privateToGroupIds: ['insiders'] }),
+      ],
+      groupSchedulesByGroupId: { sched: makeSchedule('sched', 4, [makeSegment('zoneD', 'rush', 0, 4)]) },
     });
     expect(result).toEqual({
       suggestedLocationIds: [],
@@ -559,7 +612,18 @@ describe('resolveCharacterMovementConstraint', () => {
     });
   });
 
-  it('returns undefined when the designated zone is unreachable', () => {
+  it('returns undefined when a walked-to zone is unreachable', () => {
+    const result = resolveCharacterMovementConstraint({
+      character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
+      turnNumber: 0,
+      locations: [...LINE_LOCATIONS, makeLocation('Z', [])],
+      effectiveZones: [makeZone('zoneZ', ['Z'])],
+      groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneZ', 'rush', 0, 4, 'r')]) },
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it('reports moving toward a disconnected teleport zone', () => {
     const result = resolveCharacterMovementConstraint({
       character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
@@ -567,6 +631,10 @@ describe('resolveCharacterMovementConstraint', () => {
       effectiveZones: [makeZone('zoneZ', ['Z'])],
       groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneZ', 'teleport', 0, 4, 'r')]) },
     });
-    expect(result).toBeUndefined();
+    expect(result).toEqual({
+      status: 'moving_towards_designated_zone',
+      reason: 'r',
+      targetLocationName: 'Z',
+    });
   });
 });
