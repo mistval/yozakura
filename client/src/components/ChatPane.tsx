@@ -42,7 +42,7 @@ export default function ChatPane() {
   const scenario = useScenarioStore((state) => state.activeScenario);
   const userLocation = useChatUserLocation();
 
-  const [input, setInput] = useState('');
+  const [inputIsNonEmpty, setInputIsNonEmpty] = useState(false);
   const [imagePrompt, setImagePrompt] = useState('');
   const [showImagePrompt, setShowImagePrompt] = useState(false);
   const [showChatSettings, setShowChatSettings] = useState(false);
@@ -52,6 +52,7 @@ export default function ChatPane() {
 
   const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
   const autoScrollUnlockedRef = useRef(true);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const submitChatMessage = useScenarioLoopStateStore((state) => state.submitChatMessage);
   const submitChatSkipTurn = useScenarioLoopStateStore((state) => state.submitChatSkipTurn);
@@ -119,14 +120,27 @@ export default function ChatPane() {
     return undefined;
   }
 
+  const resetInput = () => {
+    if (!inputRef.current) {
+      return;
+    }
+
+    const value = inputRef.current.value;
+    inputRef.current.value = '';
+    setInputIsNonEmpty(false);
+
+    return value.trim();
+  };
+
   const send = () => {
-    const message = input.trim();
+    assertNonNullish(inputRef.current, 'Somehow hit send without input ref');
+
+    const message = resetInput();
     if (!message) {
       return;
     }
 
     ChatCoordinator.addParticipant(userCharacter.id);
-    setInput('');
     submitChatMessage(message);
   };
 
@@ -485,14 +499,14 @@ export default function ChatPane() {
 
       <div className="flex gap-2 mb-0">
         <textarea
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
+          onChange={(event) => setInputIsNonEmpty(Boolean(event.target.value.trim()))}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey && input.trim() && isAwaitingCharacterInput) {
+            if (event.key === 'Enter' && !event.shiftKey && inputIsNonEmpty && isAwaitingCharacterInput) {
               event.preventDefault();
               send();
             }
           }}
+          ref={inputRef}
           disabled={!includesUser && !isAwaitingCharacterInput}
           placeholder={includesUser ? 'Enter a message' : 'Entering a message will add the user to the chat.'}
           rows={2}
@@ -501,7 +515,7 @@ export default function ChatPane() {
         <button
           type="button"
           onClick={send}
-          disabled={!isAwaitingCharacterInput || !input.trim() || !isAwaitingCharacterInput}
+          disabled={!isAwaitingCharacterInput || !inputIsNonEmpty || !isAwaitingCharacterInput}
         >
           Send
         </button>
