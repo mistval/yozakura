@@ -274,8 +274,13 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
   },
 
   startNewTurn(allCharacterIds, userCharacterId) {
-    const otherCharacterIds = allCharacterIds.filter((id) => id !== userCharacterId);
-    const ordered = [userCharacterId].concat(_.shuffle(otherCharacterIds));
+    const nonUserCharacterIds = () => allCharacterIds.filter((id) => id !== userCharacterId);
+    const currentTurn = useScenarioStore.getState().activeScenario?.turnNumber;
+
+    // If first turn, user moves first. Otherwise, user turn is randomized with all other characters
+    const ordered = !currentTurn
+      ? [userCharacterId].concat(_.shuffle(nonUserCharacterIds()))
+      : _.shuffle(allCharacterIds);
 
     set({
       ...inactiveChatTurnMachineState,
