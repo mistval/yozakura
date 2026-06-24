@@ -27,7 +27,8 @@ export type ChatState =
   | 'generating_image'
   | 'processing_memories'
   | 'character_speaking'
-  | 'awaiting_character_input';
+  | 'awaiting_character_input'
+  | 'selecting_speaker';
 
 export type StartChatSessionArgs = {
   participantIds: string[];

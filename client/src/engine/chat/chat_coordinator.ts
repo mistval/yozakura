@@ -161,10 +161,11 @@ export class ChatCoordinator {
     opts: { isUserInteraction?: boolean | undefined } = {}
   ) {
     return this.activeChatStore().doWithState('generating_image', async () => {
-      return withPhaseTransitionGate(async () => {
+      return withPhaseTransitionGate(async (abortSignal) => {
         const primaryCharacter = this.getCharacterById(primaryCharacterId);
         const generatedScenePrompt = await chatSceneImageChainGroup.renderAndExecute(
-          await buildFocusedChatTemplateContext(primaryCharacter.id)
+          await buildFocusedChatTemplateContext(primaryCharacter.id),
+          { abortSignal }
         );
 
         return buildFullPrompt(primaryCharacter, generatedScenePrompt);
@@ -176,22 +177,28 @@ export class ChatCoordinator {
     fullPrompt: string,
     opts?: { isUserInteraction?: boolean | undefined }
   ) {
-    return withPhaseTransitionGate((abortSignal) => {
-      return this.activeChatStore().doWithState('generating_image', async () => {
-        const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
-        const files = await generateChatImage({
-          fullPrompt,
-          saveTo,
-          abortSignal,
-        });
+    return this.activeChatStore().doWithState('generating_image', async () => {
+      return withPhaseTransitionGate(async (abortSignal) => {
+        try {
+          const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
+          const files = await generateChatImage({
+            fullPrompt,
+            saveTo,
+            abortSignal,
+          });
 
-        const firstFile = files[0];
-        assertNonNullish(firstFile, 'No file returned from image generation call');
+          const firstFile = files[0];
+          assertNonNullish(firstFile, 'No file returned from image generation call');
 
-        this.setTranscript(this.transcript().addImageMessage(firstFile).updatedTranscript);
-        return firstFile;
-      });
-    }, opts);
+          this.setTranscript(this.transcript().addImageMessage(firstFile).updatedTranscript);
+        } catch (err) {
+          showNonRetriableErrorCardIfNeeded({
+            error: err,
+            operationType: 'image.generate',
+          });
+        }
+      }, opts);
+    });
   }
 
   public static async endActiveChat(noEffect: boolean) {
@@ -259,8 +266,8 @@ export class ChatCoordinator {
 
     const tokenStreamingEnabled = useSettingsStore.getState().tokenStreamingEnabled;
 
-    return withPhaseTransitionGate(async (abortSignal) => {
-      return useTurnMachineStore.getState().doWithState('character_speaking', async () => {
+    return useTurnMachineStore.getState().doWithState('character_speaking', async () => {
+      return withPhaseTransitionGate(async (abortSignal) => {
         if (!tokenStreamingEnabled) {
           const response = await chatCompletion(prompts, {
             promptTemplateGroup: 'gen_npc_response',
@@ -302,8 +309,8 @@ export class ChatCoordinator {
         await this.pauseAfterNpcOnlyMessage();
 
         return this.transcript;
-      });
-    }, opts);
+      }, opts);
+    });
   }
 
   public static getSpeakerSelectionMode(): SpeakerSelectionMode {
@@ -389,21 +396,23 @@ export class ChatCoordinator {
       }
 
       if (selectionMode === 'intelligent') {
-        const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesGroup.renderAndExecute(
-          await buildChatModeratorContext(speakerCandidates)
-        );
+        return useTurnMachineStore.getState().doWithState('selecting_speaker', async () => {
+          const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesGroup.renderAndExecute(
+            await buildChatModeratorContext(speakerCandidates)
+          );
 
-        if (moderatorSelectedSpeakerId) {
-          const character = speakerCandidates.find((s) => s.id === moderatorSelectedSpeakerId);
+          if (moderatorSelectedSpeakerId) {
+            const character = speakerCandidates.find((s) => s.id === moderatorSelectedSpeakerId);
 
-          if (character) {
-            return character;
+            if (character) {
+              return character;
+            }
           }
-        }
 
-        // If moderator didn't select a speaker or selected one not in the chat,
-        // select randomly.
-        return getRequiredRandomChoice(speakerCandidates);
+          // If moderator didn't select a speaker or selected one not in the chat,
+          // select randomly.
+          return getRequiredRandomChoice(speakerCandidates);
+        });
       }
 
       assert(

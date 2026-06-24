@@ -43,6 +43,7 @@ export async function startScenarioLoop() {
     const restored = await doScenarioLoopAsyncAction(() => loadPersistedTurn(activeScenarioId));
     if (restored) {
       useTurnMachineStore.getState().hydrate(restored);
+      useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
     }
 
     await runTurnLoop();
