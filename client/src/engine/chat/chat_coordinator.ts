@@ -90,8 +90,8 @@ export class ChatCoordinator {
     return this.activeChatStore().removeChatParticipant(participantId);
   }
 
-  public static setStateCharacterSpeaking() {
-    this.activeChatStore().setStateCharacterSpeaking();
+  public static setStateAwaitingCharacterInput() {
+    this.activeChatStore().setStateAwaitingCharacterInput();
   }
 
   public static setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation) {
@@ -160,7 +160,7 @@ export class ChatCoordinator {
     primaryCharacterId: string,
     opts: { isUserInteraction?: boolean | undefined } = {}
   ) {
-    return this.activeChatStore().doWithStateGenerationImage(async () => {
+    return this.activeChatStore().doWithState('generating_image', async () => {
       return withPhaseTransitionGate(async () => {
         const primaryCharacter = this.getCharacterById(primaryCharacterId);
         const generatedScenePrompt = await chatSceneImageChainGroup.renderAndExecute(
@@ -177,7 +177,7 @@ export class ChatCoordinator {
     opts?: { isUserInteraction?: boolean | undefined }
   ) {
     return withPhaseTransitionGate((abortSignal) => {
-      return this.activeChatStore().doWithStateGenerationImage(async () => {
+      return this.activeChatStore().doWithState('generating_image', async () => {
         const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
         const files = await generateChatImage({
           fullPrompt,
@@ -260,47 +260,49 @@ export class ChatCoordinator {
     const tokenStreamingEnabled = useSettingsStore.getState().tokenStreamingEnabled;
 
     return withPhaseTransitionGate(async (abortSignal) => {
-      if (!tokenStreamingEnabled) {
+      return useTurnMachineStore.getState().doWithState('character_speaking', async () => {
+        if (!tokenStreamingEnabled) {
+          const response = await chatCompletion(prompts, {
+            promptTemplateGroup: 'gen_npc_response',
+            completionRequestId,
+            promptContext,
+            abortSignal,
+          });
+
+          const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
+            completionRequestId,
+          });
+
+          await this.addCharacterMessage(speaker.id, parsedResponse, opts);
+          await this.pauseAfterNpcOnlyMessage();
+
+          return this.transcript;
+        }
+
+        const draftMessage = this.startStreamingNpcDraftMessage(speaker);
+
         const response = await chatCompletion(prompts, {
           promptTemplateGroup: 'gen_npc_response',
-          completionRequestId,
           promptContext,
+          completionRequestId,
           abortSignal,
+          onTokens: (fullText: string) => {
+            this.setTranscript(this.transcript().editLatestMessage(fullText).updatedTranscript);
+          },
         });
 
         const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
           completionRequestId,
         });
 
+        // We delete and re-add in order to trigger certain effects like memory RAG
+        this.deleteMessageById(draftMessage.id);
         await this.addCharacterMessage(speaker.id, parsedResponse, opts);
+
         await this.pauseAfterNpcOnlyMessage();
 
         return this.transcript;
-      }
-
-      const draftMessage = this.startStreamingNpcDraftMessage(speaker);
-
-      const response = await chatCompletion(prompts, {
-        promptTemplateGroup: 'gen_npc_response',
-        promptContext,
-        completionRequestId,
-        abortSignal,
-        onTokens: (fullText: string) => {
-          this.setTranscript(this.transcript().editLatestMessage(fullText).updatedTranscript);
-        },
       });
-
-      const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
-        completionRequestId,
-      });
-
-      // We delete and re-add in order to trigger certain effects like memory RAG
-      this.deleteMessageById(draftMessage.id);
-      await this.addCharacterMessage(speaker.id, parsedResponse, opts);
-
-      await this.pauseAfterNpcOnlyMessage();
-
-      return this.transcript;
     }, opts);
   }
 

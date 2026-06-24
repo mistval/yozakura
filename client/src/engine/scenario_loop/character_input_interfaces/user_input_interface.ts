@@ -2,7 +2,6 @@ import { assert, assertNonNullish } from '../../../errors/application_error';
 import { useScenarioCharacterStore } from '../../../state/scenario_character_store';
 import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_store';
 import { useSettingsStore } from '../../../state/settings_store';
-import { ChatCoordinator } from '../../chat/chat_coordinator';
 import { doWithScenarioLoopPromise, scenarioLoopPromiseCallbacks } from '../flow_control';
 import type {
   ChatInputResult,
@@ -20,8 +19,6 @@ export class UserInputInterface extends CharacterInputInterface {
   }
 
   public async getNextChatInput(): Promise<ChatInputResult> {
-    ChatCoordinator.setStateCharacterSpeaking();
-
     const input = await doWithScenarioLoopPromise<ChatUserInputAction>(async (userChatActionPromise) => {
       scenarioLoopPromiseCallbacks.userChatAction = userChatActionPromise;
       return await userChatActionPromise.promise;

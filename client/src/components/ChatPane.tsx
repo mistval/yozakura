@@ -34,7 +34,9 @@ export default function ChatPane() {
   const chatMode = useActiveChatMedium();
   const participants = useActiveChatParticipants();
   const chatState = useTurnMachineStore((state) => state.chatState);
-  const isAwaitingUserInput = useTurnMachineStore((state) => state.isChatUserTurn());
+  const isAwaitingCharacterInput = useTurnMachineStore(
+    (state) => state.chatState === 'awaiting_character_input'
+  );
   const processingMemoryStatusInfo = useTurnMachineStore((state) => state.processingMemoryStatusInfo);
   const userCharacter = useUserCharacter();
   const scenario = useScenarioStore((state) => state.activeScenario);
@@ -221,7 +223,7 @@ export default function ChatPane() {
 
   const getRunButtonTitle = () => {
     const userIsInitiator = participants[0]?.id === userCharacter.id;
-    if (userIsInitiator && isAwaitingUserInput && !transcript.hasCharacterMessages()) {
+    if (userIsInitiator && isAwaitingCharacterInput && !transcript.hasCharacterMessages()) {
       return undefined;
     }
 
@@ -313,7 +315,7 @@ export default function ChatPane() {
           <button
             type="button"
             onClick={requestEndChat}
-            disabled={!isAwaitingUserInput}
+            disabled={!isAwaitingCharacterInput}
             className="button-emphasized font-semibold"
           >
             {getEndChatButtonTitle()}
@@ -354,7 +356,7 @@ export default function ChatPane() {
                     event.stopPropagation();
                     triggerParticipantSpeak(participant.id);
                   }}
-                  disabled={!isAwaitingUserInput}
+                  disabled={!isAwaitingCharacterInput}
                   className="text-xs w-full mt-1"
                 >
                   Speak
@@ -400,20 +402,20 @@ export default function ChatPane() {
                     onChange={(event) => setEditingMessageDraft(event.target.value)}
                     rows={3}
                     className="w-full border rounded-sm p-2 bg-inset text-sm"
-                    disabled={!isAwaitingUserInput}
+                    disabled={!isAwaitingCharacterInput}
                   />
                   <div className="flex justify-end gap-2 text-xs">
                     <button
                       type="button"
                       onClick={() => setEditingMessageId(undefined)}
-                      disabled={!isAwaitingUserInput}
+                      disabled={!isAwaitingCharacterInput}
                     >
                       Cancel
                     </button>
                     <button
                       type="button"
                       onClick={saveEditingMessageEdit}
-                      disabled={!isAwaitingUserInput || !editingMessageDraft.trim()}
+                      disabled={!isAwaitingCharacterInput || !editingMessageDraft.trim()}
                     >
                       Save
                     </button>
@@ -425,7 +427,7 @@ export default function ChatPane() {
                 </>
               )}
 
-              {isAwaitingUserInput && !editingMessageId && (
+              {isAwaitingCharacterInput && !editingMessageId && (
                 <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs h-6 leading-none">
                   <button
                     type="button"
@@ -433,7 +435,7 @@ export default function ChatPane() {
                       const id = entry.getId();
                       deleteMessage(id);
                     }}
-                    disabled={!isAwaitingUserInput}
+                    disabled={!isAwaitingCharacterInput}
                     title="Delete message"
                     aria-label="Delete message"
                     className="px-1 h-5 w-5 flex items-center justify-center"
@@ -449,7 +451,7 @@ export default function ChatPane() {
                           const id = entry.getId();
                           redoMessage(id);
                         }}
-                        disabled={!isAwaitingUserInput}
+                        disabled={!isAwaitingCharacterInput}
                         title="Retry message"
                         aria-label="Retry message"
                         className="px-1 h-5 w-5 flex items-center justify-center"
@@ -466,7 +468,7 @@ export default function ChatPane() {
                         setEditingMessageId(id);
                         setEditingMessageDraft(entry.getContent());
                       }}
-                      disabled={!isAwaitingUserInput}
+                      disabled={!isAwaitingCharacterInput}
                       title="Edit message"
                       aria-label="Edit message"
                       className="px-1 h-5 w-5 flex items-center justify-center"
@@ -486,12 +488,12 @@ export default function ChatPane() {
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey && input.trim() && isAwaitingUserInput) {
+            if (event.key === 'Enter' && !event.shiftKey && input.trim() && isAwaitingCharacterInput) {
               event.preventDefault();
               send();
             }
           }}
-          disabled={!includesUser && !isAwaitingUserInput}
+          disabled={!includesUser && !isAwaitingCharacterInput}
           placeholder={includesUser ? 'Enter a message' : 'Entering a message will add the user to the chat.'}
           rows={2}
           className="flex-1"
@@ -499,7 +501,7 @@ export default function ChatPane() {
         <button
           type="button"
           onClick={send}
-          disabled={!isAwaitingUserInput || !input.trim() || !isAwaitingUserInput}
+          disabled={!isAwaitingCharacterInput || !input.trim() || !isAwaitingCharacterInput}
         >
           Send
         </button>
@@ -510,12 +512,12 @@ export default function ChatPane() {
               setUserRequestedPhaseTransition('none');
               submitChatSkipTurn();
             }}
-            disabled={!isAwaitingUserInput}
+            disabled={!isAwaitingCharacterInput}
           >
             Skip
           </button>
         )}
-        <button type="button" onClick={openImagePrompt} disabled={!isAwaitingUserInput}>
+        <button type="button" onClick={openImagePrompt} disabled={!isAwaitingCharacterInput}>
           Gen Image
         </button>
       </div>

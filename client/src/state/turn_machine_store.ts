@@ -22,6 +22,13 @@ import { useScenarioCharacterStore, useUserCharacter } from './scenario_characte
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
 import { assert, assertNonNullish } from '../errors/application_error.js';
 
+export type ChatState =
+  | 'inactive'
+  | 'generating_image'
+  | 'processing_memories'
+  | 'character_speaking'
+  | 'awaiting_character_input';
+
 export type StartChatSessionArgs = {
   participantIds: string[];
   initiatorId: string;
@@ -58,7 +65,7 @@ type BaseTurnMachineStoreState = {
   pendingTurnCharacterIds: string[];
   chatsSoFar: Record<string, { withIds: string[] }[]>;
 
-  chatState: 'inactive' | 'generating_image' | 'processing_memories' | 'character_speaking';
+  chatState: ChatState;
   processingMemoryStatusInfo: string | undefined;
   participantIds: string[];
   removedParticipantIds: string[];
@@ -72,7 +79,6 @@ type BaseTurnMachineStoreState = {
   chatInstructionsByCharacterId: Record<string, string>;
 
   isActive: () => boolean;
-  isChatUserTurn: () => boolean;
   setTranscript: (transcript: ConversationTranscript) => void;
   startNewTurn: (allCharacterIds: string[], userCharacterId: string) => void;
   currentCharacterId: () => string | undefined;
@@ -94,8 +100,9 @@ type BaseTurnMachineStoreState = {
   setChatInstructions: (instructions: string) => void;
   setCharacterChatInstructions: (characterId: string, instructions: string) => void;
   setStateProcessingMemories: (info: string) => void;
+  setStateAwaitingCharacterInput: () => void;
   setStateCharacterSpeaking: () => void;
-  doWithStateGenerationImage: <T>(action: () => Promise<T>) => Promise<T>;
+  doWithState: <T>(chatState: ChatState, action: () => Promise<T>) => Promise<T>;
   getChatCharacterLocation: (
     charId: string,
     getCharacterById?: (id: string) => Character,
@@ -105,7 +112,7 @@ type BaseTurnMachineStoreState = {
 };
 
 type ActiveChatTurnMachineStoreState = OmitFunctions<BaseTurnMachineStoreState> & {
-  chatState: 'awaiting_user_input' | 'generating_image' | 'processing_memories' | 'npc_speaking';
+  chatState: Exclude<ChatState, 'inactive'>;
   participantIds: string[];
   removedParticipantIds: string[];
   gossipTargetCharacterId: string | undefined;
@@ -326,13 +333,6 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     );
   },
 
-  isChatUserTurn() {
-    const currentId = get().currentCharacterId();
-    const userId = useScenarioCharacterStore.getState().getUserCharacter()?.id;
-
-    return Boolean(currentId && userId) && currentId === userId;
-  },
-
   beginChat(args) {
     const participants = getCharactersByIds(args.participantIds);
 
@@ -342,7 +342,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       participantIds: args.participantIds,
       initiatorId: args.initiatorId,
       gossipTargetCharacterId: args.gossipTargetCharacterId,
-      chatState: 'character_speaking',
+      chatState: 'awaiting_character_input',
       transcript: ConversationTranscript.new(),
       preConversationWardrobeSnapshotByCharacterId: Object.fromEntries(
         participants.map((p) => [p.id, p.wardrobes])
@@ -410,7 +410,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     set({
       ...base,
       ...chatFields,
-      chatState: 'character_speaking',
+      chatState: 'awaiting_character_input',
       transcript: ConversationTranscript.deserialize(serializedTranscript),
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
@@ -422,6 +422,13 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
+  setStateAwaitingCharacterInput() {
+    set({
+      chatState: 'awaiting_character_input',
+      processingMemoryStatusInfo: undefined,
+    } satisfies Partial<BaseTurnMachineStoreState>);
+  },
+
   setStateCharacterSpeaking() {
     set({
       chatState: 'character_speaking',
@@ -429,15 +436,13 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
-  async doWithStateGenerationImage<T>(action: () => Promise<T>) {
+  async doWithState<T>(chatState: ChatState, action: () => Promise<T>) {
     const toRestore = {
       chatState: get().chatState,
-      processingMemoryStatusInfo: get().processingMemoryStatusInfo,
     };
 
     set({
-      chatState: 'generating_image',
-      processingMemoryStatusInfo: undefined,
+      chatState,
     } satisfies Partial<BaseTurnMachineStoreState>);
 
     try {

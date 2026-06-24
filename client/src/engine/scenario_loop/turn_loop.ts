@@ -128,6 +128,7 @@ async function runChatLoop(): Promise<{ noEffect: boolean }> {
 
     while (true) {
       const speakerInput = makeInputInterface(nextSpeaker.id);
+      ChatCoordinator.setStateAwaitingCharacterInput();
       const { input, persist } = await speakerInput.getNextChatInput();
 
       if (input.actionType === 'skip_turn') {

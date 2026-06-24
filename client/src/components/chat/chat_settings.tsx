@@ -20,7 +20,7 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
   const chatInstructions = useTurnMachineStore((s) => s.chatInstructions);
   const userLocation = useChatUserLocation();
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
-  const canEndChat = useTurnMachineStore((state) => state.isChatUserTurn());
+  const canEndChat = useTurnMachineStore((state) => state.chatState === 'awaiting_character_input');
 
   const updateSpeakerSelectionMode = (nextMode: SpeakerSelectionMode) => {
     setSettings({ speakerSelectionMode: nextMode });
