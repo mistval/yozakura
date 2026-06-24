@@ -1,6 +1,7 @@
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
 import { useMapZoneStore } from '../../state/map_zone_store.js';
 import { getRequiredActiveScenario, getRequiredActiveScenarioMap } from '../../state/scenario_store.js';
+import { useSettingsStore } from '../../state/settings_store.js';
 import type { Character } from '../types.js';
 import {
   resolveCharacterMovementConstraint,
@@ -20,6 +21,7 @@ function getScheduleMovementInput(character: Pick<Character, 'id' | 'locationId'
     locations: map.locations,
     effectiveZones: useMapZoneStore.getState().getEffectiveZones(),
     groupSchedulesByGroupId: useCharacterGroupStore.getState().schedulesByGroupId,
+    npcChatRate: useSettingsStore.getState().npcChatRate,
   };
 }
 

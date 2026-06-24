@@ -1,11 +1,12 @@
 import { getRequiredRandomChoice } from '../../util/array.js';
-import { findNearestReachable } from '../map/graph_search.js';
+import { breadthFirstSearch, findNearestReachable } from '../map/graph_search.js';
 import { resolveZoneById } from '../map/map_zone.js';
 import type {
   Character,
   MapZone,
   MovementPolicy,
   ScenarioCharacterGroupSchedule,
+  ScheduleSegment,
   WorldMapLocation,
 } from '../types.js';
 
@@ -31,6 +32,7 @@ interface ScheduleMovementInput {
   locations: WorldMapLocation[];
   effectiveZones: MapZone[];
   groupSchedulesByGroupId: Record<string, ScenarioCharacterGroupSchedule>;
+  npcChatRate?: number | undefined;
 }
 
 const POLICY_PERMISSIVENESS: Record<MovementPolicy, number> = {
@@ -54,6 +56,34 @@ function isSegmentActive(
 ): boolean {
   const position = ((turnNumber % lengthInTurns) + lengthInTurns) % lengthInTurns;
   return position >= segment.startTurn && position < segment.endTurn;
+}
+
+function turnsUntilSegmentActive(
+  segment: { startTurn: number; endTurn: number },
+  lengthInTurns: number,
+  turnNumber: number
+): number {
+  const position = ((turnNumber % lengthInTurns) + lengthInTurns) % lengthInTurns;
+  if (position >= segment.startTurn && position < segment.endTurn) {
+    return 0;
+  }
+  return (segment.startTurn - position + lengthInTurns) % lengthInTurns;
+}
+
+function estimateTravelTurns(pathLength: number, policy: MovementPolicy, npcChatRate: number): number {
+  if (policy !== 'casual') {
+    return pathLength;
+  }
+  const moveRate = 1 - npcChatRate;
+  if (moveRate <= 0) {
+    return pathLength <= 0 ? 0 : Infinity;
+  }
+  return pathLength / moveRate;
+}
+
+function neighborLookup(locations: WorldMapLocation[]): (locationId: string) => string[] {
+  const adjacencyByLocationId = new Map(locations.map((l) => [l.id, l.adjacency] as const));
+  return (locationId) => adjacencyByLocationId.get(locationId) ?? [];
 }
 
 export function resolveForbiddenLocationIds(input: {
@@ -80,24 +110,52 @@ export function resolveForbiddenLocationIds(input: {
   return forbidden;
 }
 
-// Return locations the character is scheduled to be in
-// along with a policy for how to move to each location
 export function resolveScheduledLocations(
   input: {
-    character: Pick<Character, 'groupIds'>;
+    character: Pick<Character, 'groupIds'> & { locationId?: string | undefined };
     turnNumber: number;
     groupSchedulesByGroupId: Record<string, ScenarioCharacterGroupSchedule>;
     effectiveZones: MapZone[];
+    locations?: WorldMapLocation[] | undefined;
+    npcChatRate?: number | undefined;
   },
   random?: () => number
 ): {
   scheduledLocations: Set<string>;
   policyByLocationId: Map<string, MovementPolicy>;
   reasonByLocationId: Map<string, string>;
+  forbidden: Set<string>;
 } {
   const scheduledLocations = new Set<string>();
   const policyByLocationId = new Map<string, MovementPolicy>();
   const reasonByLocationId = new Map<string, string>();
+  const forbidden = resolveForbiddenLocationIds(input);
+
+  const addZone = (segment: ScheduleSegment) => {
+    if (random && random() >= segment.obedienceRate) {
+      return;
+    }
+
+    const zone = resolveZoneById(segment.zoneId, input.effectiveZones);
+    if (!zone) {
+      return;
+    }
+
+    for (const locationId of zone.locationIds) {
+      scheduledLocations.add(locationId);
+      policyByLocationId.set(
+        locationId,
+        mostUrgentPolicy(policyByLocationId.get(locationId), segment.movementPolicy)
+      );
+
+      if (segment.reason && !reasonByLocationId.has(locationId)) {
+        reasonByLocationId.set(locationId, segment.reason);
+      }
+    }
+  };
+
+  let anyActiveNow = false;
+  const upcoming: { segment: ScheduleSegment; lengthInTurns: number }[] = [];
 
   for (const groupId of input.character.groupIds) {
     const schedule = input.groupSchedulesByGroupId[groupId];
@@ -106,38 +164,55 @@ export function resolveScheduledLocations(
     }
 
     for (const segment of schedule.segments) {
-      const activeNow = isSegmentActive(segment, schedule.lengthInTurns, input.turnNumber);
-      const activeNextTurn = isSegmentActive(segment, schedule.lengthInTurns, input.turnNumber + 1);
-      const active = segment.movementPolicy === 'teleport' ? activeNow : activeNow || activeNextTurn;
-      if (!active) {
-        continue;
-      }
-
-      if (random && random() >= segment.obedienceRate) {
-        continue;
-      }
-
-      const zone = resolveZoneById(segment.zoneId, input.effectiveZones);
-      if (!zone) {
-        // TODO: Warning log
-        continue;
-      }
-
-      for (const locationId of zone.locationIds) {
-        scheduledLocations.add(locationId);
-        policyByLocationId.set(
-          locationId,
-          mostUrgentPolicy(policyByLocationId.get(locationId), segment.movementPolicy)
-        );
-
-        if (segment.reason && !reasonByLocationId.has(locationId)) {
-          reasonByLocationId.set(locationId, segment.reason);
+      if (isSegmentActive(segment, schedule.lengthInTurns, input.turnNumber)) {
+        anyActiveNow = true;
+        addZone(segment);
+      } else if (segment.movementPolicy === 'jump') {
+        if (isSegmentActive(segment, schedule.lengthInTurns, input.turnNumber + 1)) {
+          addZone(segment);
         }
+      } else if (segment.movementPolicy === 'rush' || segment.movementPolicy === 'casual') {
+        upcoming.push({ segment, lengthInTurns: schedule.lengthInTurns });
       }
     }
   }
 
-  return { scheduledLocations, policyByLocationId, reasonByLocationId };
+  if (!anyActiveNow && upcoming.length > 0 && input.locations && input.character.locationId !== undefined) {
+    const { distance } = breadthFirstSearch(input.character.locationId, neighborLookup(input.locations), {
+      canEnter: (locationId) => !forbidden.has(locationId),
+    });
+    const chatRate = input.npcChatRate ?? 0;
+
+    for (const { segment, lengthInTurns } of upcoming) {
+      const zone = resolveZoneById(segment.zoneId, input.effectiveZones);
+      if (!zone) {
+        continue;
+      }
+
+      let pathLength = Infinity;
+      for (const locationId of zone.locationIds) {
+        const hops = distance.get(locationId);
+        if (hops !== undefined && hops < pathLength) {
+          pathLength = hops;
+        }
+      }
+      if (!Number.isFinite(pathLength)) {
+        continue;
+      }
+
+      const turnsUntilActive = turnsUntilSegmentActive(segment, lengthInTurns, input.turnNumber);
+      if (estimateTravelTurns(pathLength, segment.movementPolicy, chatRate) >= turnsUntilActive) {
+        addZone(segment);
+      }
+    }
+  }
+
+  for (const locationId of forbidden) {
+    scheduledLocations.delete(locationId);
+    policyByLocationId.delete(locationId);
+  }
+
+  return { scheduledLocations, policyByLocationId, reasonByLocationId, forbidden };
 }
 
 function warpTargetsFrom(
@@ -155,17 +230,9 @@ export function resolveScheduledMove(
   choose: <T>(items: T[]) => T = getRequiredRandomChoice,
   random: () => number = Math.random
 ): ScheduledMove {
-  const forbidden = resolveForbiddenLocationIds(input);
-  const { scheduledLocations, policyByLocationId } = resolveScheduledLocations(input, random);
+  const { scheduledLocations, policyByLocationId, forbidden } = resolveScheduledLocations(input, random);
 
-  for (const locationId of forbidden) {
-    scheduledLocations.delete(locationId);
-    policyByLocationId.delete(locationId);
-  }
-
-  const adjacencyByLocationId = new Map(input.locations.map((l) => [l.id, l.adjacency] as const));
-  const getNeighbors = (locationId: string) => adjacencyByLocationId.get(locationId) ?? [];
-
+  const getNeighbors = neighborLookup(input.locations);
   const current = input.character.locationId;
   const currentAdjacency = getNeighbors(current);
 
@@ -184,8 +251,6 @@ export function resolveScheduledMove(
     return { forceMove: false, destinationLocationId: choose(candidates), consumesTurn: true };
   }
 
-  // Teleport and jump ignore connectivity and distance entirely: the character may
-  // warp to any scheduled location with that policy, even one in a disconnected zone.
   const warpTargets = warpTargetsFrom(scheduledLocations, policyByLocationId);
   if (warpTargets.length > 0) {
     const target = choose(warpTargets);
@@ -206,24 +271,14 @@ export function resolveScheduledMove(
 
   const target = choose(targets);
   const policy = policyByLocationId.get(target)!;
-
-  const firstSteps = firstStepsToward(target);
-  const firstStep = choose(firstSteps);
-  const forceMove = policy === 'rush';
-  return { forceMove, destinationLocationId: firstStep, consumesTurn: true };
+  const firstStep = choose(firstStepsToward(target));
+  return { forceMove: policy === 'rush', destinationLocationId: firstStep, consumesTurn: true };
 }
 
 export function resolveUserMovementSuggestion(
   input: ScheduleMovementInput
 ): UserMovementSuggestion | undefined {
-  const forbidden = resolveForbiddenLocationIds(input);
-  const { scheduledLocations, policyByLocationId } = resolveScheduledLocations(input);
-
-  for (const locationId of forbidden) {
-    scheduledLocations.delete(locationId);
-    policyByLocationId.delete(locationId);
-  }
-
+  const { scheduledLocations, policyByLocationId, forbidden } = resolveScheduledLocations(input);
   const forbiddenLocationIds = [...forbidden];
 
   const locksOnly = (): UserMovementSuggestion | undefined => {
@@ -243,9 +298,7 @@ export function resolveUserMovementSuggestion(
     return locksOnly();
   }
 
-  const adjacencyByLocationId = new Map(input.locations.map((l) => [l.id, l.adjacency] as const));
-  const getNeighbors = (locationId: string) => adjacencyByLocationId.get(locationId) ?? [];
-
+  const getNeighbors = neighborLookup(input.locations);
   const current = input.character.locationId;
 
   if (scheduledLocations.has(current)) {
@@ -285,7 +338,6 @@ export function resolveUserMovementSuggestion(
     }
   };
 
-  // Teleport and jump destinations are surfaced directly, even across disconnected zones
   const warpTargets = warpTargetsFrom(scheduledLocations, policyByLocationId);
   if (warpTargets.length > 0) {
     for (const target of warpTargets) {
@@ -340,13 +392,8 @@ export interface CharacterMovementConstraint {
 export function resolveCharacterMovementConstraint(
   input: ScheduleMovementInput
 ): CharacterMovementConstraint | undefined {
-  const forbidden = resolveForbiddenLocationIds(input);
-  const { scheduledLocations, policyByLocationId, reasonByLocationId } = resolveScheduledLocations(input);
-
-  for (const locationId of forbidden) {
-    scheduledLocations.delete(locationId);
-    policyByLocationId.delete(locationId);
-  }
+  const { scheduledLocations, policyByLocationId, reasonByLocationId, forbidden } =
+    resolveScheduledLocations(input);
 
   if (scheduledLocations.size === 0) {
     return undefined;
@@ -358,17 +405,13 @@ export function resolveCharacterMovementConstraint(
     return { status: 'in_designated_zone', reason: reasonByLocationId.get(current) };
   }
 
-  // A reachable warp destination takes priority
   const warpTargets = warpTargetsFrom(scheduledLocations, policyByLocationId);
   let target = warpTargets[0];
 
   if (target === undefined) {
-    const adjacencyByLocationId = new Map(input.locations.map((l) => [l.id, l.adjacency] as const));
-    const getNeighbors = (locationId: string) => adjacencyByLocationId.get(locationId) ?? [];
-
     const { targets } = findNearestReachable(
       current,
-      getNeighbors,
+      neighborLookup(input.locations),
       (locationId) => scheduledLocations.has(locationId),
       (locationId) => !forbidden.has(locationId)
     );

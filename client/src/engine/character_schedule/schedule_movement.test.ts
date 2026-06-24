@@ -356,6 +356,53 @@ describe('resolveScheduledMove', () => {
       });
     });
 
+    it('starts rushing several turns early when the zone is far', () => {
+      const farRush = (turnNumber: number) =>
+        resolveScheduledMove(
+          {
+            character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
+            turnNumber,
+            locations: LINE_LOCATIONS,
+            effectiveZones: [makeZone('zoneD', ['D'])],
+            groupSchedulesByGroupId: { g1: makeSchedule('g1', 8, [makeSegment('zoneD', 'rush', 4, 5)]) },
+          },
+          chooseFirst
+        );
+
+      // 4 turns out, a 3-hop journey: still has slack, so it waits.
+      expect(farRush(0)).toEqual({ forceMove: false, destinationLocationId: 'A', consumesTurn: true });
+      // 3 turns out, a 3-hop journey: must leave now.
+      expect(farRush(1)).toEqual({ forceMove: true, destinationLocationId: 'B', consumesTurn: true });
+    });
+
+    it('factors NPC chat rate into the casual head start', () => {
+      const casualLookahead = (npcChatRate: number) =>
+        resolveScheduledMove(
+          {
+            character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
+            turnNumber: 0,
+            locations: LINE_LOCATIONS,
+            effectiveZones: [makeZone('zoneD', ['D'])],
+            groupSchedulesByGroupId: { g1: makeSchedule('g1', 8, [makeSegment('zoneD', 'casual', 5, 6)]) },
+            npcChatRate,
+          },
+          chooseFirst
+        );
+
+      // 5 turns out, 3 hops: at full speed (no chatting) there's still slack.
+      expect(casualLookahead(0)).toEqual({
+        forceMove: false,
+        destinationLocationId: 'A',
+        consumesTurn: true,
+      });
+      // Same turn, but a 50% chat rate doubles the estimate to 6 turns, so it leaves now.
+      expect(casualLookahead(0.5)).toEqual({
+        forceMove: false,
+        destinationLocationId: 'B',
+        consumesTurn: true,
+      });
+    });
+
     it('does not move early when already inside a back-to-back zone', () => {
       const result = resolveScheduledMove(
         {
