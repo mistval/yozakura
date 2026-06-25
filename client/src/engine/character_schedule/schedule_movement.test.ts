@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type {
   MapZone,
   MovementPolicy,
+  ScenarioCharacterGroup,
   ScenarioCharacterGroupSchedule,
   ScheduleSegment,
   WorldMapLocation,
@@ -42,14 +43,16 @@ function chooseLast<T>(items: T[]): T {
 function makeZone(id: string, locationIds: string[], extra: Partial<MapZone> = {}): MapZone {
   return {
     id,
-    mapId: 'map1',
     name: id,
     locationIds,
-    privateToGroupIds: [],
     createdAt: '',
     updatedAt: '',
     ...extra,
   };
+}
+
+function makeGroup(id: string, privateZones: string[]): ScenarioCharacterGroup {
+  return { id, scenarioId: 's1', name: id, privateZones, createdAt: '', updatedAt: '' };
 }
 
 function makeSegment(
@@ -86,8 +89,9 @@ describe('resolveScheduledMove', () => {
         character: { id: 'npc', locationId: 'A', groupIds: [] },
         turnNumber: 0,
         locations: LINE_LOCATIONS,
-        effectiveZones: [],
+        mapZones: [],
         groupSchedulesByGroupId: {},
+        characterGroups: [],
       },
       chooseFirst
     );
@@ -104,8 +108,9 @@ describe('resolveScheduledMove', () => {
         character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
         turnNumber: 0,
         locations: LINE_LOCATIONS,
-        effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+        mapZones: [makeZone('zoneCD', ['C', 'D'])],
         groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4)]) },
+        characterGroups: [],
       },
       chooseFirst
     );
@@ -123,8 +128,9 @@ describe('resolveScheduledMove', () => {
         character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
         turnNumber: 0,
         locations: LINE_LOCATIONS,
-        effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+        mapZones: [makeZone('zoneCD', ['C', 'D'])],
         groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'jump', 0, 4)]) },
+        characterGroups: [],
       },
       chooseFirst
     );
@@ -142,8 +148,9 @@ describe('resolveScheduledMove', () => {
         character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
         turnNumber: 0,
         locations: LINE_LOCATIONS,
-        effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+        mapZones: [makeZone('zoneCD', ['C', 'D'])],
         groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'rush', 0, 4)]) },
+        characterGroups: [],
       },
       chooseFirst
     );
@@ -161,8 +168,9 @@ describe('resolveScheduledMove', () => {
         character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
         turnNumber: 0,
         locations: LINE_LOCATIONS,
-        effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+        mapZones: [makeZone('zoneCD', ['C', 'D'])],
         groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'casual', 0, 4)]) },
+        characterGroups: [],
       },
       chooseFirst
     );
@@ -181,8 +189,9 @@ describe('resolveScheduledMove', () => {
           character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
           turnNumber: 0,
           locations: DIAMOND_LOCATIONS,
-          effectiveZones: [makeZone('zoneD', ['D'])],
+          mapZones: [makeZone('zoneD', ['D'])],
           groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneD', 'casual', 0, 4)]) },
+          characterGroups: [],
         },
         choose
       );
@@ -207,8 +216,9 @@ describe('resolveScheduledMove', () => {
         character: { id: 'npc', locationId: 'C', groupIds: ['g1'] },
         turnNumber: 0,
         locations: LINE_LOCATIONS,
-        effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+        mapZones: [makeZone('zoneCD', ['C', 'D'])],
         groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4)]) },
+        characterGroups: [],
       },
       chooseFirst
     );
@@ -227,6 +237,7 @@ describe('resolveScheduledMove', () => {
           makeSegment('zoneD', 'rush', 0, 4),
         ]),
       },
+      characterGroups: [],
     });
     expect([...allowed].sort()).toEqual(['C', 'D']);
   });
@@ -237,11 +248,12 @@ describe('resolveScheduledMove', () => {
         character: { id: 'npc', locationId: 'A', groupIds: ['g1', 'g2'] },
         turnNumber: 0,
         locations: LINE_LOCATIONS,
-        effectiveZones: [makeZone('zoneC', ['C']), makeZone('zoneD', ['D'])],
+        mapZones: [makeZone('zoneC', ['C']), makeZone('zoneD', ['D'])],
         groupSchedulesByGroupId: {
           g1: makeSchedule('g1', 4, [makeSegment('zoneD', 'teleport', 0, 4)]),
           g2: makeSchedule('g2', 4, [makeSegment('zoneC', 'rush', 0, 4)]),
         },
+        characterGroups: [],
       },
       chooseFirst
     );
@@ -258,10 +270,11 @@ describe('resolveScheduledMove', () => {
       locationId: 'A',
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [makeZone('privateD', ['D'], { privateToGroupIds: ['insiders'] })],
+      mapZones: [makeZone('privateD', ['D'])],
       groupSchedulesByGroupId: {
         sched: makeSchedule('sched', 4, [makeSegment('privateD', 'teleport', 0, 4)]),
       },
+      characterGroups: [makeGroup('insiders', ['privateD'])],
     };
 
     const nonMember = resolveScheduledMove(
@@ -294,8 +307,9 @@ describe('resolveScheduledMove', () => {
         character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
         turnNumber: 0,
         locations: [...LINE_LOCATIONS, makeLocation('Z', [])],
-        effectiveZones: [makeZone('zoneZ', ['Z'])],
+        mapZones: [makeZone('zoneZ', ['Z'])],
         groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneZ', 'teleport', 0, 4)]) },
+        characterGroups: [],
       },
       chooseFirst
     );
@@ -313,8 +327,9 @@ describe('resolveScheduledMove', () => {
         character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
         turnNumber: 0,
         locations: [...LINE_LOCATIONS, makeLocation('Z', [])],
-        effectiveZones: [makeZone('zoneZ', ['Z'])],
+        mapZones: [makeZone('zoneZ', ['Z'])],
         groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneZ', 'rush', 0, 4)]) },
+        characterGroups: [],
       },
       chooseFirst
     );
@@ -327,10 +342,11 @@ describe('resolveScheduledMove', () => {
       character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      mapZones: [makeZone('zoneCD', ['C', 'D'])],
       groupSchedulesByGroupId: {
         g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4, undefined, 0.5)]),
       },
+      characterGroups: [],
     };
 
     const disobeyed = resolveScheduledMove(input, chooseFirst, () => 0.9);
@@ -353,8 +369,9 @@ describe('resolveScheduledMove', () => {
           character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
           turnNumber,
           locations: LINE_LOCATIONS,
-          effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+          mapZones: [makeZone('zoneCD', ['C', 'D'])],
           groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 2)]) },
+          characterGroups: [],
         },
         chooseFirst
       );
@@ -373,10 +390,11 @@ describe('resolveScheduledMove', () => {
       character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 3,
       locations: LINE_LOCATIONS,
-      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      mapZones: [makeZone('zoneCD', ['C', 'D'])],
       groupSchedulesByGroupId: {
         g1: makeSchedule('g1', 4, [makeSegment('zoneCD', movementPolicy, 0, 2)]),
       },
+      characterGroups: [],
     });
 
     it('does not start early for teleport (no headstart)', () => {
@@ -412,8 +430,9 @@ describe('resolveScheduledMove', () => {
             character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
             turnNumber,
             locations: LINE_LOCATIONS,
-            effectiveZones: [makeZone('zoneD', ['D'])],
+            mapZones: [makeZone('zoneD', ['D'])],
             groupSchedulesByGroupId: { g1: makeSchedule('g1', 8, [makeSegment('zoneD', 'rush', 4, 5)]) },
+            characterGroups: [],
           },
           chooseFirst
         );
@@ -436,8 +455,9 @@ describe('resolveScheduledMove', () => {
             character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
             turnNumber: 0,
             locations: LINE_LOCATIONS,
-            effectiveZones: [makeZone('zoneD', ['D'])],
+            mapZones: [makeZone('zoneD', ['D'])],
             groupSchedulesByGroupId: { g1: makeSchedule('g1', 8, [makeSegment('zoneD', 'casual', 5, 6)]) },
+            characterGroups: [],
             npcChatRate,
           },
           chooseFirst
@@ -464,13 +484,14 @@ describe('resolveScheduledMove', () => {
           character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
           turnNumber: 1,
           locations: LINE_LOCATIONS,
-          effectiveZones: [makeZone('zoneAB', ['A', 'B']), makeZone('zoneCD', ['C', 'D'])],
+          mapZones: [makeZone('zoneAB', ['A', 'B']), makeZone('zoneCD', ['C', 'D'])],
           groupSchedulesByGroupId: {
             g1: makeSchedule('g1', 4, [
               makeSegment('zoneAB', 'teleport', 0, 2),
               makeSegment('zoneCD', 'teleport', 2, 4),
             ]),
           },
+          characterGroups: [],
         },
         chooseFirst
       );
@@ -486,8 +507,9 @@ describe('resolveUserMovementSuggestion', () => {
       character: { id: 'user', locationId: 'A', groupIds: [] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [],
+      mapZones: [],
       groupSchedulesByGroupId: {},
+      characterGroups: [],
     });
     expect(result).toBeUndefined();
   });
@@ -497,8 +519,9 @@ describe('resolveUserMovementSuggestion', () => {
       character: { id: 'user', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      mapZones: [makeZone('zoneCD', ['C', 'D'])],
       groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4)]) },
+      characterGroups: [],
     });
     expect(result).toEqual({
       suggestedLocationIds: ['C', 'D'],
@@ -514,8 +537,9 @@ describe('resolveUserMovementSuggestion', () => {
       character: { id: 'user', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      mapZones: [makeZone('zoneCD', ['C', 'D'])],
       groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'rush', 0, 4)]) },
+      characterGroups: [],
     });
     expect(result).toEqual({
       suggestedLocationIds: ['B'],
@@ -531,8 +555,9 @@ describe('resolveUserMovementSuggestion', () => {
       character: { id: 'user', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      mapZones: [makeZone('zoneCD', ['C', 'D'])],
       groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'casual', 0, 4)]) },
+      characterGroups: [],
     });
     expect(result).toEqual({
       suggestedLocationIds: ['B'],
@@ -548,8 +573,9 @@ describe('resolveUserMovementSuggestion', () => {
       character: { id: 'user', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
       locations: DIAMOND_LOCATIONS,
-      effectiveZones: [makeZone('zoneD', ['D'])],
+      mapZones: [makeZone('zoneD', ['D'])],
       groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneD', 'casual', 0, 4)]) },
+      characterGroups: [],
     });
     expect(result).toEqual({
       suggestedLocationIds: ['B', 'C'],
@@ -565,8 +591,9 @@ describe('resolveUserMovementSuggestion', () => {
       character: { id: 'user', locationId: 'C', groupIds: ['g1'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      mapZones: [makeZone('zoneCD', ['C', 'D'])],
       groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4)]) },
+      characterGroups: [],
     });
     expect(result).toEqual({
       suggestedLocationIds: [],
@@ -582,8 +609,9 @@ describe('resolveUserMovementSuggestion', () => {
       character: { id: 'user', locationId: 'A', groupIds: [] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [makeZone('privateC', ['C'], { privateToGroupIds: ['insiders'] })],
+      mapZones: [makeZone('privateC', ['C'])],
       groupSchedulesByGroupId: {},
+      characterGroups: [makeGroup('insiders', ['privateC'])],
     });
     expect(result).toEqual({
       suggestedLocationIds: [],
@@ -599,11 +627,9 @@ describe('resolveUserMovementSuggestion', () => {
       character: { id: 'user', locationId: 'A', groupIds: ['sched'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [
-        makeZone('zoneD', ['D']),
-        makeZone('privateC', ['C'], { privateToGroupIds: ['insiders'] }),
-      ],
+      mapZones: [makeZone('zoneD', ['D']), makeZone('privateC', ['C'])],
       groupSchedulesByGroupId: { sched: makeSchedule('sched', 4, [makeSegment('zoneD', 'teleport', 0, 4)]) },
+      characterGroups: [makeGroup('insiders', ['privateC'])],
     });
     expect(result).toEqual({
       suggestedLocationIds: ['D'],
@@ -619,11 +645,9 @@ describe('resolveUserMovementSuggestion', () => {
       character: { id: 'user', locationId: 'A', groupIds: ['sched'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [
-        makeZone('zoneD', ['D']),
-        makeZone('privateC', ['C'], { privateToGroupIds: ['insiders'] }),
-      ],
+      mapZones: [makeZone('zoneD', ['D']), makeZone('privateC', ['C'])],
       groupSchedulesByGroupId: { sched: makeSchedule('sched', 4, [makeSegment('zoneD', 'rush', 0, 4)]) },
+      characterGroups: [makeGroup('insiders', ['privateC'])],
     });
     expect(result).toEqual({
       suggestedLocationIds: [],
@@ -645,11 +669,12 @@ describe('resolveUserMovementSuggestion', () => {
       character: { id: 'user', locationId: 'A', groupIds: ['rushers', 'wanderers'] },
       turnNumber: 0,
       locations: branch,
-      effectiveZones: [makeZone('zoneB', ['B']), makeZone('zoneC', ['C'])],
+      mapZones: [makeZone('zoneB', ['B']), makeZone('zoneC', ['C'])],
       groupSchedulesByGroupId: {
         rushers: makeSchedule('rushers', 4, [makeSegment('zoneB', 'rush', 0, 4)]),
         wanderers: makeSchedule('wanderers', 4, [makeSegment('zoneC', 'casual', 0, 4)]),
       },
+      characterGroups: [],
     });
     expect(result).toEqual({
       suggestedLocationIds: ['X'],
@@ -667,8 +692,9 @@ describe('resolveCharacterMovementConstraint', () => {
       character: { id: 'npc', locationId: 'A', groupIds: [] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [],
+      mapZones: [],
       groupSchedulesByGroupId: {},
+      characterGroups: [],
     });
     expect(result).toBeUndefined();
   });
@@ -678,10 +704,11 @@ describe('resolveCharacterMovementConstraint', () => {
       character: { id: 'npc', locationId: 'C', groupIds: ['g1'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      mapZones: [makeZone('zoneCD', ['C', 'D'])],
       groupSchedulesByGroupId: {
         g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4, 'she works the night shift')]),
       },
+      characterGroups: [],
     });
     expect(result).toEqual({ status: 'in_designated_zone', reason: 'she works the night shift' });
   });
@@ -691,8 +718,9 @@ describe('resolveCharacterMovementConstraint', () => {
       character: { id: 'npc', locationId: 'C', groupIds: ['g1'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      mapZones: [makeZone('zoneCD', ['C', 'D'])],
       groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'teleport', 0, 4)]) },
+      characterGroups: [],
     });
     expect(result).toEqual({ status: 'in_designated_zone', reason: undefined });
   });
@@ -702,10 +730,11 @@ describe('resolveCharacterMovementConstraint', () => {
       character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
       locations: LINE_LOCATIONS,
-      effectiveZones: [makeZone('zoneCD', ['C', 'D'])],
+      mapZones: [makeZone('zoneCD', ['C', 'D'])],
       groupSchedulesByGroupId: {
         g1: makeSchedule('g1', 4, [makeSegment('zoneCD', 'rush', 0, 4, 'her shift starts soon')]),
       },
+      characterGroups: [],
     });
     expect(result).toEqual({
       status: 'moving_towards_designated_zone',
@@ -719,8 +748,9 @@ describe('resolveCharacterMovementConstraint', () => {
       character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
       locations: [...LINE_LOCATIONS, makeLocation('Z', [])],
-      effectiveZones: [makeZone('zoneZ', ['Z'])],
+      mapZones: [makeZone('zoneZ', ['Z'])],
       groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneZ', 'rush', 0, 4, 'r')]) },
+      characterGroups: [],
     });
     expect(result).toBeUndefined();
   });
@@ -730,8 +760,9 @@ describe('resolveCharacterMovementConstraint', () => {
       character: { id: 'npc', locationId: 'A', groupIds: ['g1'] },
       turnNumber: 0,
       locations: [...LINE_LOCATIONS, makeLocation('Z', [])],
-      effectiveZones: [makeZone('zoneZ', ['Z'])],
+      mapZones: [makeZone('zoneZ', ['Z'])],
       groupSchedulesByGroupId: { g1: makeSchedule('g1', 4, [makeSegment('zoneZ', 'teleport', 0, 4, 'r')]) },
+      characterGroups: [],
     });
     expect(result).toEqual({
       status: 'moving_towards_designated_zone',
