@@ -83,6 +83,7 @@ type BaseTurnMachineStoreState = {
   setTranscript: (transcript: ConversationTranscript) => void;
   startNewTurn: (allCharacterIds: string[], userCharacterId: string) => void;
   currentCharacterId: () => string | undefined;
+  currentCharacterIsUser: () => boolean;
   finishCurrentCharacter: () => boolean;
   setTurnMachineState: (turnMachineState: TurnMachineState) => void;
   recordChat: (initiatorId: string, withIds: string[]) => void;
@@ -292,6 +293,11 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
 
   currentCharacterId() {
     return get().pendingTurnCharacterIds[0];
+  },
+
+  currentCharacterIsUser() {
+    const currentId = get().currentCharacterId();
+    return currentId === useScenarioStore.getState().activeScenario?.userCharacterId;
   },
 
   setCurrentCharacter(characterId: string) {
