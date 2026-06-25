@@ -15,7 +15,7 @@ import { CharacterInputInterface } from './character_input_interface';
 
 export class UserInputInterface extends CharacterInputInterface {
   public async getNextTurnMove(): Promise<TurnMoveResult> {
-    return { move: await this.resolveTurnMove(), persist: true };
+    return { move: await this.resolveTurnMove() };
   }
 
   public async getNextChatInput(): Promise<ChatInputResult> {
@@ -24,7 +24,7 @@ export class UserInputInterface extends CharacterInputInterface {
       return await userChatActionPromise.promise;
     });
 
-    return { input, persist: true };
+    return { input };
   }
 
   public continuesAfterMove(move: TurnMove, outcome: TurnMoveOutcome): boolean {

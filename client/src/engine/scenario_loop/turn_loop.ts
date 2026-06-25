@@ -72,11 +72,11 @@ async function runTurnLoopTick() {
     };
 
     const outcome = await runChatLoop();
-    advanceAfterMove(inputInterface, chatMove, outcome, true);
+    advanceAfterMove(inputInterface, chatMove, outcome);
     return;
   }
 
-  const { move, persist } = await inputInterface.getNextTurnMove();
+  const { move } = await inputInterface.getNextTurnMove();
 
   if (move.actionType === 'chat' && move.rich) {
     const chatStart = await doScenarioLoopAsyncAction(() =>
@@ -88,15 +88,10 @@ async function runTurnLoopTick() {
   }
 
   const outcome = await applySimpleTurnMove(characterId, move);
-  advanceAfterMove(inputInterface, move, outcome, persist);
+  advanceAfterMove(inputInterface, move, outcome);
 }
 
-function advanceAfterMove(
-  inputInterface: CharacterInputInterface,
-  move: TurnMove,
-  outcome: TurnMoveOutcome,
-  persist: boolean
-) {
+function advanceAfterMove(inputInterface: CharacterInputInterface, move: TurnMove, outcome: TurnMoveOutcome) {
   const store = useTurnMachineStore.getState();
 
   let turnEnded = false;
@@ -110,9 +105,7 @@ function advanceAfterMove(
     incrementTurnNumber();
   }
 
-  if (persist || turnEnded) {
-    persistTurn();
-  }
+  persistTurn();
 }
 
 async function runChatLoop(): Promise<{ noEffect: boolean }> {
@@ -131,7 +124,7 @@ async function runChatLoop(): Promise<{ noEffect: boolean }> {
     while (true) {
       const speakerInput = makeInputInterface(nextSpeaker.id);
       ChatCoordinator.setStateAwaitingCharacterInput();
-      const { input, persist } = await speakerInput.getNextChatInput();
+      const { input } = await speakerInput.getNextChatInput();
 
       if (input.actionType === 'skip_turn') {
         nextSpeaker = await doScenarioLoopAsyncAction(() =>
@@ -165,9 +158,7 @@ async function runChatLoop(): Promise<{ noEffect: boolean }> {
         assert(false, 'Unknown chat input action');
       }
 
-      if (persist) {
-        persistTurn();
-      }
+      persistTurn();
     }
   } catch (err) {
     await closeChatSession(true);

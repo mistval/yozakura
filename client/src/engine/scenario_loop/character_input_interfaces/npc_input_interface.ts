@@ -62,7 +62,6 @@ export class NPCInputInterface extends CharacterInputInterface {
                 forceRichInteraction: true,
               }
             ),
-            persist: false,
           };
         }
       }
@@ -71,7 +70,6 @@ export class NPCInputInterface extends CharacterInputInterface {
     if (scheduledMove.forceMove) {
       return {
         move: { actionType: 'move', ...scheduledMove },
-        persist: false,
       };
     }
 
@@ -126,17 +124,16 @@ export class NPCInputInterface extends CharacterInputInterface {
         );
         return {
           move: this.buildChatMove(npc, chatCandidates, directedRelationships, maxOtherParticipants),
-          persist: false,
         };
       }
     }
 
-    return { move: { actionType: 'move', ...scheduledMove }, persist: false };
+    return { move: { actionType: 'move', ...scheduledMove } };
   }
 
   public async getNextChatInput(): Promise<ChatInputResult> {
     if (ChatCoordinator.isChatMessageLimitReached()) {
-      return { input: { actionType: 'request_end_chat' }, persist: false };
+      return { input: { actionType: 'request_end_chat' } };
     }
 
     // While paused, the only way an NPC is the next speaker is because the user explicitly chose
@@ -146,7 +143,7 @@ export class NPCInputInterface extends CharacterInputInterface {
       ChatCoordinator.speakAsNpc(this.characterId, { isUserInteraction })
     );
 
-    return { input: { actionType: 'spoke' }, persist: true };
+    return { input: { actionType: 'spoke' } };
   }
 
   public continuesAfterMove(move: TurnMove): boolean {
