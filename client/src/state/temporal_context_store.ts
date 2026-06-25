@@ -20,17 +20,24 @@ import {
 import { useScenarioStore } from './scenario_store.js';
 import { runWithInteractiveRetry } from '../engine/interative_retry.js';
 import type { Scenario } from '../engine/types.js';
+import type { OmitFunctions } from '../util/types.js';
 
 type TemporalContextStoreState = {
   displayHtml: string;
   plainText: string;
   dayIndex: number | undefined;
+  lastComputedTurn: number;
   compute: (scenario: Scenario) => Promise<TemporalContext | undefined>;
-  computeAndSet: () => Promise<TemporalContextStoreState>;
+  computeAndSet: (opts?: { forceRecompute?: boolean }) => Promise<TemporalContextStoreState>;
   reset: () => void;
 };
 
-const EMPTY = { displayHtml: '', plainText: '', dayIndex: undefined };
+const EMPTY: OmitFunctions<TemporalContextStoreState> = {
+  displayHtml: '',
+  plainText: '',
+  dayIndex: undefined,
+  lastComputedTurn: -1,
+};
 
 export const useTemporalContextStore = create<TemporalContextStoreState>((set, get) => ({
   ...EMPTY,
@@ -72,10 +79,15 @@ export const useTemporalContextStore = create<TemporalContextStoreState>((set, g
     });
   },
 
-  computeAndSet: async () => {
+  computeAndSet: async (options: { forceRecompute?: boolean } = {}) => {
     const scenario = useScenarioStore.getState().activeScenario;
     if (!scenario) {
       set(EMPTY);
+      return get();
+    }
+
+    const turn = scenario.turnNumber;
+    if (turn === get().lastComputedTurn && !options.forceRecompute) {
       return get();
     }
 
@@ -86,7 +98,13 @@ export const useTemporalContextStore = create<TemporalContextStoreState>((set, g
       return get();
     }
 
-    set({ displayHtml: result.displayHtml, plainText: result.plainText, dayIndex: result.dayIndex });
+    set({
+      displayHtml: result.displayHtml,
+      plainText: result.plainText,
+      dayIndex: result.dayIndex,
+      lastComputedTurn: turn,
+    });
+
     return get();
   },
 }));

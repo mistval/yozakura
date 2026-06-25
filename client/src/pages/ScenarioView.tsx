@@ -40,7 +40,6 @@ export default function ScenarioView() {
   const zones = useMapZoneStore((state) => state.zones);
   const schedulesByGroupId = useCharacterGroupStore((state) => state.schedulesByGroupId);
   const temporalDisplayHtml = useTemporalContextStore((state) => state.displayHtml);
-  const recomputeTemporalContext = useTemporalContextStore((state) => state.computeAndSet);
   const { showCharacterOverview } = useCharacterOverview();
   const { showConversationLog } = useConversationLog();
   const { showMap } = useMapModal();
@@ -82,12 +81,6 @@ export default function ScenarioView() {
       void startScenarioLoop();
     }
   }, [scenario?.id]);
-
-  useEffect(() => {
-    if (scenario) {
-      void recomputeTemporalContext();
-    }
-  }, [scenario?.id, scenario?.turnNumber, recomputeTemporalContext]);
 
   useEffect(() => {
     if (!scenario) {

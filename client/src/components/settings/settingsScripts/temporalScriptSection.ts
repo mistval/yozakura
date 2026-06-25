@@ -33,15 +33,15 @@ export function useTemporalScriptSelection(): ScriptSelection {
     controlValues: temporalSection?.controlValues[selectedScriptId] ?? {},
     onSelectScript: (id) => {
       setTemporalSelectedScriptId(id);
-      void recompute();
+      void recompute({ forceRecompute: true });
     },
     onSetControlValue: (controlId, value) => {
       setTemporalControlValue(selectedScriptId, controlId, value);
-      void recompute();
+      void recompute({ forceRecompute: true });
     },
     onResetControlValues: () => {
       resetTemporalControlValues(selectedScriptId);
-      void recompute();
+      void recompute({ forceRecompute: true });
     },
   };
 }

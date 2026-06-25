@@ -54,8 +54,9 @@ export async function runTurnLoop() {
 async function runTurnLoopTick() {
   const { turnMachineState, currentCharacterId, startNewTurn } = useTurnMachineStore.getState();
 
+  await recomputeTemporalContextAndAutoselectWardrobes();
+
   if (turnMachineState === undefined) {
-    await recomputeTemporalContextAndAutoselectWardrobes();
     startNewTurn(getTurnCharacterIds(), getRequiredUserCharacterId());
   }
 
