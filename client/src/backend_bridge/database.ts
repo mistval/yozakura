@@ -7,20 +7,18 @@ import {
   scenarioSchema,
   worldMapSchema,
   scenarioCharacterGroupSchema,
-  mapZoneSchema,
   scenarioCharacterGroupScheduleSchema,
-  movementLogEntrySchema,
+  scenarioEventSchema,
   type CharacterPair,
   type Character,
   type CharacterRelationship,
   type StoredConversation,
-  type MovementLogEntry,
+  type ScenarioEvent,
   type Scenario,
   type WorldMap,
   type RootPersistedObject,
   type ScenarioSummary,
   type ScenarioCharacterGroup,
-  type MapZone,
   type ScenarioCharacterGroupSchedule,
 } from '../engine/types.js';
 import { assert } from '../errors/application_error';
@@ -37,9 +35,8 @@ const TABLE_CONVERSATION_PARTICIPANT = 'conversation_participant';
 const TABLE_MAP = 'map';
 const TABLE_KEY_VALUE = 'key_value';
 const TABLE_SCENARIO_CHARACTER_GROUP = 'scenario_character_group';
-const TABLE_MAP_ZONE = 'map_zone';
 const TABLE_SCENARIO_CHARACTER_GROUP_SCHEDULE = 'scenario_character_group_schedule';
-const TABLE_MOVEMENT_LOG = 'movement_log';
+const TABLE_SCENARIO_EVENT_LOG = 'scenario_event_log';
 
 function buildSqlPlaceholders(count: number): string {
   return Array(count).fill('?').join(', ');
@@ -212,19 +209,20 @@ const SELECT_CONVERSATION_BY_ID_SQL = `
   LIMIT 1
 `;
 
-const UPSERT_MOVEMENT_LOG_SQL = `
-  INSERT INTO ${TABLE_MOVEMENT_LOG} (id, scenario_id, data, created_at, updated_at)
-  VALUES (?, ?, ?, ${sqlDatetimeNow()}, ${sqlDatetimeNow()})
+const UPSERT_SCENARIO_EVENT_SQL = `
+  INSERT INTO ${TABLE_SCENARIO_EVENT_LOG} (id, scenario_id, event_type, data, created_at, updated_at)
+  VALUES (?, ?, ?, ?, ${sqlDatetimeNow()}, ${sqlDatetimeNow()})
   ON CONFLICT(id)
   DO UPDATE SET
     data = excluded.data,
     scenario_id = excluded.scenario_id,
+    event_type = excluded.event_type,
     updated_at = ${sqlDatetimeNow()}
 `;
 
-const SELECT_MOVEMENT_LOG_PAGE_SQL = `
+const SELECT_SCENARIO_EVENT_PAGE_SQL = `
   SELECT *
-  FROM ${TABLE_MOVEMENT_LOG}
+  FROM ${TABLE_SCENARIO_EVENT_LOG}
   WHERE scenario_id = ?
   ORDER BY rowid DESC
   LIMIT ? OFFSET ?
@@ -291,8 +289,8 @@ type ConversationPageResult = {
   hasNextPage: boolean;
 };
 
-export type MovementLogPageResult = {
-  entries: MovementLogEntry[];
+export type ScenarioEventPageResult = {
+  entries: ScenarioEvent[];
   page: number;
   hasPreviousPage: boolean;
   hasNextPage: boolean;
@@ -652,26 +650,26 @@ export async function storeConversation(scenarioId: string, entry: StoredConvers
   ]);
 }
 
-export async function storeMovementLogEntry(scenarioId: string, entry: MovementLogEntry) {
-  const parsedEntry = movementLogEntrySchema.parse(entry);
-  await dbRun(UPSERT_MOVEMENT_LOG_SQL, [
-    [parsedEntry.id, scenarioId, encodeStoredData(parsedEntry, movementLogEntrySchema)],
+export async function storeScenarioEvent(scenarioId: string, event: ScenarioEvent) {
+  const parsedEvent = scenarioEventSchema.parse(event);
+  await dbRun(UPSERT_SCENARIO_EVENT_SQL, [
+    [parsedEvent.id, scenarioId, parsedEvent.eventType, encodeStoredData(parsedEvent, scenarioEventSchema)],
   ]);
 }
 
-export async function loadMovementLogPage(
+export async function loadScenarioEventPage(
   scenarioId: string,
   page: number,
   pageSize: number = 100
-): Promise<MovementLogPageResult> {
+): Promise<ScenarioEventPageResult> {
   const coercedPage = coerceToPositiveInteger(page, 1);
   const coercedPageSize = coerceToPositiveInteger(pageSize, 100);
   const offset = (coercedPage - 1) * coercedPageSize;
 
   const entries = await selectDataRows(
-    SELECT_MOVEMENT_LOG_PAGE_SQL,
+    SELECT_SCENARIO_EVENT_PAGE_SQL,
     [[scenarioId, coercedPageSize + 1, offset]],
-    movementLogEntrySchema
+    scenarioEventSchema
   );
 
   return {
@@ -792,44 +790,6 @@ const DELETE_SCENARIO_CHARACTER_GROUP_SQL = `
   WHERE id = ?
 `;
 
-const UPSERT_MAP_ZONE_SQL = `
-  INSERT INTO ${TABLE_MAP_ZONE} (id, map_id, scenario_id, parent_zone_id, data, created_at, updated_at)
-  SELECT
-    json_extract(value, '$[0]'),
-    json_extract(value, '$[1]'),
-    json_extract(value, '$[2]'),
-    json_extract(value, '$[3]'),
-    json_extract(value, '$[4]'),
-    ${sqlDatetimeNow()},
-    ${sqlDatetimeNow()}
-  FROM json_each(?)
-  WHERE TRUE
-  ON CONFLICT(id)
-  DO UPDATE SET
-    map_id = excluded.map_id,
-    scenario_id = excluded.scenario_id,
-    parent_zone_id = excluded.parent_zone_id,
-    data = excluded.data,
-    updated_at = ${sqlDatetimeNow()}
-`;
-
-const SELECT_GLOBAL_MAP_ZONES_SQL = `
-  SELECT *
-  FROM ${TABLE_MAP_ZONE}
-  WHERE map_id = ? AND scenario_id IS NULL
-`;
-
-const SELECT_SCENARIO_MAP_ZONES_SQL = `
-  SELECT *
-  FROM ${TABLE_MAP_ZONE}
-  WHERE scenario_id = ?
-`;
-
-const DELETE_MAP_ZONE_SQL = `
-  DELETE FROM ${TABLE_MAP_ZONE}
-  WHERE id = ?
-`;
-
 const UPSERT_GROUP_SCHEDULE_SQL = `
   INSERT INTO ${TABLE_SCENARIO_CHARACTER_GROUP_SCHEDULE} (id, scenario_id, group_id, data, created_at, updated_at)
   VALUES (?, ?, ?, ?, ${sqlDatetimeNow()}, ${sqlDatetimeNow()})
@@ -871,35 +831,6 @@ export async function loadScenarioCharacterGroups(scenarioId: string) {
 
 export async function deleteScenarioCharacterGroup(id: string) {
   await dbRun(DELETE_SCENARIO_CHARACTER_GROUP_SQL, [[id]]);
-}
-
-export async function storeMapZones(zones: MapZone[]) {
-  if (zones.length === 0) return;
-  await dbRun(UPSERT_MAP_ZONE_SQL, [
-    [
-      JSON.stringify(
-        zones.map((zone) => [
-          zone.id,
-          zone.mapId,
-          zone.scenarioId ?? null,
-          zone.parentZoneId ?? null,
-          encodeStoredData(zone, mapZoneSchema),
-        ])
-      ),
-    ],
-  ]);
-}
-
-export async function loadGlobalMapZones(mapId: string) {
-  return selectDataRows(SELECT_GLOBAL_MAP_ZONES_SQL, [[mapId]], mapZoneSchema);
-}
-
-export async function loadScenarioMapZones(scenarioId: string) {
-  return selectDataRows(SELECT_SCENARIO_MAP_ZONES_SQL, [[scenarioId]], mapZoneSchema);
-}
-
-export async function deleteMapZone(id: string) {
-  await dbRun(DELETE_MAP_ZONE_SQL, [[id]]);
 }
 
 export async function storeGroupSchedule(schedule: ScenarioCharacterGroupSchedule) {

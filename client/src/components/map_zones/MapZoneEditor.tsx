@@ -1,86 +1,151 @@
+import * as Database from '../../backend_bridge/database.js';
 import { useMemo, useState } from 'react';
 import { GraphCanvas } from 'reagraph';
 import { useGraphTheme } from '../../theme/graph_themes.js';
-import type { MapZone, ScenarioCharacterGroup, WorldMapLocation } from '../../engine/types.js';
+import type { MapZone, WorldMap } from '../../engine/types.js';
 import DeleteButton from '../ui/DeleteButton.js';
 import InfoTooltip from './../ui/InfoTooltip';
+import { useCharacterGroupStore } from '../../state/character_group_store.js';
+import {
+  concatUniqueById,
+  findById,
+  findRequiredById,
+  removeById,
+  removeByIdentity,
+} from '../../util/array.js';
+import { assertNonNullish } from '../../errors/application_error.js';
 
-export type ZoneEdits = Partial<Pick<MapZone, 'name' | 'locationIds' | 'privateToGroupIds'>>;
-
-export type ZoneEditorController = {
-  zones: MapZone[];
-  groups: ScenarioCharacterGroup[];
-  ready: boolean;
-  allowPrivate: boolean;
-  allowResync: boolean;
-  mapClasses?: string[];
-  createZone: (name: string) => MapZone;
-  editZone: (zoneId: string, changes: ZoneEdits) => string;
-  deleteZone: (zoneId: string) => void;
-  resyncZone?: (zoneId: string, direction: 'push' | 'discard') => string;
-};
+export type ZoneEdits = Partial<Pick<MapZone, 'name' | 'locationIds'>>;
 
 const MEMBER_FILL = '#22c55e';
 
+function editZone(zones: MapZone[], zoneUpdate: Partial<MapZone> & Pick<MapZone, 'id'>) {
+  const targetZone = findRequiredById(zones, zoneUpdate.id);
+  return concatUniqueById(zones, {
+    ...targetZone,
+    ...zoneUpdate,
+  });
+}
+
 export default function MapZoneEditor({
-  locations,
-  controller,
+  isGlobalContext,
+  map,
+  updateMap,
+  mapClasses = [],
 }: {
-  locations: WorldMapLocation[];
-  controller: ZoneEditorController;
+  isGlobalContext: boolean;
+  map: WorldMap;
+  updateMap: (mutator: (prev: WorldMap) => WorldMap) => void;
+  mapClasses?: string[];
 }) {
   const graphTheme = useGraphTheme();
   const [selectedZoneId, setSelectedZoneId] = useState<string | undefined>(undefined);
-
-  const selectedZone = controller.zones.find((zone) => zone.id === selectedZoneId);
-  const memberSet = useMemo(() => new Set(selectedZone?.locationIds ?? []), [selectedZone]);
+  const groups = useCharacterGroupStore((s) => s.groups);
+  const selectedZone = findById(map.zones, selectedZoneId ?? '');
+  const zoneMembers = selectedZone?.locationIds ?? [];
 
   const toggleZoneSelection = (zoneId: string) => {
     setSelectedZoneId((current) => (current === zoneId ? undefined : zoneId));
   };
 
   const graph = useMemo(() => {
-    const nodes = locations.map((location) => ({
+    const nodes = map.locations.map((location) => ({
       id: location.id,
-      label: location.name || 'Untitled',
-      ...(memberSet.has(location.id) ? { fill: MEMBER_FILL } : {}),
+      label: location.name,
+      ...(zoneMembers.includes(location.id) ? { fill: MEMBER_FILL } : {}),
     }));
-    const edges = locations.flatMap((location) =>
+
+    const edges = map.locations.flatMap((location) =>
       location.adjacency.map((targetId) => ({
         id: `${location.id}->${targetId}`,
         source: location.id,
         target: targetId,
       }))
     );
-    return { nodes, edges };
-  }, [locations, memberSet]);
 
-  const toggleMembership = (locationId: string) => {
-    if (!selectedZone) {
-      return;
-    }
-    const nextLocationIds = memberSet.has(locationId)
-      ? selectedZone.locationIds.filter((id) => id !== locationId)
-      : selectedZone.locationIds.concat(locationId);
-    setSelectedZoneId(controller.editZone(selectedZone.id, { locationIds: nextLocationIds }));
+    return { nodes, edges };
+  }, [map.locations, zoneMembers]);
+
+  const privateZoneSet = useMemo(() => {
+    return new Set(groups.flatMap((g) => g.privateZones));
+  }, [groups]);
+
+  const toggleLocationMembership = (locationId: string) => {
+    assertNonNullish(selectedZone, 'No selected zone');
+
+    updateMap((prev) => {
+      const editTarget = findRequiredById(prev.zones, selectedZone.id);
+      const nextLocationIds = editTarget.locationIds.includes(locationId)
+        ? removeByIdentity(editTarget.locationIds, locationId)
+        : editTarget.locationIds.concat(locationId);
+
+      return {
+        ...prev,
+        zones: editZone(prev.zones, { id: selectedZone.id, locationIds: nextLocationIds }),
+      };
+    });
+  };
+
+  const addZone = () => {
+    const newZone = Database.createPersistedObject({
+      name: 'New Zone',
+      locationIds: [],
+    });
+
+    updateMap((prev) => {
+      const newZones = prev.zones.concat(newZone);
+
+      return {
+        ...prev,
+        zones: newZones,
+      };
+    });
+
+    setSelectedZoneId(newZone.id);
+  };
+
+  const changeZoneName = (newName: string) => {
+    assertNonNullish(selectedZone, 'No selected zone');
+
+    updateMap((prev) => {
+      const editTarget = findRequiredById(prev.zones, selectedZone.id);
+
+      return {
+        ...prev,
+        zones: editZone(prev.zones, {
+          id: editTarget.id,
+          name: newName,
+        }),
+      };
+    });
+  };
+
+  const deleteZone = () => {
+    assertNonNullish(selectedZone, 'No selected zone');
+    setSelectedZoneId(undefined);
+
+    updateMap((prev) => {
+      return {
+        ...prev,
+        zones: removeById(prev.zones, selectedZone.id),
+      };
+    });
   };
 
   const togglePrivateGroup = (groupId: string) => {
     if (!selectedZone) {
       return;
     }
-    const current = selectedZone.privateToGroupIds;
-    const next = current.includes(groupId) ? current.filter((id) => id !== groupId) : current.concat(groupId);
-    setSelectedZoneId(controller.editZone(selectedZone.id, { privateToGroupIds: next }));
-  };
 
-  const isOverride = Boolean(selectedZone?.parentZoneId);
+    // TODO: Should clean up the private zone array on scenario characters lazily sometime
+    useCharacterGroupStore.getState().togglePrivateMapZone(groupId, selectedZone.id);
+  };
 
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex shrink-0 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {controller.zones.map((zone) => (
+          {map.zones.map((zone) => (
             <button
               key={zone.id}
               type="button"
@@ -88,17 +153,13 @@ export default function MapZoneEditor({
               onClick={() => toggleZoneSelection(zone.id)}
             >
               {zone.name || 'Untitled Zone'}
-              {zone.privateToGroupIds.length > 0 ? ' 🔒' : ''}
+              {privateZoneSet.has(zone.id) ? ' 🔒' : ''}
             </button>
           ))}
-          <button type="button" onClick={() => setSelectedZoneId(controller.createZone('New Zone').id)}>
+          <button type="button" onClick={addZone}>
             + Add Zone
           </button>
         </div>
-
-        {!controller.ready && controller.zones.length === 0 && (
-          <div className="text-sm text-muted">Loading zones…</div>
-        )}
 
         {selectedZone && (
           <div className="bordered-section space-y-3">
@@ -111,9 +172,7 @@ export default function MapZoneEditor({
                   id="zone-name"
                   className="w-full border rounded-sm px-3 py-2 bg-inset"
                   value={selectedZone.name}
-                  onChange={(event) =>
-                    setSelectedZoneId(controller.editZone(selectedZone.id, { name: event.target.value }))
-                  }
+                  onChange={(event) => changeZoneName(event.target.value)}
                   placeholder="Zone name"
                 />
                 <DeleteButton
@@ -121,39 +180,12 @@ export default function MapZoneEditor({
                   confirmTitle="Delete Zone"
                   confirmLabel="Delete Zone"
                   confirmMessage={`Delete zone "${selectedZone.name || 'Untitled Zone'}"? Any schedule segments that use it will be removed.`}
-                  onConfirm={() => {
-                    controller.deleteZone(selectedZone.id);
-                    setSelectedZoneId(controller.zones.find((zone) => zone.id !== selectedZone.id)?.id);
-                  }}
+                  onConfirm={deleteZone}
                 />
               </div>
             </div>
 
-            {controller.allowResync && isOverride && (
-              <div className="space-y-2 rounded-sm border border-border-default bg-inset p-2 text-sm">
-                <div className="text-muted">This zone overrides a global map zone for this scenario.</div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelectedZoneId(controller.resyncZone?.(selectedZone.id, 'push') ?? undefined)
-                    }
-                  >
-                    Apply to global map
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSelectedZoneId(controller.resyncZone?.(selectedZone.id, 'discard') ?? undefined)
-                    }
-                  >
-                    Revert to global
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {controller.allowPrivate && (
+            {!isGlobalContext && (
               <div className="space-y-1">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="text-sm font-medium">Private to groups</div>
@@ -162,16 +194,16 @@ export default function MapZoneEditor({
                     html="If any groups are selected here, only members of these groups will be allowed to enter this zone (even if other groups have schedules that want them to be here)."
                   />
                 </div>
-                {controller.groups.length === 0 ? (
+                {groups.length === 0 ? (
                   <div className="text-sm text-muted">No character groups yet.</div>
                 ) : (
                   <div className="flex flex-wrap items-center gap-2">
-                    {controller.groups.map((group) => (
+                    {groups.map((group) => (
                       <label key={group.id} className="flex items-center gap-2 text-sm">
                         <input
                           type="checkbox"
                           className="h-4 w-4 rounded-sm border-border-accent accent-focus-ring"
-                          checked={selectedZone.privateToGroupIds.includes(group.id)}
+                          checked={group.privateZones.includes(selectedZone.id)}
                           onChange={() => togglePrivateGroup(group.id)}
                         />
                         <span>{group.name || 'Untitled Group'}</span>
@@ -192,7 +224,7 @@ export default function MapZoneEditor({
       )}
 
       <div
-        className={`relative min-w-0 flex-1 overflow-hidden rounded-sm border border-border-default bg-inset ${controller.mapClasses?.join(' ') ?? ''}`}
+        className={`relative min-w-0 flex-1 overflow-hidden rounded-sm border border-border-default bg-inset ${mapClasses.join(' ')}`}
       >
         {graph.nodes.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-muted">
@@ -204,7 +236,7 @@ export default function MapZoneEditor({
             edges={graph.edges}
             theme={graphTheme}
             actives={selectedZone?.locationIds ?? []}
-            onNodeClick={(node) => toggleMembership(node.id)}
+            onNodeClick={(node) => toggleLocationMembership(node.id)}
           />
         )}
       </div>

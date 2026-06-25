@@ -188,10 +188,18 @@ export const ephemeralLocationSchema = worldMapLocationSchema.extend({
 
 export type EphemeralLocation = z.infer<typeof ephemeralLocationSchema>;
 
+export const mapZoneSchema = basePersistedObjectSchema.extend({
+  name: z.string(),
+  locationIds: z.array(z.string()),
+});
+
+export type MapZone = z.infer<typeof mapZoneSchema>;
+
 export const worldMapSchema = basePersistedObjectSchema.extend({
   name: z.string(),
   description: z.string(),
   locations: z.array(worldMapLocationSchema),
+  zones: z.array(mapZoneSchema),
 });
 
 export type WorldMap = z.infer<typeof worldMapSchema>;
@@ -234,20 +242,10 @@ export type MovementPolicy = z.infer<typeof movementPolicySchema>;
 export const scenarioCharacterGroupSchema = basePersistedObjectSchema.extend({
   scenarioId: z.string(),
   name: z.string(),
+  privateZones: z.array(z.string()),
 });
 
 export type ScenarioCharacterGroup = z.infer<typeof scenarioCharacterGroupSchema>;
-
-export const mapZoneSchema = basePersistedObjectSchema.extend({
-  mapId: z.string(),
-  scenarioId: z.string().optional(),
-  parentZoneId: z.string().optional(),
-  name: z.string(),
-  locationIds: z.array(z.string()),
-  privateToGroupIds: z.array(z.string()),
-});
-
-export type MapZone = z.infer<typeof mapZoneSchema>;
 
 export const scheduleSegmentSchema = z.object({
   id: z.string(),
@@ -444,7 +442,8 @@ export const storedConversationSchema = basePersistedObjectSchema.extend({
 
 export type StoredConversation = z.infer<typeof storedConversationSchema>;
 
-export const movementLogEntrySchema = basePersistedObjectSchema.extend({
+export const scenarioMovementEventSchema = basePersistedObjectSchema.extend({
+  eventType: z.literal('movement'),
   turnNumber: z.number(),
   characterId: z.string(),
   characterName: z.string(),
@@ -453,4 +452,8 @@ export const movementLogEntrySchema = basePersistedObjectSchema.extend({
   toLocationName: z.string(),
 });
 
-export type MovementLogEntry = z.infer<typeof movementLogEntrySchema>;
+export type ScenarioMovementEvent = z.infer<typeof scenarioMovementEventSchema>;
+
+export const scenarioEventSchema = z.discriminatedUnion('eventType', [scenarioMovementEventSchema]);
+
+export type ScenarioEvent = z.infer<typeof scenarioEventSchema>;

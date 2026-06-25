@@ -19,7 +19,6 @@ import { useScenarioStore } from '../state/scenario_store.js';
 import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from '../state/scenario_character_relationship_store.js';
-import { useMapZoneStore } from '../state/map_zone_store.js';
 import { useCharacterGroupStore } from '../state/character_group_store.js';
 import { useTemporalContextStore } from '../state/temporal_context_store.js';
 import { getUserMovementSuggestion } from '../engine/character_schedule/get_scheduled_move';
@@ -37,7 +36,6 @@ export default function ScenarioView() {
   const getCharacterRelationships = useScenarioCharacterRelationshipStore(
     (state) => state.getCharacterRelationships
   );
-  const zones = useMapZoneStore((state) => state.zones);
   const schedulesByGroupId = useCharacterGroupStore((state) => state.schedulesByGroupId);
   const temporalDisplayHtml = useTemporalContextStore((state) => state.displayHtml);
   const { showCharacterOverview } = useCharacterOverview();
@@ -199,7 +197,7 @@ export default function ScenarioView() {
       .map((id) => locationById[id])
       .filter((entry): entry is WorldMapLocation => Boolean(entry));
     return { ...raw, suggestedLocations };
-  }, [canSubmitUserTurn, user, activeMap, scenario?.turnNumber, zones, schedulesByGroupId, locationById]);
+  }, [canSubmitUserTurn, user, activeMap, scenario?.turnNumber, schedulesByGroupId, locationById]);
 
   const addCharacterToActiveChat = (npcId: string) => {
     if (!hasActiveChatSession || !scenario) {

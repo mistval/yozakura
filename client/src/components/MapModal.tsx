@@ -7,14 +7,12 @@ import { useGraphTheme } from '../theme/graph_themes.js';
 import type { Character } from '../engine/types.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import { useScenarioCharacterStore, useUserCharacter } from '../state/scenario_character_store.js';
-import { useMapZoneStore } from '../state/map_zone_store.js';
-import { useCharacterGroupStore } from '../state/character_group_store.js';
 import * as Database from '../backend_bridge/database.js';
-import { getEffectiveZones } from '../engine/map/map_zone.js';
-import type { MovementLogEntry, MovementPolicy } from '../engine/types.js';
+import type { ScenarioEvent, MovementPolicy } from '../engine/types.js';
 import { useCharacterOverview } from './character_overview/CharacterOverviewContext.js';
 import { useMapModal } from './MapModalContext.js';
-import MapZoneEditor, { type ZoneEditorController } from './map_zones/MapZoneEditor.js';
+import MapZoneEditor from './map_zones/MapZoneEditor.js';
+import { useMapStore } from '../state/map_store.js';
 
 const MOVEMENT_VERB: Record<MovementPolicy, string> = {
   teleport: 'teleported',
@@ -58,12 +56,10 @@ function CharacterAvatar({
 
 export default function MapModal() {
   const { closeMap, open } = useMapModal();
+  const updateMap = useMapStore((s) => s.updateMap);
   const map = useScenarioStore((state) => state.activeScenarioMap);
   const scenario = useScenarioStore((state) => state.activeScenario);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
-  const zones = useMapZoneStore((state) => state.zones);
-  const zonesAreLoaded = useMapZoneStore((state) => state.zonesAreLoaded);
-  const groups = useCharacterGroupStore((state) => state.groups);
   const user = useUserCharacter();
   const graphTheme = useGraphTheme();
   const { showCharacterOverview } = useCharacterOverview();
@@ -79,7 +75,7 @@ export default function MapModal() {
     setViewParam(next === 'characters' ? undefined : next);
 
   const [logPage, setLogPage] = useState(1);
-  const [logEntries, setLogEntries] = useState<MovementLogEntry[]>([]);
+  const [logEntries, setLogEntries] = useState<ScenarioEvent[]>([]);
   const [logHasNextPage, setLogHasNextPage] = useState(false);
   const [logLoading, setLogLoading] = useState(false);
 
@@ -103,8 +99,8 @@ export default function MapModal() {
     void (async () => {
       try {
         const result = await Database.doAsDataRead(
-          () => Database.loadMovementLogPage(scenario.id, logPage),
-          'movement_log'
+          () => Database.loadScenarioEventPage(scenario.id, logPage),
+          'scenario_event_log'
         );
         if (!cancelled) {
           setLogEntries(result.entries);
@@ -121,28 +117,6 @@ export default function MapModal() {
       cancelled = true;
     };
   }, [view, scenario?.id, logPage, open]);
-
-  const zoneController: ZoneEditorController = useMemo(
-    () => ({
-      zones: scenario ? getEffectiveZones(scenario.id, scenario.mapId, zones) : [],
-      groups,
-      ready: zonesAreLoaded,
-      allowPrivate: true,
-      allowResync: true,
-      createZone: (name) => useMapZoneStore.getState().createScenarioZone(scenario!.mapId, name),
-      editZone: (zoneId, changes) => useMapZoneStore.getState().editScenarioZone(zoneId, changes).id,
-      deleteZone: (zoneId) => {
-        useCharacterGroupStore.getState().removeZoneFromAllSchedules(zoneId);
-        useMapZoneStore.getState().deleteZone(zoneId);
-      },
-      resyncZone: (zoneId, direction) => {
-        const parentId = useMapZoneStore.getState().zones.find((z) => z.id === zoneId)?.parentZoneId;
-        useMapZoneStore.getState().resyncZone(zoneId, direction);
-        return parentId ?? zoneId;
-      },
-    }),
-    [scenario, zones, zonesAreLoaded, groups]
-  );
 
   // Characters grouped by location, ordered to match the map's location list.
   // Only locations that actually contain characters are shown.
@@ -253,7 +227,13 @@ export default function MapModal() {
 
       {view === 'zones' && (
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {map && <MapZoneEditor locations={map.locations} controller={zoneController} />}
+          {map && (
+            <MapZoneEditor
+              map={map}
+              isGlobalContext={false}
+              updateMap={(mutator) => updateMap(map.id, mutator)}
+            />
+          )}
         </div>
       )}
 

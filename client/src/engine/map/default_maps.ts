@@ -6,6 +6,7 @@ export const DEFAULT_WORLD_MAPS: WorldMap[] = [
     name: 'Paradise Island',
     description:
       'A tropical island resort connected to a colorful nearby town, with beaches, jungle trails, and lively nightlife.',
+    zones: [],
     locations: [
       {
         id: 'f563580ad4a9429191c267b58b4e0af2',
@@ -162,6 +163,7 @@ export const DEFAULT_WORLD_MAPS: WorldMap[] = [
     id: 'c42275869d6b4af4af9652c589a088a5',
     name: 'Yozakura University',
     description: 'A large, lively university campus with diverse social and academic spaces.',
+    zones: [],
     locations: [
       {
         id: '41de8d5f137b43c59f11782fff65d1e7',
@@ -281,6 +283,7 @@ export const DEFAULT_WORLD_MAPS: WorldMap[] = [
     name: 'Oyacho Agawase',
     description:
       'A small seaside village in Japan, blending working harbor life, quiet lanes, and hillside views.',
+    zones: [],
     locations: [
       {
         id: 'e605db2bc36f40cfa0adf0249952e9fa',
@@ -426,6 +429,7 @@ export const DEFAULT_WORLD_MAPS: WorldMap[] = [
     name: 'Kingdoms',
     description:
       'Two neighboring but politically divided realms: the Kingdom of Caldris, a wealthy river-coast power of guilds and scholars, and the Kingdom of Thornvale, a rugged highland realm of knightly houses and old rites.',
+    zones: [],
     locations: [
       {
         id: 'df2c350879cf465fb88d185ff6beb5df',

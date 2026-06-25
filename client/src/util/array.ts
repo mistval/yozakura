@@ -65,3 +65,21 @@ export function concatUniqueById<TElementType extends { id: string }>(
     })
     .concat(found ? [] : newElement);
 }
+
+export function removeById<TElementType extends { id: string }>(arr: TElementType[], id: string) {
+  return arr.filter((e) => e.id !== id);
+}
+
+export function removeByIdentity<TElementType>(arr: TElementType[], el: TElementType) {
+  return arr.filter((e) => e !== el);
+}
+
+export function findById<TElementType extends { id: string }>(arr: TElementType[], id: string) {
+  return arr.find((e) => e.id === id);
+}
+
+export function findRequiredById<TElementType extends { id: string }>(arr: TElementType[], id: string) {
+  const found = findById(arr, id);
+  assertNonNullish(found, 'element not found');
+  return found;
+}

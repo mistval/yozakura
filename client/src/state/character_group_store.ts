@@ -2,10 +2,10 @@ import { create } from 'zustand';
 import * as Database from '../backend_bridge/database.js';
 import type { ScenarioCharacterGroup, ScenarioCharacterGroupSchedule } from '../engine/types.js';
 import { assert } from '../errors/application_error.js';
-import { concatUniqueById } from '../util/array.js';
+import { concatUniqueById, removeById } from '../util/array.js';
 import { getRequiredActiveScenario, useScenarioStore } from './scenario_store.js';
 import { useScenarioCharacterStore } from './scenario_character_store.js';
-import { useMapZoneStore } from './map_zone_store.js';
+import _ from 'lodash';
 
 const DATABASE_OBJECT_NAME = 'scenario_character_group';
 const SCHEDULE_DATABASE_OBJECT_NAME = 'scenario_character_group_schedule';
@@ -16,6 +16,7 @@ type CharacterGroupStoreState = {
   groupsAreLoaded: boolean;
 
   loadGroups: () => Promise<void>;
+  saveGroup: (group: ScenarioCharacterGroup) => void;
   createGroup: (name: string) => ScenarioCharacterGroup;
   renameGroup: (groupId: string, name: string) => void;
   deleteGroup: (groupId: string) => void;
@@ -24,6 +25,7 @@ type CharacterGroupStoreState = {
   saveSchedule: (schedule: ScenarioCharacterGroupSchedule) => void;
   ensureSchedule: (groupId: string) => ScenarioCharacterGroupSchedule;
   removeZoneFromAllSchedules: (zoneId: string) => void;
+  togglePrivateMapZone: (groupId: string, mapId: string) => void;
 };
 
 const DEFAULT_SCHEDULE_LENGTH_IN_TURNS = 56;
@@ -57,20 +59,13 @@ export const useCharacterGroupStore = create<CharacterGroupStoreState>((set, get
 
   createGroup: (name) => {
     const scenarioId = getRequiredActiveScenario().id;
-    const group = Database.createPersistedObject({ scenarioId, name });
+    const group: ScenarioCharacterGroup = Database.createPersistedObject({
+      scenarioId,
+      name,
+      privateZones: [],
+    });
 
-    set({ groups: get().groups.concat(group) });
-
-    void Database.doAsDataWrite(
-      async () => {
-        const latest = get().groups.find((g) => g.id === group.id);
-        if (latest) {
-          await Database.storeScenarioCharacterGroups([latest]);
-        }
-      },
-      DATABASE_OBJECT_NAME,
-      { debouncerKey: group.id }
-    );
+    get().saveGroup(group);
 
     return group;
   },
@@ -80,24 +75,13 @@ export const useCharacterGroupStore = create<CharacterGroupStoreState>((set, get
     assert(group, 'renameGroup called for unknown group');
 
     const updated = { ...group, name };
-    set({ groups: concatUniqueById(get().groups, updated) });
-
-    void Database.doAsDataWrite(
-      async () => {
-        const latest = get().groups.find((g) => g.id === groupId);
-        if (latest) {
-          await Database.storeScenarioCharacterGroups([latest]);
-        }
-      },
-      DATABASE_OBJECT_NAME,
-      { debouncerKey: groupId }
-    );
+    get().saveGroup(updated);
   },
 
   deleteGroup: (groupId) => {
     const { [groupId]: _removed, ...remainingSchedules } = get().schedulesByGroupId;
     set({
-      groups: get().groups.filter((g) => g.id !== groupId),
+      groups: removeById(get().groups, groupId),
       schedulesByGroupId: remainingSchedules,
     });
 
@@ -105,9 +89,8 @@ export const useCharacterGroupStore = create<CharacterGroupStoreState>((set, get
     const updatedCharacters = characterStore.scenarioCharacters
       .filter((c) => c.groupIds.includes(groupId))
       .map((c) => ({ ...c, groupIds: c.groupIds.filter((id) => id !== groupId) }));
-    characterStore.saveScenarioCharacters(updatedCharacters);
 
-    useMapZoneStore.getState().removeGroupFromAllZones(groupId);
+    characterStore.saveScenarioCharacters(updatedCharacters);
 
     void Database.doAsDataWrite(async () => {
       await Database.deleteScenarioCharacterGroup(groupId);
@@ -168,6 +151,34 @@ export const useCharacterGroupStore = create<CharacterGroupStoreState>((set, get
         segments: schedule.segments.filter((segment) => segment.zoneId !== zoneId),
       });
     }
+  },
+
+  togglePrivateMapZone: (groupId, zoneId) => {
+    const group = get().groups.find((g) => g.id === groupId);
+    assert(group, 'renameGroup called for unknown group');
+
+    const isPrivate = group.privateZones.includes(zoneId);
+    const newPrivateZones = isPrivate
+      ? _.without(group.privateZones, zoneId)
+      : group.privateZones.concat(zoneId);
+
+    const updated: ScenarioCharacterGroup = { ...group, privateZones: newPrivateZones };
+    get().saveGroup(updated);
+  },
+
+  saveGroup: (group) => {
+    set({ groups: concatUniqueById(get().groups, group) });
+
+    void Database.doAsDataWrite(
+      async () => {
+        const latest = get().groups.find((g) => g.id === group.id);
+        if (latest) {
+          await Database.storeScenarioCharacterGroups([latest]);
+        }
+      },
+      DATABASE_OBJECT_NAME,
+      { debouncerKey: group.id }
+    );
   },
 }));
 

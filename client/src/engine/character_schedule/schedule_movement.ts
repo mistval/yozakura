@@ -1,10 +1,10 @@
-import { getRequiredRandomChoice } from '../../util/array.js';
+import { findById, getRequiredRandomChoice } from '../../util/array.js';
 import { breadthFirstSearch, findNearestReachable } from '../map/graph_search.js';
-import { resolveZoneById } from '../map/map_zone.js';
 import type {
   Character,
   MapZone,
   MovementPolicy,
+  ScenarioCharacterGroup,
   ScenarioCharacterGroupSchedule,
   ScheduleSegment,
   WorldMapLocation,
@@ -31,8 +31,9 @@ interface ScheduleMovementInput {
   character: Pick<Character, 'id' | 'locationId' | 'groupIds'>;
   turnNumber: number;
   locations: WorldMapLocation[];
-  effectiveZones: MapZone[];
+  mapZones: MapZone[];
   groupSchedulesByGroupId: Record<string, ScenarioCharacterGroupSchedule>;
+  characterGroups: ScenarioCharacterGroup[];
   npcChatRate?: number | undefined;
 }
 
@@ -89,16 +90,24 @@ function neighborLookup(locations: WorldMapLocation[]): (locationId: string) => 
 
 export function resolveForbiddenLocationIds(input: {
   character: Pick<Character, 'groupIds'>;
-  effectiveZones: MapZone[];
+  characterGroups: ScenarioCharacterGroup[];
+  mapZones: MapZone[];
 }): Set<string> {
   const forbidden = new Set<string>();
+  const groupsForPrivateZone = new Map<string, string[]>();
+  for (const group of input.characterGroups) {
+    for (const zoneId of group.privateZones) {
+      groupsForPrivateZone.set(zoneId, (groupsForPrivateZone.get(zoneId) ?? []).concat(group.id));
+    }
+  }
 
-  for (const zone of input.effectiveZones) {
-    if (zone.privateToGroupIds.length === 0) {
+  for (const zone of input.mapZones) {
+    const allowedGroups = groupsForPrivateZone.get(zone.id);
+    if (!allowedGroups) {
       continue;
     }
 
-    const isMember = zone.privateToGroupIds.some((groupId) => input.character.groupIds.includes(groupId));
+    const isMember = allowedGroups.some((groupId) => input.character.groupIds.includes(groupId));
     if (isMember) {
       continue;
     }
@@ -116,7 +125,8 @@ export function resolveScheduledLocations(
     character: Pick<Character, 'groupIds'> & { locationId?: string | undefined };
     turnNumber: number;
     groupSchedulesByGroupId: Record<string, ScenarioCharacterGroupSchedule>;
-    effectiveZones: MapZone[];
+    mapZones: MapZone[];
+    characterGroups: ScenarioCharacterGroup[];
     locations?: WorldMapLocation[] | undefined;
     npcChatRate?: number | undefined;
   },
@@ -137,7 +147,7 @@ export function resolveScheduledLocations(
       return;
     }
 
-    const zone = resolveZoneById(segment.zoneId, input.effectiveZones);
+    const zone = findById(input.mapZones, segment.zoneId);
     if (!zone) {
       return;
     }
@@ -185,7 +195,7 @@ export function resolveScheduledLocations(
     const chatRate = input.npcChatRate ?? 0;
 
     for (const { segment, lengthInTurns } of upcoming) {
-      const zone = resolveZoneById(segment.zoneId, input.effectiveZones);
+      const zone = findById(input.mapZones, segment.zoneId);
       if (!zone) {
         continue;
       }

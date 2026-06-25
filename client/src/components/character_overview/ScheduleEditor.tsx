@@ -2,13 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import {
   movementPolicySchema,
-  type MapZone,
   type ScenarioCharacterGroupSchedule,
   type ScheduleSegment,
 } from '../../engine/types.js';
-import { getEffectiveZones } from '../../engine/map/map_zone.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
-import { useMapZoneStore } from '../../state/map_zone_store.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import InfoTooltip from './../ui/InfoTooltip';
 import { newId } from '../../util/id.js';
@@ -60,13 +57,8 @@ function assignLanes(segments: ScheduleSegment[]): {
 
 export default function ScheduleEditor({ groupId }: { groupId: string }) {
   const storedSchedule = useCharacterGroupStore((state) => state.schedulesByGroupId[groupId]);
-  const zones = useMapZoneStore((state) => state.zones);
+  const map = useScenarioStore((s) => s.activeScenarioMap);
   const scenario = useScenarioStore((state) => state.activeScenario);
-
-  const effectiveZones: MapZone[] = useMemo(
-    () => (scenario ? getEffectiveZones(scenario.id, scenario.mapId, zones) : []),
-    [scenario, zones]
-  );
 
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | undefined>(undefined);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | undefined>(undefined);
@@ -74,6 +66,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const lengthInTurns = storedSchedule?.lengthInTurns ?? 56;
+  const zones = map?.zones ?? [];
   const segments = storedSchedule?.segments ?? [];
   const turnNumber = scenario?.turnNumber ?? 0;
   const nowTurn = ((turnNumber % lengthInTurns) + lengthInTurns) % lengthInTurns;
@@ -139,7 +132,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
       id: newId(),
       startTurn,
       endTurn: Math.min(lengthInTurns, startTurn + 1),
-      zoneId: effectiveZones[0]?.id ?? '',
+      zoneId: zones[0]?.id ?? '',
       movementPolicy: 'teleport',
       obedienceRate: 1,
     };
@@ -179,10 +172,10 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
             }
           />
         </div>
-        <button type="button" onClick={() => addSegment()} disabled={effectiveZones.length === 0}>
+        <button type="button" onClick={() => addSegment()} disabled={zones.length === 0}>
           ➕ Add Schedule Segment
         </button>
-        {effectiveZones.length === 0 && (
+        {zones.length === 0 && (
           <span className="text-sm text-muted">Create a map zone first (Map → Zones).</span>
         )}
       </div>
@@ -199,7 +192,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
             className="relative"
             style={{ width: `${contentWidth}px`, height: `${contentHeight}px` }}
             onDoubleClick={(event) => {
-              if (effectiveZones.length === 0) return;
+              if (zones.length === 0) return;
               const el = scrollRef.current;
               if (!el) return;
               const rect = el.getBoundingClientRect();
@@ -221,7 +214,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
 
             {segments.map((segment, index) => {
               const lane = laneBySegmentId[segment.id] ?? 0;
-              const zoneName = effectiveZones.find((zone) => zone.id === segment.zoneId)?.name ?? 'No zone';
+              const zoneName = zones.find((zone) => zone.id === segment.zoneId)?.name ?? 'No zone';
               const isSelected = segment.id === selectedSegmentId;
               return (
                 <Rnd
@@ -313,7 +306,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
                 value={selectedSegment.zoneId}
                 onChange={(event) => updateSegment(selectedSegment.id, { zoneId: event.target.value })}
               >
-                {effectiveZones.map((zone) => (
+                {zones.map((zone) => (
                   <option key={zone.id} value={zone.id}>
                     {zone.name || 'Untitled Zone'}
                   </option>

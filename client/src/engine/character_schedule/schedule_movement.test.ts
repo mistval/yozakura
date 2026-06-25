@@ -220,7 +220,7 @@ describe('resolveScheduledMove', () => {
     const { scheduledLocations: allowed } = resolveScheduledLocations({
       character: { groupIds: ['g1'] },
       turnNumber: 0,
-      effectiveZones: [makeZone('zoneC', ['C']), makeZone('zoneD', ['D'])],
+      mapZones: [makeZone('zoneC', ['C']), makeZone('zoneD', ['D'])],
       groupSchedulesByGroupId: {
         g1: makeSchedule('g1', 4, [
           makeSegment('zoneC', 'teleport', 0, 4),

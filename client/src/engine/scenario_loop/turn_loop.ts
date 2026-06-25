@@ -248,7 +248,8 @@ function recordMovement(characterId: string, toId: string, movementPolicy: Movem
   const locationName = (locationId: string) =>
     map.locations.find((location) => location.id === locationId)?.name ?? locationId;
 
-  const entry = Database.createPersistedObject({
+  const event = Database.createPersistedObject({
+    eventType: 'movement' as const,
     turnNumber: scenario.turnNumber,
     characterId,
     characterName: `${character.firstName} ${character.lastName}`,
@@ -257,7 +258,7 @@ function recordMovement(characterId: string, toId: string, movementPolicy: Movem
     toLocationName: locationName(toId),
   });
 
-  void Database.doAsDataWrite(() => Database.storeMovementLogEntry(scenario.id, entry), 'movement_log');
+  void Database.doAsDataWrite(() => Database.storeScenarioEvent(scenario.id, event), 'scenario_event_log');
 }
 
 async function recomputeTemporalContextAndAutoselectWardrobes() {

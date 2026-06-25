@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { ApplicationError } from '../errors/application_error';
+import _ from 'lodash';
+import { omitNilValues } from '../util/types';
 
 type LlmTokenCallback = (fullText: string) => void;
 
@@ -169,18 +171,15 @@ export async function executeLlmChat(payload: Record<string, unknown>, options: 
     stream: streamingRequested,
   };
 
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (targetUrl) {
-    headers['X-Target-URL'] = targetUrl;
-  }
-  const authHeader = buildAuthHeader(authToken);
-  if (authHeader) {
-    headers['Authorization'] = authHeader;
-  }
+  const headers = omitNilValues({
+    'Content-Type': 'application/json',
+    'X-Target-URL': targetUrl,
+    Authorization: buildAuthHeader(authToken),
+  });
 
   const response = await fetch('/api/proxy/fetch', {
     method: 'POST',
-    headers,
+    headers: _.omitBy(headers, _.isNil),
     body: JSON.stringify(requestPayload),
     signal: signal ?? null,
   });
