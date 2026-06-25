@@ -79,11 +79,17 @@ const BACKFILL_TEMPORAL_CONTEXT_SQL = `
   WHERE json_extract(data, '$.temporalContext') IS NULL;
 `;
 
+const BACKFILL_MAP_ZONES_SQL = `
+  UPDATE map SET data = json_set(data, '$.zones', json('[]'))
+    WHERE json_extract(data, '$.zones') IS NULL;
+`;
+
 export const migration: Migration = {
   doMigration(db) {
     db.exec(DELETE_ACTIVE_CHAT_KEYS_SQL);
     db.exec(CREATE_SQL);
     db.exec(BACKFILL_GROUP_IDS_SQL);
     db.exec(BACKFILL_TEMPORAL_CONTEXT_SQL);
+    db.exec(BACKFILL_MAP_ZONES_SQL);
   },
 };
