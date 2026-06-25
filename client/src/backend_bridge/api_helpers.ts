@@ -179,7 +179,7 @@ export async function executeLlmChat(payload: Record<string, unknown>, options: 
 
   const response = await fetch('/api/proxy/fetch', {
     method: 'POST',
-    headers: _.omitBy(headers, _.isNil),
+    headers,
     body: JSON.stringify(requestPayload),
     signal: signal ?? null,
   });

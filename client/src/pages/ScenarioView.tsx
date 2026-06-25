@@ -44,7 +44,8 @@ export default function ScenarioView() {
   const { openSettings } = useSettingsModal();
   const activeParticipants = useActiveChatParticipants();
   const freedomOfMovement = useSettingsStore((s) => s.freedomOfMovement);
-  const hasActiveChatSession = useTurnMachineStore((state) => state.chatState !== 'inactive');
+  const activeChatState = useTurnMachineStore((state) => state.chatState);
+  const hasActiveChatSession = activeChatState !== 'inactive';
   const currentTurnCharacterId = useCurrentTurnCharacterId();
   const submitUserWait = useScenarioLoopStateStore((state) => state.submitUserWait);
   const submitUserMove = useScenarioLoopStateStore((state) => state.submitUserMove);
@@ -113,6 +114,9 @@ export default function ScenarioView() {
   const perspectiveLocationId: string | undefined = perspectiveCharacter
     ? charactersById[perspectiveCharacter.id]?.locationId
     : undefined;
+  const canAddChatParticipant =
+    activeChatState !== 'processing_memories' && (hasActiveChatSession || isUserTurn);
+
   const locationById = useMemo(
     () =>
       Object.fromEntries((activeMap?.locations || []).map((location) => [location.id, location] as const)),
@@ -332,9 +336,7 @@ export default function ScenarioView() {
                       submitUserChatAction(char.id);
                     }}
                     selected={isSelected}
-                    disabled={
-                      (!hasActiveChatSession && !canSubmitUserTurn) || char.id === scenario.userCharacterId
-                    }
+                    disabled={!canAddChatParticipant || char.id === scenario.userCharacterId}
                   />
                 );
               })}
