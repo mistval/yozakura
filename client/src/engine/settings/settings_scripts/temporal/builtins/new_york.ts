@@ -1,6 +1,9 @@
 import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
+import { resolveTemporalBasics, temporalControls, type TemporalDefaults } from '../builtin_utility.js';
 import type { TemporalContext, TemporalContextSettingsScript } from '../temporal_script_types.js';
+
+const TEMPORAL_DEFAULTS: TemporalDefaults = { tempFrac: [0.05, 0.4, 0.8, 1.0, 0.8, 0.55, 0.3, 0.12] };
 
 export const newYorkTemporalScript: TemporalContextSettingsScript = {
   id: 'nyc-weather',
@@ -20,33 +23,12 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
         { name: '°C (Celsius)', value: 'C' },
       ],
     },
+    ...temporalControls(TEMPORAL_DEFAULTS),
   ]) as SettingsScriptControlsDefinition,
 
   async getTemporalContext(controlValues, request, helpers): Promise<TemporalContext> {
-    const TURNS_PER_DAY = 8;
-    const PERIODS = ['Dawn', 'Morning', 'Midday', 'Afternoon', 'Evening', 'Dusk', 'Night', 'Midnight'];
-    // Diurnal temperature curve across the 8 periods: 0 = daily low, 1 = daily high.
-    const TEMP_FRAC = [0.05, 0.4, 0.8, 1.0, 0.8, 0.55, 0.3, 0.12];
-
-    const dayIndex = Math.floor(request.scenario.turnNumber / TURNS_PER_DAY);
-    const periodIndex = ((request.scenario.turnNumber % TURNS_PER_DAY) + TURNS_PER_DAY) % TURNS_PER_DAY;
-    const period = PERIODS[periodIndex];
-    const isDaylight = periodIndex >= 1 && periodIndex <= 4; // morning → evening
-
-    // --- Resolve the current in-world date ---
-    const start = new Date(`${controlValues.startDate ?? '2026-06-01'}T00:00:00Z`);
-    start.setUTCDate(start.getUTCDate() + dayIndex);
-    const year = start.getUTCFullYear();
-    const month = start.getUTCMonth(); // 0–11
-    const dom = start.getUTCDate();
-    const isoDate = start.toISOString().slice(0, 10);
-    const dateLabel = start.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-      timeZone: 'UTC',
-    });
+    const { period, isDaylight, dayIndex, year, month, dom, daysInMonth, isoDate, dateLabel, tempFracAtPeriod } =
+      resolveTemporalBasics(controlValues, request.scenario.turnNumber, TEMPORAL_DEFAULTS);
 
     // --- NYC (Central Park) monthly climate normals, °F + daily precip probability ---
     const MONTHLY = [
@@ -66,7 +48,6 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     const { hi: monthlyHi, lo: monthlyLo, precip: precipChance } = MONTHLY[month]!;
 
     // --- Deterministic per-month extreme-event scheduler ---
-    const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
     const monthlyEvent = (
       type: string,
       cfg: { months: number[]; chance: number; minDur: number; maxDur: number }
@@ -157,7 +138,7 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       }
     }
 
-    const tempF = Math.round(lo + (hi - lo) * TEMP_FRAC[periodIndex]!);
+    const tempF = Math.round(lo + (hi - lo) * tempFracAtPeriod);
     const useC = (controlValues.units ?? 'F') === 'C';
     const temp = `${useC ? Math.round(((tempF - 32) * 5) / 9) : tempF}${useC ? '°C' : '°F'}`;
 
