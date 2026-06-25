@@ -16,7 +16,6 @@ export function persistTurn() {
     return;
   }
 
-  const snapshot = useTurnMachineStore.getState().serialize();
   const key = turnPersistenceKey(scenario.id);
 
   void Database.doAsDataWrite(
@@ -24,6 +23,8 @@ export function persistTurn() {
       if (useScenarioStore.getState().activeScenario?.id !== scenario.id) {
         return;
       }
+
+      const snapshot = useTurnMachineStore.getState().serialize();
 
       if (snapshot === undefined) {
         await Database.deleteKeyValue(key);
