@@ -67,6 +67,10 @@ Each schedule segment has a movement policy that controls how a member gets to t
 
 When teleport or jump would land the character in a [private zone](#private-zones) they aren't allowed to enter, the warp is blocked, just like walking in would be.
 
+## Arriving on time
+
+**Rush** and **casual** characters try to start their journey early enough to reach the zone by the time they are scheduled to be there. But if you don't give them enough of a gap between schedule segments, they won't make it. For example if you schedule them to be in zone A, and then in zone B three turns later, but walking between zone A and B requires five turns, then they can't get to zone B on time.
+
 ## Obedience rate
 
 Each schedule segment has an **obedience rate**, from 0% to 100%, defaulting to 100%. It is the chance that a character actually follows the segment on any given turn.
