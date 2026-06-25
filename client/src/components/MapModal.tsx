@@ -57,7 +57,7 @@ function CharacterAvatar({
 }
 
 export default function MapModal() {
-  const { closeMap } = useMapModal();
+  const { closeMap, showMap } = useMapModal();
   const map = useScenarioStore((state) => state.activeScenarioMap);
   const scenario = useScenarioStore((state) => state.activeScenario);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
@@ -88,7 +88,7 @@ export default function MapModal() {
   }, [scenario?.id, view]);
 
   useEffect(() => {
-    if (view !== 'log' || !scenario) {
+    if (view !== 'log' || !scenario || !showMap) {
       return;
     }
 
@@ -114,7 +114,7 @@ export default function MapModal() {
     return () => {
       cancelled = true;
     };
-  }, [view, scenario?.id, logPage]);
+  }, [view, scenario?.id, logPage, showMap]);
 
   const zoneController: ZoneEditorController = useMemo(
     () => ({
