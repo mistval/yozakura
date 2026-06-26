@@ -6,6 +6,7 @@ import { newYorkTemporalScript } from './builtins/new_york.js';
 import { saharaTemporalScript } from './builtins/sahara.js';
 import { shizuokaTemporalScript } from './builtins/shizuoka.js';
 import { stPetersburgTemporalScript } from './builtins/st_petersburg.js';
+import { titanTemporalScript } from './builtins/titan.js';
 import {
   DEFAULT_TEMPORAL_SCRIPT_ID,
   temporalContextSettingsScriptSchema,
@@ -30,6 +31,7 @@ export const BUILTIN_TEMPORAL_SCRIPTS: TemporalContextSettingsScript[] = [
   saharaTemporalScript,
   shizuokaTemporalScript,
   stPetersburgTemporalScript,
+  titanTemporalScript,
 ];
 
 export function getBuiltinTemporalScript(scriptId: string): TemporalContextSettingsScript | undefined {
