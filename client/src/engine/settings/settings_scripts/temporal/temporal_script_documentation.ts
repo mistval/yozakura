@@ -5,7 +5,7 @@ const EXAMPLE_CUSTOM_TEMPORAL_SCRIPT = `({
   name: 'My Calendar',
   description: 'A simple calendar and weather example.',
   controls: () => [
-    { id: 'startDate', type: 'calendar', label: 'Start date', width: 'full' },
+    { id: 'startDate', type: 'calendar', label: 'Start date', width: 'full', default: 'SCENARIO_CREATE_DATE' },
   ],
   async getTemporalContext(controlValues, request, helpers) {
     const TURNS_PER_DAY = 4;
