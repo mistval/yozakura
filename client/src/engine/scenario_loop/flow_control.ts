@@ -9,6 +9,12 @@ export class UserAbortSignalException extends Error {
 
 export class ScenarioLoopAbortSignalException extends Error {}
 
+export function rethrowSignalException(err: unknown) {
+  if (err instanceof UserAbortSignalException || err instanceof ScenarioLoopAbortSignalException) {
+    throw err;
+  }
+}
+
 class ScenarioLoopPromise<TReturnType> {
   private readonly resolvers = Promise.withResolvers<TReturnType>();
 

@@ -3,7 +3,7 @@ import { useTurnMachineStore } from '../../state/turn_machine_store';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
-import { useScenarioStore } from '../../state/scenario_store';
+import { getRequiredUserCharacterId, useScenarioStore } from '../../state/scenario_store';
 import * as Database from '../../backend_bridge/database';
 import { useSettingsStore } from '../../state/settings_store';
 import { useTemporalContextStore } from '../../state/temporal_context_store';
@@ -16,6 +16,7 @@ import { NPCInputInterface } from './character_input_interfaces/npc_input_interf
 import { UserInputInterface } from './character_input_interfaces/user_input_interface';
 import {
   doScenarioLoopAsyncAction,
+  rethrowSignalException,
   ScenarioLoopAbortSignalException,
   UserAbortSignalException,
 } from './flow_control';
@@ -28,19 +29,22 @@ export async function runTurnLoop(
     prioritizeUserOnFirstIteration?: boolean | undefined;
   } = {}
 ) {
-  let prioritizeUser = opts.prioritizeUserOnFirstIteration;
+  let prioritizeUser = opts.prioritizeUserOnFirstIteration ?? false;
 
   while (true) {
     try {
       await runTurnLoopTick({
         prioritizeUser,
       });
+
+      prioritizeUser = false;
     } catch (err) {
       if (err instanceof UserAbortSignalException) {
         const loopState = useScenarioLoopStateStore.getState();
         loopState.setAutoMode(false);
         loopState.setUserRequestedPhaseTransition('none');
         useTurnMachineStore.getState().reset();
+        prioritizeUser = true;
         persistTurn();
         continue;
       }
@@ -56,8 +60,6 @@ export async function runTurnLoop(
 
       throw err;
     }
-
-    prioritizeUser = undefined;
   }
 }
 
@@ -67,7 +69,7 @@ async function runTurnLoopTick(opts?: { prioritizeUser?: boolean | undefined }) 
   await recomputeTemporalContextAndAutoselectWardrobes();
 
   if (turnMachineState === undefined) {
-    startNewTurn(getTurnCharacterIds(), getRequiredUserCharacterId(), {
+    startNewTurn({
       userMovesFirst: opts?.prioritizeUser,
     });
   }
@@ -142,7 +144,7 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
       try {
         const speakerInput = makeInputInterface(nextSpeaker.id);
         ChatCoordinator.setStateAwaitingCharacterInput();
-        const { input } = await speakerInput.getNextChatInput();
+        const { input } = await doScenarioLoopAsyncAction(() => speakerInput.getNextChatInput());
 
         if (input.actionType === 'skip_turn') {
           nextSpeaker = await doScenarioLoopAsyncAction(() =>
@@ -178,6 +180,8 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
 
         persistTurn();
       } catch (err) {
+        rethrowSignalException(err);
+
         void showNonRetriableErrorCardIfNeeded({
           error: err,
           operationType: 'chat_loop_inner',
@@ -340,14 +344,4 @@ function incrementTurnNumber() {
     ...prev,
     turnNumber: prev.turnNumber + 1,
   }));
-}
-
-function getTurnCharacterIds(): string[] {
-  return useScenarioCharacterStore.getState().scenarioCharacters.map((c) => c.id);
-}
-
-function getRequiredUserCharacterId(): string {
-  const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();
-  assertNonNullish(userCharacter, 'User character not found');
-  return userCharacter.id;
 }

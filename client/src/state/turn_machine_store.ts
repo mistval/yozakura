@@ -17,7 +17,7 @@ import {
 import { ConversationTranscript } from '../engine/chat/transcript.js';
 import { MemoryRAGHelper } from '../engine/memory_rag_helper.js';
 import type { OmitFunctions } from '../util/types.js';
-import { getRequiredActiveScenario, useScenarioStore } from './scenario_store.js';
+import { getRequiredActiveScenario, getRequiredUserCharacterId, useScenarioStore } from './scenario_store.js';
 import { useScenarioCharacterStore, useUserCharacter } from './scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
 import { assert, assertNonNullish } from '../errors/application_error.js';
@@ -81,11 +81,7 @@ type BaseTurnMachineStoreState = {
 
   isActive: () => boolean;
   setTranscript: (transcript: ConversationTranscript) => void;
-  startNewTurn: (
-    allCharacterIds: string[],
-    userCharacterId: string,
-    opts?: { userMovesFirst?: boolean | undefined }
-  ) => void;
+  startNewTurn: (opts?: { userMovesFirst?: boolean | undefined }) => void;
   currentCharacterId: () => string | undefined;
   currentCharacterIsUser: () => boolean;
   finishCurrentCharacter: () => boolean;
@@ -278,7 +274,10 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     return get().chatState !== 'inactive';
   },
 
-  startNewTurn(allCharacterIds, userCharacterId, opts: { userMovesFirst?: boolean | undefined } = {}) {
+  startNewTurn(opts: { userMovesFirst?: boolean | undefined } = {}) {
+    const allCharacterIds = useScenarioCharacterStore.getState().scenarioCharacters.map((c) => c.id);
+    const userCharacterId = getRequiredUserCharacterId();
+
     const nonUserCharacterIds = () => allCharacterIds.filter((id) => id !== userCharacterId);
 
     // If first turn, user moves first. Otherwise, user turn is randomized with all other characters
