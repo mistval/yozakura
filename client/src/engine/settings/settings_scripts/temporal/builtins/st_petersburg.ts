@@ -1,9 +1,9 @@
 import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
 import { resolveTemporalDate, temporalControls } from '../builtin_utility.js';
-import type { TemporalContext, TemporalContextSettingsScript } from '../temporal_script_types.js';
+import type { TemporalContext, TemporalContextBuiltInSettingsScript } from '../temporal_script_types.js';
 
-export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
+export const stPetersburgTemporalScript: TemporalContextBuiltInSettingsScript = {
   id: 'stpetersburg-weather',
   name: 'St. Petersburg',
   description:

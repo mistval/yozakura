@@ -10,6 +10,7 @@ import { titanTemporalScript } from './builtins/titan.js';
 import {
   DEFAULT_TEMPORAL_SCRIPT_ID,
   temporalContextSettingsScriptSchema,
+  type TemporalContextBuiltInSettingsScript,
   type TemporalContextSettingsScript,
 } from './temporal_script_types.js';
 
@@ -24,7 +25,7 @@ export function createDefaultTemporalSectionState(): SettingsScriptSectionState 
   };
 }
 
-export const BUILTIN_TEMPORAL_SCRIPTS: TemporalContextSettingsScript[] = [
+export const BUILTIN_TEMPORAL_SCRIPTS: TemporalContextBuiltInSettingsScript[] = [
   baliTemporalScript,
   newYorkTemporalScript,
   montpellierTemporalScript,

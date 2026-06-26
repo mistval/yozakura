@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useUserTextFileList } from './useUserTextFileList.js';
 import SettingFieldLabel from '../ui/SettingFieldLabel.js';
 import DeleteButton from '../../ui/DeleteButton.js';
@@ -22,30 +22,12 @@ export default function TextFileListField({
   tooltipHtml,
   htmlFor,
 }: TextFileListFieldProps) {
-  const { files, error, busy, create, save, remove, loadContent } = useUserTextFileList(groupKey);
+  const { files, error, busy, create, save, remove } = useUserTextFileList(groupKey);
   const [isCreating, setIsCreating] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [content, setContent] = useState('');
 
   const selectedFile = files.find((file) => file.id === value);
-
-  useEffect(() => {
-    if (!value || isCreating) {
-      setContent('');
-      return;
-    }
-
-    let cancelled = false;
-    void (async () => {
-      const text = await loadContent(value);
-      if (!cancelled) {
-        setContent(text ?? '');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [value, isCreating, loadContent]);
 
   const handleSelectChange = (next: string) => {
     if (next === NEW_OPTION) {
@@ -72,13 +54,6 @@ export default function TextFileListField({
     }
     const nextId = await remove(selectedFile.id);
     onChange(nextId ?? '');
-  };
-
-  const handleSaveContent = async () => {
-    if (!selectedFile) {
-      return;
-    }
-    await save(selectedFile.id, selectedFile.fileName, content);
   };
 
   return (
@@ -141,9 +116,8 @@ export default function TextFileListField({
             aria-label="File content"
             rows={12}
             spellCheck={false}
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            onBlur={() => void handleSaveContent()}
+            value={selectedFile.fileContent}
+            onChange={(event) => void save(selectedFile.id, selectedFile.fileName, event.target.value)}
             className="rounded-input font-mono text-sm w-full"
           />
           <div className="flex justify-end">

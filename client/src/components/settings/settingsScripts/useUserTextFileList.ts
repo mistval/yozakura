@@ -1,22 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  deleteUserTextFile,
-  listUserTextFiles,
-  loadUserTextFileContent,
-  saveUserTextFile,
-  type UserTextFileSummary,
-} from '../../../backend_bridge/database.js';
+import * as Database from '../../../backend_bridge/database.js';
 import { getErrorMessage } from '../../../errors/error_util.js';
 import { newId } from '../../../util/id.js';
+import { concatUniqueById, findById, removeById } from '../../../util/array.js';
 
 export function useUserTextFileList(groupKey: string) {
-  const [files, setFiles] = useState<UserTextFileSummary[]>([]);
+  const [files, setFiles] = useState<Database.UserTextFileSummary[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const saveDebounced = useCallback((file: Database.UserTextFileSummary) => {
+    setFiles((prev) => concatUniqueById(prev, file));
+    void Database.doAsDataWrite(() => Database.saveUserTextFile(file), 'user_text_file', {
+      debouncerKey: file.id,
+    });
+  }, []);
+
   const refresh = useCallback(async () => {
     try {
-      setFiles(await listUserTextFiles(groupKey));
+      setFiles(await Database.loadUserTextFiles(groupKey));
     } catch (e) {
       setError(getErrorMessage(e));
     }
@@ -32,8 +34,8 @@ export function useUserTextFileList(groupKey: string) {
       setError('');
       try {
         const id = newId();
-        await saveUserTextFile({ id, groupKey, fileName: fileName.trim() || 'Untitled', fileContent });
-        await refresh();
+        const file = { id, groupKey, fileName: fileName.trim() || 'Untitled', fileContent };
+        saveDebounced(file);
         return id;
       } catch (e) {
         setError(getErrorMessage(e));
@@ -42,7 +44,7 @@ export function useUserTextFileList(groupKey: string) {
         setBusy(false);
       }
     },
-    [groupKey, refresh]
+    [groupKey, saveDebounced]
   );
 
   const save = useCallback(
@@ -50,15 +52,15 @@ export function useUserTextFileList(groupKey: string) {
       setBusy(true);
       setError('');
       try {
-        await saveUserTextFile({ id, groupKey, fileName, fileContent });
-        await refresh();
+        const file = { id, groupKey, fileName, fileContent };
+        saveDebounced(file);
       } catch (e) {
         setError(getErrorMessage(e));
       } finally {
         setBusy(false);
       }
     },
-    [groupKey, refresh]
+    [groupKey, saveDebounced]
   );
 
   const remove = useCallback(
@@ -66,9 +68,9 @@ export function useUserTextFileList(groupKey: string) {
       setBusy(true);
       setError('');
       try {
-        await deleteUserTextFile(id);
-        const remaining = await listUserTextFiles(groupKey);
+        const remaining = removeById(files, id);
         setFiles(remaining);
+        await Database.doAsDataWrite(() => Database.deleteUserTextFile(id), 'user_text_file');
         return remaining[0]?.id;
       } catch (e) {
         setError(getErrorMessage(e));
@@ -77,10 +79,10 @@ export function useUserTextFileList(groupKey: string) {
         setBusy(false);
       }
     },
-    [groupKey]
+    [files]
   );
 
-  const loadContent = useCallback((id: string) => loadUserTextFileContent(groupKey, id), [groupKey]);
+  const loadContent = useCallback((id: string) => findById(files, id)?.fileContent, [files]);
 
-  return { files, error, busy, setError, refresh, create, save, remove, loadContent };
+  return { files, error, busy, loadContent, setError, refresh, create, save, remove };
 }

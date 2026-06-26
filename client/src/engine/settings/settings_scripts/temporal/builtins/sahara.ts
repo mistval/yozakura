@@ -1,11 +1,11 @@
 import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
 import { resolveTemporalBasics, temporalControls, type TemporalDefaults } from '../builtin_utility.js';
-import type { TemporalContext, TemporalContextSettingsScript } from '../temporal_script_types.js';
+import type { TemporalContext, TemporalContextBuiltInSettingsScript } from '../temporal_script_types.js';
 
 const TEMPORAL_DEFAULTS: TemporalDefaults = { tempFrac: [0.0, 0.45, 0.85, 1.0, 0.75, 0.45, 0.2, 0.05] };
 
-export const saharaTemporalScript: TemporalContextSettingsScript = {
+export const saharaTemporalScript: TemporalContextBuiltInSettingsScript = {
   id: 'sahara-weather',
   name: 'Sahara Desert',
   description:

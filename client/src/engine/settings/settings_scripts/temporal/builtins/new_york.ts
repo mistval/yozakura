@@ -1,11 +1,11 @@
 import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
 import { resolveTemporalBasics, temporalControls, type TemporalDefaults } from '../builtin_utility.js';
-import type { TemporalContext, TemporalContextSettingsScript } from '../temporal_script_types.js';
+import type { TemporalContext, TemporalContextBuiltInSettingsScript } from '../temporal_script_types.js';
 
 const TEMPORAL_DEFAULTS: TemporalDefaults = { tempFrac: [0.05, 0.4, 0.8, 1.0, 0.8, 0.55, 0.3, 0.12] };
 
-export const newYorkTemporalScript: TemporalContextSettingsScript = {
+export const newYorkTemporalScript: TemporalContextBuiltInSettingsScript = {
   id: 'nyc-weather',
   name: 'New York City',
   description:

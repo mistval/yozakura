@@ -712,7 +712,7 @@ const UPSERT_USER_TEXT_FILE_SQL = `
 `;
 
 const SELECT_USER_TEXT_FILES_BY_GROUP_SQL = `
-  SELECT id, file_name
+  SELECT id, file_name, group_key, file_content
   FROM ${TABLE_USER_TEXT_FILES}
   WHERE group_key = ?
 `;
@@ -729,15 +729,20 @@ const DELETE_USER_TEXT_FILE_SQL = `
   WHERE id = ?
 `;
 
-export type UserTextFileSummary = { id: string; fileName: string };
+export type UserTextFileSummary = { id: string; fileName: string; groupKey: string; fileContent: string };
 
-export async function listUserTextFiles(groupKey: string): Promise<UserTextFileSummary[]> {
+export async function loadUserTextFiles(groupKey: string): Promise<UserTextFileSummary[]> {
   const rows = await selectTypedMultiQuery(
     SELECT_USER_TEXT_FILES_BY_GROUP_SQL,
     [[groupKey]],
-    z.object({ id: z.string(), file_name: z.string() })
+    z.object({ id: z.string(), file_name: z.string(), group_key: z.string(), file_content: z.string() })
   );
-  return rows.map((row) => ({ id: row.id, fileName: row.file_name }));
+  return rows.map((row) => ({
+    id: row.id,
+    fileName: row.file_name,
+    groupKey: row.group_key,
+    fileContent: row.file_content,
+  }));
 }
 
 export async function loadUserTextFileContent(groupKey: string, id: string): Promise<string | undefined> {

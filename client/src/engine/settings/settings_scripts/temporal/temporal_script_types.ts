@@ -17,9 +17,6 @@ export type TemporalContext = {
 };
 
 export const temporalContextSettingsScriptSchema = z.object({
-  id: z.string().meta({
-    description: 'A unique ID for this script. Can be anything, but must be unique.',
-  }),
   name: z.string().meta({
     description: 'The display name of the temporal context provider (e.g. "New York").',
   }),
@@ -39,14 +36,15 @@ export const temporalContextSettingsScriptSchema = z.object({
 
 export const temporalContextSettingsScriptJSONSchema = temporalContextSettingsScriptSchema.toJSONSchema();
 
-export type TemporalContextSettingsScript = {
-  id: string;
-  name: string;
-  description?: string | undefined;
+export type TemporalContextSettingsScript = z.infer<typeof temporalContextSettingsScriptSchema> & {
   controls?: SettingsScriptControlsDefinition | undefined;
   getTemporalContext: (
     controlValues: SettingsControlValues,
     request: TemporalContextRequest,
     helpers: SettingsScriptHelpers
   ) => Promise<TemporalContext>;
+};
+
+export type TemporalContextBuiltInSettingsScript = TemporalContextSettingsScript & {
+  id: string;
 };

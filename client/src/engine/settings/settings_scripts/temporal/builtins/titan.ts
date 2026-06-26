@@ -1,8 +1,8 @@
 import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
-import type { TemporalContext, TemporalContextSettingsScript } from '../temporal_script_types.js';
+import type { TemporalContext, TemporalContextBuiltInSettingsScript } from '../temporal_script_types.js';
 
-export const titanTemporalScript: TemporalContextSettingsScript = {
+export const titanTemporalScript: TemporalContextBuiltInSettingsScript = {
   id: 'titan-weather',
   name: 'Titan',
   description:
