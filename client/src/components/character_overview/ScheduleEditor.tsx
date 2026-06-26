@@ -214,7 +214,9 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
 
             {segments.map((segment, index) => {
               const lane = laneBySegmentId[segment.id] ?? 0;
-              const zoneName = zones.find((zone) => zone.id === segment.zoneId)?.name ?? 'No zone';
+              const zoneName =
+                zones.find((zone) => zone.id === segment.zoneId)?.name ??
+                'Unknown zone (other map or deleted)';
               const isSelected = segment.id === selectedSegmentId;
               return (
                 <Rnd
