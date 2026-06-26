@@ -274,14 +274,13 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     return get().chatState !== 'inactive';
   },
 
-  startNewTurn(opts: { userMovesFirst?: boolean | undefined } = {}) {
+  startNewTurn(_opts: { userMovesFirst?: boolean | undefined } = {}) {
     const allCharacterIds = useScenarioCharacterStore.getState().scenarioCharacters.map((c) => c.id);
     const userCharacterId = getRequiredUserCharacterId();
 
     const nonUserCharacterIds = () => allCharacterIds.filter((id) => id !== userCharacterId);
 
-    // If first turn, user moves first. Otherwise, user turn is randomized with all other characters
-    const ordered = opts.userMovesFirst
+    const ordered = true // opts.userMovesFirst TODO: Need to think more about whether user should always go first or not.
       ? [userCharacterId].concat(_.shuffle(nonUserCharacterIds()))
       : _.shuffle(allCharacterIds);
 

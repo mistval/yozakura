@@ -54,7 +54,7 @@ function CharacterAvatar({
   );
 }
 
-export default function MapModal() {
+function MapModalInner() {
   const { closeMap, open } = useMapModal();
   const updateMap = useMapStore((s) => s.updateMap);
   const map = useScenarioStore((state) => state.activeScenarioMap);
@@ -400,4 +400,15 @@ export default function MapModal() {
       )}
     </RoutedModalFrame>
   );
+}
+
+export default function MapModal() {
+  const { open } = useMapModal();
+
+  if (!open) {
+    return;
+  }
+
+  // Optimization so this isn't rendering when not open
+  return <MapModalInner />;
 }

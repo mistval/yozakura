@@ -15,7 +15,7 @@ import { assertNonNullish } from '../../errors/application_error.js';
 import { StringParam, useQueryParam } from 'use-query-params';
 import { useConversationLog } from '../conversation_log/ConversationLogContext.js';
 
-export default function CharacterOverview() {
+function CharacterOverviewInner() {
   const [scrollDown, setScrollDown] = useQueryParam('scrolldown', StringParam);
   const scenario = useScenarioStore((state) => state.activeScenario);
   const activeMap = useScenarioStore((state) => state.activeScenarioMap);
@@ -205,4 +205,15 @@ export default function CharacterOverview() {
       <CharacterOverviewAddCharactersModal />
     </>
   );
+}
+
+export default function CharacterOverview() {
+  const { open } = useCharacterOverview();
+
+  if (!open) {
+    return;
+  }
+
+  // Optimization so this isn't rendering when not open
+  return <CharacterOverviewInner />;
 }

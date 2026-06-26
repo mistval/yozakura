@@ -131,7 +131,7 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
       const key = relationshipKey(updated.fromId, updated.toId);
       relationshipCache.set(key, updated);
 
-      void Database.doAsDataWrite(
+      await Database.doAsDataWrite(
         async () => {
           const latest = relationshipCache.get(key);
           if (!latest) {

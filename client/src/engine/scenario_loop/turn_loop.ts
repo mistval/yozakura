@@ -208,7 +208,7 @@ async function applySimpleTurnMove(characterId: string, move: TurnMove): Promise
 
   if (move.actionType === 'move') {
     recordMovement(characterId, move.destinationLocationId, move.movementPolicy);
-    await moveScenarioCharacter(characterId, move.destinationLocationId);
+    moveScenarioCharacter(characterId, move.destinationLocationId);
     return { noEffect: true };
   }
 
@@ -265,7 +265,7 @@ async function closeChatSession(forceNoEffect?: boolean): Promise<{ noEffect: bo
   return { noEffect };
 }
 
-async function moveScenarioCharacter(characterId: string, toId: string) {
+function moveScenarioCharacter(characterId: string, toId: string) {
   useScenarioCharacterStore.getState().saveScenarioCharacterFields(characterId, {
     locationId: toId,
   });

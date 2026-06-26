@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { ApplicationError } from '../errors/application_error';
-import _ from 'lodash';
 import { omitNilValues } from '../util/types';
 
 type LlmTokenCallback = (fullText: string) => void;
