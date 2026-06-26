@@ -17,8 +17,6 @@ import { assertNonNullish } from '../../errors/application_error.js';
 
 export type ZoneEdits = Partial<Pick<MapZone, 'name' | 'locationIds'>>;
 
-const MEMBER_FILL = '#22c55e';
-
 function editZone(zones: MapZone[], zoneUpdate: Partial<MapZone> & Pick<MapZone, 'id'>) {
   const targetZone = findRequiredById(zones, zoneUpdate.id);
   return concatUniqueById(zones, {
@@ -52,7 +50,6 @@ export default function MapZoneEditor({
     const nodes = map.locations.map((location) => ({
       id: location.id,
       label: location.name,
-      ...(zoneMembers.includes(location.id) ? { fill: MEMBER_FILL } : {}),
     }));
 
     const edges = map.locations.flatMap((location) =>
