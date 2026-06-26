@@ -15,13 +15,9 @@ import {
 } from './temporal_script_types.js';
 
 export function createDefaultTemporalSectionState(): SettingsScriptSectionState {
-  const now = new Date();
-  const startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-    now.getDate()
-  ).padStart(2, '0')}`;
   return {
     selectedScriptId: DEFAULT_TEMPORAL_SCRIPT_ID,
-    controlValues: { [DEFAULT_TEMPORAL_SCRIPT_ID]: { startDate } },
+    controlValues: {},
   };
 }
 

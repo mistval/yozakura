@@ -70,10 +70,7 @@ const BACKFILL_TEMPORAL_CONTEXT_SQL = `
     data,
     '$.temporalContext',
     json_object(
-      'selectedScriptId', 'bali-weather',
-      'controlValues', json_object(
-        'bali-weather', json_object('startDate', substr(created_at, 1, 10))
-      )
+      'selectedScriptId', 'bali-weather'
     )
   )
   WHERE json_extract(data, '$.temporalContext') IS NULL;
