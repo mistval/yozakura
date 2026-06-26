@@ -15,7 +15,7 @@ export const DEFAULT_JUMP_BY_DAYS = 7;
 export const DEFAULT_START_DATE = '2026-06-01';
 
 export type TemporalDefaults = {
-  tempFrac: number[];
+  tempFrac?: number[];
   periods?: string[];
   daylightPeriods?: string[];
   jumpByDays?: number;
@@ -107,7 +107,7 @@ export function temporalControls(defaults: TemporalDefaults): SettingsScriptCont
       id: 'tempCurve',
       type: 'string',
       label: 'Temperature curve',
-      default: defaults.tempFrac.join(', '),
+      default: defaults.tempFrac?.join(', '),
       width: 'full',
       tooltipHtml:
         'Comma-separated fractions from 0 (daily low) to 1 (daily high) describing temperature through the day. If the number of points differs from the number of time periods, the curve is linearly interpolated to fit.',
@@ -124,31 +124,19 @@ export function temporalControls(defaults: TemporalDefaults): SettingsScriptCont
   ];
 }
 
-export function resolveTemporalBasics(
+export function resolveTemporalDate(
   controlValues: SettingsControlValues,
   turnNumber: number,
+  turnsPerDay: number,
   defaults: TemporalDefaults
-): TemporalBasics {
-  const periods = parseList(controlValues.periods, defaults.periods ?? DEFAULT_PERIODS);
-  const turnsPerDay = periods.length;
+) {
   const jumpByDays = Math.max(
     0,
     Math.floor(parseNumber(controlValues.jumpByDays, defaults.jumpByDays ?? DEFAULT_JUMP_BY_DAYS))
   );
 
-  const dayIndex = Math.floor(turnNumber / turnsPerDay);
   const periodIndex = ((turnNumber % turnsPerDay) + turnsPerDay) % turnsPerDay;
-  const period = periods[periodIndex]!;
-
-  const daylightPeriods = parseList(
-    controlValues.daylightPeriods,
-    defaults.daylightPeriods ?? DEFAULT_DAYLIGHT_PERIODS
-  ).map((name) => name.toLowerCase());
-  const isDaylight = daylightPeriods.includes(period.toLowerCase());
-
-  const tempFrac = interpolateCurve(parseNumberList(controlValues.tempCurve, defaults.tempFrac), turnsPerDay);
-  const tempFracAtPeriod = tempFrac[periodIndex]!;
-
+  const dayIndex = Math.floor(turnNumber / turnsPerDay);
   const calendarOffset = dayIndex * (1 + jumpByDays);
   const date = new Date(`${controlValues.startDate ?? DEFAULT_START_DATE}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + calendarOffset);
@@ -166,14 +154,8 @@ export function resolveTemporalBasics(
   });
 
   return {
-    periods,
     turnsPerDay,
-    periodIndex,
-    period,
-    isDaylight,
     dayIndex,
-    tempFrac,
-    tempFracAtPeriod,
     date,
     year,
     month,
@@ -181,5 +163,41 @@ export function resolveTemporalBasics(
     daysInMonth,
     isoDate,
     dateLabel,
+    periodIndex,
+  };
+}
+
+export function resolveTemporalBasics(
+  controlValues: SettingsControlValues,
+  turnNumber: number,
+  defaults: TemporalDefaults
+): TemporalBasics {
+  const periods = parseList(controlValues.periods, defaults.periods ?? DEFAULT_PERIODS);
+  const turnsPerDay = periods.length;
+  const dateInfo = resolveTemporalDate(controlValues, turnNumber, turnsPerDay, defaults);
+  const period = periods[dateInfo.periodIndex]!;
+
+  const daylightPeriods = parseList(
+    controlValues.daylightPeriods,
+    defaults.daylightPeriods ?? DEFAULT_DAYLIGHT_PERIODS
+  ).map((name) => name.toLowerCase());
+
+  const isDaylight = daylightPeriods.includes(period.toLowerCase());
+
+  const tempFrac = interpolateCurve(
+    parseNumberList(controlValues.tempCurve, defaults.tempFrac ?? []),
+    turnsPerDay
+  );
+
+  const tempFracAtPeriod = tempFrac[dateInfo.periodIndex]!;
+
+  return {
+    ...dateInfo,
+    periods,
+    turnsPerDay,
+    period,
+    isDaylight,
+    tempFrac,
+    tempFracAtPeriod,
   };
 }

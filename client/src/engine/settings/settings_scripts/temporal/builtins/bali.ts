@@ -29,6 +29,8 @@ export const baliTemporalScript: TemporalContextSettingsScript = {
   async getTemporalContext(controlValues, request, helpers): Promise<TemporalContext> {
     const {
       period,
+      periodIndex,
+      turnsPerDay,
       isDaylight,
       dayIndex,
       year,
@@ -37,8 +39,15 @@ export const baliTemporalScript: TemporalContextSettingsScript = {
       daysInMonth,
       isoDate,
       dateLabel,
+      tempFrac,
       tempFracAtPeriod,
     } = resolveTemporalBasics(controlValues, request.scenario.turnNumber, TEMPORAL_DEFAULTS);
+
+    // Locate the day's heat peak (≈ mid-afternoon) from the temperature curve.
+    // Using the curve rather than fixed period indices keeps the diurnal weather
+    // correct no matter how many time periods the user configures.
+    const peakIndex = tempFrac.indexOf(Math.max(...tempFrac));
+    const stormSpan = Math.max(1, Math.round(turnsPerDay / 4));
 
     // --- Bali (Denpasar) monthly climate normals, °F + daily precip probability ---
     const MONTHLY = [
@@ -127,33 +136,53 @@ export const baliTemporalScript: TemporalContextSettingsScript = {
       hi = monthlyHi + shift;
       lo = monthlyLo + shift;
 
-      if (d() < precipChance) {
-        if (d() < 0.4) {
-          cond = 'Thunderstorms';
-          emoji = '🌩️';
-          blurb = 'cracking thunderstorms and brief, intense showers';
-        } else {
-          cond = 'Tropical Rain';
-          emoji = '🌧️';
-          blurb = 'warm, steady tropical rain';
-        }
+      // Tropical sea-breeze convection drives Bali's daily rhythm: humid clear
+      // mornings, cumulus towering up toward the heat of the day, storms breaking
+      // around and just after the peak, then easing overnight. So a "rain day" is
+      // really an afternoon-storm day, not all-day rain.
+      const convectiveDay = d() < precipChance;
+      const heavy = d() < 0.4; // thunderstorm vs. steady rain when the storm breaks
+      const sky = d();
+
+      const building = periodIndex < peakIndex; // warming toward the heat of the day
+      const storming = periodIndex >= peakIndex && periodIndex <= peakIndex + stormSpan;
+
+      if (convectiveDay && building && tempFracAtPeriod < 0.6) {
+        // Early, still-cool part of the day — calm before the build-up
+        cond = 'Humid & hazy';
+        emoji = '🌥️';
+        blurb = 'a warm, hazy morning with cumulus already piling up over the interior hills';
+      } else if (convectiveDay && building) {
+        // Heating up fast toward the peak — towers building
+        cond = 'Building storms';
+        emoji = '🌦️';
+        blurb = 'a sticky build-up with thunderheads boiling over the volcanic spine of the island';
+      } else if (convectiveDay && storming) {
+        // At and just past the heat peak — the storm breaks
+        cond = heavy ? 'Thunderstorms' : 'Tropical Rain';
+        emoji = heavy ? '⛈️' : '🌧️';
+        blurb = heavy
+          ? 'a heavy afternoon thunderstorm cracking over the island, warm rain drenching everything'
+          : 'warm, heavy tropical rain pouring straight down in dense sheets';
+      } else if (convectiveDay) {
+        // Late, after the storm window — showers trailing off
+        cond = 'Easing Showers';
+        emoji = '🌧️';
+        blurb = 'the last of the day’s showers trailing off into a steamy, dripping night';
+      } else if (sky < 0.45) {
+        cond = 'Clear';
+        emoji = isDaylight ? '☀️' : '🌙';
+        blurb = isDaylight ? 'clear skies and strong tropical sun' : 'clear and balmy under the stars';
+      } else if (sky < 0.8) {
+        cond = 'Partly cloudy';
+        emoji = isDaylight ? '⛅' : '☁️';
+        blurb = isDaylight
+          ? 'a mix of tropical sun and scattered clouds'
+          : 'scattered clouds drifting in the warm night air';
       } else {
-        const sky = d();
-        if (sky < 0.45) {
-          cond = 'Clear';
-          emoji = isDaylight ? '☀️' : '🌙';
-          blurb = isDaylight ? 'clear skies and strong sun' : 'clear and balmy';
-        } else if (sky < 0.8) {
-          cond = 'Partly cloudy';
-          emoji = isDaylight ? '⛅' : '☁️';
-          blurb = isDaylight
-            ? 'a mix of tropical sun and scattered clouds'
-            : 'scattered clouds drifting in the warm night air';
-        } else {
-          cond = 'Overcast';
-          emoji = '☁️';
-          blurb = 'grey and overcast but still humid';
-        }
+        cond = 'Overcast';
+        emoji = '☁️';
+        blurb = 'grey and overcast but still humid';
       }
     }
 
@@ -167,7 +196,7 @@ export const baliTemporalScript: TemporalContextSettingsScript = {
     else if (tempF >= 75) feel = 'warm and balmy';
     else feel = 'pleasantly mild';
 
-    let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}`;
+    let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}<br>${blurb}`;
     if (alert) displayHtml += `<br><b>${alert}</b>`;
 
     let plainText = `${dateLabel}, ${period}. Weather: ${temp} (${feel}), ${cond.toLowerCase()} — ${blurb}.`;

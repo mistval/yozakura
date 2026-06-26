@@ -79,6 +79,14 @@ export const saharaTemporalScript: TemporalContextSettingsScript = {
     });
     const extremeHeat = monthlyEvent('heatwave', { months: [5, 6, 7, 8], chance: 0.4, minDur: 3, maxDur: 8 });
     const desertFreeze = monthlyEvent('freeze', { months: [11, 0, 1], chance: 0.15, minDur: 2, maxDur: 4 });
+    // The Harmattan: a dry, dust-laden north-easterly that hazes over the desert
+    // through the winter, suppressing daytime highs and smothering the horizon.
+    const harmattan = monthlyEvent('harmattan', {
+      months: [10, 11, 0, 1, 2],
+      chance: 0.35,
+      minDur: 2,
+      maxDur: 5,
+    });
 
     // --- Per-day randomness, stable for a given calendar date ---
     const d = helpers.createSeededRandom(`${request.scenario.id}-${isoDate}`);
@@ -114,6 +122,15 @@ export const saharaTemporalScript: TemporalContextSettingsScript = {
       emoji = '🥶';
       blurb = 'bitterly cold winds sweeping across the desert floor';
       alert = '❄️ FREEZE WARNING FOR NIGHTFALL';
+    } else if (harmattan) {
+      hi = monthlyHi - (4 + Math.round(d() * 4)); // dust dims the sun, holding the high down
+      lo = monthlyLo - Math.round(d() * 3); // dry, cool nights under the dust pall
+      cond = 'Harmattan Haze';
+      emoji = '🌫️';
+      blurb = isDaylight
+        ? 'a thick, dust-laden Harmattan wind off the deep desert, blotting the sun to a pale, sickly disc'
+        : 'a dry, dusty Harmattan hissing through the dark, the stars smothered behind suspended dust';
+      alert = '⚠️ HARMATTAN: REDUCED VISIBILITY IN BLOWING DUST';
     } else {
       const shift = Math.round((d() * 2 - 1) * 6);
       hi = monthlyHi + shift;
@@ -158,7 +175,7 @@ export const saharaTemporalScript: TemporalContextSettingsScript = {
     else if (tempF >= 35) feel = 'chilly';
     else feel = 'freezing cold';
 
-    let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}`;
+    let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}<br>${blurb}`;
     if (alert) displayHtml += `<br><b>${alert}</b>`;
 
     let plainText = `${dateLabel}, ${period}. Weather: ${temp} (${feel}), ${cond.toLowerCase()} — ${blurb}.`;

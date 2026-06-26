@@ -29,6 +29,8 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
   async getTemporalContext(controlValues, request, helpers): Promise<TemporalContext> {
     const {
       period,
+      periodIndex,
+      turnsPerDay,
       isDaylight,
       dayIndex,
       year,
@@ -37,8 +39,15 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       daysInMonth,
       isoDate,
       dateLabel,
+      tempFrac,
       tempFracAtPeriod,
     } = resolveTemporalBasics(controlValues, request.scenario.turnNumber, TEMPORAL_DEFAULTS);
+
+    // Heat peak of the day (≈ mid-afternoon) from the temperature curve, used to
+    // time warm-season convection. Deriving it from the curve rather than fixed
+    // period indices keeps it correct for any user-configured set of periods.
+    const peakIndex = tempFrac.indexOf(Math.max(...tempFrac));
+    const stormSpan = Math.max(1, Math.round(turnsPerDay / 4));
 
     // --- NYC (Central Park) monthly climate normals, °F + daily precip probability ---
     const MONTHLY = [
@@ -93,12 +102,20 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       blurb = 'heavy snow, howling wind and near-zero visibility';
       alert = '⚠️ BLIZZARD WARNING';
     } else if (hurricane) {
+      const major = d() < 0.3; // most NYC tropical hits are tropical storms or remnants, not full hurricanes
       hi = 68 + Math.round(d() * 10); // 68–78
       lo = hi - (5 + Math.round(d() * 5));
-      cond = 'Hurricane';
-      emoji = '🌀';
-      blurb = 'torrential rain and violent wind lashing the city';
-      alert = '🌀 HURRICANE WARNING';
+      if (major) {
+        cond = 'Hurricane';
+        emoji = '🌀';
+        blurb = 'a hurricane churning up the coast, torrential rain and violent wind lashing the city';
+        alert = '🌀 HURRICANE WARNING';
+      } else {
+        cond = 'Tropical Storm';
+        emoji = '🌧️';
+        blurb = 'the driving rain and gusty wind of a tropical system sweeping up the Eastern Seaboard';
+        alert = '⚠️ TROPICAL STORM WARNING';
+      }
     } else if (heatWave) {
       hi = 93 + Math.round(d() * 9); // 93–102
       lo = 74 + Math.round(d() * 8);
@@ -115,7 +132,17 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
       lo = monthlyLo + shift;
       const avg = (hi + lo) / 2;
 
-      if (d() < precipChance) {
+      const wet = d() < precipChance;
+      const stormy = d() < 0.55; // when it's a warm-season wet day, is the rain convective?
+      const sky = d();
+
+      // Warm-season precip is often afternoon convection rather than all-day frontal
+      // rain: hot hazy mornings, pop-up thunderstorms around peak heating, muggy nights.
+      const convectiveSeason = month >= 4 && month <= 8; // May–Sep
+      const stormHours = periodIndex >= peakIndex && periodIndex <= peakIndex + stormSpan;
+      const preStorm = periodIndex < peakIndex;
+
+      if (wet) {
         if (avg <= 33) {
           cond = 'Snow';
           emoji = '🌨️';
@@ -124,27 +151,37 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
           cond = 'Wintry mix';
           emoji = '🌨️';
           blurb = 'a cold, sloppy wintry mix';
+        } else if (convectiveSeason && avg >= 68 && stormy) {
+          if (stormHours) {
+            cond = 'Thunderstorms';
+            emoji = '⛈️';
+            blurb = 'a booming pop-up thunderstorm rolling through with heavy downpours and gusty wind';
+          } else if (preStorm) {
+            cond = 'Hazy & humid';
+            emoji = isDaylight ? '🌥️' : '☁️';
+            blurb = 'a hazy, humid stretch with the air thickening ahead of the afternoon storms';
+          } else {
+            cond = 'Muggy';
+            emoji = isDaylight ? '⛅' : '☁️';
+            blurb = 'a humid, restless lull after the storms have rolled through';
+          }
         } else {
           cond = 'Rain';
           emoji = '🌧️';
           blurb = 'steady rain';
         }
+      } else if (sky < 0.45) {
+        cond = 'Clear';
+        emoji = isDaylight ? '☀️' : '🌙';
+        blurb = isDaylight ? 'clear skies' : 'clear and calm';
+      } else if (sky < 0.78) {
+        cond = 'Partly cloudy';
+        emoji = isDaylight ? '⛅' : '☁️';
+        blurb = isDaylight ? 'a mix of sun and clouds' : 'clouds drifting under the night sky';
       } else {
-        const sky = d();
-        if (sky < 0.45) {
-          cond = 'Clear';
-          emoji = isDaylight ? '☀️' : '🌙';
-          blurb = isDaylight ? 'clear skies' : 'clear and calm';
-        } else if (sky < 0.78) {
-          cond = 'Partly cloudy';
-          emoji = isDaylight ? '⛅' : '☁️';
-          // FIX: Differentiate blurb based on daylight
-          blurb = isDaylight ? 'a mix of sun and clouds' : 'clouds drifting under the night sky';
-        } else {
-          cond = 'Overcast';
-          emoji = '☁️';
-          blurb = 'grey and overcast';
-        }
+        cond = 'Overcast';
+        emoji = '☁️';
+        blurb = 'grey and overcast';
       }
     }
 
@@ -160,7 +197,7 @@ export const newYorkTemporalScript: TemporalContextSettingsScript = {
     else if (tempF >= 32) feel = 'cold';
     else feel = 'frigid';
 
-    let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}`;
+    let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}<br>${blurb}`;
     if (alert) displayHtml += `<br><b>${alert}</b>`;
 
     let plainText = `${dateLabel}, ${period}. Weather: ${temp} (${feel}), ${cond.toLowerCase()} — ${blurb}.`;

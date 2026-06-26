@@ -129,12 +129,18 @@ export const shizuokaTemporalScript: TemporalContextSettingsScript = {
         if (sky < 0.5) {
           cond = 'Clear';
           emoji = isDaylight ? '☀️' : '🌙';
-          // FIX: Differentiate blurb based on daylight
-          blurb = isDaylight
-            ? month < 3 || month > 9
-              ? 'crisp, beautifully clear skies'
-              : 'bright and sunny'
-            : 'clear and calm';
+          // The dry, crisp air of late autumn through spring is when snow-capped
+          // Mt. Fuji stands out sharpest; humid summer haze tends to swallow it.
+          const fujiSeason = month < 4 || month > 9; // Nov–Apr
+          if (isDaylight) {
+            blurb = fujiSeason
+              ? 'crisp, clear skies with Mt. Fuji standing snow-capped and razor-sharp on the horizon'
+              : 'bright and sunny, though summer haze softens Mt. Fuji to a faint outline';
+          } else {
+            blurb = fujiSeason
+              ? 'clear and still, Mt. Fuji a pale silhouette beneath the stars'
+              : 'clear and calm';
+          }
         } else if (sky < 0.8) {
           cond = 'Partly cloudy';
           emoji = isDaylight ? '⛅' : '☁️';
@@ -162,7 +168,7 @@ export const shizuokaTemporalScript: TemporalContextSettingsScript = {
     else feel = 'chilly';
 
     // --- Build outputs ---
-    let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}`;
+    let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${period} · ${temp} · ${cond}<br>${blurb}`;
     if (alert) displayHtml += `<br><b>${alert}</b>`;
 
     let plainText = `${dateLabel}, ${period}. Weather: ${temp} (${feel}), ${cond.toLowerCase()} — ${blurb}.`;

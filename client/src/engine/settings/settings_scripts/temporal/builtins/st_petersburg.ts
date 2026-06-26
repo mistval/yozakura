@@ -1,5 +1,6 @@
 import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
+import { resolveTemporalDate, temporalControls } from '../builtin_utility.js';
 import type { TemporalContext, TemporalContextSettingsScript } from '../temporal_script_types.js';
 
 export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
@@ -20,32 +21,21 @@ export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
         { name: '°F (Fahrenheit)', value: 'F' },
       ],
     },
+    ...temporalControls({}).filter((c) => c.id === 'jumpByDays'),
   ]) as SettingsScriptControlsDefinition,
 
   async getTemporalContext(controlValues, request, helpers): Promise<TemporalContext> {
-    const TURNS_PER_DAY = 8;
     const PERIODS = ['Dawn', 'Morning', 'Midday', 'Afternoon', 'Evening', 'Dusk', 'Night', 'Midnight'];
+    const TURNS_PER_DAY = PERIODS.length;
+
+    const dateInfo = resolveTemporalDate(controlValues, request.scenario.turnNumber, TURNS_PER_DAY, {});
+
     // Diurnal temperature curve: Coldest at dawn (0), warmest at mid-afternoon (1).
     const TEMP_FRAC = [0.05, 0.4, 0.8, 1.0, 0.8, 0.55, 0.3, 0.12];
 
     const dayIndex = Math.floor(request.scenario.turnNumber / TURNS_PER_DAY);
     const periodIndex = ((request.scenario.turnNumber % TURNS_PER_DAY) + TURNS_PER_DAY) % TURNS_PER_DAY;
     const period = PERIODS[periodIndex];
-
-    // --- Resolve the current in-world date ---
-    const start = new Date(`${controlValues.startDate ?? '2026-06-01'}T00:00:00Z`);
-    start.setUTCDate(start.getUTCDate() + dayIndex);
-    const year = start.getUTCFullYear();
-    const month = start.getUTCMonth(); // 0–11
-    const dom = start.getUTCDate();
-    const isoDate = start.toISOString().slice(0, 10);
-    const dateLabel = start.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-      timeZone: 'UTC',
-    });
 
     // --- Dynamic Seasonal Daylight (St. Petersburg Latitude 59.9° N) ---
     const DAYLIGHT_PERIODS_BY_MONTH = [
@@ -63,8 +53,13 @@ export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
       [2, 3], // Dec: ~6 hrs
     ];
 
-    const isDaylight = DAYLIGHT_PERIODS_BY_MONTH[month]!.includes(periodIndex);
-    const isWhiteNight = (month === 5 || month === 6) && (periodIndex === 6 || periodIndex === 7);
+    const isDaylight = DAYLIGHT_PERIODS_BY_MONTH[dateInfo.month]!.includes(periodIndex);
+    const isWhiteNight =
+      (dateInfo.month === 5 || dateInfo.month === 6) && (periodIndex === 6 || periodIndex === 7);
+    // The dark counterpart to the White Nights: around the solstice the sun (the
+    // city sits just south of the Arctic Circle) only manages ~6 h of low, wan
+    // light, and the long nights and gloom are as defining as the bright summer.
+    const isDeepWinter = dateInfo.month === 11 || dateInfo.month === 0; // Dec, Jan
 
     // --- St. Petersburg monthly climate normals, °F + daily precip probability ---
     const MONTHLY = [
@@ -81,21 +76,23 @@ export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
       { hi: 35, lo: 27, precip: 0.45 }, // Nov
       { hi: 28, lo: 19, precip: 0.45 }, // Dec
     ];
-    const { hi: monthlyHi, lo: monthlyLo, precip: precipChance } = MONTHLY[month]!;
+    const { hi: monthlyHi, lo: monthlyLo, precip: precipChance } = MONTHLY[dateInfo.month]!;
 
     // --- Deterministic per-month extreme-event scheduler ---
-    const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    const daysInMonth = new Date(Date.UTC(dateInfo.year, dateInfo.month + 1, 0)).getUTCDate();
     const monthlyEvent = (
       type: string,
       cfg: { months: number[]; chance: number; minDur: number; maxDur: number }
     ) => {
-      if (!cfg.months.includes(month)) return null;
-      const r = helpers.createSeededRandom(`${request.scenario.id}-${year}-${month}-${type}`);
+      if (!cfg.months.includes(dateInfo.month)) return null;
+      const r = helpers.createSeededRandom(
+        `${request.scenario.id}-${dateInfo.year}-${dateInfo.month}-${type}`
+      );
       if (r() >= cfg.chance) return null;
       const duration = cfg.minDur + Math.floor(r() * (cfg.maxDur - cfg.minDur + 1));
       const latestStart = Math.max(1, daysInMonth - duration);
       const startDom = 1 + Math.floor(r() * latestStart);
-      return dom >= startDom && dom < startDom + duration;
+      return dateInfo.dom >= startDom && dateInfo.dom < startDom + duration;
     };
 
     const siberianFreeze = monthlyEvent('freeze', {
@@ -113,7 +110,7 @@ export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
     const summerStorm = monthlyEvent('storm', { months: [5, 6, 7], chance: 0.25, minDur: 1, maxDur: 2 });
 
     // --- Per-day randomness, stable for a given calendar date ---
-    const d = helpers.createSeededRandom(`${request.scenario.id}-${isoDate}`);
+    const d = helpers.createSeededRandom(`${request.scenario.id}-${dateInfo.isoDate}`);
 
     let hi,
       lo,
@@ -127,7 +124,7 @@ export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
       lo = hi - (10 + Math.round(d() * 5));
       cond = 'Siberian Cold';
       emoji = '🥶';
-      blurb = 'dangerously bitter, bone-chilling cold from a Siberian high';
+      blurb = 'dangerously bitter, bone-chilling cold from a Siberian high, the Neva locked solid under ice';
       alert = '❄️ EXTREME COLD WARNING';
     } else if (blizzard) {
       hi = 18 + Math.round(d() * 8);
@@ -164,13 +161,20 @@ export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
         }
       } else {
         const sky = d();
-        const overcastThreshold = month > 8 || month < 3 ? 0.4 : 0.65;
+        const overcastThreshold = dateInfo.month > 8 || dateInfo.month < 3 ? 0.4 : 0.65;
 
         if (sky < overcastThreshold) {
           cond = 'Clear';
           if (isWhiteNight) {
             emoji = '🌆';
             blurb = 'the surreal, luminous twilight of the White Nights';
+          } else if (isDeepWinter && isDaylight) {
+            emoji = '🌅';
+            blurb =
+              'a low, wan midwinter sun barely clearing the rooftops, casting long blue shadows even at midday';
+          } else if (isDeepWinter) {
+            emoji = '🌙';
+            blurb = 'the long, hard dark of midwinter, the stars sharp and brittle over the frozen city';
           } else {
             emoji = isDaylight ? '☀️' : '🌙';
             blurb = isDaylight ? 'bright and clear skies' : 'clear and cold';
@@ -188,7 +192,10 @@ export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
         } else {
           cond = 'Overcast';
           emoji = '☁️';
-          blurb = 'a thick, heavy layer of grey overcast';
+          blurb =
+            isDeepWinter && isDaylight
+              ? 'a leaden midwinter overcast, the brief daylight never brightening past a dim, dusk-like murk'
+              : 'a thick, heavy layer of grey overcast';
         }
       }
     }
@@ -207,10 +214,10 @@ export const stPetersburgTemporalScript: TemporalContextSettingsScript = {
 
     const displayPeriod = isWhiteNight ? 'White Night' : period;
 
-    let displayHtml = `<b>${dateLabel}</b><br>${emoji} ${displayPeriod} · ${temp} · ${cond}`;
+    let displayHtml = `<b>${dateInfo.dateLabel}</b><br>${emoji} ${displayPeriod} · ${temp} · ${cond}<br>${blurb}`;
     if (alert) displayHtml += `<br><b>${alert}</b>`;
 
-    let plainText = `${dateLabel}, ${displayPeriod}. Weather: ${temp}, ${cond.toLowerCase()} (${feel}) — ${blurb}.`;
+    let plainText = `${dateInfo.dateLabel}, ${displayPeriod}. Weather: ${temp}, ${cond.toLowerCase()} (${feel}) — ${blurb}.`;
     if (alert) plainText += ' A severe weather alert is in effect.';
 
     return { displayHtml, plainText, dayIndex };
