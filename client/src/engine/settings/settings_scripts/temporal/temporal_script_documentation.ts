@@ -99,6 +99,7 @@ ${currentScriptSource}
 - You can use the latest JavaScript features and don't need to worry about supporting old browsers.
 - You can expect the script to execute roughly once per minute on average.
 - While the example script above is purposefully kept simple, most users will expect a bit more color, including temperatures, occasional extreme weather events, or similar. The script should help make the scenario feel alive.
+- Assume the user is non-technical. No need to explain technical details unless they ask.
 - Where there's a fitting emoji, use emojis in the displayHtml for added color.
 - Write the script as the user asks, but if you think they might be missing out on opportunities for more colorful behavior, let them know at the end.
 - Don't make anything configurable beyond the start date, unless the user asks you to, as this can create unnecessary complication. Feel free to suggest customization options to the user *after* you follow their instructions and write the initial script. It can be an iterative process.
