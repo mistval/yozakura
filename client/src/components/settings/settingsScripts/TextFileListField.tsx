@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useUserTextFileList } from './useUserTextFileList.js';
-import { SpoilerSection } from '../../ui/SpoilerSection.js';
 import SettingFieldLabel from '../ui/SettingFieldLabel.js';
+import DeleteButton from '../../ui/DeleteButton.js';
 
 const NEW_OPTION = '__new__';
 
@@ -47,12 +47,6 @@ export default function TextFileListField({
     };
   }, [value, isCreating, loadContent]);
 
-  useEffect(() => {
-    if (!isCreating) {
-      setNameDraft(selectedFile?.fileName ?? '');
-    }
-  }, [selectedFile?.fileName, isCreating]);
-
   const handleSelectChange = (next: string) => {
     if (next === NEW_OPTION) {
       setIsCreating(true);
@@ -65,18 +59,11 @@ export default function TextFileListField({
   };
 
   const handleCreate = async () => {
-    const id = await create(nameDraft);
+    const id = await create(nameDraft, content);
     if (id) {
       setIsCreating(false);
       onChange(id);
     }
-  };
-
-  const handleRename = async () => {
-    if (!selectedFile) {
-      return;
-    }
-    await save(selectedFile.id, nameDraft.trim() || selectedFile.fileName, content);
   };
 
   const handleDelete = async () => {
@@ -87,12 +74,11 @@ export default function TextFileListField({
     onChange(nextId ?? '');
   };
 
-  const handleSaveContent = async (nextContent: string) => {
+  const handleSaveContent = async () => {
     if (!selectedFile) {
       return;
     }
-    await save(selectedFile.id, selectedFile.fileName, nextContent);
-    setContent(nextContent);
+    await save(selectedFile.id, selectedFile.fileName, content);
   };
 
   return (
@@ -104,6 +90,7 @@ export default function TextFileListField({
         onChange={(event) => handleSelectChange(event.target.value)}
         className="rounded-input"
       >
+        {!isCreating && !value && <option value="">Select a file…</option>}
         {!isCreating && value && !selectedFile && <option value={value}>{value}</option>}
         {files.map((file) => (
           <option key={file.id} value={file.id}>
@@ -114,58 +101,62 @@ export default function TextFileListField({
       </select>
 
       {isCreating ? (
-        <div className="flex gap-2 items-center">
+        <div className="space-y-2 bordered-section">
           <input
+            aria-label="New file name"
             value={nameDraft}
             onChange={(event) => setNameDraft(event.target.value)}
-            placeholder="New file name"
+            placeholder="File name"
             className="rounded-input"
           />
-          <button
-            type="button"
-            onClick={() => void handleCreate()}
-            disabled={busy}
-            className="shrink-0 px-3 py-1 border rounded-sm"
-          >
-            Create
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsCreating(false)}
-            className="shrink-0 px-3 py-1 border rounded-sm"
-          >
-            Cancel
-          </button>
-        </div>
-      ) : selectedFile ? (
-        <>
-          <div className="flex gap-2 items-center">
-            <input
-              value={nameDraft}
-              onChange={(event) => setNameDraft(event.target.value)}
-              className="rounded-input"
-            />
+          <textarea
+            aria-label="File content"
+            rows={12}
+            spellCheck={false}
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            className="rounded-input font-mono text-sm w-full"
+          />
+          <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => void handleRename()}
-              disabled={busy}
-              className="shrink-0 px-3 py-1 border rounded-sm"
+              onClick={() => setIsCreating(false)}
+              className="px-3 py-1 border rounded-sm"
             >
-              Save name
+              Cancel
             </button>
             <button
               type="button"
-              onClick={() => void handleDelete()}
+              onClick={() => void handleCreate()}
               disabled={busy}
-              className="shrink-0 px-3 py-1 border rounded-sm"
+              className="px-3 py-1 border rounded-sm"
             >
-              Delete
+              Create
             </button>
           </div>
-          <SpoilerSection title="Edit file content" initialValue={content} onSave={handleSaveContent}>
-            {null}
-          </SpoilerSection>
-        </>
+        </div>
+      ) : selectedFile ? (
+        <div className="space-y-2 bordered-section">
+          <textarea
+            aria-label="File content"
+            rows={12}
+            spellCheck={false}
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            onBlur={() => void handleSaveContent()}
+            className="rounded-input font-mono text-sm w-full"
+          />
+          <div className="flex justify-end">
+            <DeleteButton
+              onConfirm={handleDelete}
+              disabled={busy}
+              confirmTitle="Delete File"
+              confirmLabel="Delete File"
+              label="Delete file"
+              confirmMessage={`Delete "${selectedFile.fileName || 'Untitled'}"? This cannot be undone.`}
+            />
+          </div>
+        </div>
       ) : null}
 
       {error && <div className="error-card">{error}</div>}

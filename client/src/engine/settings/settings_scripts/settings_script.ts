@@ -117,7 +117,7 @@ const settingsScriptTextFileListControlSchema = z
   })
   .meta({
     description:
-      'A picker for a named, user-editable text file (e.g. a ComfyUI workflow), with create / rename / edit / delete. The stored control value is the selected file id; load the file content at run time with `helpers.loadUserTextFile(controlId, fileId)`. Files persist outside the settings blob.',
+      'A picker for a named, user-editable text file (e.g. a ComfyUI workflow), with create / edit / delete. The stored control value is the selected file id; load the file content at run time with `helpers.loadUserTextFile(controlId, fileId)`. Files persist outside the settings blob.',
   });
 
 export const settingsScriptControlSchema = z.discriminatedUnion('type', [

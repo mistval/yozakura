@@ -27,12 +27,12 @@ export function useUserTextFileList(groupKey: string) {
   }, [refresh]);
 
   const create = useCallback(
-    async (fileName: string): Promise<string | undefined> => {
+    async (fileName: string, fileContent = ''): Promise<string | undefined> => {
       setBusy(true);
       setError('');
       try {
         const id = newId();
-        await saveUserTextFile({ id, groupKey, fileName: fileName.trim() || 'Untitled', fileContent: '' });
+        await saveUserTextFile({ id, groupKey, fileName: fileName.trim() || 'Untitled', fileContent });
         await refresh();
         return id;
       } catch (e) {
