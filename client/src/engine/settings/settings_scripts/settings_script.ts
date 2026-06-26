@@ -188,6 +188,9 @@ export type ScriptSectionDescriptor = {
   getDocumentation: () => string;
   documentationTitle: string;
   enableCustom?: boolean;
+  selectLabel?: string;
+  selectTooltipHtml?: string;
+  postSelectOpenHelpHtml?: string;
 };
 
 export type ScriptSelection = {

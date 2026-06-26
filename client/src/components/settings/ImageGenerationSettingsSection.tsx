@@ -26,35 +26,6 @@ export default function ImageGenerationSettingsSection() {
         </p>
       </div>
       <div className="bordered-section">
-        <div className="space-y-1">
-          <SettingFieldLabel text="Image Generation Provider" htmlFor="image-provider" />
-          <select
-            id="image-provider"
-            value={imageSelection.selectedScriptId}
-            onChange={(event) => imageSelection.onSelectScript(event.target.value)}
-            className="rounded-input"
-          >
-            {IMAGE_SCRIPT_DESCRIPTOR.builtinOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="text-sm text-warning-text-strong bg-warning-bg border border-warning-border-soft rounded-sm p-2 mt-1">
-          Don't see your provider?{' '}
-          <a
-            href="https://mistval.github.io/yozakura/docs/image-providers"
-            target="_blank"
-            rel="noreferrer"
-            className="underline hover:text-primary"
-          >
-            Check here
-          </a>
-          .
-        </div>
-
         <CustomScriptSettings descriptor={IMAGE_SCRIPT_DESCRIPTOR} selection={imageSelection} />
       </div>
 

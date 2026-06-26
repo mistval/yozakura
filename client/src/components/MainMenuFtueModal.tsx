@@ -19,10 +19,7 @@ import {
   updateLLMConfigsWithBaseDefaultsConnection,
 } from '../engine/settings/cascading_llm_configs.js';
 import { getRequiredRandomChoice } from '../util/array.js';
-import {
-  BUILTIN_IMAGE_SCRIPTS,
-  getBuiltinImageScript,
-} from '../engine/settings/settings_scripts/image/image_scripts.js';
+import { getBuiltinImageScript } from '../engine/settings/settings_scripts/image/image_scripts.js';
 import CustomScriptSettings from './settings/settingsScripts/CustomScriptSettings.js';
 import {
   IMAGE_SCRIPT_DESCRIPTOR,
@@ -43,8 +40,6 @@ const FTUE_MODEL_TOOLTIP_HTML =
 const FTUE_TOKEN_STREAMING_TOOLTIP_HTML =
   'When enabled, NPC chat responses stream token-by-token while they are being generated. Your API provider must support OpenAI-compatible streaming (SSE). Most providers do support this.';
 
-const API_SHAPE_TOOLTIP_HTML = `The AUTOMATIC1111 shape is supported by most local image generation software (including, of course, <a href="https://github.com/automatic1111/stable-diffusion-webui">AUTOMATIC1111</a>). The OpenRouter shape is for OpenRouter and might work with other providers that have similar APIs. More providers, including fully custom ones, can be configured later in Settings.`;
-
 export default function MainMenuFtueModal() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,7 +53,6 @@ export default function MainMenuFtueModal() {
   const globalCharactersAreLoaded = useGlobalCharactersStore((s) => s.globalCharactersAreLoaded);
   const maps = useMapStore((s) => s.maps);
   const [demoStartLoading, setDemoStartLoading, demoStartLoadingRef] = useStateRef(false);
-  const [didOpenProviderDropdown, setDidOpenProviderDropdown] = useState(false);
   const [demoStartError, setDemoStartError] = useState('');
   const {
     loading: llmConnectionTestLoading,
@@ -282,44 +276,6 @@ export default function MainMenuFtueModal() {
             <p className="text-sm text-secondary">
               Configure an image generation API if you wish to use image generation features.
             </p>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <label className="block text-sm font-medium" htmlFor="ftue-image-api-shape">
-                  Provider
-                </label>
-
-                <InfoTooltip html={API_SHAPE_TOOLTIP_HTML} label="About provider" align="center" />
-              </div>
-              <select
-                id="ftue-image-api-shape"
-                value={imageSelection.selectedScriptId}
-                onChange={(event) => imageSelection.onSelectScript(event.target.value)}
-                onClick={() => setDidOpenProviderDropdown(true)}
-                className="w-full rounded-sm border px-3 py-2"
-              >
-                {BUILTIN_IMAGE_SCRIPTS.map((script) => (
-                  <option key={script.id} value={script.id}>
-                    {script.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {didOpenProviderDropdown && (
-              <div className="text-sm text-warning-text-strong bg-warning-bg border border-warning-border-soft rounded-sm p-2 mt-1">
-                Didn't see your provider?{' '}
-                <a
-                  href="https://mistval.github.io/yozakura/docs/image-providers"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline hover:text-primary"
-                >
-                  Check here
-                </a>
-                .
-              </div>
-            )}
 
             <CustomScriptSettings
               descriptor={IMAGE_SCRIPT_DESCRIPTOR}

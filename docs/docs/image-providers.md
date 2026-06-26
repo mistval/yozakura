@@ -62,6 +62,6 @@ Specific to [ComfyUI](https://comfy.org/).
 
 ## Cloudflare Workers AI
 
-| Provider                                                                 | Typical API URL                                                                   | Tested? | Notes                                   |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ------- | --------------------------------------- |
-| [Cloudflare Workers AI](https://www.cloudflare.com/products/workers-ai/) | https://api.cloudflare.com/client/v4/accounts/[your account id]/ai/run/[model id] | ✅      | Generous free tier and easy deployment. |
+| Provider                                                                 | Typical API URL                                                                   | Tested? | Notes                                                                               |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------- |
+| [Cloudflare Workers AI](https://www.cloudflare.com/products/workers-ai/) | https://api.cloudflare.com/client/v4/accounts/[your account id]/ai/run/[model id] | ✅      | Generous free tier. Good choice if you'd like some basic image generation for free. |

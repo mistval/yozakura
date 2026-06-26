@@ -177,7 +177,7 @@ export default function SettingsPanel() {
         open={resetDialogOpen}
         onClose={() => setResetDialogOpen(false)}
         title="Reset Settings to Default"
-        message="Reset settings to default? This will not affect your scenario data. Only your settings will be reset. After resetting your settings, you will be taken back to the main menu and presented with the initial setup flow."
+        message="Reset settings to default? This will not affect your scenario data and won't delete custom scripts you've added. It WILL reset prompts. After resetting your settings, you will be taken back to the main menu and presented with the initial setup flow."
         confirmLabel="Reset Settings"
         onConfirm={handleConfirmReset}
       />

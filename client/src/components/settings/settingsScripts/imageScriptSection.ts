@@ -21,6 +21,14 @@ export const IMAGE_SCRIPT_DESCRIPTOR: ScriptSectionDescriptor = {
   resolveScript: resolveImageScript,
   getDocumentation: getImageScriptDocumentation,
   documentationTitle: 'Custom Image Generation Script Documentation',
+  selectLabel: 'Image Generation Provider',
+  postSelectOpenHelpHtml: `Didn't see your provider?
+    <a
+      href="https://mistval.github.io/yozakura/docs/image-providers"
+      target="_blank"
+      rel="noreferrer"
+      class="underline hover:text-primary"
+    >Check here</a>.`,
 };
 
 export function useImageScriptSelection(): ScriptSelection {

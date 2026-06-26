@@ -19,6 +19,7 @@ import { loadUserTextFileContent } from '../../../backend_bridge/database.js';
 import { createSeededRandom } from '../../../engine/settings/settings_scripts/seeded_random.js';
 import Modal from '../../ui/Modal.js';
 import DeleteButton from '../../ui/DeleteButton.js';
+import SettingFieldLabel from '../ui/SettingFieldLabel.js';
 import SettingsScriptControls from './SettingsScriptControls.js';
 import { useUserTextFileList } from './useUserTextFileList.js';
 
@@ -42,6 +43,9 @@ export default function CustomScriptSettings({
     getDocumentation,
     documentationTitle,
     enableCustom = false,
+    selectLabel,
+    selectTooltipHtml,
+    postSelectOpenHelpHtml,
   } = descriptor;
   const { selectedScriptId, controlValues, onSelectScript, onSetControlValue, onResetControlValues } =
     selection;
@@ -50,6 +54,7 @@ export default function CustomScriptSettings({
   const [documentation, setDocumentation] = useState('');
   const [buttonData, setButtonData] = useState<Record<string, unknown>>({});
   const [customSource, setCustomSource] = useState('');
+  const [selectOpened, setSelectOpened] = useState(false);
 
   const isBuiltin = builtinOptions.some((option) => option.value === selectedScriptId);
   const selectedCustom = customScripts.files.find((file) => file.id === selectedScriptId);
@@ -160,10 +165,19 @@ export default function CustomScriptSettings({
 
   return (
     <div className="space-y-3">
-      {enableCustom && (
+      <div className="space-y-1">
+        {selectLabel && (
+          <SettingFieldLabel
+            text={selectLabel}
+            tooltipHtml={selectTooltipHtml}
+            htmlFor={`${sectionId}-script-provider`}
+          />
+        )}
         <select
+          id={`${sectionId}-script-provider`}
           aria-label="Script provider"
           value={selectedScriptId}
+          onClick={() => setSelectOpened(true)}
           onChange={(event) => void handleProviderChange(event.target.value)}
           className="rounded-input"
         >
@@ -175,14 +189,21 @@ export default function CustomScriptSettings({
               {option.label}
             </option>
           ))}
-          {customScripts.files.map((file) => (
-            <option key={file.id} value={file.id}>
-              {file.fileName}
-            </option>
-          ))}
-          <option value={NEW_CUSTOM_OPTION}>+ New custom script…</option>
+          {enableCustom &&
+            customScripts.files.map((file) => (
+              <option key={file.id} value={file.id}>
+                {file.fileName}
+              </option>
+            ))}
+          {enableCustom && <option value={NEW_CUSTOM_OPTION}>+ New custom script…</option>}
         </select>
-      )}
+        {postSelectOpenHelpHtml && selectOpened && (
+          <div
+            className="text-sm text-warning-text-strong bg-warning-bg border border-warning-border-soft rounded-sm p-2 mt-1"
+            dangerouslySetInnerHTML={{ __html: postSelectOpenHelpHtml }}
+          ></div>
+        )}
+      </div>
 
       {selectedDescription && <div className="border rounded-sm p-3">{selectedDescription}</div>}
 
