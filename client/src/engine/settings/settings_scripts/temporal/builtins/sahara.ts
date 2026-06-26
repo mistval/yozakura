@@ -1,6 +1,11 @@
 import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
-import { resolveTemporalBasics, temporalControls, type TemporalDefaults } from '../builtin_utility.js';
+import {
+  resolveTemporalBasics,
+  SCENARIO_CREATE_DATE_SENTINEL,
+  temporalControls,
+  type TemporalDefaults,
+} from '../builtin_utility.js';
 import type { TemporalContext, TemporalContextBuiltInSettingsScript } from '../temporal_script_types.js';
 
 const TEMPORAL_DEFAULTS: TemporalDefaults = { tempFrac: [0.0, 0.45, 0.85, 1.0, 0.75, 0.45, 0.2, 0.05] };
@@ -12,7 +17,13 @@ export const saharaTemporalScript: TemporalContextBuiltInSettingsScript = {
     'An 8-turn-long-day weather/season simulation for the Sahara Desert. Tracks calendar date, time of day, extreme diurnal temperature swings, and severe events like sandstorms and extreme heat based on arid climate normals.',
 
   controls: (() => [
-    { id: 'startDate', type: 'calendar', label: 'Start date', default: '2026-06-01', width: 'full' },
+    {
+      id: 'startDate',
+      type: 'calendar',
+      label: 'Start date',
+      default: SCENARIO_CREATE_DATE_SENTINEL,
+      width: 'full',
+    },
     {
       id: 'units',
       type: 'dropdown_select',

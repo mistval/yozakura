@@ -13,6 +13,7 @@ export const DEFAULT_PERIODS = [
 export const DEFAULT_DAYLIGHT_PERIODS = ['Morning', 'Midday', 'Afternoon', 'Evening'];
 export const DEFAULT_JUMP_BY_DAYS = 7;
 export const DEFAULT_START_DATE = '2026-06-01';
+export const SCENARIO_CREATE_DATE_SENTINEL = 'SCENARIO_CREATE_DATE';
 
 export type TemporalDefaults = {
   tempFrac?: number[];
@@ -122,6 +123,21 @@ export function temporalControls(defaults: TemporalDefaults): SettingsScriptCont
         'Comma-separated subset of the time period names that count as daylight. Affects sky descriptions and day/night emoji.',
     },
   ];
+}
+
+export function resolveSentinelStartDates(
+  controlValues: SettingsControlValues,
+  scenarioCreatedAt: string | undefined
+): SettingsControlValues {
+  const resolvedDate = (scenarioCreatedAt ?? new Date().toISOString()).slice(0, 10);
+  let resolved: SettingsControlValues | undefined;
+  for (const [id, value] of Object.entries(controlValues)) {
+    if (value === SCENARIO_CREATE_DATE_SENTINEL) {
+      resolved ??= { ...controlValues };
+      resolved[id] = resolvedDate;
+    }
+  }
+  return resolved ?? controlValues;
 }
 
 export function resolveTemporalDate(

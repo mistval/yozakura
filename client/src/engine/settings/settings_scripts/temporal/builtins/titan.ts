@@ -1,5 +1,6 @@
 import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
+import { SCENARIO_CREATE_DATE_SENTINEL } from '../builtin_utility.js';
 import type { TemporalContext, TemporalContextBuiltInSettingsScript } from '../temporal_script_types.js';
 
 export const titanTemporalScript: TemporalContextBuiltInSettingsScript = {
@@ -9,7 +10,13 @@ export const titanTemporalScript: TemporalContextBuiltInSettingsScript = {
     "A weather/season simulation for the Huygens landing site on Saturn's moon Titan — the only spot in the outer solar system with in-situ ground truth. Tracks Titan sols, the 29.5-year seasonal cycle, the cryogenic ~94 K surface, and the rare methane-cycle weather of the equatorial dune plains.",
 
   controls: (() => [
-    { id: 'startDate', type: 'calendar', label: 'Start date (Earth)', default: '2026-06-01', width: 'full' },
+    {
+      id: 'startDate',
+      type: 'calendar',
+      label: 'Start date (Earth)',
+      default: SCENARIO_CREATE_DATE_SENTINEL,
+      width: 'full',
+    },
     {
       id: 'units',
       type: 'dropdown_select',

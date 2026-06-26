@@ -1,6 +1,6 @@
 import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
-import { resolveTemporalDate, temporalControls } from '../builtin_utility.js';
+import { resolveTemporalDate, SCENARIO_CREATE_DATE_SENTINEL, temporalControls } from '../builtin_utility.js';
 import type { TemporalContext, TemporalContextBuiltInSettingsScript } from '../temporal_script_types.js';
 
 export const stPetersburgTemporalScript: TemporalContextBuiltInSettingsScript = {
@@ -10,7 +10,13 @@ export const stPetersburgTemporalScript: TemporalContextBuiltInSettingsScript = 
     'An 8-turn-long-day weather/season simulation for St. Petersburg, Russia. Tracks calendar date, time of day, temperature, and extreme seasonal daylight shifts (from long winter nights to the summer White Nights).',
 
   controls: (() => [
-    { id: 'startDate', type: 'calendar', label: 'Start date', default: '2026-06-01', width: 'full' },
+    {
+      id: 'startDate',
+      type: 'calendar',
+      label: 'Start date',
+      default: SCENARIO_CREATE_DATE_SENTINEL,
+      width: 'full',
+    },
     {
       id: 'units',
       type: 'dropdown_select',

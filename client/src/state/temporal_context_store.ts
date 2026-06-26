@@ -13,6 +13,7 @@ import {
   getBuiltinTemporalScript,
   resolveTemporalScript,
 } from '../engine/settings/settings_scripts/temporal/temporal_scripts.js';
+import { resolveSentinelStartDates } from '../engine/settings/settings_scripts/temporal/builtin_utility.js';
 import {
   TEMPORAL_CONTEXT_SECTION_ID,
   type TemporalContext,
@@ -57,7 +58,10 @@ export const useTemporalContextStore = create<TemporalContextStoreState>((set, g
 
     const stored = section.controlValues[section.selectedScriptId] ?? {};
     const controls = resolveControls(resolved.script.controls, { controlValues: stored, buttonData: {} });
-    const controlValues = resolveControlValues(controls, stored);
+    const controlValues = resolveSentinelStartDates(
+      resolveControlValues(controls, stored),
+      scenario.createdAt
+    );
 
     const helpers: SettingsScriptHelpers = {
       proxiedFetch: createProxiedFetch(undefined),

@@ -173,7 +173,8 @@ function ControlField({
     }
 
     case 'calendar': {
-      const selectedDate = value ? new Date(`${value}T00:00:00`) : undefined;
+      const parsedDate = value ? new Date(`${value}T00:00:00`) : undefined;
+      const selectedDate = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : undefined;
       return (
         <StackedField label={control.label ?? control.id} tooltipHtml={control.tooltipHtml} htmlFor={htmlFor}>
           <Calendar

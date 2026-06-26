@@ -1,6 +1,11 @@
 import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
-import { resolveTemporalBasics, temporalControls, type TemporalDefaults } from '../builtin_utility.js';
+import {
+  resolveTemporalBasics,
+  SCENARIO_CREATE_DATE_SENTINEL,
+  temporalControls,
+  type TemporalDefaults,
+} from '../builtin_utility.js';
 import type { TemporalContext, TemporalContextBuiltInSettingsScript } from '../temporal_script_types.js';
 
 const TEMPORAL_DEFAULTS: TemporalDefaults = { tempFrac: [0.05, 0.4, 0.8, 1.0, 0.8, 0.55, 0.3, 0.12] };
@@ -12,7 +17,13 @@ export const montpellierTemporalScript: TemporalContextBuiltInSettingsScript = {
     'An 8-turn-long-day weather/season simulation for Montpellier, France. Tracks calendar date, time of day, temperature, and Mediterranean climate events like the summer Canicule and autumn Épisodes Cévenols.',
 
   controls: (() => [
-    { id: 'startDate', type: 'calendar', label: 'Start date', default: '2026-06-01', width: 'full' },
+    {
+      id: 'startDate',
+      type: 'calendar',
+      label: 'Start date',
+      default: SCENARIO_CREATE_DATE_SENTINEL,
+      width: 'full',
+    },
     {
       id: 'units',
       type: 'dropdown_select',

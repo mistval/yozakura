@@ -91,7 +91,7 @@ const settingsScriptCalendarControlSchema = z
   })
   .meta({
     description:
-      'A calendar date picker. The stored value is an ISO date string (YYYY-MM-DD). `default` is an ISO date string.',
+      'A calendar date picker. The stored value is an ISO date string (YYYY-MM-DD). `default` is an ISO date string, or the sentinel string "SCENARIO_CREATE_DATE", which uses the scenario creation date (that is usually the right move).',
   });
 
 const settingsScriptButtonControlSchema = z
