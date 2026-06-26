@@ -27,8 +27,18 @@ export const baliTemporalScript: TemporalContextSettingsScript = {
   ]) as SettingsScriptControlsDefinition,
 
   async getTemporalContext(controlValues, request, helpers): Promise<TemporalContext> {
-    const { period, isDaylight, dayIndex, year, month, dom, daysInMonth, isoDate, dateLabel, tempFracAtPeriod } =
-      resolveTemporalBasics(controlValues, request.scenario.turnNumber, TEMPORAL_DEFAULTS);
+    const {
+      period,
+      isDaylight,
+      dayIndex,
+      year,
+      month,
+      dom,
+      daysInMonth,
+      isoDate,
+      dateLabel,
+      tempFracAtPeriod,
+    } = resolveTemporalBasics(controlValues, request.scenario.turnNumber, TEMPORAL_DEFAULTS);
 
     // --- Bali (Denpasar) monthly climate normals, °F + daily precip probability ---
     const MONTHLY = [

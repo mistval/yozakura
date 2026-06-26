@@ -27,8 +27,18 @@ export const shizuokaTemporalScript: TemporalContextSettingsScript = {
   ]) as SettingsScriptControlsDefinition,
 
   async getTemporalContext(controlValues, request, helpers): Promise<TemporalContext> {
-    const { period, isDaylight, dayIndex, year, month, dom, daysInMonth, isoDate, dateLabel, tempFracAtPeriod } =
-      resolveTemporalBasics(controlValues, request.scenario.turnNumber, TEMPORAL_DEFAULTS);
+    const {
+      period,
+      isDaylight,
+      dayIndex,
+      year,
+      month,
+      dom,
+      daysInMonth,
+      isoDate,
+      dateLabel,
+      tempFracAtPeriod,
+    } = resolveTemporalBasics(controlValues, request.scenario.turnNumber, TEMPORAL_DEFAULTS);
 
     // --- Shizuoka Pacific Coast monthly climate normals, °F + daily precip probability ---
     // Winters are mild and famously sunny. Summers are hot, muggy, and wet.
