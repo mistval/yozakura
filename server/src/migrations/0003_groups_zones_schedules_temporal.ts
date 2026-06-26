@@ -70,9 +70,9 @@ const BACKFILL_TEMPORAL_CONTEXT_SQL = `
     data,
     '$.temporalContext',
     json_object(
-      'selectedScriptId', 'new-york',
+      'selectedScriptId', 'bali-weather',
       'controlValues', json_object(
-        'new-york', json_object('startDate', substr(created_at, 1, 10))
+        'bali-weather', json_object('startDate', substr(created_at, 1, 10))
       )
     )
   )
