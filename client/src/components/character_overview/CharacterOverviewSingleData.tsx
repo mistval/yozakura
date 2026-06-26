@@ -14,6 +14,7 @@ import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store
 import { assertNonNullish } from '../../errors/application_error.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
 import { StringParam, useQueryParams } from 'use-query-params';
+import { getRequiredRandomChoice } from '../../util/array.js';
 
 function buildGroupQuery(groupId: string): string {
   const params = new URLSearchParams(window.location.search);
@@ -189,7 +190,16 @@ export default function CharacterOverviewSingleData({
           <select
             value={charactersById[selectedSingleCharacter.id]?.locationId || ''}
             onChange={(event) => {
-              void setCharacterLocation(selectedSingleCharacter.id, event.target.value);
+              const locationId =
+                event.target.value === 'random'
+                  ? getRequiredRandomChoice(
+                      sortedLocations.filter(
+                        (l) => l.id !== charactersById[selectedSingleCharacter.id]?.locationId
+                      )
+                    ).id
+                  : event.target.value;
+
+              void setCharacterLocation(selectedSingleCharacter.id, locationId);
             }}
             className="border rounded-sm px-2 py-1 bg-inset"
           >
@@ -198,6 +208,9 @@ export default function CharacterOverviewSingleData({
                 {location.name}
               </option>
             ))}
+            <option key="random" value="random">
+              Random Location
+            </option>
           </select>
         </label>
         <label className="flex flex-col items-center gap-2 text-sm">
