@@ -16,6 +16,7 @@ If you decide to keep the old goal:
 
 If you decide to write a new goal for <%= it.focusedCharacter.firstName %> to pursue with <%= it.targetCharacter.firstName %>:
 - Write a goal that provides strong narrative momentum.
+- Prioritize taking decisive action rather than just planning.
 - Be specific and provide sufficient context.
 - Output only the updated goal and nothing else`;
   public readonly contextSchema = offscreenMemoryUpdateConversationGoalContextSchema;

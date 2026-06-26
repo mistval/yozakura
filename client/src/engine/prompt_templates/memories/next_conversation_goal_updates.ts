@@ -11,7 +11,7 @@ class NextConversationGoalUpdatesSystemTemplate extends PromptTemplateBase<
 
 Rules:
 - Prioritize specific goals that were discussed in the conversation.
-- Prioritize taking decisive action rather than just planning
+- Prioritize taking decisive action rather than just planning.
 - Write in the third person perspective.
 - Choose a goal that provides strong narrative momentum.
 - Be specific and provide sufficient context.
