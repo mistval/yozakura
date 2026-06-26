@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react';
 import type { PromptTemplateChain } from '../../../engine/prompt_templates/prompt_template_chain.js';
 import type { PromptTemplateOverride } from '../../../state/settings_store.js';
 import { useSettingsStore } from '../../../state/settings_store.js';
-import Modal from '../../ui/Modal.js';
 import RevertableTextSettingsGroup from '../ui/RevertableTextSettingsGroup.js';
 import TextSettingEditor from '../ui/TextSettingEditor.js';
 import { settingsTooltips } from '../settings_tooltips.js';
 import type { PromptExecutionContext } from '../../../engine/prompt_templates/prompt_template_context_fields.js';
+import AIAssistantInstructionsButton from '../../ui/AIAssistantInstructionsButton.js';
 
 type PromptTemplateChainEditorProps = {
   chain: PromptTemplateChain<PromptExecutionContext, unknown>;
@@ -24,9 +24,7 @@ export default function PromptTemplateChainEditor({ chain }: PromptTemplateChain
   const promptParserOverrides = useSettingsStore((s) => s.promptParserOverrides);
   const promptTemplateOverrides = useSettingsStore((s) => s.promptTemplateOverrides);
   const setSettings = useSettingsStore((s) => s.setSettings);
-  const [documentationOpen, setDocumentationOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
-  const [documentation, setDocumentation] = useState('');
 
   const parserSource = promptParserOverrides[chain.parser?.parserOverrideSettingId ?? '']?.source;
   const resolvedParserSource = parserSource ?? chain.parser?.defaultParserSource ?? '';
@@ -141,21 +139,12 @@ export default function PromptTemplateChainEditor({ chain }: PromptTemplateChain
 
   return (
     <>
-      <header className="space-y-1 flex flex-col gap-2">
-        <div className="flex  items-start justify-between gap-3">
-          <button
-            type="button"
-            className="px-3 py-1 border rounded-sm w-full h-12 button-emphasized"
-            onClick={() => {
-              const documentation = chain.getDocumentation();
-              setDocumentation(documentation);
-              setDocumentationOpen(true);
-            }}
-          >
-            🤖 AI Assistant Instructions 🗒️
-          </button>
-        </div>
-      </header>
+      <AIAssistantInstructionsButton
+        title={`${chain.templateChainTitle} Template Group Documentation`}
+        getDocumentation={() => chain.getDocumentation()}
+        fileNameBase={chain.templateChainId}
+        isDirty={isDirty}
+      />
 
       <RevertableTextSettingsGroup
         savedValues={savedValues}
@@ -212,73 +201,6 @@ export default function PromptTemplateChainEditor({ chain }: PromptTemplateChain
           </div>
         )}
       </RevertableTextSettingsGroup>
-
-      <Modal
-        open={documentationOpen}
-        onClose={() => setDocumentationOpen(false)}
-        className="flex items-center justify-center p-4"
-      >
-        <div className="bg-emphasized rounded-sm p-4 w-full max-w-4xl space-y-3">
-          <header className="space-y-2">
-            <h3 className="font-semibold">{chain.templateChainTitle} Template Group Documentation</h3>
-            <p className="text-sm text-secondary">
-              Reading and writing templates is hard. Copy these instructions into a powerful LLM, describe the
-              edits you want, and let it do the work for you. The instructions document is different for each
-              prompt group and contains your templates and parser, so you don't need to copy-paste them
-              separately.
-            </p>
-          </header>
-
-          {isDirty && (
-            <div className="rounded-sm border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning-text">
-              You have unsaved template changes. The below instructions document does not include your unsaved
-              changes.
-            </div>
-          )}
-
-          <textarea
-            rows={20}
-            readOnly
-            value={documentation}
-            spellCheck={false}
-            className="rounded-input font-mono text-xs w-full"
-          />
-
-          <div className="flex flex-wrap gap-2 justify-end">
-            <button
-              type="button"
-              className="px-3 py-1 border rounded-sm"
-              onClick={async () => {
-                await navigator.clipboard.writeText(documentation);
-              }}
-            >
-              Copy
-            </button>
-            <button
-              type="button"
-              className="px-3 py-1 border rounded-sm"
-              onClick={() => {
-                const blob = new Blob([documentation], { type: 'text/markdown;charset=utf-8' });
-                const downloadUrl = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = `${chain.templateChainId}.md`;
-                link.click();
-                URL.revokeObjectURL(downloadUrl);
-              }}
-            >
-              Download
-            </button>
-            <button
-              type="button"
-              className="px-3 py-1 border rounded-sm"
-              onClick={() => setDocumentationOpen(false)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </Modal>
     </>
   );
 }
