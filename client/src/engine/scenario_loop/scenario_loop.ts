@@ -1,7 +1,7 @@
 import { useTurnMachineStore } from '../../state/turn_machine_store';
 import { whenScenarioCharactersLoaded } from '../../state/scenario_character_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
-import { useScenarioStore } from '../../state/scenario_store';
+import { getRequiredUserCharacterId, useScenarioStore } from '../../state/scenario_store';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry';
 import {
   abortAllPendingActions,
@@ -17,6 +17,33 @@ function stopScenarioLoop() {
   scenarioLoopPromiseCallbacks.userTurnAction = undefined;
   scenarioLoopPromiseCallbacks.userChatAction = undefined;
   useScenarioLoopStateStore.getState().resetLoopState();
+}
+
+function calculateStartupPauseState(hydratedState: ReturnType<typeof useTurnMachineStore.getState>): {
+  pause: boolean;
+  forceNextSpeaker: string | undefined;
+} {
+  if (hydratedState.chatState !== 'inactive' && hydratedState.userIsParticipant()) {
+    return {
+      pause: false,
+      forceNextSpeaker: getRequiredUserCharacterId(),
+    };
+  } else if (hydratedState.chatState !== 'inactive') {
+    return {
+      pause: true,
+      forceNextSpeaker: undefined,
+    };
+  } else if (hydratedState.currentCharacterIsUser()) {
+    return {
+      pause: false,
+      forceNextSpeaker: undefined,
+    };
+  }
+
+  return {
+    pause: true,
+    forceNextSpeaker: undefined,
+  };
 }
 
 export async function startScenarioLoop() {
@@ -41,15 +68,19 @@ export async function startScenarioLoop() {
     await doScenarioLoopAsyncAction(() => whenScenarioCharactersLoaded());
 
     const restored = await doScenarioLoopAsyncAction(() => loadPersistedTurn(activeScenarioId));
+    let forceInitialSpeakerIfChat: string | undefined;
+
     if (restored) {
       useTurnMachineStore.getState().hydrate(restored);
+      const startupPauseState = calculateStartupPauseState(useTurnMachineStore.getState());
+      forceInitialSpeakerIfChat = startupPauseState.forceNextSpeaker;
 
-      if (!useTurnMachineStore.getState().currentCharacterIsUser()) {
+      if (startupPauseState.pause) {
         useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
       }
     }
 
-    await runTurnLoop();
+    await runTurnLoop({ forceInitialSpeakerIfChat });
   } catch (err) {
     if (err instanceof ScenarioLoopAbortSignalException) {
       return;

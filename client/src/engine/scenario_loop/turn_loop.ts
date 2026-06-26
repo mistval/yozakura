@@ -23,10 +23,12 @@ import { persistTurn } from './turn_persistence';
 import type { TurnMove, TurnMoveOutcome } from './types';
 import type { MovementPolicy } from '../types';
 
-export async function runTurnLoop() {
+export async function runTurnLoop(opts?: { forceInitialSpeakerIfChat?: string | undefined }) {
+  let initialSpeakerIfChat = opts?.forceInitialSpeakerIfChat;
+
   while (true) {
     try {
-      await runTurnLoopTick();
+      await runTurnLoopTick({ initialSpeakerIfChat });
     } catch (err) {
       if (err instanceof UserAbortSignalException) {
         const loopState = useScenarioLoopStateStore.getState();
@@ -48,10 +50,12 @@ export async function runTurnLoop() {
 
       throw err;
     }
+
+    initialSpeakerIfChat = undefined;
   }
 }
 
-async function runTurnLoopTick() {
+async function runTurnLoopTick(opts?: { initialSpeakerIfChat?: string | undefined }) {
   const { turnMachineState, currentCharacterId, startNewTurn } = useTurnMachineStore.getState();
 
   await recomputeTemporalContextAndAutoselectWardrobes();
@@ -72,7 +76,7 @@ async function runTurnLoopTick() {
       rich: true,
     };
 
-    const outcome = await runChatLoop();
+    const outcome = await runChatLoop({ forceInitialSpeaker: opts?.initialSpeakerIfChat });
     advanceAfterMove(inputInterface, chatMove, outcome);
     return;
   }
@@ -109,7 +113,9 @@ function advanceAfterMove(inputInterface: CharacterInputInterface, move: TurnMov
   persistTurn();
 }
 
-async function runChatLoop(): Promise<{ noEffect: boolean }> {
+async function runChatLoop(opts?: {
+  forceInitialSpeaker?: string | undefined;
+}): Promise<{ noEffect: boolean }> {
   ChatCoordinator.enterActiveChat();
 
   if (
@@ -120,7 +126,9 @@ async function runChatLoop(): Promise<{ noEffect: boolean }> {
   }
 
   try {
-    let nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+    let nextSpeaker = await doScenarioLoopAsyncAction(() =>
+      ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: opts?.forceInitialSpeaker })
+    );
 
     while (true) {
       const speakerInput = makeInputInterface(nextSpeaker.id);

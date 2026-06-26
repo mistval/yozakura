@@ -295,3 +295,9 @@ export function getRequiredActiveScenarioMap() {
   assertNonNullish(activeMap, 'no active map');
   return activeMap;
 }
+
+export function getRequiredUserCharacterId() {
+  const scenario = useScenarioStore.getState().activeScenario;
+  assertNonNullish(scenario, 'no active scenario');
+  return scenario.userCharacterId;
+}
