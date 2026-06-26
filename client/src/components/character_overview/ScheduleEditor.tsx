@@ -14,7 +14,7 @@ import { newId } from '../../util/id.js';
 import DeleteButton from '../ui/DeleteButton.js';
 import ConfirmDialog from '../ui/ConfirmDialog.js';
 import RangeNumberInput from '../settings/ui/RangeNumberInput.js';
-import { clampUnitRate, toPercent } from '../../util/numeric.js';
+import { clamp, clampUnitRate, toPercent } from '../../util/numeric.js';
 
 const SEGMENT_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#14b8a6'];
 const LANE_HEIGHT_PX = 28;
@@ -24,11 +24,7 @@ const MIN_PIXELS_PER_TURN = 14;
 const MAX_PIXELS_PER_TURN = 220;
 const ZOOM_STEP = 1.15;
 const REASON_TOOLTIP =
-  'Explain why the character should be here at this time, completing the thought: "They are here because …". This may be injected into the character\'s system prompt while their schedule keeps them in this zone.';
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
+  'Explain why the character should be here at this time, completing the thought: "They are here because ...". This may be injected into the character\'s system prompt both while they are here and while they are traveling here.';
 
 function parsePositiveInt(value: string, fallback: number): number {
   const parsed = Math.trunc(Number(value));

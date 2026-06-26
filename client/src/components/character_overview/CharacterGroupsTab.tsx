@@ -6,6 +6,7 @@ import { useScenarioCharacterStore } from '../../state/scenario_character_store.
 import DeleteButton from '../ui/DeleteButton.js';
 import Tabs from '../ui/Tabs.js';
 import ScheduleEditor from './ScheduleEditor.js';
+import { findById } from '../../util/array.js';
 
 export default function CharacterGroupsTab() {
   const groups = useCharacterGroupStore((state) => state.groups);
@@ -14,7 +15,7 @@ export default function CharacterGroupsTab() {
   const [selectedGroupId, setSelectedGroupId] = useQueryParam('cogroup', StringParam);
   const [subTab, setSubTab] = useState<'members' | 'schedule'>('members');
 
-  const selectedGroup = groups.find((group) => group.id === selectedGroupId);
+  const selectedGroup = findById(groups, selectedGroupId ?? '');
 
   const toggleGroupSelection = (groupId: string) => {
     setSelectedGroupId(selectedGroupId === groupId ? undefined : groupId);

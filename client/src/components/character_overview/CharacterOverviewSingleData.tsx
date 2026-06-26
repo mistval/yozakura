@@ -116,8 +116,8 @@ export default function CharacterOverviewSingleData({
     return undefined;
   }
 
-  const setCharacterLocation = async (characterId: string, locationId: string) => {
-    await saveScenarioCharacterFields(characterId, {
+  const setCharacterLocation = (characterId: string, locationId: string) => {
+    saveScenarioCharacterFields(characterId, {
       locationId: locationId.trim(),
     });
   };
@@ -199,7 +199,7 @@ export default function CharacterOverviewSingleData({
                     ).id
                   : event.target.value;
 
-              void setCharacterLocation(selectedSingleCharacter.id, locationId);
+              setCharacterLocation(selectedSingleCharacter.id, locationId);
             }}
             className="border rounded-sm px-2 py-1 bg-inset"
           >

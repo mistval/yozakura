@@ -8,7 +8,7 @@ export default function HeaderSection() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { canDelete, isBusy, deleteConfirmationMessage, closeEditor, remove, isNew, isGlobalMode, error } =
     useCharacterEditorModal();
-  const activeChatStatus = useTurnMachineStore((state) => state.chatState !== 'inactive');
+  const hasActiveChat = useTurnMachineStore((state) => state.chatState !== 'inactive');
   const currentTurnCharacterId = useCurrentTurnCharacterId();
   const userCharacterId = useScenarioStore((state) => state.activeScenario?.userCharacterId);
   const npcPhaseBusy = currentTurnCharacterId !== undefined && currentTurnCharacterId !== userCharacterId;
@@ -24,9 +24,9 @@ export default function HeaderSection() {
               onClick={() => {
                 setConfirmOpen(true);
               }}
-              disabled={isBusy || activeChatStatus || npcPhaseBusy}
+              disabled={isBusy || hasActiveChat || npcPhaseBusy}
               title={
-                isBusy || activeChatStatus || npcPhaseBusy
+                isBusy || hasActiveChat || npcPhaseBusy
                   ? "Cannot delete characters right now. Make sure it's your turn and you do not have a chat open."
                   : ''
               }

@@ -651,9 +651,8 @@ export async function storeConversation(scenarioId: string, entry: StoredConvers
 }
 
 export async function storeScenarioEvent(scenarioId: string, event: ScenarioEvent) {
-  const parsedEvent = scenarioEventSchema.parse(event);
   await dbRun(UPSERT_SCENARIO_EVENT_SQL, [
-    [parsedEvent.id, scenarioId, parsedEvent.eventType, encodeStoredData(parsedEvent, scenarioEventSchema)],
+    [event.id, scenarioId, event.eventType, encodeStoredData(event, scenarioEventSchema)],
   ]);
 }
 

@@ -11,7 +11,6 @@ import { ChatCoordinator } from '../../chat/chat_coordinator';
 import { getScheduledMoveForNpc } from '../../character_schedule/get_scheduled_move';
 import { familiarityRelativeWeight, getDirectedRelationship } from '../../relationship';
 import type { Character, CharacterRelationships, WorldMapLocation } from '../../types';
-import { doScenarioLoopAsyncAction } from '../flow_control';
 import type { ChatInputResult, TurnMove, TurnMoveResult } from '../types';
 import { CharacterInputInterface } from './character_input_interface';
 
@@ -139,9 +138,7 @@ export class NPCInputInterface extends CharacterInputInterface {
     // While paused, the only way an NPC is the next speaker is because the user explicitly chose
     // them, so this generation is a user interaction that must bypass the pause gate.
     const isUserInteraction = ChatCoordinator.isChatPaused();
-    await doScenarioLoopAsyncAction(() =>
-      ChatCoordinator.speakAsNpc(this.characterId, { isUserInteraction })
-    );
+    await ChatCoordinator.speakAsNpc(this.characterId, { isUserInteraction });
 
     return { input: { actionType: 'spoke' } };
   }

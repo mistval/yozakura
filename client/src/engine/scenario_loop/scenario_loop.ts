@@ -3,17 +3,11 @@ import { whenScenarioCharactersLoaded } from '../../state/scenario_character_sto
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
 import { useScenarioStore } from '../../state/scenario_store';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry';
-import {
-  abortAllPendingActions,
-  doScenarioLoopAsyncAction,
-  ScenarioLoopAbortSignalException,
-  scenarioLoopPromiseCallbacks,
-} from './flow_control';
+import { ScenarioLoopAbortSignalException, scenarioLoopPromiseCallbacks } from './flow_control';
 import { loadPersistedTurn } from './turn_persistence';
 import { runTurnLoop } from './turn_loop';
 
 function stopScenarioLoop() {
-  abortAllPendingActions();
   scenarioLoopPromiseCallbacks.userTurnAction = undefined;
   scenarioLoopPromiseCallbacks.userChatAction = undefined;
   useScenarioLoopStateStore.getState().resetLoopState();
@@ -51,9 +45,9 @@ export async function startScenarioLoop() {
 
   try {
     useTurnMachineStore.getState().reset();
-    await doScenarioLoopAsyncAction(() => whenScenarioCharactersLoaded());
+    await whenScenarioCharactersLoaded();
 
-    const restored = await doScenarioLoopAsyncAction(() => loadPersistedTurn(activeScenarioId));
+    const restored = await loadPersistedTurn(activeScenarioId);
 
     if (restored) {
       useTurnMachineStore.getState().hydrate(restored);

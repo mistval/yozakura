@@ -15,7 +15,6 @@ import { CharacterInputInterface } from './character_input_interfaces/character_
 import { NPCInputInterface } from './character_input_interfaces/npc_input_interface';
 import { UserInputInterface } from './character_input_interfaces/user_input_interface';
 import {
-  doScenarioLoopAsyncAction,
   rethrowSignalException,
   ScenarioLoopAbortSignalException,
   UserAbortSignalException,
@@ -76,6 +75,11 @@ async function runTurnLoopTick(opts?: { prioritizeUser?: boolean | undefined }) 
 
   const characterId = currentCharacterId();
   assertNonNullish(characterId, 'No current character to process');
+  const character = useScenarioCharacterStore.getState().getCharacterById(characterId);
+  if (!character) {
+    advanceState(false);
+    return;
+  }
 
   const inputInterface = makeInputInterface(characterId);
 
@@ -87,30 +91,28 @@ async function runTurnLoopTick(opts?: { prioritizeUser?: boolean | undefined }) 
     };
 
     const outcome = await runChatLoop({ userSpeaksFirst: opts?.prioritizeUser });
-    advanceAfterMove(inputInterface, chatMove, outcome);
+    advanceState(inputInterface.continuesAfterMove(chatMove, outcome));
     return;
   }
 
   const { move } = await inputInterface.getNextTurnMove();
 
   if (move.actionType === 'chat' && move.rich) {
-    const chatStart = await doScenarioLoopAsyncAction(() =>
-      ChatCoordinator.prepareChatStart(move.participantIds)
-    );
+    const chatStart = await ChatCoordinator.prepareChatStart(move.participantIds);
     useTurnMachineStore.getState().beginChat(chatStart);
     persistTurn();
     return;
   }
 
   const outcome = await applySimpleTurnMove(characterId, move);
-  advanceAfterMove(inputInterface, move, outcome);
+  advanceState(inputInterface.continuesAfterMove(move, outcome));
 }
 
-function advanceAfterMove(inputInterface: CharacterInputInterface, move: TurnMove, outcome: TurnMoveOutcome) {
+function advanceState(currentCharacterShouldMoveAgain: boolean) {
   const store = useTurnMachineStore.getState();
 
   let turnEnded = false;
-  if (inputInterface.continuesAfterMove(move, outcome)) {
+  if (currentCharacterShouldMoveAgain) {
     store.setTurnMachineState('deciding');
   } else {
     turnEnded = store.finishCurrentCharacter();
@@ -134,46 +136,36 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
   }
 
   try {
-    let nextSpeaker = await doScenarioLoopAsyncAction(() =>
-      ChatCoordinator.selectNextSpeaker({
-        forcedSpeakerId: opts?.userSpeaksFirst ? getRequiredUserCharacterId() : undefined,
-      })
-    );
+    let nextSpeaker = await ChatCoordinator.selectNextSpeaker({
+      forcedSpeakerId: opts?.userSpeaksFirst ? getRequiredUserCharacterId() : undefined,
+    });
 
     while (true) {
       try {
         const speakerInput = makeInputInterface(nextSpeaker.id);
         ChatCoordinator.setStateAwaitingCharacterInput();
-        const { input } = await doScenarioLoopAsyncAction(() => speakerInput.getNextChatInput());
+        const { input } = await speakerInput.getNextChatInput();
 
         if (input.actionType === 'skip_turn') {
-          nextSpeaker = await doScenarioLoopAsyncAction(() =>
-            ChatCoordinator.selectNextSpeaker({ notSpeakerId: nextSpeaker.id })
-          );
+          nextSpeaker = await ChatCoordinator.selectNextSpeaker({ notSpeakerId: nextSpeaker.id });
         } else if (input.actionType === 'speak_as') {
-          nextSpeaker = await doScenarioLoopAsyncAction(() =>
-            ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: input.characterId })
-          );
+          nextSpeaker = await ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: input.characterId });
         } else if (input.actionType === 'request_end_chat') {
           return closeChatSession(input.forceNoEffect);
         } else if (input.actionType === 'send_message') {
-          await doScenarioLoopAsyncAction(() =>
-            ChatCoordinator.addCharacterMessage(nextSpeaker.id, input.message)
-          );
-          nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+          await ChatCoordinator.addCharacterMessage(nextSpeaker.id, input.message);
+          nextSpeaker = await ChatCoordinator.selectNextSpeaker();
         } else if (input.actionType === 'spoke') {
-          nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+          nextSpeaker = await ChatCoordinator.selectNextSpeaker();
         } else if (input.actionType === 'delete_message') {
           ChatCoordinator.deleteMessageById(input.messageId);
         } else if (input.actionType === 'redo_message') {
-          await doScenarioLoopAsyncAction(() => ChatCoordinator.redoMessageById(input.messageId));
-          nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+          await ChatCoordinator.redoMessageById(input.messageId);
+          nextSpeaker = await ChatCoordinator.selectNextSpeaker();
         } else if (input.actionType === 'edit_message') {
           ChatCoordinator.editMessageById(input.messageId, input.newContent);
         } else if (input.actionType === 'generate_image') {
-          await doScenarioLoopAsyncAction(() =>
-            ChatCoordinator.generateImageFromPrompt(input.prompt, { isUserInteraction: true })
-          );
+          ChatCoordinator.generateImageFromPrompt(input.prompt, { isUserInteraction: true });
         } else {
           assert(false, 'Unknown chat input action');
         }
@@ -188,11 +180,9 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
           hint: 'Control will be handed to the user',
         });
 
-        nextSpeaker = await doScenarioLoopAsyncAction(() =>
-          ChatCoordinator.selectNextSpeaker({
-            forcedSpeakerId: getRequiredUserCharacterId(),
-          })
-        );
+        nextSpeaker = await ChatCoordinator.selectNextSpeaker({
+          forcedSpeakerId: getRequiredUserCharacterId(),
+        });
       }
     }
   } catch (err) {
@@ -260,7 +250,7 @@ async function closeChatSession(forceNoEffect?: boolean): Promise<{ noEffect: bo
   const noEffect = forceNoEffect || (activeChatStore.transcript?.countCharacterChatMessages() ?? 0) < 2;
 
   doPostConversationWardrobeAutoRevert();
-  await doScenarioLoopAsyncAction(() => ChatCoordinator.endActiveChat(noEffect));
+  await ChatCoordinator.endActiveChat(noEffect);
 
   return { noEffect };
 }
