@@ -23,12 +23,18 @@ import { persistTurn } from './turn_persistence';
 import type { TurnMove, TurnMoveOutcome } from './types';
 import type { MovementPolicy } from '../types';
 
-export async function runTurnLoop(opts?: { forceInitialSpeakerIfChat?: string | undefined }) {
-  let initialSpeakerIfChat = opts?.forceInitialSpeakerIfChat;
+export async function runTurnLoop(
+  opts: {
+    prioritizeUserOnFirstIteration?: boolean | undefined;
+  } = {}
+) {
+  let prioritizeUser = opts.prioritizeUserOnFirstIteration;
 
   while (true) {
     try {
-      await runTurnLoopTick({ initialSpeakerIfChat });
+      await runTurnLoopTick({
+        prioritizeUser,
+      });
     } catch (err) {
       if (err instanceof UserAbortSignalException) {
         const loopState = useScenarioLoopStateStore.getState();
@@ -51,17 +57,19 @@ export async function runTurnLoop(opts?: { forceInitialSpeakerIfChat?: string | 
       throw err;
     }
 
-    initialSpeakerIfChat = undefined;
+    prioritizeUser = undefined;
   }
 }
 
-async function runTurnLoopTick(opts?: { initialSpeakerIfChat?: string | undefined }) {
+async function runTurnLoopTick(opts?: { prioritizeUser?: boolean | undefined }) {
   const { turnMachineState, currentCharacterId, startNewTurn } = useTurnMachineStore.getState();
 
   await recomputeTemporalContextAndAutoselectWardrobes();
 
   if (turnMachineState === undefined) {
-    startNewTurn(getTurnCharacterIds(), getRequiredUserCharacterId());
+    startNewTurn(getTurnCharacterIds(), getRequiredUserCharacterId(), {
+      userMovesFirst: opts?.prioritizeUser,
+    });
   }
 
   const characterId = currentCharacterId();
@@ -76,7 +84,7 @@ async function runTurnLoopTick(opts?: { initialSpeakerIfChat?: string | undefine
       rich: true,
     };
 
-    const outcome = await runChatLoop({ forceInitialSpeaker: opts?.initialSpeakerIfChat });
+    const outcome = await runChatLoop({ userSpeaksFirst: opts?.prioritizeUser });
     advanceAfterMove(inputInterface, chatMove, outcome);
     return;
   }
@@ -113,9 +121,7 @@ function advanceAfterMove(inputInterface: CharacterInputInterface, move: TurnMov
   persistTurn();
 }
 
-async function runChatLoop(opts?: {
-  forceInitialSpeaker?: string | undefined;
-}): Promise<{ noEffect: boolean }> {
+async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Promise<{ noEffect: boolean }> {
   ChatCoordinator.enterActiveChat();
 
   if (
@@ -127,47 +133,63 @@ async function runChatLoop(opts?: {
 
   try {
     let nextSpeaker = await doScenarioLoopAsyncAction(() =>
-      ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: opts?.forceInitialSpeaker })
+      ChatCoordinator.selectNextSpeaker({
+        forcedSpeakerId: opts?.userSpeaksFirst ? getRequiredUserCharacterId() : undefined,
+      })
     );
 
     while (true) {
-      const speakerInput = makeInputInterface(nextSpeaker.id);
-      ChatCoordinator.setStateAwaitingCharacterInput();
-      const { input } = await speakerInput.getNextChatInput();
+      try {
+        const speakerInput = makeInputInterface(nextSpeaker.id);
+        ChatCoordinator.setStateAwaitingCharacterInput();
+        const { input } = await speakerInput.getNextChatInput();
 
-      if (input.actionType === 'skip_turn') {
+        if (input.actionType === 'skip_turn') {
+          nextSpeaker = await doScenarioLoopAsyncAction(() =>
+            ChatCoordinator.selectNextSpeaker({ notSpeakerId: nextSpeaker.id })
+          );
+        } else if (input.actionType === 'speak_as') {
+          nextSpeaker = await doScenarioLoopAsyncAction(() =>
+            ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: input.characterId })
+          );
+        } else if (input.actionType === 'request_end_chat') {
+          return closeChatSession(input.forceNoEffect);
+        } else if (input.actionType === 'send_message') {
+          await doScenarioLoopAsyncAction(() =>
+            ChatCoordinator.addCharacterMessage(nextSpeaker.id, input.message)
+          );
+          nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+        } else if (input.actionType === 'spoke') {
+          nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+        } else if (input.actionType === 'delete_message') {
+          ChatCoordinator.deleteMessageById(input.messageId);
+        } else if (input.actionType === 'redo_message') {
+          await doScenarioLoopAsyncAction(() => ChatCoordinator.redoMessageById(input.messageId));
+          nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
+        } else if (input.actionType === 'edit_message') {
+          ChatCoordinator.editMessageById(input.messageId, input.newContent);
+        } else if (input.actionType === 'generate_image') {
+          await doScenarioLoopAsyncAction(() =>
+            ChatCoordinator.generateImageFromPrompt(input.prompt, { isUserInteraction: true })
+          );
+        } else {
+          assert(false, 'Unknown chat input action');
+        }
+
+        persistTurn();
+      } catch (err) {
+        void showNonRetriableErrorCardIfNeeded({
+          error: err,
+          operationType: 'chat_loop_inner',
+          hint: 'Control will be handed to the user',
+        });
+
         nextSpeaker = await doScenarioLoopAsyncAction(() =>
-          ChatCoordinator.selectNextSpeaker({ notSpeakerId: nextSpeaker.id })
+          ChatCoordinator.selectNextSpeaker({
+            forcedSpeakerId: getRequiredUserCharacterId(),
+          })
         );
-      } else if (input.actionType === 'speak_as') {
-        nextSpeaker = await doScenarioLoopAsyncAction(() =>
-          ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: input.characterId })
-        );
-      } else if (input.actionType === 'request_end_chat') {
-        return closeChatSession(input.forceNoEffect);
-      } else if (input.actionType === 'send_message') {
-        await doScenarioLoopAsyncAction(() =>
-          ChatCoordinator.addCharacterMessage(nextSpeaker.id, input.message)
-        );
-        nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
-      } else if (input.actionType === 'spoke') {
-        nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
-      } else if (input.actionType === 'delete_message') {
-        ChatCoordinator.deleteMessageById(input.messageId);
-      } else if (input.actionType === 'redo_message') {
-        await doScenarioLoopAsyncAction(() => ChatCoordinator.redoMessageById(input.messageId));
-        nextSpeaker = await doScenarioLoopAsyncAction(() => ChatCoordinator.selectNextSpeaker());
-      } else if (input.actionType === 'edit_message') {
-        ChatCoordinator.editMessageById(input.messageId, input.newContent);
-      } else if (input.actionType === 'generate_image') {
-        await doScenarioLoopAsyncAction(() =>
-          ChatCoordinator.generateImageFromPrompt(input.prompt, { isUserInteraction: true })
-        );
-      } else {
-        assert(false, 'Unknown chat input action');
       }
-
-      persistTurn();
     }
   } catch (err) {
     await closeChatSession(true);

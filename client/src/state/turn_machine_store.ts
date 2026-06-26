@@ -81,7 +81,11 @@ type BaseTurnMachineStoreState = {
 
   isActive: () => boolean;
   setTranscript: (transcript: ConversationTranscript) => void;
-  startNewTurn: (allCharacterIds: string[], userCharacterId: string) => void;
+  startNewTurn: (
+    allCharacterIds: string[],
+    userCharacterId: string,
+    opts?: { userMovesFirst?: boolean | undefined }
+  ) => void;
   currentCharacterId: () => string | undefined;
   currentCharacterIsUser: () => boolean;
   finishCurrentCharacter: () => boolean;
@@ -274,12 +278,11 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     return get().chatState !== 'inactive';
   },
 
-  startNewTurn(allCharacterIds, userCharacterId) {
+  startNewTurn(allCharacterIds, userCharacterId, opts: { userMovesFirst?: boolean | undefined } = {}) {
     const nonUserCharacterIds = () => allCharacterIds.filter((id) => id !== userCharacterId);
-    const currentTurn = useScenarioStore.getState().activeScenario?.turnNumber;
 
     // If first turn, user moves first. Otherwise, user turn is randomized with all other characters
-    const ordered = !currentTurn
+    const ordered = opts.userMovesFirst
       ? [userCharacterId].concat(_.shuffle(nonUserCharacterIds()))
       : _.shuffle(allCharacterIds);
 

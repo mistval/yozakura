@@ -192,7 +192,7 @@ export class ChatCoordinator {
 
           this.setTranscript(this.transcript().addImageMessage(firstFile).updatedTranscript);
         } catch (err) {
-          showNonRetriableErrorCardIfNeeded({
+          void showNonRetriableErrorCardIfNeeded({
             error: err,
             operationType: 'image.generate',
           });
@@ -420,9 +420,10 @@ export class ChatCoordinator {
         'Reached end of selectNextSpeaker function unexpectedly. Unknown speaker selection strategy?'
       );
     } catch (err) {
-      showNonRetriableErrorCardIfNeeded({
+      void showNonRetriableErrorCardIfNeeded({
         error: err,
         operationType: 'select_next_speaker',
+        hint: 'Control will be handed to first participant',
       });
 
       return participants[0]!;
