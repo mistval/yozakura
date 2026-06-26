@@ -36,6 +36,7 @@ export function useImageScriptSelection(): ScriptSelection {
   return {
     selectedScriptId: section.selectedScriptId,
     controlValues: section.controlValues[section.selectedScriptId] ?? {},
+    onScriptSaved: () => {},
     onSelectScript: (id) => setSelectedScriptId(IMAGE_GENERATION_SECTION_ID, id),
     onSetControlValue: (controlId, value) =>
       setControlValue(IMAGE_GENERATION_SECTION_ID, section.selectedScriptId, controlId, value),

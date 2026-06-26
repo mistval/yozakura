@@ -3,6 +3,7 @@ import Modal from './Modal.js';
 
 export default function AIAssistantInstructionsButton({
   getDocumentation,
+  instructions,
   title,
   isDirty,
   fileNameBase,
@@ -10,6 +11,7 @@ export default function AIAssistantInstructionsButton({
   title: string;
   isDirty: boolean;
   fileNameBase: string;
+  instructions: string;
   getDocumentation: () => string;
 }) {
   const [documentationOpen, setDocumentationOpen] = useState(false);
@@ -41,12 +43,7 @@ export default function AIAssistantInstructionsButton({
         <div className="bg-emphasized rounded-sm p-4 w-full max-w-4xl space-y-3">
           <header className="space-y-2">
             <h3 className="font-semibold">{title}</h3>
-            <p className="text-sm text-secondary">
-              Reading and writing templates is hard. Copy these instructions into a powerful LLM, describe the
-              edits you want, and let it do the work for you. The instructions document is different for each
-              prompt group and contains your templates and parser, so you don't need to copy-paste them
-              separately.
-            </p>
+            <p className="text-sm text-secondary">{instructions}</p>
           </header>
 
           {isDirty && (

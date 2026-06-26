@@ -32,7 +32,7 @@ const EXAMPLE_CUSTOM_TEMPORAL_SCRIPT = `({
   },
 })`;
 
-export function getTemporalScriptDocumentation(): string {
+export function getTemporalScriptDocumentation(currentScriptSource: string): string {
   return `# Custom Temporal Context Script
 
 You are being provided this document because the user needs your help customizing the temporal context in their Yozakura scenario.
@@ -79,15 +79,30 @@ ${JSON.stringify(temporalContextSettingsScriptJSONSchema, null, 2)}
 ${EXAMPLE_CUSTOM_TEMPORAL_SCRIPT}
 \`\`\`
 
+${
+  currentScriptSource
+    ? `## Current Value
+
+This is the current value of the script that the user wants your help editing. Keep in mind that it isn't necessarily correct or finished, it's just what's currently entered in the custom script input field.
+
+\`\`\`js
+${currentScriptSource}
+\`\`\`
+
+`
+    : ''
+}
+
 ## Instructions
 
-- The script runs in a browser so you may use browser APIs such as fetch and localStorage, but do not expect localStorage to persist between application restarts.
-- It's generally okay if it's not 100% deterministic between application restarts, so if the user wants to use live weather data, it's possible to do that and cache in localStorage while accepting the tradeoff of possible inconsistency between sessions.
+- The script runs in a browser so you may use browser APIs such as fetch, and localStorage for caching. localStorage cannot be expected to persist between application sessions, but it's generally okay if results are only deterministic within sessions, not between them.
 - You can use the latest JavaScript features and don't need to worry about supporting old browsers.
-- You can expect the script to run roughly once per minute on average, so caching isn't normally necessary, but you may cache in localStorage if you wish to.
-- Write the script as the user asks, but if you think they might be missing out on some fun opportunity for more colorful customization, let them know at the end.
+- You can expect the script to execute roughly once per minute on average.
+- While the example script above is purposefully kept simple, most users will expect a bit more color, including temperatures, occasional extreme weather events, or similar. The script should help make the scenario feel alive.
 - Where there's a fitting emoji, use emojis in the displayHtml for added color.
-- Assuming the user wants to have a concept of "days" (which isn't strictly necessary), confirm with them how many turns per day they want and what the sub-day time periods should be called. Note that it's also technically possible to have days of varying length (might make sense in arctic scenarios or such). Do NOT make number of turns per day configurable, unless the user specifically asks for that, as it can be an unwanted complication.
-- Rather than making assumptions about what the user wants, ask them up front before racing off.
+- Write the script as the user asks, but if you think they might be missing out on opportunities for more colorful behavior, let them know at the end.
+- Don't make anything configurable beyond the start date, unless the user asks you to, as this can create unnecessary complication. Feel free to suggest customization options to the user *after* you follow their instructions and write the initial script. It can be an iterative process.
+- Assuming the user wants to have a concept of "days" (which isn't strictly necessary), double check with them how many turns per day they want and what the sub-day time periods should be called. Note that it's also technically possible to have days of varying length (might make sense in arctic scenarios or such).
+- The overall workflow should be: follow the user's instructions and get something into their hands, then suggest improvements, then iterate together with the user if they wish to go further.
 `;
 }

@@ -144,6 +144,7 @@ export default function PromptTemplateChainEditor({ chain }: PromptTemplateChain
         getDocumentation={() => chain.getDocumentation()}
         fileNameBase={chain.templateChainId}
         isDirty={isDirty}
+        instructions="Reading and writing templates is hard. Copy these instructions into a powerful LLM, describe the edits you want, and let it do the work for you. The instructions document is different for each prompt group and contains your templates and parser, so you don't need to copy-paste them separately."
       />
 
       <RevertableTextSettingsGroup

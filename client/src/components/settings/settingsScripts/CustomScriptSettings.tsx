@@ -17,11 +17,11 @@ import {
 import { createProxiedFetch } from '../../../backend_bridge/proxied_fetch.js';
 import { loadUserTextFileContent } from '../../../backend_bridge/database.js';
 import { createSeededRandom } from '../../../engine/settings/settings_scripts/seeded_random.js';
-import Modal from '../../ui/Modal.js';
 import DeleteButton from '../../ui/DeleteButton.js';
 import SettingFieldLabel from '../ui/SettingFieldLabel.js';
 import SettingsScriptControls from './SettingsScriptControls.js';
 import { useUserTextFileList } from './useUserTextFileList.js';
+import AIAssistantInstructionsButton from '../../ui/AIAssistantInstructionsButton.js';
 
 const NEW_CUSTOM_OPTION = '__new_custom_script__';
 
@@ -47,11 +47,15 @@ export default function CustomScriptSettings({
     selectTooltipHtml,
     postSelectOpenHelpHtml,
   } = descriptor;
-  const { selectedScriptId, controlValues, onSelectScript, onSetControlValue, onResetControlValues } =
-    selection;
+  const {
+    selectedScriptId,
+    controlValues,
+    onSelectScript,
+    onSetControlValue,
+    onResetControlValues,
+    onScriptSaved,
+  } = selection;
   const customScripts = useUserTextFileList(customScriptGroupKey(sectionId));
-  const [documentationOpen, setDocumentationOpen] = useState(false);
-  const [documentation, setDocumentation] = useState('');
   const [buttonData, setButtonData] = useState<Record<string, unknown>>({});
   const [customSource, setCustomSource] = useState('');
   const [selectOpened, setSelectOpened] = useState(false);
@@ -213,9 +217,9 @@ export default function CustomScriptSettings({
             <input
               aria-label="Custom script name"
               value={selectedCustom.fileName}
-              onChange={(event) =>
-                void customScripts.save(selectedCustom.id, event.target.value, customSource)
-              }
+              onChange={(event) => {
+                void customScripts.save(selectedCustom.id, event.target.value, customSource);
+              }}
               className="rounded-input"
             />
             <DeleteButton
@@ -228,16 +232,13 @@ export default function CustomScriptSettings({
             />
           </div>
 
-          <button
-            type="button"
-            className="px-3 py-1 border rounded-sm w-full h-12 button-emphasized"
-            onClick={() => {
-              setDocumentation(getDocumentation());
-              setDocumentationOpen(true);
-            }}
-          >
-            🤖 AI Assistant Instructions 🗒️
-          </button>
+          <AIAssistantInstructionsButton
+            getDocumentation={() => getDocumentation(customSource)}
+            title={documentationTitle}
+            isDirty={false}
+            fileNameBase={selectedScriptId}
+            instructions="Copy these instructions into a powerful LLM, describe what you want, and let it do the work for you. The instructions document explains how to write a script, and also includes the current script content (if any) so you can request edits to the current script."
+          />
 
           <textarea
             aria-label="Custom script source"
@@ -245,7 +246,10 @@ export default function CustomScriptSettings({
             spellCheck={false}
             value={customSource}
             onChange={(event) => setCustomSource(event.target.value)}
-            onBlur={() => void customScripts.save(selectedCustom.id, selectedCustom.fileName, customSource)}
+            onBlur={() => {
+              void customScripts.save(selectedCustom.id, selectedCustom.fileName, customSource);
+              onScriptSaved();
+            }}
             className="rounded-input font-mono text-sm w-full"
           />
 
@@ -275,49 +279,6 @@ export default function CustomScriptSettings({
           </button>
         </div>
       )}
-
-      <Modal
-        open={documentationOpen}
-        onClose={() => setDocumentationOpen(false)}
-        className="flex items-center justify-center p-4"
-      >
-        <div className="bg-emphasized rounded-sm p-4 w-full max-w-4xl space-y-3">
-          <header className="space-y-2">
-            <h3 className="font-semibold">{documentationTitle}</h3>
-            <p className="text-sm text-secondary">
-              Copy these instructions into a powerful LLM, tell it what you want the script to do, and let it
-              write the script for you.
-            </p>
-          </header>
-
-          <textarea
-            rows={20}
-            readOnly
-            value={documentation}
-            spellCheck={false}
-            className="rounded-input font-mono text-xs w-full"
-          />
-
-          <div className="flex flex-wrap gap-2 justify-end">
-            <button
-              type="button"
-              className="px-3 py-1 border rounded-sm"
-              onClick={async () => {
-                await navigator.clipboard.writeText(documentation);
-              }}
-            >
-              Copy
-            </button>
-            <button
-              type="button"
-              className="px-3 py-1 border rounded-sm"
-              onClick={() => setDocumentationOpen(false)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }

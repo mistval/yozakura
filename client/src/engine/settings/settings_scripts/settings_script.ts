@@ -185,7 +185,7 @@ export type ScriptSectionDescriptor = {
   sectionId: string;
   builtinOptions: { value: string; label: string }[];
   resolveScript: (selectedScriptId: string, source: string) => ResolvedControlScript;
-  getDocumentation: () => string;
+  getDocumentation: (selectedScriptId: string) => string;
   documentationTitle: string;
   enableCustom?: boolean;
   selectLabel?: string;
@@ -196,6 +196,7 @@ export type ScriptSectionDescriptor = {
 export type ScriptSelection = {
   selectedScriptId: string;
   controlValues: Record<string, string>;
+  onScriptSaved: () => void;
   onSelectScript: (scriptId: string) => void;
   onSetControlValue: (controlId: string, value: string) => void;
   onResetControlValues: () => void;

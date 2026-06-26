@@ -31,6 +31,9 @@ export function useTemporalScriptSelection(): ScriptSelection {
   return {
     selectedScriptId,
     controlValues: temporalSection?.controlValues[selectedScriptId] ?? {},
+    onScriptSaved: () => {
+      void recompute({ forceRecompute: true });
+    },
     onSelectScript: (id) => {
       setTemporalSelectedScriptId(id);
       void recompute({ forceRecompute: true });
