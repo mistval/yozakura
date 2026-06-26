@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { MoveHighlight } from '../engine/character_schedule/schedule_movement.js';
 
 type LocationItem = {
@@ -30,21 +31,56 @@ const HIGHLIGHT_RING: Record<MoveHighlight, string> = {
   allowed: 'ring-2 ring-success-ring',
 };
 
-export default function LocationPanel({
-  location,
-  adjacentLocationIds,
-  onMove,
-  onWait,
-  disabled,
-  canMove = true,
-  suggestion,
-}: LocationPanelProps) {
-  const suggestedLocations = suggestion?.suggestedLocations ?? [];
-  const suggestedIds = new Set(suggestedLocations.map((entry) => entry.id));
-  const forbiddenIds = new Set(suggestion?.forbiddenLocationIds ?? []);
-  const orderedLocations = suggestedLocations.concat(
-    adjacentLocationIds.filter((entry) => !suggestedIds.has(entry.id))
+function MoveButtons({ suggestion, adjacentLocationIds, disabled, onMove, onWait }: LocationPanelProps) {
+  const { orderedLocations, forbiddenIds } = useMemo(() => {
+    const suggestedLocations = suggestion?.suggestedLocations ?? [];
+    const suggestedIds = new Set(suggestedLocations.map((entry) => entry.id));
+    const forbiddenIds = new Set(suggestion?.forbiddenLocationIds ?? []);
+    const orderedLocations = suggestedLocations
+      .concat(
+        adjacentLocationIds.filter((entry) => !suggestedIds.has(entry.id) && !forbiddenIds.has(entry.id))
+      )
+      .concat(adjacentLocationIds.filter((entry) => forbiddenIds.has(entry.id)));
+
+    return { orderedLocations, forbiddenIds };
+  }, [suggestion]);
+
+  return (
+    <div>
+      <div className="font-semibold mb-1">Move to</div>
+      <div className="flex gap-2 flex-wrap">
+        {orderedLocations.map((entry) => {
+          const highlight = suggestion?.highlightByLocationId[entry.id];
+          const locked = forbiddenIds.has(entry.id);
+          return (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => onMove(entry.id)}
+              disabled={disabled}
+              className={highlight ? HIGHLIGHT_RING[highlight] : undefined}
+            >
+              {locked ? `🔒 ${entry.name}` : entry.name}
+            </button>
+          );
+        })}
+        {onWait && (
+          <button
+            type="button"
+            onClick={onWait}
+            disabled={disabled}
+            className={suggestion?.highlightWait ? HIGHLIGHT_RING.allowed : undefined}
+          >
+            Wait
+          </button>
+        )}
+      </div>
+    </div>
   );
+}
+
+export default function LocationPanel(props: LocationPanelProps) {
+  const { location, canMove = true } = props;
 
   return (
     <div className="space-y-3">
@@ -53,38 +89,7 @@ export default function LocationPanel({
         <p className="font-semibold">{location.description}</p>
       </div>
 
-      {canMove && (
-        <div>
-          <div className="font-semibold mb-1">Move to</div>
-          <div className="flex gap-2 flex-wrap">
-            {orderedLocations.map((entry) => {
-              const highlight = suggestion?.highlightByLocationId[entry.id];
-              const locked = forbiddenIds.has(entry.id);
-              return (
-                <button
-                  key={entry.id}
-                  type="button"
-                  onClick={() => onMove(entry.id)}
-                  disabled={disabled}
-                  className={highlight ? HIGHLIGHT_RING[highlight] : undefined}
-                >
-                  {locked ? `🔒 ${entry.name}` : entry.name}
-                </button>
-              );
-            })}
-            {onWait && (
-              <button
-                type="button"
-                onClick={onWait}
-                disabled={disabled}
-                className={suggestion?.highlightWait ? HIGHLIGHT_RING.allowed : undefined}
-              >
-                Wait
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      {canMove && <MoveButtons {...props} />}
     </div>
   );
 }
