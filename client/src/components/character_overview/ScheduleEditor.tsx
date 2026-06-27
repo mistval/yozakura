@@ -176,7 +176,9 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
           ➕ Add Schedule Segment
         </button>
         {zones.length === 0 && (
-          <span className="text-sm text-muted">Create a map zone first (Map → Zones).</span>
+          <button type="button" onClick={showMapZones}>
+            🗺 Create a Map Zone First
+          </button>
         )}
       </div>
 
