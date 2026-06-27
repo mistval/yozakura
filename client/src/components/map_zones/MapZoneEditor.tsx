@@ -68,7 +68,9 @@ export default function MapZoneEditor({
   }, [groups]);
 
   const toggleLocationMembership = (locationId: string) => {
-    assertNonNullish(selectedZone, 'No selected zone');
+    if (!selectedZone) {
+      return;
+    }
 
     updateMap((prev) => {
       const editTarget = findRequiredById(prev.zones, selectedZone.id);

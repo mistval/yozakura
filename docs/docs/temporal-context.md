@@ -1,6 +1,6 @@
 ---
 title: Temporal Context
-sidebar_position: 7
+sidebar_position: 4
 description: How Yozakura's temporal context system models date, time of day, weather, and any other scenario-wide state that changes over time, and how to script your own.
 keywords:
   - yozakura temporal context
@@ -18,20 +18,26 @@ A Yozakura scenario has a temporal context: a scriptable piece of scenario-wide 
 - **The scenario header** shows a short, formatted summary. This can include light HTML and emoji, so it might read something like a bold date on one line and "☀️ Afternoon · 31°C · Clear" on the next.
 - **Character prompts** receive the same information as plain text. It is injected into each AI character's system prompt, so they are aware of the current temporal context, and can react to it or bring it up in conversation.
 
-![Placeholder: the scenario header showing the date, time of day, and weather](/img/temporal-header.png)
+![The scenario header showing the date, time of day, and weather](/img/temporal_header.png)
 
 ## Choosing or writing a script
 
-Open Scenario Settings and find the **Temporal Context** section. It comes with several built-in scripts: Bali, New York City, Montpellier, Sahara, Shizuoka, and St. Petersburg. Each one simulates the date, time of day, temperature, season, and the occasional severe weather event for that place, based on historical climate normals. Pick whichever fits your setting, or none of them if you would rather script your own (see below).
+Open Scenario Settings and find the **Temporal Context** section. It comes with several built-in scripts. Each one simulates the date, time of day, temperature, season, and the occasional severe weather event for that place, based on historical climate normals. Pick whichever fits your setting, or none of them if you would rather script your own (see below).
 
-The built-in scripts expose a couple of controls:
+The built-in scripts expose a few controls:
 
 - **Start date** sets what in-world date the scenario begins on. Time moves forward from there as turns pass.
 - **Temperature units** switches between Celsius and Fahrenheit.
+- **Jump by days** jumps forward by the specified number of days at the end of each day. If this is set to the default 7, it means that, for example, the day after a Monday is the _following week's_ Tuesday. This keeps the calendar moving at a good pace, while keeping individual days sufficiently long (8 turns by default).
+- **Time periods** controls the number of and names of the time periods of each day. One time period is one turn.
+- **Temperature curve** Customize how the temperature varies between the daily low and daily high across time periods.
+- **Daylight periods** Specify which periods are considered daylight.
 
 A **Reset to Default** button restores the controls to their starting values.
 
-![Placeholder: the Temporal Context setting, showing the provider dropdown and its controls](/img/temporal-settings.png)
+- (The St. Petersburg and Titan scripts don't have some of those above-listed options, because they have internal logic that wouldn't play nice with some of those options)
+
+![The Temporal Context setting, showing the provider dropdown and its controls](/img/temporal_settings.png)
 
 ## Writing your own
 
@@ -39,13 +45,13 @@ You can write your own script, or you can ask a modern AI model to write one for
 
 In the Temporal Context dropdown, choose **+ New custom script…** to create one and open the editor.
 
-Click the **🤖 AI Assistant Instructions 🗒️** button, copy the instructions it shows, and send them to your favorite frontier LLM with a description of what you want. It will write the script, which you can paste back into the editor. All of the built-in scripts were written by Claude Opus 4.8 Extra, with minor back and forth.
+Click the **🤖 AI Assistant Instructions 🗒️** button, copy the instructions it shows, and send them to your favorite frontier LLM with a description of what you want. It will write the script, which you can paste back into the editor. All of the built-in scripts were written by Claude Opus 4.8 Extra, with minor back and forth. I have also found Gemini Pro to do a great job, for free.
 
 If you would like to write or modify a script by hand, you can refer to the built-in scripts [here](https://github.com/mistval/yozakura/tree/main/client/src/engine/settings/settings_scripts/temporal/builtins) to see how they are structured.
 
 ## Date and time
 
-Temporal context advances with the scenario's turn number. The script decides how many turns make up a day and what to call each slice of it. The built-in scripts use eight turns per day, with periods named Dawn, Morning, Midday, Afternoon, Evening, Dusk, Night, and Midnight. Custom scripts can have as many turns per day as you want, and you can name the time periods whatever you want. It is not strictly necessary to even have "days", you could have a scenario with a completely alien concept of time, or none at all.
+Temporal context advances with the scenario's turn number. The script decides how many turns make up a day and what to call each slice of it. The built-in scripts default to eight turns per day, with periods named Dawn, Morning, Midday, Afternoon, Evening, Dusk, Night, and Midnight. Custom scripts can have as many turns per day as you want, and you can name the time periods whatever you want. It is not strictly necessary to even have "days", you could have a scenario with a completely alien concept of time, or none at all.
 
 A script can return a **day index** that ticks up once per in-world day. When it changes, characters re-roll their daily auto-selected wardrobes, so a character can end up dressed differently from one day to the next. Returning this is optional. Without it, the wardrobe auto-select feature will never trigger.
 
@@ -61,3 +67,5 @@ Because the script decides both what the header shows and what the characters ar
 As a concrete example, consider a sports tournament. A single script could hold a World Cup bracket, map ranges of turns to a fixture calendar, and decide each result with a seeded random outcome. The header could show the current match or the latest score with flag emoji, while the plain text tells characters who just got knocked out.
 
 The right mental model is: the temporal context is the seam for any background story that should advance on its own while your characters live their lives in front of it.
+
+If you would like a more interactive way to set global context, consider changing the `Map Description` in Scenario Settings, that is an easy place to write user-specified global context.
