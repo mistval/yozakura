@@ -1,6 +1,6 @@
 import { assert } from '../errors/application_error';
 
-const DEBOUNCE_DELAY_MS = 500;
+const DEBOUNCE_DELAY_MS = 1000;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -68,23 +68,21 @@ class Timer<TReadType> {
         this.writeOperationsInFlight = false;
       }
 
-      if (this.pendingWriteOperation) {
-        continue;
+      if (!this.pendingWriteOperation) {
+        const readOperations = this.readOperations;
+        this.readOperations = [];
+
+        await Promise.all(
+          readOperations.map(async (ro) => {
+            try {
+              const result = await ro.operation();
+              ro.resolve(result);
+            } catch (err) {
+              ro.reject(err);
+            }
+          })
+        );
       }
-
-      const readOperations = this.readOperations;
-      this.readOperations = [];
-
-      await Promise.all(
-        readOperations.map(async (ro) => {
-          try {
-            const result = await ro.operation();
-            ro.resolve(result);
-          } catch (err) {
-            ro.reject(err);
-          }
-        })
-      );
 
       await wait(DEBOUNCE_DELAY_MS);
 

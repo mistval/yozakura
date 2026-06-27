@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Calendar from 'react-calendar';
 import type {
   ButtonHandlerResult,
   SettingsScriptControl,
@@ -22,6 +23,13 @@ type SettingsScriptControlsProps = {
 
 function itemClassName(width: 'full' | undefined): string {
   return width === 'full' ? 'basis-full' : 'basis-full md:basis-[calc(50%-0.375rem)] md:grow';
+}
+
+function toIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 type FieldChromeProps = {
@@ -161,6 +169,24 @@ function ControlField({
             ))}
           </select>
         </InlineField>
+      );
+    }
+
+    case 'calendar': {
+      const parsedDate = value ? new Date(`${value}T00:00:00`) : undefined;
+      const selectedDate = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : undefined;
+      return (
+        <StackedField label={control.label ?? control.id} tooltipHtml={control.tooltipHtml} htmlFor={htmlFor}>
+          <Calendar
+            value={selectedDate ?? null}
+            onChange={(next) => {
+              const date = Array.isArray(next) ? next[0] : next;
+              if (date) {
+                onChange(toIsoDate(date));
+              }
+            }}
+          />
+        </StackedField>
       );
     }
 

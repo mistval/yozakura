@@ -1,5 +1,11 @@
 import { getErrorMessage } from '../errors/error_util.js';
 
+function buildAuthHeader(authToken: string): string | undefined {
+  const trimmed = authToken.trim();
+  if (!trimmed) return undefined;
+  return trimmed.toLowerCase().startsWith('bearer ') ? trimmed : `Bearer ${trimmed}`;
+}
+
 const CHAT_COMPLETIONS_PATH = '/chat/completions';
 const MODELS_PATH = '/models';
 
@@ -50,28 +56,22 @@ export async function testLlmConnection(rawUrl: string, authToken: string): Prom
   }
 
   try {
-    const response = await fetch('/api/llm/test-connection', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        targetUrl: rewriteResult.modelsUrl,
-        authToken,
-      }),
-    });
-
-    let payload: unknown = undefined;
-    try {
-      payload = await response.json();
-    } catch {
-      payload = undefined;
+    const headers: Record<string, string> = { 'X-Target-URL': rewriteResult.modelsUrl };
+    const authHeader = buildAuthHeader(authToken);
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
     }
 
+    const response = await fetch('/api/proxy/fetch', {
+      method: 'GET',
+      headers,
+    });
+
     if (!response.ok) {
+      const body = await response.text().catch(() => '');
       return {
         ok: false,
-        error: `Connection test failed (${response.status} ${response.statusText}). ${JSON.stringify(payload)}`,
+        error: `Connection test failed (${response.status} ${response.statusText}). ${body}`,
       };
     }
 

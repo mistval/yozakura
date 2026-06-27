@@ -1,53 +1,30 @@
 import _ from 'lodash';
-import { assert, assertNonNullish } from '../errors/application_error';
-import { getRequiredRandomChoice, weightedSampleWithoutReplacement } from '../util/array';
-import { familiarityRelativeWeight, getDirectedRelationship, relationshipKey } from './relationship';
-import type { Character, CharacterRelationships, WorldMapLocation } from './types';
-import { useScenarioCharacterStore } from '../state/scenario_character_store';
-import { useScenarioCharacterRelationshipStore } from '../state/scenario_character_relationship_store';
-import { useSettingsStore } from '../state/settings_store';
-import { getRequiredActiveScenario, getRequiredActiveScenarioMap } from '../state/scenario_store';
-import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store';
+import { assert, assertNonNullish } from '../../../errors/application_error';
+import { useTurnMachineStore } from '../../../state/turn_machine_store';
+import { useScenarioCharacterStore } from '../../../state/scenario_character_store';
+import { useScenarioCharacterRelationshipStore } from '../../../state/scenario_character_relationship_store';
+import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_store';
+import { useSettingsStore } from '../../../state/settings_store';
+import { getRequiredActiveScenario, getRequiredActiveScenarioMap } from '../../../state/scenario_store';
+import { weightedSampleWithoutReplacement } from '../../../util/array';
+import { ChatCoordinator } from '../../chat/chat_coordinator';
+import { getScheduledMoveForNpc } from '../../character_schedule/get_scheduled_move';
+import { familiarityRelativeWeight, getDirectedRelationship } from '../../relationship';
+import type { Character, CharacterRelationships, WorldMapLocation } from '../../types';
+import type { ChatInputResult, TurnMove, TurnMoveResult } from '../types';
+import { CharacterInputInterface } from './character_input_interface';
 
-type NPCTurnResult =
-  | {
-      result: 'all_turns_complete';
-    }
-  | {
-      result: 'npc_moved';
-      characterId: string;
-      destinationLocationId: string;
-    }
-  | {
-      result: 'do_simple_interaction';
-      participants: Character[];
-    }
-  | {
-      result: 'do_rich_interaction';
-      participants: Character[];
-    };
-
-export class NPCTurnRunner {
-  private readonly npcTurnQueue: Character[];
-  private readonly hasChatted = new Set<string>();
-
-  constructor() {
-    this.npcTurnQueue = _.shuffle(useScenarioCharacterStore.getState().getNPCs());
+export class NPCInputInterface extends CharacterInputInterface {
+  public constructor(private readonly characterId: string) {
+    super();
   }
 
-  private get autoModeEnabled(): boolean {
-    return useScenarioLoopStateStore.getState().autoMode;
-  }
-
-  async runNextTurn(): Promise<NPCTurnResult> {
-    const npc = this.npcTurnQueue.pop();
-    if (!npc) {
-      return { result: 'all_turns_complete' };
-    }
-
+  public async getNextTurnMove(): Promise<TurnMoveResult> {
+    const npc = useScenarioCharacterStore.getState().getRequiredCharacterById(this.characterId);
     const currentLocation = this.getCharacterLocation(npc.id);
     const forcedConversationTargetId = npc.nextConversationWithCharacterId;
     const userCharacterId = useScenarioCharacterStore.getState().getUserCharacter()?.id;
+    const scheduledMove = getScheduledMoveForNpc(npc);
 
     if (
       forcedConversationTargetId &&
@@ -72,14 +49,27 @@ export class NPCTurnRunner {
           nextConversationWithCharacterId: '',
         });
 
-        const key = relationshipKey(npc.id, forcedConversationTarget.id);
-        if (!this.hasChatted.has(key)) {
-          this.hasChatted.add(key);
-          return this.runChatTurn(npc, [forcedConversationTarget], forcedConversationTargetRelationship, 1, {
-            forceRichInteraction: true,
-          });
+        if (!useTurnMachineStore.getState().hasChatted(npc.id, forcedConversationTarget.id)) {
+          useTurnMachineStore.getState().recordChat(npc.id, [forcedConversationTarget.id]);
+          return {
+            move: this.buildChatMove(
+              npc,
+              [forcedConversationTarget],
+              forcedConversationTargetRelationship,
+              1,
+              {
+                forceRichInteraction: true,
+              }
+            ),
+          };
         }
       }
+    }
+
+    if (scheduledMove.forceMove) {
+      return {
+        move: { actionType: 'move', ...scheduledMove },
+      };
     }
 
     const chatDecider = Math.random();
@@ -98,7 +88,7 @@ export class NPCTurnRunner {
         .scenarioCharacters.filter(
           (c) =>
             c.id !== npc.id &&
-            !this.hasChatted.has(relationshipKey(c.id, npc.id)) &&
+            !useTurnMachineStore.getState().hasChatted(c.id, npc.id) &&
             (!this.autoModeEnabled || c.id !== scenario.userCharacterId)
         );
 
@@ -127,15 +117,41 @@ export class NPCTurnRunner {
 
       // If there are no chat candidates, fall through and do a move instead
       if (chatCandidates.length > 0) {
-        chatCandidates.forEach((c) => this.hasChatted.add(relationshipKey(c.id, npc.id)));
-        return this.runChatTurn(npc, chatCandidates, directedRelationships, maxOtherParticipants);
+        useTurnMachineStore.getState().recordChat(
+          npc.id,
+          chatCandidates.map((c) => c.id)
+        );
+        return {
+          move: this.buildChatMove(npc, chatCandidates, directedRelationships, maxOtherParticipants),
+        };
       }
     }
 
-    return this.runMoveTurn(npc);
+    return { move: { actionType: 'move', ...scheduledMove } };
   }
 
-  runChatTurn(
+  public async getNextChatInput(): Promise<ChatInputResult> {
+    if (ChatCoordinator.isChatMessageLimitReached()) {
+      return { input: { actionType: 'request_end_chat' } };
+    }
+
+    // While paused, the only way an NPC is the next speaker is because the user explicitly chose
+    // them, so this generation is a user interaction that must bypass the pause gate.
+    const isUserInteraction = ChatCoordinator.isChatPaused();
+    await ChatCoordinator.speakAsNpc(this.characterId, { isUserInteraction });
+
+    return { input: { actionType: 'spoke' } };
+  }
+
+  public continuesAfterMove(move: TurnMove): boolean {
+    return move.actionType === 'move' && !move.consumesTurn;
+  }
+
+  private get autoModeEnabled(): boolean {
+    return useScenarioLoopStateStore.getState().autoMode;
+  }
+
+  private buildChatMove(
     npc: Character,
     chatCandidates: Character[],
     directedRelationships: CharacterRelationships,
@@ -143,7 +159,7 @@ export class NPCTurnRunner {
     options?: {
       forceRichInteraction?: boolean;
     }
-  ): NPCTurnResult {
+  ): TurnMove {
     const settings = useSettingsStore.getState();
     const candidateWeights = chatCandidates.map((c) => ({
       value: c,
@@ -162,22 +178,11 @@ export class NPCTurnRunner {
       Math.random() < settings.richNpcInteractionRate ||
       otherParticipants.some((p) => p.id === scenario.userCharacterId);
 
-    if (isRich) {
-      return {
-        result: 'do_rich_interaction',
-        participants: allParticipants,
-      };
-    } else {
-      return { result: 'do_simple_interaction', participants: allParticipants };
-    }
-  }
-
-  async runMoveTurn(npc: Character): Promise<NPCTurnResult> {
-    const location = this.getCharacterLocation(npc.id);
-    const candidates = [location.id].concat(location.adjacency);
-    const targetLocation = getRequiredRandomChoice(candidates);
-
-    return { result: 'npc_moved', characterId: npc.id, destinationLocationId: targetLocation };
+    return {
+      actionType: 'chat',
+      participantIds: allParticipants.map((p) => p.id),
+      rich: isRich,
+    };
   }
 
   private getCharacterLocation(characterId: string): WorldMapLocation {

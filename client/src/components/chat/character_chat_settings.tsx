@@ -3,7 +3,7 @@ import ImplicitWardrobeEditor from '../wardrobe/ImplicitWardrobeEditor.js';
 import SettingFieldLabel from '../settings/ui/SettingFieldLabel.js';
 import type { Character } from '../../engine/types.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
-import { useActiveChatParticipants, useActiveChatStore } from '../../state/active_chat_store.js';
+import { useActiveChatParticipants, useTurnMachineStore } from '../../state/turn_machine_store.js';
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
@@ -23,7 +23,7 @@ export default function CharacterChatSettings({
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const saveScenarioCharacterFields = useScenarioCharacterStore((state) => state.saveScenarioCharacterFields);
   const participants = useActiveChatParticipants();
-  const chatInstructionsByCharacterId = useActiveChatStore((state) => state.chatInstructionsByCharacterId);
+  const chatInstructionsByCharacterId = useTurnMachineStore((state) => state.chatInstructionsByCharacterId);
   const { showCharacterOverview } = useCharacterOverview();
 
   if (!settingsCharacterId || !scenario) {

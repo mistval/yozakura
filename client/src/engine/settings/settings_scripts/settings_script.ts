@@ -80,6 +80,20 @@ const settingsScriptDropdownSelectControlSchema = z
     description: 'A dropdown selector. Defaults to the first option when no default is given.',
   });
 
+const settingsScriptCalendarControlSchema = z
+  .object({
+    id: z.string(),
+    type: z.literal('calendar'),
+    label: z.string().optional(),
+    default: z.string().optional(),
+    tooltipHtml: z.string().optional(),
+    width: z.enum(['full']).optional(),
+  })
+  .meta({
+    description:
+      'A calendar date picker. The stored value is an ISO date string (YYYY-MM-DD). `default` is an ISO date string, or the sentinel string "SCENARIO_CREATE_DATE", which uses the scenario creation date (that is usually the right move).',
+  });
+
 const settingsScriptButtonControlSchema = z
   .object({
     id: z.string(),
@@ -103,7 +117,7 @@ const settingsScriptTextFileListControlSchema = z
   })
   .meta({
     description:
-      'A picker for a named, user-editable text file (e.g. a ComfyUI workflow), with create / rename / edit / delete. The stored control value is the selected file id; load the file content at run time with `helpers.loadUserTextFile(controlId, fileId)`. Files persist outside the settings blob.',
+      'A picker for a named, user-editable text file (e.g. a ComfyUI workflow), with create / edit / delete. The stored control value is the selected file id; load the file content at run time with `helpers.loadUserTextFile(controlId, fileId)`. Files persist outside the settings blob.',
   });
 
 export const settingsScriptControlSchema = z.discriminatedUnion('type', [
@@ -112,6 +126,7 @@ export const settingsScriptControlSchema = z.discriminatedUnion('type', [
   settingsScriptPasswordControlSchema,
   settingsScriptJsonControlSchema,
   settingsScriptDropdownSelectControlSchema,
+  settingsScriptCalendarControlSchema,
   settingsScriptButtonControlSchema,
   settingsScriptTextFileListControlSchema,
 ]);
@@ -142,6 +157,7 @@ export type SettingsScriptHelpers = {
   proxiedFetch: ProxiedFetch;
   abortSignal: AbortSignal | undefined;
   loadUserTextFile: (controlId: string, fileId: string) => Promise<string | undefined>;
+  createSeededRandom: (seed: string | number) => () => number;
 };
 
 export type ControlsContext = {
@@ -150,3 +166,38 @@ export type ControlsContext = {
 };
 
 export type SettingsScriptControlsDefinition = (context: ControlsContext) => SettingsScriptControl[];
+
+export type ControlScript = {
+  description?: string | undefined;
+  controls?: SettingsScriptControlsDefinition | undefined;
+  buttonHandler?:
+    | ((
+        buttonId: string,
+        controlValues: SettingsControlValues,
+        helpers: SettingsScriptHelpers
+      ) => Promise<ButtonHandlerResult>)
+    | undefined;
+};
+
+export type ResolvedControlScript = { ok: true; script: ControlScript } | { ok: false; error: string };
+
+export type ScriptSectionDescriptor = {
+  sectionId: string;
+  builtinOptions: { value: string; label: string }[];
+  resolveScript: (selectedScriptId: string, source: string) => ResolvedControlScript;
+  getDocumentation: (selectedScriptId: string) => string;
+  documentationTitle: string;
+  enableCustom?: boolean;
+  selectLabel?: string;
+  selectTooltipHtml?: string;
+  postSelectOpenHelpHtml?: string;
+};
+
+export type ScriptSelection = {
+  selectedScriptId: string;
+  controlValues: Record<string, string>;
+  onScriptSaved: () => void;
+  onSelectScript: (scriptId: string) => void;
+  onSetControlValue: (controlId: string, value: string) => void;
+  onResetControlValues: () => void;
+};

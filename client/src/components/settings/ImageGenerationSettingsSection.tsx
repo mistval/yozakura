@@ -4,23 +4,9 @@ import RangeNumberInput from './ui/RangeNumberInput.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
 import { settingsTooltips } from './settings_tooltips.js';
 import CustomScriptSettings from './settingsScripts/CustomScriptSettings.js';
-import {
-  getImageScriptOptions,
-  resolveImageScript,
-} from '../../engine/settings/settings_scripts/image/image_scripts.js';
-import { getImageScriptDocumentation } from '../../engine/settings/settings_scripts/image/image_script_documentation.js';
-import {
-  setSelectedScriptId,
-  useSettingsScriptSection,
-} from '../../engine/settings/settings_scripts/settings_scripts_store.js';
-import { IMAGE_GENERATION_SECTION_ID } from '../../engine/settings/settings_scripts/settings_scripts_state.js';
+import { IMAGE_SCRIPT_DESCRIPTOR, useImageScriptSelection } from './settingsScripts/imageScriptSection.js';
 
 import { clampUnitRate, toPercent } from '../../util/numeric.js';
-
-const CUSTOM_SCRIPT_TOOLTIP_HTML =
-  'Paste a JavaScript settings script describing a custom image provider. Use the AI Assistant Instructions button to generate one. Any controls it declares are rendered below.';
-
-const imageScriptOptions = getImageScriptOptions();
 
 export default function ImageGenerationSettingsSection() {
   const imagePromptPrefix = useSettingsStore((s) => s.imagePromptPrefix);
@@ -29,7 +15,7 @@ export default function ImageGenerationSettingsSection() {
   const autoImageNpcOnly = useSettingsStore((s) => s.autoImageNpcOnly);
   const setSettings = useSettingsStore((s) => s.setSettings);
 
-  const imageSection = useSettingsScriptSection(IMAGE_GENERATION_SECTION_ID);
+  const imageSelection = useImageScriptSelection();
 
   return (
     <div className="space-y-4">
@@ -40,42 +26,7 @@ export default function ImageGenerationSettingsSection() {
         </p>
       </div>
       <div className="bordered-section">
-        <div className="space-y-1">
-          <SettingFieldLabel text="Image Generation Provider" htmlFor="image-provider" />
-          <select
-            id="image-provider"
-            value={imageSection.selectedScriptId}
-            onChange={(event) => setSelectedScriptId(IMAGE_GENERATION_SECTION_ID, event.target.value)}
-            className="rounded-input"
-          >
-            {imageScriptOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="text-sm text-warning-text-strong bg-warning-bg border border-warning-border-soft rounded-sm p-2 mt-1">
-          Don't see your provider?{' '}
-          <a
-            href="https://mistval.github.io/yozakura/docs/image-providers"
-            target="_blank"
-            rel="noreferrer"
-            className="underline hover:text-primary"
-          >
-            Check here
-          </a>
-          .
-        </div>
-
-        <CustomScriptSettings
-          sectionId={IMAGE_GENERATION_SECTION_ID}
-          resolveScript={resolveImageScript}
-          getDocumentation={getImageScriptDocumentation}
-          documentationTitle="Custom Image Generation Script Documentation"
-          customSourceTooltipHtml={CUSTOM_SCRIPT_TOOLTIP_HTML}
-        />
+        <CustomScriptSettings descriptor={IMAGE_SCRIPT_DESCRIPTOR} selection={imageSelection} />
       </div>
 
       <div className="bordered-section">

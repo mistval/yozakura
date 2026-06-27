@@ -9,9 +9,9 @@ import { ChatCoordinator } from '../engine/chat/chat_coordinator.js';
 import {
   useActiveChatMedium,
   useActiveChatParticipants,
-  useActiveChatStore,
+  useTurnMachineStore,
   useChatUserLocation,
-} from '../state/active_chat_store.js';
+} from '../state/turn_machine_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import ChatSettings from './chat/chat_settings.js';
 import CharacterChatSettings from './chat/character_chat_settings.js';
@@ -30,16 +30,19 @@ export default function ChatPane() {
   const groupChatMessageLimit = useSettingsStore((s) => s.groupChatMessageLimit);
   const richNpcMessageCount = useSettingsStore((s) => s.richNpcMessageCount);
   const editImagePromptsBeforeDispatch = useSettingsStore((s) => s.editImagePromptsBeforeDispatch);
-  const transcript = useActiveChatStore((state) => state.transcript);
+  const transcript = useTurnMachineStore((state) => state.transcript);
   const chatMode = useActiveChatMedium();
   const participants = useActiveChatParticipants();
-  const chatState = useActiveChatStore((state) => state.chatState);
-  const processingMemoryStatusInfo = useActiveChatStore((state) => state.processingMemoryStatusInfo);
+  const chatState = useTurnMachineStore((state) => state.chatState);
+  const isAwaitingCharacterInput = useTurnMachineStore(
+    (state) => state.chatState === 'awaiting_character_input'
+  );
+  const processingMemoryStatusInfo = useTurnMachineStore((state) => state.processingMemoryStatusInfo);
   const userCharacter = useUserCharacter();
   const scenario = useScenarioStore((state) => state.activeScenario);
   const userLocation = useChatUserLocation();
 
-  const [input, setInput] = useState('');
+  const [inputIsNonEmpty, setInputIsNonEmpty] = useState(false);
   const [imagePrompt, setImagePrompt] = useState('');
   const [showImagePrompt, setShowImagePrompt] = useState(false);
   const [showChatSettings, setShowChatSettings] = useState(false);
@@ -49,11 +52,16 @@ export default function ChatPane() {
 
   const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
   const autoScrollUnlockedRef = useRef(true);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const submitChatMessage = useScenarioLoopStateStore((state) => state.submitChatMessage);
   const submitChatSkipTurn = useScenarioLoopStateStore((state) => state.submitChatSkipTurn);
   const submitChatSpeakAs = useScenarioLoopStateStore((state) => state.submitChatSpeakAs);
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
+  const submitChatDeleteMessage = useScenarioLoopStateStore((state) => state.submitChatDeleteMessage);
+  const submitChatRedoMessage = useScenarioLoopStateStore((state) => state.submitChatRedoMessage);
+  const submitChatEditMessage = useScenarioLoopStateStore((state) => state.submitChatEditMessage);
+  const submitChatGenerateImage = useScenarioLoopStateStore((state) => state.submitChatGenerateImage);
   const userRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.userRequestedPhaseTransition
   );
@@ -64,7 +72,6 @@ export default function ChatPane() {
   const generatingAutoImage = chatState === 'generating_image';
   const processingMemories = chatState === 'processing_memories';
   const chatMemoryUpdateStatus = processingMemories ? (processingMemoryStatusInfo ?? '') : '';
-  const isAwaitingUserInput = chatState === 'awaiting_user_input';
 
   const participantById = useMemo(
     () => Object.fromEntries(participants.map((participant) => [participant.id, participant])),
@@ -113,14 +120,27 @@ export default function ChatPane() {
     return undefined;
   }
 
+  const resetInput = () => {
+    if (!inputRef.current) {
+      return;
+    }
+
+    const value = inputRef.current.value;
+    inputRef.current.value = '';
+    setInputIsNonEmpty(false);
+
+    return value.trim();
+  };
+
   const send = () => {
-    const message = input.trim();
+    assertNonNullish(inputRef.current, 'Somehow hit send without input ref');
+
+    const message = resetInput();
     if (!message) {
       return;
     }
 
     ChatCoordinator.addParticipant(userCharacter.id);
-    setInput('');
     submitChatMessage(message);
   };
 
@@ -143,35 +163,36 @@ export default function ChatPane() {
       return;
     }
 
-    await ChatCoordinator.generateImageFromPrompt(fullPrompt, { isUserInteraction: true });
+    submitChatGenerateImage(fullPrompt);
   };
 
-  const generateImageNow = async () => {
+  const generateImageNow = () => {
     setShowImagePrompt(false);
-    await ChatCoordinator.generateImageFromPrompt(imagePrompt, { isUserInteraction: true });
+    submitChatGenerateImage(imagePrompt);
   };
 
   const deleteMessage = (id: string) => {
-    ChatCoordinator.deleteMessageById(id);
     setEditingMessageId(undefined);
     setEditingMessageDraft('');
+    submitChatDeleteMessage(id);
   };
 
-  const redoMessage = async (id: string) => {
-    await ChatCoordinator.redoMessageById(id);
+  const redoMessage = (id: string) => {
     setEditingMessageId(undefined);
     setEditingMessageDraft('');
+    submitChatRedoMessage(id);
   };
 
-  const saveEditingMessageEdit = async () => {
+  const saveEditingMessageEdit = () => {
     const trimmed = editingMessageDraft.trim();
     if (!trimmed || !editingMessageId) {
       return;
     }
 
-    await ChatCoordinator.editMessageById(editingMessageId, trimmed);
+    const id = editingMessageId;
     setEditingMessageId(undefined);
     setEditingMessageDraft('');
+    submitChatEditMessage(id, trimmed);
   };
 
   const requestEndChat = () => {
@@ -216,7 +237,7 @@ export default function ChatPane() {
 
   const getRunButtonTitle = () => {
     const userIsInitiator = participants[0]?.id === userCharacter.id;
-    if (userIsInitiator && isAwaitingUserInput && !transcript.hasCharacterMessages()) {
+    if (userIsInitiator && isAwaitingCharacterInput && !transcript.hasCharacterMessages()) {
       return undefined;
     }
 
@@ -308,7 +329,7 @@ export default function ChatPane() {
           <button
             type="button"
             onClick={requestEndChat}
-            disabled={!isAwaitingUserInput}
+            disabled={!isAwaitingCharacterInput}
             className="button-emphasized font-semibold"
           >
             {getEndChatButtonTitle()}
@@ -349,7 +370,7 @@ export default function ChatPane() {
                     event.stopPropagation();
                     triggerParticipantSpeak(participant.id);
                   }}
-                  disabled={!isAwaitingUserInput}
+                  disabled={!isAwaitingCharacterInput}
                   className="text-xs w-full mt-1"
                 >
                   Speak
@@ -395,20 +416,20 @@ export default function ChatPane() {
                     onChange={(event) => setEditingMessageDraft(event.target.value)}
                     rows={3}
                     className="w-full border rounded-sm p-2 bg-inset text-sm"
-                    disabled={!isAwaitingUserInput}
+                    disabled={!isAwaitingCharacterInput}
                   />
                   <div className="flex justify-end gap-2 text-xs">
                     <button
                       type="button"
                       onClick={() => setEditingMessageId(undefined)}
-                      disabled={!isAwaitingUserInput}
+                      disabled={!isAwaitingCharacterInput}
                     >
                       Cancel
                     </button>
                     <button
                       type="button"
                       onClick={saveEditingMessageEdit}
-                      disabled={!isAwaitingUserInput || !editingMessageDraft.trim()}
+                      disabled={!isAwaitingCharacterInput || !editingMessageDraft.trim()}
                     >
                       Save
                     </button>
@@ -420,7 +441,7 @@ export default function ChatPane() {
                 </>
               )}
 
-              {isAwaitingUserInput && !editingMessageId && (
+              {isAwaitingCharacterInput && !editingMessageId && (
                 <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs h-6 leading-none">
                   <button
                     type="button"
@@ -428,7 +449,7 @@ export default function ChatPane() {
                       const id = entry.getId();
                       deleteMessage(id);
                     }}
-                    disabled={!isAwaitingUserInput}
+                    disabled={!isAwaitingCharacterInput}
                     title="Delete message"
                     aria-label="Delete message"
                     className="px-1 h-5 w-5 flex items-center justify-center"
@@ -444,7 +465,7 @@ export default function ChatPane() {
                           const id = entry.getId();
                           redoMessage(id);
                         }}
-                        disabled={!isAwaitingUserInput}
+                        disabled={!isAwaitingCharacterInput}
                         title="Retry message"
                         aria-label="Retry message"
                         className="px-1 h-5 w-5 flex items-center justify-center"
@@ -461,7 +482,7 @@ export default function ChatPane() {
                         setEditingMessageId(id);
                         setEditingMessageDraft(entry.getContent());
                       }}
-                      disabled={!isAwaitingUserInput}
+                      disabled={!isAwaitingCharacterInput}
                       title="Edit message"
                       aria-label="Edit message"
                       className="px-1 h-5 w-5 flex items-center justify-center"
@@ -478,15 +499,15 @@ export default function ChatPane() {
 
       <div className="flex gap-2 mb-0">
         <textarea
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
+          onChange={(event) => setInputIsNonEmpty(Boolean(event.target.value.trim()))}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey && input.trim() && isAwaitingUserInput) {
+            if (event.key === 'Enter' && !event.shiftKey && inputIsNonEmpty && isAwaitingCharacterInput) {
               event.preventDefault();
               send();
             }
           }}
-          disabled={!includesUser && !isAwaitingUserInput}
+          ref={inputRef}
+          disabled={!includesUser && !isAwaitingCharacterInput}
           placeholder={includesUser ? 'Enter a message' : 'Entering a message will add the user to the chat.'}
           rows={2}
           className="flex-1"
@@ -494,7 +515,7 @@ export default function ChatPane() {
         <button
           type="button"
           onClick={send}
-          disabled={!isAwaitingUserInput || !input.trim() || !isAwaitingUserInput}
+          disabled={!isAwaitingCharacterInput || !inputIsNonEmpty || !isAwaitingCharacterInput}
         >
           Send
         </button>
@@ -505,12 +526,12 @@ export default function ChatPane() {
               setUserRequestedPhaseTransition('none');
               submitChatSkipTurn();
             }}
-            disabled={!isAwaitingUserInput}
+            disabled={!isAwaitingCharacterInput}
           >
             Skip
           </button>
         )}
-        <button type="button" onClick={openImagePrompt} disabled={!isAwaitingUserInput}>
+        <button type="button" onClick={openImagePrompt} disabled={!isAwaitingCharacterInput}>
           Gen Image
         </button>
       </div>

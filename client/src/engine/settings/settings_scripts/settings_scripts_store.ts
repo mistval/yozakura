@@ -9,7 +9,6 @@ import type { SettingsScriptSectionState } from './settings_scripts_state.js';
 
 const EMPTY_SECTION_STATE: SettingsScriptSectionState = {
   selectedScriptId: '',
-  customScriptSource: '',
   controlValues: {},
 };
 
@@ -24,12 +23,6 @@ export function getSettingsScriptSection(sectionId: string): SettingsScriptSecti
 export function setSelectedScriptId(sectionId: string, scriptId: string): void {
   useSettingsStore.getState().setSettings({
     settingsScripts: { [sectionId]: { selectedScriptId: scriptId } },
-  });
-}
-
-export function setCustomScriptSource(sectionId: string, source: string): void {
-  useSettingsStore.getState().setSettings({
-    settingsScripts: { [sectionId]: { customScriptSource: source } },
   });
 }
 

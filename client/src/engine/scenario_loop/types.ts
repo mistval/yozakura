@@ -1,3 +1,5 @@
+import type { MovementPolicy } from '../types.js';
+
 interface UserTurnActionWait {
   actionType: 'wait';
 }
@@ -5,6 +7,7 @@ interface UserTurnActionWait {
 interface UserTurnActionMove {
   actionType: 'move';
   destinationLocationId: string;
+  consumesTurn: boolean;
 }
 
 interface UserTurnActionInitiateChat {
@@ -33,10 +36,77 @@ export interface ChatUserInputRequestEnd {
   forceNoEffect?: boolean;
 }
 
+interface ChatUserInputDeleteMessage {
+  actionType: 'delete_message';
+  messageId: string;
+}
+
+interface ChatUserInputRedoMessage {
+  actionType: 'redo_message';
+  messageId: string;
+}
+
+interface ChatUserInputEditMessage {
+  actionType: 'edit_message';
+  messageId: string;
+  newContent: string;
+}
+
+interface ChatUserInputGenerateImage {
+  actionType: 'generate_image';
+  prompt: string;
+}
+
 export type ChatUserInputAction =
   | ChatUserInputSendMessage
   | ChatUserInputSkipTurn
   | ChatUserInputSpeakAs
-  | ChatUserInputRequestEnd;
+  | ChatUserInputRequestEnd
+  | ChatUserInputDeleteMessage
+  | ChatUserInputRedoMessage
+  | ChatUserInputEditMessage
+  | ChatUserInputGenerateImage;
+
+// A unified move that any character (user or NPC) can take on their turn.
+interface TurnMoveWait {
+  actionType: 'wait';
+}
+
+interface TurnMoveMove {
+  actionType: 'move';
+  destinationLocationId: string;
+  consumesTurn: boolean;
+  movementPolicy?: MovementPolicy | undefined;
+}
+
+interface TurnMoveChat {
+  actionType: 'chat';
+  participantIds: string[];
+  // A rich chat runs a full conversation; a non-rich ("simple") chat only applies relationship updates.
+  rich: boolean;
+}
+
+export type TurnMove = TurnMoveWait | TurnMoveMove | TurnMoveChat;
+
+export interface TurnMoveOutcome {
+  // For chats, whether the conversation was inconsequential. Irrelevant (always true) for other moves.
+  noEffect: boolean;
+}
+
+// The result of asking a character for their next contribution to an active chat. The user supplies a
+// ChatUserInputAction; an NPC generates and adds its own message, reported back as 'spoke'.
+interface ChatTurnSpoke {
+  actionType: 'spoke';
+}
+
+export type ChatTurnInput = ChatUserInputAction | ChatTurnSpoke;
+
+export interface TurnMoveResult {
+  move: TurnMove;
+}
+
+export interface ChatInputResult {
+  input: ChatTurnInput;
+}
 
 export type ScenarioLoopRunState = 'idle' | 'running' | 'errored';

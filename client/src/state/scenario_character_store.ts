@@ -61,6 +61,7 @@ async function copyGlobalCharacterForScenario(character: Character, scenarioId: 
     locationId: getRequiredRandomChoice(map.locations).id,
     imagePath: await Files.copyCharacterImageForScenario(scenarioId, character),
     globalCharacterId: character.id,
+    groupIds: [],
   };
 }
 
@@ -311,6 +312,21 @@ export function useUserCharacter() {
   const scenario = useScenarioStore((s) => s.activeScenario);
 
   return getUserCharacter(scenario, charactersById);
+}
+
+export function whenScenarioCharactersLoaded(): Promise<void> {
+  if (useScenarioCharacterStore.getState().scenarioCharactersAreLoaded) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve) => {
+    const unsubscribe = useScenarioCharacterStore.subscribe((state) => {
+      if (state.scenarioCharactersAreLoaded) {
+        unsubscribe();
+        resolve();
+      }
+    });
+  });
 }
 
 function updateCharacterLocationsForMapChange(map: WorldMap) {

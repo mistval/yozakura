@@ -15,12 +15,12 @@ import { useScenarioCharacterStore } from '../../state/scenario_character_store.
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { ConversationTranscript } from './transcript';
 import {
-  clearPersistedActiveChat,
   getActiveChatMedium,
   getActiveChatParticipants,
   getAllActiveChatSpeakers,
-  useActiveChatStore,
-} from '../../state/active_chat_store';
+  useTurnMachineStore,
+  type StartChatSessionArgs,
+} from '../../state/turn_machine_store';
 import { chatSceneImageChainGroup } from '../prompt_templates/chat/chat_scene_image';
 import { moderationNextSpeakerTemplatesGroup } from '../prompt_templates/chat/moderation_next_speaker';
 import { chatSystemPromptChain } from '../prompt_templates/chat/chat_system_prompt';
@@ -32,41 +32,54 @@ import { getRequiredRandomChoice } from '../../util/array';
 import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
 
 export class ChatCoordinator {
-  public static async activate(participantIds: string[]) {
+  public static async prepareChatStart(participantIds: string[]): Promise<StartChatSessionArgs> {
     assert(participantIds.length >= 2, 'At least two participants are required to initialize chat');
-    assert(this.activeChatStore().chatState === 'inactive', 'Already active');
 
-    const scenarioCharacterState = useScenarioCharacterStore.getState();
-
-    const participants = scenarioCharacterState.getCharactersByIds(participantIds);
+    const participants = useScenarioCharacterStore.getState().getCharactersByIds(participantIds);
     const firstParticipant = participants[0];
     assertNonNullish(firstParticipant);
 
     const gossipTargetCharacterId = await this.selectChatStartGossipTargetCharacterId(
       participantIds,
       getRequiredActiveScenario().userCharacterId
-    ).catch((err) => {
-      showNonRetriableErrorCardIfNeeded({
-        error: err,
-        operationType: 'get_gossip_target',
-      });
+    );
 
-      return undefined;
-    });
-
-    this.activeChatStore().activate({
+    return {
       participantIds,
       initiatorId: firstParticipant.id,
       gossipTargetCharacterId,
-    });
+    };
+  }
+
+  public static enterActiveChat() {
+    this.turnMachineStore().enterActiveChat();
+  }
+
+  public static isChatMessageLimitReached(): boolean {
+    return this.countChatMessages() >= this.getChatMessageLimit();
+  }
+
+  private static getChatMessageLimit(): number {
+    const chatState = this.turnMachineStore();
+    const settings = useSettingsStore.getState();
+
+    if (chatState.userIsParticipant() || this.isChatPaused()) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+
+    if (chatState.participantIds.length > 2) {
+      return settings.groupChatMessageLimit;
+    }
+
+    return settings.richNpcMessageCount * 2;
   }
 
   public static deactivate() {
-    this.activeChatStore().deactivate();
+    this.turnMachineStore().deactivateChat();
   }
 
   public static addParticipant(participantId: string) {
-    return this.activeChatStore().addChatParticipant(participantId);
+    return this.turnMachineStore().addChatParticipant(participantId);
   }
 
   public static removeParticipant(participantId: string) {
@@ -74,27 +87,23 @@ export class ChatCoordinator {
       useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
     }
 
-    return this.activeChatStore().removeChatParticipant(participantId);
+    return this.turnMachineStore().removeChatParticipant(participantId);
   }
 
-  public static setStateAwaitingUserInput() {
-    this.activeChatStore().setStateAwaitingUserInput();
-  }
-
-  public static setStateNpcSpeaking() {
-    this.activeChatStore().setStateNpcSpeaking();
+  public static setStateAwaitingCharacterInput() {
+    this.turnMachineStore().setStateAwaitingCharacterInput();
   }
 
   public static setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation) {
-    this.activeChatStore().setEphemeralLocation(setter);
+    this.turnMachineStore().setEphemeralLocation(setter);
   }
 
   public static setChatInstructions(instructions: string) {
-    this.activeChatStore().setChatInstructions(instructions);
+    this.turnMachineStore().setChatInstructions(instructions);
   }
 
   public static setCharacterChatInstructions(characterId: string, instructions: string) {
-    this.activeChatStore().setCharacterChatInstructions(characterId, instructions);
+    this.turnMachineStore().setCharacterChatInstructions(characterId, instructions);
   }
 
   public static deleteMessageById(messageId: string) {
@@ -123,7 +132,7 @@ export class ChatCoordinator {
     return this.speakAsNpc(forcedSpeakerId, { isUserInteraction: true });
   }
 
-  public static async editMessageById(id: string, newContent: string) {
+  public static editMessageById(id: string, newContent: string) {
     const { updatedTranscript } = this.transcript().editMessageById(id, newContent);
     this.setTranscript(updatedTranscript);
   }
@@ -151,11 +160,12 @@ export class ChatCoordinator {
     primaryCharacterId: string,
     opts: { isUserInteraction?: boolean | undefined } = {}
   ) {
-    return this.activeChatStore().doWithStateGenerationImage(async () => {
-      return withPhaseTransitionGate(async () => {
+    return this.turnMachineStore().doWithState('generating_image', async () => {
+      return withPhaseTransitionGate(async (abortSignal) => {
         const primaryCharacter = this.getCharacterById(primaryCharacterId);
         const generatedScenePrompt = await chatSceneImageChainGroup.renderAndExecute(
-          await buildFocusedChatTemplateContext(primaryCharacter.id)
+          await buildFocusedChatTemplateContext(primaryCharacter.id),
+          { abortSignal }
         );
 
         return buildFullPrompt(primaryCharacter, generatedScenePrompt);
@@ -167,8 +177,8 @@ export class ChatCoordinator {
     fullPrompt: string,
     opts?: { isUserInteraction?: boolean | undefined }
   ) {
-    return withPhaseTransitionGate((abortSignal) => {
-      return this.activeChatStore().doWithStateGenerationImage(async () => {
+    return this.turnMachineStore().doWithState('generating_image', async () => {
+      return withPhaseTransitionGate(async (abortSignal) => {
         const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
         const files = await generateChatImage({
           fullPrompt,
@@ -180,9 +190,8 @@ export class ChatCoordinator {
         assertNonNullish(firstFile, 'No file returned from image generation call');
 
         this.setTranscript(this.transcript().addImageMessage(firstFile).updatedTranscript);
-        return firstFile;
-      });
-    }, opts);
+      }, opts);
+    });
   }
 
   public static async endActiveChat(noEffect: boolean) {
@@ -223,7 +232,6 @@ export class ChatCoordinator {
       }
     } catch (err) {
     } finally {
-      clearPersistedActiveChat(scenario.id);
       this.deactivate();
     }
   }
@@ -251,49 +259,51 @@ export class ChatCoordinator {
 
     const tokenStreamingEnabled = useSettingsStore.getState().tokenStreamingEnabled;
 
-    return withPhaseTransitionGate(async (abortSignal) => {
-      if (!tokenStreamingEnabled) {
+    return useTurnMachineStore.getState().doWithState('character_speaking', async () => {
+      return withPhaseTransitionGate(async (abortSignal) => {
+        if (!tokenStreamingEnabled) {
+          const response = await chatCompletion(prompts, {
+            promptTemplateGroup: 'gen_npc_response',
+            completionRequestId,
+            promptContext,
+            abortSignal,
+          });
+
+          const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
+            completionRequestId,
+          });
+
+          await this.addCharacterMessage(speaker.id, parsedResponse, opts);
+          await this.pauseAfterNpcOnlyMessage();
+
+          return this.transcript;
+        }
+
+        const draftMessage = this.startStreamingNpcDraftMessage(speaker);
+
         const response = await chatCompletion(prompts, {
           promptTemplateGroup: 'gen_npc_response',
-          completionRequestId,
           promptContext,
+          completionRequestId,
           abortSignal,
+          onTokens: (fullText: string) => {
+            this.setTranscript(this.transcript().editLatestMessage(fullText).updatedTranscript);
+          },
         });
 
         const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
           completionRequestId,
         });
 
+        // We delete and re-add in order to trigger certain effects like memory RAG
+        this.deleteMessageById(draftMessage.id);
         await this.addCharacterMessage(speaker.id, parsedResponse, opts);
+
         await this.pauseAfterNpcOnlyMessage();
 
         return this.transcript;
-      }
-
-      const draftMessage = this.startStreamingNpcDraftMessage(speaker);
-
-      const response = await chatCompletion(prompts, {
-        promptTemplateGroup: 'gen_npc_response',
-        promptContext,
-        completionRequestId,
-        abortSignal,
-        onTokens: (fullText: string) => {
-          this.setTranscript(this.transcript().editLatestMessage(fullText).updatedTranscript);
-        },
-      });
-
-      const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
-        completionRequestId,
-      });
-
-      // We delete and re-add in order to trigger certain effects like memory RAG
-      this.deleteMessageById(draftMessage.id);
-      await this.addCharacterMessage(speaker.id, parsedResponse, opts);
-
-      await this.pauseAfterNpcOnlyMessage();
-
-      return this.transcript;
-    }, opts);
+      }, opts);
+    });
   }
 
   public static getSpeakerSelectionMode(): SpeakerSelectionMode {
@@ -379,21 +389,23 @@ export class ChatCoordinator {
       }
 
       if (selectionMode === 'intelligent') {
-        const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesGroup.renderAndExecute(
-          await buildChatModeratorContext(speakerCandidates)
-        );
+        return useTurnMachineStore.getState().doWithState('selecting_speaker', async () => {
+          const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesGroup.renderAndExecute(
+            await buildChatModeratorContext(speakerCandidates)
+          );
 
-        if (moderatorSelectedSpeakerId) {
-          const character = speakerCandidates.find((s) => s.id === moderatorSelectedSpeakerId);
+          if (moderatorSelectedSpeakerId) {
+            const character = speakerCandidates.find((s) => s.id === moderatorSelectedSpeakerId);
 
-          if (character) {
-            return character;
+            if (character) {
+              return character;
+            }
           }
-        }
 
-        // If moderator didn't select a speaker or selected one not in the chat,
-        // select randomly.
-        return getRequiredRandomChoice(speakerCandidates);
+          // If moderator didn't select a speaker or selected one not in the chat,
+          // select randomly.
+          return getRequiredRandomChoice(speakerCandidates);
+        });
       }
 
       assert(
@@ -401,9 +413,10 @@ export class ChatCoordinator {
         'Reached end of selectNextSpeaker function unexpectedly. Unknown speaker selection strategy?'
       );
     } catch (err) {
-      showNonRetriableErrorCardIfNeeded({
+      void showNonRetriableErrorCardIfNeeded({
         error: err,
         operationType: 'select_next_speaker',
+        hint: 'Control will be handed to first participant',
       });
 
       return participants[0]!;
@@ -415,15 +428,15 @@ export class ChatCoordinator {
   }
 
   private static setStateProcessingMemories(statusInfo: string) {
-    this.activeChatStore().setStateProcessingMemories(statusInfo);
+    this.turnMachineStore().setStateProcessingMemories(statusInfo);
   }
 
-  private static activeChatStore() {
-    return useActiveChatStore.getState();
+  private static turnMachineStore() {
+    return useTurnMachineStore.getState();
   }
 
   private static memoryRagHelper() {
-    const helper = this.activeChatStore().memoryRagHelper;
+    const helper = this.turnMachineStore().memoryRagHelper;
     assertNonNullish(helper, 'MemoryRAGHelper is not initialized');
     return helper;
   }
@@ -433,18 +446,18 @@ export class ChatCoordinator {
   }
 
   private static setTranscript(transcript: ConversationTranscript) {
-    this.activeChatStore().setTranscript(transcript);
+    this.turnMachineStore().setTranscript(transcript);
   }
 
   private static transcript() {
-    const { transcript } = this.activeChatStore();
+    const { transcript } = this.turnMachineStore();
     assertNonNullish(transcript, 'Transcript is not initialized');
 
     return transcript;
   }
 
   private static async pauseAfterNpcOnlyMessage() {
-    if (this.activeChatStore().userIsParticipant()) {
+    if (this.turnMachineStore().userIsParticipant()) {
       return;
     }
 
@@ -488,7 +501,7 @@ export class ChatCoordinator {
     }
 
     const autoImageNpcOnly = settings.autoImageNpcOnly;
-    if (autoImageNpcOnly && this.activeChatStore().userIsParticipant()) {
+    if (autoImageNpcOnly && this.turnMachineStore().userIsParticipant()) {
       return;
     }
 
@@ -556,7 +569,7 @@ export class ChatCoordinator {
   }
 
   private static initiatorId() {
-    return this.activeChatStore().initiatorId;
+    return this.turnMachineStore().initiatorId;
   }
 
   private static initiator() {

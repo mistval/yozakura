@@ -25,6 +25,7 @@ import MapList from './pages/MapList';
 import MapEditor from './pages/MapEditor';
 import { QueryParamProvider } from 'use-query-params';
 import { hydrateSettings } from './state/settings_store.js';
+import 'react-calendar/dist/Calendar.css';
 import './styles.css';
 
 function AppRoutes() {

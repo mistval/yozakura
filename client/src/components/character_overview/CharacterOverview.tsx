@@ -8,13 +8,14 @@ import CharacterOverviewAddCharactersModal from './CharacterOverviewAddCharacter
 import CharacterOverviewPairData from './CharacterOverviewPairData.js';
 import CharacterOverviewSelectionStrip from './CharacterOverviewSelectionStrip.js';
 import CharacterOverviewSingleData from './CharacterOverviewSingleData.js';
+import CharacterGroupsTab from './CharacterGroupsTab.js';
 import RoutedModalFrame from '../ui/RoutedModalFrame.js';
 import CharacterEditorModal from '../character_editor_modal/CharacterEditorModal.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 import { StringParam, useQueryParam } from 'use-query-params';
 import { useConversationLog } from '../conversation_log/ConversationLogContext.js';
 
-export default function CharacterOverview() {
+function CharacterOverviewInner() {
   const [scrollDown, setScrollDown] = useQueryParam('scrolldown', StringParam);
   const scenario = useScenarioStore((state) => state.activeScenario);
   const activeMap = useScenarioStore((state) => state.activeScenarioMap);
@@ -34,6 +35,10 @@ export default function CharacterOverview() {
   } = useCharacterOverview();
 
   const userId = scenario?.userCharacterId || '';
+  const [tabParam, setTabParam] = useQueryParam('cotab', StringParam);
+  const [, setGroupParam] = useQueryParam('cogroup', StringParam);
+  const tab = tabParam === 'groups' ? 'groups' : 'overview';
+  const setTab = (next: 'overview' | 'groups') => setTabParam(next === 'overview' ? undefined : next);
   const [relationships, setRelationships] = useState<CharacterRelationships>({});
   const contentRef = useRef<HTMLDivElement>(undefined);
 
@@ -50,6 +55,8 @@ export default function CharacterOverview() {
     if (!open) {
       setSelectedIds([]);
       setRelationships({});
+      setTabParam(undefined);
+      setGroupParam(undefined);
     }
   }, [open]);
 
@@ -124,39 +131,64 @@ export default function CharacterOverview() {
         onClose={closeCharacterOverview}
         maxWidthClassName="max-w-6xl"
         contentRef={contentRef}
+        headerActions={
+          <>
+            <button
+              type="button"
+              className={tab === 'overview' ? 'button-emphasized' : ''}
+              onClick={() => setTab('overview')}
+            >
+              Overview
+            </button>
+            <button
+              type="button"
+              className={tab === 'groups' ? 'button-emphasized' : ''}
+              onClick={() => setTab('groups')}
+            >
+              Character Groups
+            </button>
+          </>
+        }
       >
         <>
           <h2 className="text-xl font-semibold">Character Overview</h2>
-          <CharacterOverviewSelectionStrip
-            characters={orderedCharacters}
-            selectedIds={validSelectedIds}
-            activeMap={activeMap}
-            relationshipLogs={relationships}
-            onToggleSelect={toggleSelect}
-          />
 
-          {!selectedPair && selectedSingleCharacter && (
-            <div className="space-y-2">
-              <div className="text-sm text-muted">Select two characters to view their relationship.</div>
-              <CharacterOverviewSingleData
-                selectedSingleCharacter={selectedSingleCharacter}
-                scenario={scenario}
+          {tab === 'overview' && (
+            <>
+              <CharacterOverviewSelectionStrip
+                characters={orderedCharacters}
+                selectedIds={validSelectedIds}
                 activeMap={activeMap}
-                onShowConversationDetail={(entryId) => {
-                  showConversationLog({ conversationId: entryId });
-                }}
+                relationshipLogs={relationships}
+                onToggleSelect={toggleSelect}
               />
-            </div>
+
+              {!selectedPair && selectedSingleCharacter && (
+                <div className="space-y-2">
+                  <div className="text-sm text-muted">Select two characters to view their relationship.</div>
+                  <CharacterOverviewSingleData
+                    selectedSingleCharacter={selectedSingleCharacter}
+                    scenario={scenario}
+                    activeMap={activeMap}
+                    onShowConversationDetail={(entryId) => {
+                      showConversationLog({ conversationId: entryId });
+                    }}
+                  />
+                </div>
+              )}
+
+              {selectedPair && (
+                <CharacterOverviewPairData
+                  selectedCharacterIds={selectedPair}
+                  onShowConversationDetail={(entryId) => {
+                    showConversationLog({ conversationId: entryId });
+                  }}
+                />
+              )}
+            </>
           )}
 
-          {selectedPair && (
-            <CharacterOverviewPairData
-              selectedCharacterIds={selectedPair}
-              onShowConversationDetail={(entryId) => {
-                showConversationLog({ conversationId: entryId });
-              }}
-            />
-          )}
+          {tab === 'groups' && <CharacterGroupsTab />}
         </>
       </RoutedModalFrame>
 
@@ -165,10 +197,7 @@ export default function CharacterOverview() {
         open={Boolean(routeEditingCharacterId)}
         characterId={routeEditingCharacterId}
         scenarioId={scenario.id}
-        onClose={({ deleted }) => {
-          if (deleted) {
-            setSelectedIds([]);
-          }
+        onClose={() => {
           backToCharacterOverview();
         }}
       />
@@ -176,4 +205,15 @@ export default function CharacterOverview() {
       <CharacterOverviewAddCharactersModal />
     </>
   );
+}
+
+export default function CharacterOverview() {
+  const { open } = useCharacterOverview();
+
+  if (!open) {
+    return;
+  }
+
+  // Optimization so this isn't rendering when not open
+  return <CharacterOverviewInner />;
 }

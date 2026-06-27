@@ -5,6 +5,7 @@ import { type Scenario, type ScenarioSummary, type WorldMap } from '../engine/ty
 import * as MapHelper from '../engine/map/world_map.js';
 import { useMapStore } from './map_store.js';
 import { assert, assertNonNullish } from '../errors/application_error.js';
+import { createDefaultTemporalSectionState } from '../engine/settings/settings_scripts/temporal/temporal_scripts.js';
 
 type ScenarioStoreState = {
   activeScenario: Scenario | undefined;
@@ -18,6 +19,9 @@ type ScenarioStoreState = {
   mergeMapOverrides: (
     overrides: { name?: string | undefined; description?: string | undefined } | undefined
   ) => void;
+  setTemporalSelectedScriptId: (scriptId: string) => void;
+  setTemporalControlValue: (scriptId: string, controlId: string, value: string) => void;
+  resetTemporalControlValues: (scriptId: string) => void;
   deleteInactiveScenario: (scenarioId: string) => void;
   saveImmediateBlankInactiveScenario: (mapId: string) => Promise<Scenario>;
   saveImmediateInactiveScenario: (
@@ -176,11 +180,44 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     });
   },
 
+  setTemporalSelectedScriptId: (scriptId) => {
+    get().updateScenario((prev) => ({
+      ...prev,
+      temporalContext: { ...prev.temporalContext, selectedScriptId: scriptId },
+    }));
+  },
+
+  setTemporalControlValue: (scriptId, controlId, value) => {
+    get().updateScenario((prev) => {
+      const section = prev.temporalContext;
+      const forScript = { ...(section.controlValues[scriptId] ?? {}), [controlId]: value };
+      return {
+        ...prev,
+        temporalContext: {
+          ...section,
+          controlValues: { ...section.controlValues, [scriptId]: forScript },
+        },
+      };
+    });
+  },
+
+  resetTemporalControlValues: (scriptId) => {
+    get().updateScenario((prev) => {
+      const controlValues = { ...prev.temporalContext.controlValues };
+      delete controlValues[scriptId];
+      return {
+        ...prev,
+        temporalContext: { ...prev.temporalContext, controlValues },
+      };
+    });
+  },
+
   saveImmediateBlankInactiveScenario: async (mapId) => {
     const scenario = Database.createPersistedObject({
       mapId,
       turnNumber: 0,
       userCharacterId: '',
+      temporalContext: createDefaultTemporalSectionState(),
     });
 
     await get().saveImmediateInactiveScenario(scenario);
@@ -257,4 +294,10 @@ export function getRequiredActiveScenarioMap() {
   const activeMap = useScenarioStore.getState().activeScenarioMap;
   assertNonNullish(activeMap, 'no active map');
   return activeMap;
+}
+
+export function getRequiredUserCharacterId() {
+  const scenario = useScenarioStore.getState().activeScenario;
+  assertNonNullish(scenario, 'no active scenario');
+  return scenario.userCharacterId;
 }

@@ -9,8 +9,6 @@ class ConversationRollingSummarySystemTemplate extends PromptTemplateBase<
 > {
   public readonly defaultTemplateString = `You must summarize a conversation and extract the key information from <%= it.focusedCharacter.firstName %>'s perspective.
 
-Write a 2-4 paragraph summary of the conversation from <%= it.focusedCharacter.firstName %>'s perspective in third person.
-
 Rules:
 - Focus on durable facts, commitments, relationship shifts, emotional tone, and unresolved threads.
 - Prioritize actionable details useful for future interactions. Be specific and direct, leaving nothing to the imagination.

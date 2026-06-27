@@ -10,7 +10,8 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest"
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.19",
@@ -24,10 +25,13 @@
     "lru-cache": "^11.5.0",
     "meta-png": "^1.0.6",
     "react": "19.2.7",
+    "react-calendar": "^6.0.1",
     "react-dom": "19.2.7",
     "react-markdown": "^10.1.0",
+    "react-rnd": "^10.5.3",
     "react-router-dom": "^6.30.1",
     "reagraph": "^4.30.8",
+    "seedrandom": "^3.0.5",
     "serialize-error": "^13.0.1",
     "uid": "^2.0.2",
     "use-query-params": "^2.2.2",
@@ -39,10 +43,13 @@
     "@types/lodash": "^4.17.24",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
+    "@types/seedrandom": "^3.0.8",
     "@vitejs/plugin-react": "^6.0.2",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.3.0",
     "typescript": "^5.9.3",
-    "vite": "^8.0.14"
+    "vite": "^8.0.14",
+    "vite-plugin-node-polyfills": "^0.28.0",
+    "vitest": "^4.1.9"
   }
 }

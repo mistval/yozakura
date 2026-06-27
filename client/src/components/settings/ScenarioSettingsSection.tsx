@@ -5,12 +5,20 @@ import { settingsTooltips } from './settings_tooltips.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { getErrorMessage } from '../../errors/error_util.js';
 import { useMapStore } from '../../state/map_store.js';
+import CustomScriptSettings from './settingsScripts/CustomScriptSettings.js';
+import {
+  TEMPORAL_SCRIPT_DESCRIPTOR,
+  useTemporalScriptSelection,
+} from './settingsScripts/temporalScriptSection.js';
 
 export default function ScenarioSettingsSection() {
   const scenario = useScenarioStore((state) => state.activeScenario);
   const activeMap = useScenarioStore((state) => state.activeScenarioMap);
   const setScenarioMap = useScenarioStore((state) => state.setScenarioMap);
   const mergeMapOverrides = useScenarioStore((state) => state.mergeMapOverrides);
+  const temporalSelection = useTemporalScriptSelection();
+
+  const temporalSection = scenario?.temporalContext;
 
   const maps = useMapStore((s) => s.maps);
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
@@ -166,6 +174,18 @@ export default function ScenarioSettingsSection() {
           />
         </div>
       </div>
+
+      {temporalSection && (
+        <div className="bordered-section space-y-2">
+          <SettingFieldLabel
+            text="Temporal Context"
+            htmlFor="scenario-temporal-context"
+            tooltipHtml="Controls the date, time of day, weather, and other environmental context shown in the header and injected into character prompts."
+            className="text-sm font-medium text-primary"
+          />
+          <CustomScriptSettings descriptor={TEMPORAL_SCRIPT_DESCRIPTOR} selection={temporalSelection} />
+        </div>
+      )}
     </div>
   );
 }

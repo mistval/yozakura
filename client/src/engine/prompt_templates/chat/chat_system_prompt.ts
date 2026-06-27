@@ -64,12 +64,23 @@ World name: <%= it.worldMap.name %>
 
 World description: <%= it.worldMap.description %>
 
+<% if (it.temporalContext) { %>
+The current date and time: <%= it.temporalContext %>
+<% } %>
 
 <%= it.focusedCharacter.firstName %>'s current location is:
 Location name:  <%= it.currentLocation.name %>
 
 Location description: <%= it.currentLocation.description %>
+<% const movement = it.characterMovementConstraint; %>
 
+<% if (movement?.status === 'in_designated_zone' && movement.reason) { %>
+<%= it.focusedCharacter.firstName %> is currently here because <%= movement.reason %>
+<% } else if (movement?.status !== 'in_designated_zone' && movement?.reason) { %>
+<%= it.focusedCharacter.firstName %> is currently moving towards <%= movement.targetLocationName %> because <%= movement.reason %>
+<% } else if (movement?.status !== 'in_designated_zone' && movement?.targetLocationName) { %>
+<%= it.focusedCharacter.firstName %> is currently moving towards <%= movement.targetLocationName %>
+<% } %>
 </setting>
 
 <% const gossipTargetHasBeenRagged = it.raggedCharacters.some((c) => c.id === it.gossipTargetCharacter?.id); %>

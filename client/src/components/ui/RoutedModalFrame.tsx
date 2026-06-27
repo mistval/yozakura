@@ -13,6 +13,7 @@ type RoutedModalFrameProps = {
   panelClassName?: string | undefined;
   contentRef?: Ref<HTMLDivElement | undefined> | undefined;
   queryParam?: string | undefined;
+  headerActions?: ReactNode | undefined;
   children: ReactNode;
 };
 
@@ -27,6 +28,7 @@ export default function RoutedModalFrame({
   panelClassName = '',
   contentRef,
   queryParam,
+  headerActions,
   children,
 }: RoutedModalFrameProps) {
   const { open: derivedOpen } = useModalQueryParam(queryParam ?? '');
@@ -39,10 +41,11 @@ export default function RoutedModalFrame({
     <Modal open={open} onClose={onClose} className={className} contentRef={contentRef} zIndex={zIndex}>
       <div className={`mx-auto p-4 md:p-6 ${maxWidthClassName}`}>
         <div className={`bg-emphasized rounded-sm border shadow-xs p-4 md:p-6 space-y-4 ${panelClassName}`}>
-          {(showClose || (showBack && onBack)) && (
+          {(showClose || (showBack && onBack) || headerActions) && (
             <div className="sticky top-3 z-20 h-0">
               <div className="flex justify-end">
                 <div className="inline-flex gap-2 rounded-sm border border-border-default bg-surface-frosted p-1 shadow-xs backdrop-blur-sm">
+                  {headerActions}
                   {showBack && onBack && (
                     <button
                       className="button-emphasized"

@@ -1,19 +1,33 @@
 import express, { type Router } from 'express';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import z from 'zod';
 
-const bodySchema = z.object({
-  method: z.string().optional(),
-  url: z.string(),
-  headers: z.array(z.object({ name: z.string(), value: z.string() })).optional(),
-  body: z.string().optional(),
-});
+const EXCLUDED_REQUEST_HEADERS = new Set([
+  'host',
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailers',
+  'transfer-encoding',
+  'upgrade',
+  'x-target-url',
+]);
+
+const EXCLUDED_RESPONSE_HEADERS = new Set([
+  'content-encoding',
+  'content-length',
+  'connection',
+  'keep-alive',
+  'transfer-encoding',
+  'upgrade',
+]);
 
 export default function proxyRouter(): Router {
   const router = express.Router();
 
-  router.post('/proxy/fetch', async (req, res) => {
+  router.all('/proxy/fetch', async (req, res) => {
     const upstreamAbortController = new AbortController();
     res.on('close', () => {
       if (!res.writableEnded) {
@@ -22,33 +36,40 @@ export default function proxyRouter(): Router {
     });
 
     try {
-      const { method, url, headers, body } = bodySchema.parse(req.body);
-
-      const requestHeaders: Record<string, string> = {};
-      for (const header of headers ?? []) {
-        requestHeaders[header.name] = header.value;
+      const targetUrl = req.headers['x-target-url'];
+      if (!targetUrl || typeof targetUrl !== 'string') {
+        res.status(400).json({ error: 'Missing X-Target-URL header' });
+        return;
       }
 
-      const requestMethod = (method ?? 'GET').toUpperCase();
-      const canHaveBody = requestMethod !== 'GET' && requestMethod !== 'HEAD';
+      const requestHeaders: Record<string, string> = {};
+      for (const [name, value] of Object.entries(req.headers)) {
+        if (!EXCLUDED_REQUEST_HEADERS.has(name.toLowerCase()) && typeof value === 'string') {
+          requestHeaders[name] = value;
+        }
+      }
 
-      const requestInit: RequestInit = {
-        method: requestMethod,
+      const method = req.method.toUpperCase();
+      const canHaveBody = method !== 'GET' && method !== 'HEAD';
+
+      const requestInit: RequestInit & { duplex?: string } = {
+        method,
         headers: requestHeaders,
         signal: upstreamAbortController.signal,
       };
 
-      if (canHaveBody && body) {
-        requestInit.body = body;
+      if (canHaveBody) {
+        requestInit.body = Readable.toWeb(req) as ReadableStream;
+        requestInit.duplex = 'half';
       }
 
-      const response = await fetch(url, requestInit);
+      const response = await fetch(targetUrl, requestInit);
 
       res.status(response.status);
-      const contentType = response.headers.get('content-type');
-
-      if (contentType) {
-        res.setHeader('Content-Type', contentType);
+      for (const [name, value] of response.headers.entries()) {
+        if (!EXCLUDED_RESPONSE_HEADERS.has(name.toLowerCase())) {
+          res.setHeader(name, value);
+        }
       }
 
       if (!response.body) {

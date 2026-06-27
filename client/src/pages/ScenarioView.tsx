@@ -2,22 +2,29 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import CharacterCard from '../components/CharacterCard';
 import ChatPane from '../components/ChatPane';
-import LocationPanel from '../components/LocationPanel';
+import LocationPanel, { type MoveSuggestion } from '../components/LocationPanel';
 import { useCharacterOverview } from '../components/character_overview/CharacterOverviewContext';
 import { useConversationLog } from '../components/conversation_log/ConversationLogContext';
 import { useMapModal } from '../components/MapModalContext';
 import { useSettingsModal } from '../components/settings/SettingsModalContext';
 import { getDirectedRelationship } from '../engine/relationship';
-import { getDayNumber, getTimePeriod, getTimePeriodLabel } from '../engine/schedule';
 import type { Character, CharacterPair, CharacterRelationships, WorldMapLocation } from '../engine/types';
 import { assertNonNullish } from '../errors/application_error';
-import { useActiveChatParticipants, useActiveChatStore } from '../state/active_chat_store';
+import {
+  useActiveChatParticipants,
+  useTurnMachineStore,
+  useCurrentTurnCharacterId,
+} from '../state/turn_machine_store';
 import { useScenarioStore } from '../state/scenario_store.js';
 import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from '../state/scenario_character_relationship_store.js';
+import { useCharacterGroupStore } from '../state/character_group_store.js';
+import { useTemporalContextStore } from '../state/temporal_context_store.js';
+import { getUserMovementSuggestion } from '../engine/character_schedule/get_scheduled_move';
 import { ChatCoordinator } from '../engine/chat/chat_coordinator';
 import { startScenarioLoop } from '../engine/scenario_loop/scenario_loop';
+import { useSettingsStore } from '../state/settings_store';
 
 export default function ScenarioView() {
   const navigate = useNavigate();
@@ -29,13 +36,17 @@ export default function ScenarioView() {
   const getCharacterRelationships = useScenarioCharacterRelationshipStore(
     (state) => state.getCharacterRelationships
   );
+  const schedulesByGroupId = useCharacterGroupStore((state) => state.schedulesByGroupId);
+  const temporalDisplayHtml = useTemporalContextStore((state) => state.displayHtml);
   const { showCharacterOverview } = useCharacterOverview();
   const { showConversationLog } = useConversationLog();
   const { showMap } = useMapModal();
   const { openSettings } = useSettingsModal();
   const activeParticipants = useActiveChatParticipants();
-  const hasActiveChatSession = useActiveChatStore((state) => state.chatState !== 'inactive');
-  const currentPhase = useScenarioLoopStateStore((state) => state.currentPhase);
+  const freedomOfMovement = useSettingsStore((s) => s.freedomOfMovement);
+  const activeChatState = useTurnMachineStore((state) => state.chatState);
+  const hasActiveChatSession = activeChatState !== 'inactive';
+  const currentTurnCharacterId = useCurrentTurnCharacterId();
   const submitUserWait = useScenarioLoopStateStore((state) => state.submitUserWait);
   const submitUserMove = useScenarioLoopStateStore((state) => state.submitUserMove);
   const submitUserChatAction = useScenarioLoopStateStore((state) => state.submitUserChatAction);
@@ -44,8 +55,11 @@ export default function ScenarioView() {
   const setUserRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.setUserRequestedPhaseTransition
   );
-  const npcPhaseBusy = currentPhase === 'npc';
-  const canSubmitUserTurn = currentPhase === 'user' && !hasActiveChatSession;
+  const isUserTurn =
+    currentTurnCharacterId !== undefined && currentTurnCharacterId === scenario?.userCharacterId;
+  const npcPhaseBusy =
+    currentTurnCharacterId !== undefined && currentTurnCharacterId !== scenario?.userCharacterId;
+  const canSubmitUserTurn = isUserTurn && !hasActiveChatSession;
   const previousUserIdRef = useRef<string | null>(null);
   const [visibleRelationships, setVisibleRelationships] = useState<CharacterRelationships>({});
 
@@ -100,8 +114,9 @@ export default function ScenarioView() {
   const perspectiveLocationId: string | undefined = perspectiveCharacter
     ? charactersById[perspectiveCharacter.id]?.locationId
     : undefined;
-  const dayNumber = scenario ? getDayNumber(scenario.turnNumber) : 1;
-  const currentTimePeriod = scenario ? getTimePeriod(scenario.turnNumber) : 'morning';
+  const canAddChatParticipant =
+    activeChatState !== 'processing_memories' && (hasActiveChatSession || isUserTurn);
+
   const locationById = useMemo(
     () =>
       Object.fromEntries((activeMap?.locations || []).map((location) => [location.id, location] as const)),
@@ -174,6 +189,20 @@ export default function ScenarioView() {
       .filter((l): l is WorldMapLocation => Boolean(l));
   }, [perspectiveLocationId, locationAdjacenyById, locationById]);
 
+  const moveSuggestion = useMemo<MoveSuggestion | undefined>(() => {
+    if (!canSubmitUserTurn || !user || !activeMap) {
+      return undefined;
+    }
+    const raw = getUserMovementSuggestion(user);
+    if (!raw) {
+      return undefined;
+    }
+    const suggestedLocations = raw.suggestedLocationIds
+      .map((id) => locationById[id])
+      .filter((entry): entry is WorldMapLocation => Boolean(entry));
+    return { ...raw, suggestedLocations };
+  }, [canSubmitUserTurn, user, activeMap, scenario?.turnNumber, schedulesByGroupId, locationById]);
+
   const addCharacterToActiveChat = (npcId: string) => {
     if (!hasActiveChatSession || !scenario) {
       return;
@@ -218,9 +247,7 @@ export default function ScenarioView() {
 
   const renderSessionHeader = ({ includeMenu = false }: { includeMenu?: boolean } = {}) => (
     <div className="flex justify-between items-center">
-      <div className="font-semibold">
-        Day {dayNumber} · Turn: {scenario.turnNumber} · {getTimePeriodLabel(currentTimePeriod)}
-      </div>
+      <div className="font-semibold" dangerouslySetInnerHTML={{ __html: temporalDisplayHtml }} />
       <div className="flex gap-2">
         <button type="button" onClick={() => showCharacterOverview()}>
           Character Overview
@@ -252,13 +279,17 @@ export default function ScenarioView() {
             location={resolvedLocation}
             adjacentLocationIds={adjacentLocations}
             onMove={(locationId) => {
-              submitUserMove(locationId);
+              submitUserMove(
+                locationId,
+                moveSuggestion?.consumesTurnByLocationId[locationId] ?? !freedomOfMovement
+              );
             }}
             onWait={() => {
               submitUserWait();
             }}
             disabled={!canSubmitUserTurn}
             canMove={!showNpcPhaseControls}
+            suggestion={moveSuggestion}
           />
 
           {showNpcPhaseControls && (
@@ -305,9 +336,7 @@ export default function ScenarioView() {
                       submitUserChatAction(char.id);
                     }}
                     selected={isSelected}
-                    disabled={
-                      (!hasActiveChatSession && !canSubmitUserTurn) || char.id === scenario.userCharacterId
-                    }
+                    disabled={!canAddChatParticipant || char.id === scenario.userCharacterId}
                   />
                 );
               })}

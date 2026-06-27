@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
-import { GraphCanvas } from 'reagraph';
-import { useGraphTheme } from '../theme/graph_themes.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.js';
 import type { WorldMap, WorldMapLocation } from '../engine/types.js';
 import { getConnectivityIslands, validateWorldMap } from '../engine/map/world_map.js';
 import { useMapStore } from '../state/map_store.js';
 import * as Database from '../backend_bridge/database.js';
 import { assert } from '../errors/application_error.js';
+import MapZoneEditor from '../components/map_zones/MapZoneEditor.js';
 
 function createEmptyLocation(): WorldMapLocation {
   return Database.createPersistedObject({
@@ -19,22 +18,13 @@ function createEmptyLocation(): WorldMapLocation {
   });
 }
 
-function constructGraph(locations: WorldMapLocation[]) {
-  const nodes = locations.map((l) => ({
-    id: l.id,
-    label: l.name,
-  }));
-
-  const edges = locations.flatMap((l) =>
-    l.adjacency.map((a) => ({
-      id: `${l.id}->${a}`,
-      source: l.id,
-      target: a,
-      label: `${l.id} > ${a}`,
-    }))
-  );
-
-  return { nodes, edges };
+function createEmptyMap(): WorldMap {
+  return Database.createPersistedObject({
+    name: '',
+    description: '',
+    locations: [createEmptyLocation()],
+    zones: [],
+  });
 }
 
 export default function MapEditor() {
@@ -45,66 +35,61 @@ export default function MapEditor() {
   const isNew = !id;
 
   const [error, setError] = useState('');
-  const [mapName, setMapName] = useState('');
-  const [mapDescription, setMapDescription] = useState('');
-  const [locations, setLocations] = useState<WorldMapLocation[]>([createEmptyLocation()]);
+  const [currentMap, setCurrentMap] = useState<WorldMap>(createEmptyMap());
   const [mapPendingDelete, setMapPendingDelete] = useState<WorldMap | undefined>(undefined);
   const maps = useMapStore((s) => s.maps);
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
-
   const existingMap = useMemo(() => {
     return maps.find((m) => m.id === id);
   }, [maps]);
 
-  const graphVisualization = useMemo(() => {
-    return constructGraph(locations);
-  }, [locations]);
-
-  const connectivityIslands = useMemo(() => getConnectivityIslands(locations), [locations]);
-  const graphTheme = useGraphTheme();
+  const connectivityIslands = useMemo(
+    () => getConnectivityIslands(currentMap.locations),
+    [currentMap.locations]
+  );
 
   useEffect(() => {
     if (!mapsAreLoaded || !existingMap) {
       return;
     }
 
-    setLocations(existingMap.locations);
-    setMapDescription(existingMap.description);
-    setMapName(existingMap.name);
+    setCurrentMap(existingMap);
   }, [mapsAreLoaded, existingMap]);
 
   const updateLocation = (id: string, updates: Partial<WorldMapLocation>) => {
-    setLocations((prev) =>
-      prev.map((location) =>
-        location.id === id
-          ? {
-              ...location,
-              ...updates,
-            }
-          : location
-      )
-    );
+    setCurrentMap((prev) => ({
+      ...prev,
+      locations: prev.locations.map((location) =>
+        location.id === id ? { ...location, ...updates } : location
+      ),
+    }));
   };
 
   const addLocation = () => {
-    setLocations((prev) => [createEmptyLocation()].concat(prev));
+    setCurrentMap((prev) => ({
+      ...prev,
+      locations: [createEmptyLocation()].concat(prev.locations),
+    }));
   };
 
   const deleteLocationById = (id: string) => {
-    setLocations((prev) => {
-      const withoutLocation = prev.filter((location) => location.id !== id);
-      return withoutLocation.map((location) => ({
-        ...location,
-        adjacency: location.adjacency.filter((target) => target !== id),
-      }));
+    setCurrentMap((prev) => {
+      const withoutLocation = prev.locations.filter((location) => location.id !== id);
+      return {
+        ...prev,
+        locations: withoutLocation.map((location) => ({
+          ...location,
+          adjacency: location.adjacency.filter((target) => target !== id),
+        })),
+      };
     });
   };
 
   const setAdjacency = (locationId: string, targetId: string, checked: boolean) => {
     assert(locationId !== targetId, 'Trying to set adjacency to self');
 
-    setLocations((prev) => {
-      const next = prev.map((location) => ({
+    setCurrentMap((prev) => {
+      const next = prev.locations.map((location) => ({
         ...location,
         adjacency: location.adjacency.concat(),
       }));
@@ -125,27 +110,21 @@ export default function MapEditor() {
         target.adjacency = target.adjacency.filter((id) => id !== locationId);
       }
 
-      return next;
+      return { ...prev, locations: next };
     });
   };
 
   const handleSave = () => {
-    const trimmedMapName = mapName.trim();
-    const trimmedMapDescription = mapDescription.trim();
-
-    const trimmedLocations = locations.map((location) => ({
-      ...location,
-      name: location.name.trim(),
-      description: location.description.trim(),
-    }));
-
-    const mapToSave: WorldMap = Database.createPersistedObject({
-      id: isNew ? undefined : id,
-      name: trimmedMapName,
-      description: trimmedMapDescription,
-      locations: trimmedLocations,
-      createdAt: existingMap?.createdAt,
-    });
+    const mapToSave: WorldMap = {
+      ...currentMap,
+      name: currentMap.name.trim(),
+      description: currentMap.description.trim(),
+      locations: currentMap.locations.map((location) => ({
+        ...location,
+        name: location.name.trim(),
+        description: location.description.trim(),
+      })),
+    };
 
     const validationErrors = validateWorldMap(mapToSave);
     if (validationErrors.length > 0) {
@@ -203,8 +182,8 @@ export default function MapEditor() {
         <input
           id="map-name"
           className="w-full border rounded-sm px-3 py-2 bg-inset"
-          value={mapName}
-          onChange={(event) => setMapName(event.target.value)}
+          value={currentMap.name}
+          onChange={(event) => setCurrentMap((prev) => ({ ...prev, name: event.target.value }))}
           placeholder="Map name"
         />
       </div>
@@ -216,8 +195,8 @@ export default function MapEditor() {
         <textarea
           id="map-description"
           className="w-full min-h-24 border rounded-sm px-3 py-2 bg-inset"
-          value={mapDescription}
-          onChange={(event) => setMapDescription(event.target.value)}
+          value={currentMap.description}
+          onChange={(event) => setCurrentMap((prev) => ({ ...prev, description: event.target.value }))}
           placeholder="Describe the world setting..."
         />
       </div>
@@ -230,7 +209,7 @@ export default function MapEditor() {
           </button>
         </div>
 
-        {locations.map((location) => (
+        {currentMap.locations.map((location) => (
           <div key={location.id} className="border rounded-sm p-3 space-y-2 bg-surface-soft">
             <div className="space-y-2">
               <label className="block text-sm" htmlFor={`location-name-${location.id}`}>
@@ -259,10 +238,12 @@ export default function MapEditor() {
             </div>
 
             <div className="space-y-2">
-              {locations.length > 1 && <div className="text-sm font-medium">Adjacent Locations</div>}
+              {currentMap.locations.length > 1 && (
+                <div className="text-sm font-medium">Adjacent Locations</div>
+              )}
 
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {locations
+                {currentMap.locations
                   .filter((entry) => entry.id !== location.id)
                   .map((targetLocation) => {
                     const checked = location.adjacency.includes(targetLocation.id);
@@ -281,7 +262,8 @@ export default function MapEditor() {
                           }}
                         />
                         <span>
-                          {targetLocation.name || `Location ${locations.indexOf(targetLocation) + 1}`}
+                          {targetLocation.name ||
+                            `Location ${currentMap.locations.indexOf(targetLocation) + 1}`}
                         </span>
                       </label>
                     );
@@ -291,7 +273,7 @@ export default function MapEditor() {
                 <button
                   type="button"
                   onClick={() => deleteLocationById(location.id)}
-                  disabled={locations.length <= 1}
+                  disabled={currentMap.locations.length <= 1}
                 >
                   Delete Location
                 </button>
@@ -303,9 +285,17 @@ export default function MapEditor() {
 
       {error && <div className="error-card">{error}</div>}
 
-      <div className="relative w-full" style={{ height: '500px' }}>
-        <GraphCanvas nodes={graphVisualization.nodes} edges={graphVisualization.edges} theme={graphTheme} />
-      </div>
+      {!isNew && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold">Map Zones</h2>
+          <MapZoneEditor
+            map={currentMap}
+            updateMap={setCurrentMap}
+            isGlobalContext={true}
+            mapClasses={['min-h-200']}
+          />
+        </div>
+      )}
 
       {connectivityIslands.length > 1 && (
         <div className="rounded-sm border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning-text space-y-2">

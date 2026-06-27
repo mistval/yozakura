@@ -1,77 +1,98 @@
 import { useEffect, useState } from 'react';
 import type {
   ButtonHandlerResult,
-  SettingsControlValues,
-  SettingsScriptControlsDefinition,
+  ScriptSectionDescriptor,
+  ScriptSelection,
   SettingsScriptHelpers,
 } from '../../../engine/settings/settings_scripts/settings_script.js';
 import {
   getControlDefault,
   resolveControls,
   resolveControlValues,
-  resetScriptControlValues,
-  setControlValue,
-  setCustomScriptSource,
-  useSettingsScriptSection,
 } from '../../../engine/settings/settings_scripts/settings_scripts_store.js';
 import {
-  CUSTOM_SCRIPT_ID,
+  customScriptGroupKey,
   makeTextFileGroupKey,
 } from '../../../engine/settings/settings_scripts/settings_scripts_state.js';
 import { createProxiedFetch } from '../../../backend_bridge/proxied_fetch.js';
 import { loadUserTextFileContent } from '../../../backend_bridge/database.js';
-import Modal from '../../ui/Modal.js';
-import TextSettingEditor from '../ui/TextSettingEditor.js';
+import { createSeededRandom } from '../../../engine/settings/settings_scripts/seeded_random.js';
+import DeleteButton from '../../ui/DeleteButton.js';
+import SettingFieldLabel from '../ui/SettingFieldLabel.js';
 import SettingsScriptControls from './SettingsScriptControls.js';
+import { useUserTextFileList } from './useUserTextFileList.js';
+import AIAssistantInstructionsButton from '../../ui/AIAssistantInstructionsButton.js';
+import { useTextareaPasteWarningGate } from '../pasteWarning/useTextareaPasteWarningGate.js';
 
-export type ControlScript = {
-  controls?: SettingsScriptControlsDefinition | undefined;
-  buttonHandler?:
-    | ((
-        buttonId: string,
-        controlValues: SettingsControlValues,
-        helpers: SettingsScriptHelpers
-      ) => Promise<ButtonHandlerResult>)
-    | undefined;
-};
-
-export type ResolvedControlScript = { ok: true; script: ControlScript } | { ok: false; error: string };
+const NEW_CUSTOM_OPTION = '__new_custom_script__';
 
 type CustomScriptSettingsProps = {
-  sectionId: string;
-  resolveScript: (selectedScriptId: string, customScriptSource: string) => ResolvedControlScript;
-  getDocumentation: () => string;
-  documentationTitle: string;
-  customSourceLabel?: string;
-  customSourceTooltipHtml?: string;
+  descriptor: ScriptSectionDescriptor;
+  selection: ScriptSelection;
   visibleControlIds?: string[] | undefined;
 };
 
 export default function CustomScriptSettings({
-  sectionId,
-  resolveScript,
-  getDocumentation,
-  documentationTitle,
-  customSourceLabel = 'Custom Script',
-  customSourceTooltipHtml,
+  descriptor,
+  selection,
   visibleControlIds,
 }: CustomScriptSettingsProps) {
-  const section = useSettingsScriptSection(sectionId);
-  const [documentationOpen, setDocumentationOpen] = useState(false);
-  const [documentation, setDocumentation] = useState('');
+  const {
+    sectionId,
+    builtinOptions,
+    resolveScript,
+    getDocumentation,
+    documentationTitle,
+    enableCustom = false,
+    selectLabel,
+    selectTooltipHtml,
+    postSelectOpenHelpHtml,
+  } = descriptor;
+  const {
+    selectedScriptId,
+    controlValues,
+    onSelectScript,
+    onSetControlValue,
+    onResetControlValues,
+    onScriptSaved,
+  } = selection;
+  const customScripts = useUserTextFileList(customScriptGroupKey(sectionId));
   const [buttonData, setButtonData] = useState<Record<string, unknown>>({});
+  const [customSource, setCustomSource] = useState('');
+  const [selectOpened, setSelectOpened] = useState(false);
 
-  const selectedScriptId = section.selectedScriptId;
-  const isCustom = selectedScriptId === CUSTOM_SCRIPT_ID;
-  const resolved = resolveScript(selectedScriptId, section.customScriptSource);
-  const storedValues = section.controlValues[selectedScriptId] ?? {};
+  const { onPasteWithWarning, warningModal } = useTextareaPasteWarningGate({});
+
+  const isBuiltin = builtinOptions.some((option) => option.value === selectedScriptId);
+  const selectedCustom = customScripts.files.find((file) => file.id === selectedScriptId);
+  const isCustomSelected = enableCustom && !isBuiltin && Boolean(selectedScriptId);
 
   useEffect(() => {
     setButtonData({});
   }, [selectedScriptId]);
 
+  useEffect(() => {
+    if (!isCustomSelected) {
+      setCustomSource('');
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const text = await customScripts.loadContent(selectedScriptId);
+      if (!cancelled) {
+        setCustomSource(text ?? '');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isCustomSelected, selectedScriptId, customScripts.loadContent]);
+
+  const resolved = resolveScript(selectedScriptId, isCustomSelected ? customSource : '');
+  const selectedDescription = resolved.ok ? resolved.script.description : undefined;
   const controls = resolved.ok
-    ? resolveControls(resolved.script.controls, { controlValues: storedValues, buttonData })
+    ? resolveControls(resolved.script.controls, { controlValues, buttonData })
     : [];
 
   const makeHelpers = (): SettingsScriptHelpers => ({
@@ -79,6 +100,7 @@ export default function CustomScriptSettings({
     abortSignal: undefined,
     loadUserTextFile: (controlId, fileId) =>
       loadUserTextFileContent(makeTextFileGroupKey(sectionId, selectedScriptId, controlId), fileId),
+    createSeededRandom,
   });
 
   const handleButtonClick = async (buttonId: string): Promise<ButtonHandlerResult> => {
@@ -90,8 +112,8 @@ export default function CustomScriptSettings({
       return { result: 'failure', resultDescription: 'This provider has no handler for that button.' };
     }
 
-    const controlValues = resolveControlValues(controls, storedValues);
-    const result = await resolved.script.buttonHandler(buttonId, controlValues, makeHelpers());
+    const liveControlValues = resolveControlValues(controls, controlValues);
+    const result = await resolved.script.buttonHandler(buttonId, liveControlValues, makeHelpers());
     if (result.data !== undefined) {
       const nextButtonData = { ...buttonData, [buttonId]: result.data };
       setButtonData(nextButtonData);
@@ -106,16 +128,13 @@ export default function CustomScriptSettings({
     }
 
     const liveControls = resolveControls(resolved.script.controls, {
-      controlValues: storedValues,
+      controlValues,
       buttonData: nextButtonData,
     });
-    const baselineControls = resolveControls(resolved.script.controls, {
-      controlValues: storedValues,
-      buttonData: {},
-    });
+    const baselineControls = resolveControls(resolved.script.controls, { controlValues, buttonData: {} });
 
     for (const control of liveControls) {
-      if (control.type === 'button' || storedValues[control.id] !== undefined) {
+      if (control.type === 'button' || controlValues[control.id] !== undefined) {
         continue;
       }
 
@@ -127,48 +146,137 @@ export default function CustomScriptSettings({
       const baseline = baselineControls.find((candidate) => candidate.id === control.id);
       const baselineValue = baseline ? getControlDefault(baseline) : '';
       if (liveValue !== baselineValue) {
-        setControlValue(sectionId, selectedScriptId, control.id, liveValue);
+        onSetControlValue(control.id, liveValue);
       }
     }
   };
 
+  const handleProviderChange = async (next: string) => {
+    if (next === NEW_CUSTOM_OPTION) {
+      const id = await customScripts.create('Untitled script');
+      if (id) {
+        onSelectScript(id);
+      }
+      return;
+    }
+    onSelectScript(next);
+  };
+
+  const handleDeleteCustom = async () => {
+    if (!selectedCustom) {
+      return;
+    }
+    const nextId = await customScripts.remove(selectedCustom.id);
+    onSelectScript(nextId ?? builtinOptions[0]?.value ?? '');
+  };
+
   return (
     <div className="space-y-3">
-      {isCustom && (
-        <>
-          <button
-            type="button"
-            className="px-3 py-1 border rounded-sm w-full h-12 button-emphasized"
-            onClick={() => {
-              setDocumentation(getDocumentation());
-              setDocumentationOpen(true);
-            }}
-          >
-            🤖 AI Assistant Instructions 🗒️
-          </button>
-
-          <TextSettingEditor
-            label={customSourceLabel}
-            htmlFor={`${sectionId}-custom-script-source`}
-            tooltipHtml={customSourceTooltipHtml}
-            value={section.customScriptSource}
-            onChange={(nextValue) => setCustomScriptSource(sectionId, nextValue)}
-            textareaRows={16}
-            spellCheck={false}
-            enablePasteWarning
+      <div className="space-y-1">
+        {selectLabel && (
+          <SettingFieldLabel
+            text={selectLabel}
+            tooltipHtml={selectTooltipHtml}
+            htmlFor={`${sectionId}-script-provider`}
           />
-        </>
+        )}
+        <select
+          id={`${sectionId}-script-provider`}
+          aria-label="Script provider"
+          value={selectedScriptId}
+          onClick={() => setSelectOpened(true)}
+          onChange={(event) => void handleProviderChange(event.target.value)}
+          className="rounded-input"
+        >
+          {!isBuiltin && !selectedCustom && selectedScriptId && (
+            <option value={selectedScriptId}>{selectedScriptId}</option>
+          )}
+          {builtinOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+          {enableCustom &&
+            customScripts.files.map((file) => (
+              <option key={file.id} value={file.id}>
+                {file.fileName}
+              </option>
+            ))}
+          {enableCustom && <option value={NEW_CUSTOM_OPTION}>+ New custom script…</option>}
+        </select>
+        {postSelectOpenHelpHtml && selectOpened && (
+          <div
+            className="text-sm text-warning-text-strong bg-warning-bg border border-warning-border-soft rounded-sm p-2 mt-1"
+            dangerouslySetInnerHTML={{ __html: postSelectOpenHelpHtml }}
+          ></div>
+        )}
+      </div>
+
+      {selectedDescription && <div className="border rounded-sm p-3">{selectedDescription}</div>}
+
+      {isCustomSelected && selectedCustom && (
+        <div className="space-y-2 bordered-section">
+          <div className="flex gap-2 items-center">
+            <input
+              aria-label="Custom script name"
+              value={selectedCustom.fileName}
+              onChange={(event) => {
+                void customScripts.save(selectedCustom.id, event.target.value, customSource);
+              }}
+              className="rounded-input"
+            />
+            <DeleteButton
+              onConfirm={handleDeleteCustom}
+              disabled={customScripts.busy}
+              confirmTitle="Delete Script"
+              confirmLabel="Delete Script"
+              label="Delete script"
+              confirmMessage={`Delete script "${selectedCustom.fileName || 'Untitled script'}"? This cannot be undone.`}
+            />
+          </div>
+
+          <AIAssistantInstructionsButton
+            getDocumentation={() => getDocumentation(customSource)}
+            title={documentationTitle}
+            isDirty={false}
+            fileNameBase={selectedScriptId}
+            instructions="Copy these instructions into a powerful LLM, describe what you want, and let it do the work for you. The instructions document explains how to write a script, and also includes the current script content (if any) so you can request edits to the current script."
+          />
+
+          <textarea
+            aria-label="Custom script source"
+            rows={16}
+            spellCheck={false}
+            value={customSource}
+            onChange={(event) => setCustomSource(event.target.value)}
+            onBlur={() => {
+              void customScripts.save(selectedCustom.id, selectedCustom.fileName, customSource);
+              onScriptSaved();
+            }}
+            className="rounded-input font-mono text-sm w-full"
+            onPaste={(event) => {
+              onPasteWithWarning(event, {
+                value: customSource,
+                applyValue: (val) => {
+                  setCustomSource(val);
+                },
+              });
+            }}
+          />
+
+          {customScripts.error && <div className="error-card">{customScripts.error}</div>}
+        </div>
       )}
 
       {resolved.ok ? (
         <SettingsScriptControls
           controls={controls}
-          values={storedValues}
+          values={controlValues}
           sectionId={sectionId}
           scriptId={selectedScriptId}
           idPrefix={`${sectionId}-${selectedScriptId}`}
           visibleControlIds={visibleControlIds}
-          onChange={(controlId, value) => setControlValue(sectionId, selectedScriptId, controlId, value)}
+          onChange={(controlId, value) => onSetControlValue(controlId, value)}
           onButtonClick={handleButtonClick}
         />
       ) : (
@@ -177,82 +285,13 @@ export default function CustomScriptSettings({
 
       {!visibleControlIds && (
         <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={() => resetScriptControlValues(sectionId, selectedScriptId)}
-            className="px-3 py-1 border rounded-sm"
-          >
+          <button type="button" onClick={onResetControlValues} className="px-3 py-1 border rounded-sm">
             Reset to Default
           </button>
         </div>
       )}
 
-      <Modal
-        open={documentationOpen}
-        onClose={() => setDocumentationOpen(false)}
-        className="flex items-center justify-center p-4"
-      >
-        <div className="bg-emphasized rounded-sm p-4 w-full max-w-4xl space-y-3">
-          <header className="space-y-2">
-            <h3 className="font-semibold">{documentationTitle}</h3>
-            <p className="text-sm text-secondary">
-              Copy these instructions into a powerful LLM, tell it which provider you want to support, and let
-              it write the script for you. Alternatively, see{' '}
-              <a
-                target="_blank"
-                rel="noreferrer"
-                className="underline hover:text-primary"
-                href="https://github.com/mistval/yozakura/tree/dev/client/src/engine/settings/settings_scripts/image/builtins"
-              >
-                here
-              </a>{' '}
-              where you can find the built-in scripts for reference.
-            </p>
-          </header>
-
-          <textarea
-            rows={20}
-            readOnly
-            value={documentation}
-            spellCheck={false}
-            className="rounded-input font-mono text-xs w-full"
-          />
-
-          <div className="flex flex-wrap gap-2 justify-end">
-            <button
-              type="button"
-              className="px-3 py-1 border rounded-sm"
-              onClick={async () => {
-                await navigator.clipboard.writeText(documentation);
-              }}
-            >
-              Copy
-            </button>
-            <button
-              type="button"
-              className="px-3 py-1 border rounded-sm"
-              onClick={() => {
-                const blob = new Blob([documentation], { type: 'text/markdown;charset=utf-8' });
-                const downloadUrl = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = downloadUrl;
-                link.download = `${sectionId}-custom-script-instructions.md`;
-                link.click();
-                URL.revokeObjectURL(downloadUrl);
-              }}
-            >
-              Download
-            </button>
-            <button
-              type="button"
-              className="px-3 py-1 border rounded-sm"
-              onClick={() => setDocumentationOpen(false)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </Modal>
+      {warningModal}
     </div>
   );
 }

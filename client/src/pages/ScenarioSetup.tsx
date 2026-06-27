@@ -10,6 +10,7 @@ import { assertNonNullish } from '../errors/application_error.js';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
 import { useGlobalCharactersStore } from '../state/global_character_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
+import { createDefaultTemporalSectionState } from '../engine/settings/settings_scripts/temporal/temporal_scripts.js';
 
 function sortCharacters(characters: Character[]) {
   return characters.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
@@ -88,6 +89,7 @@ export default function ScenarioSetup() {
         mapId: selectedMap.id,
         turnNumber: 0,
         userCharacterId: '',
+        temporalContext: createDefaultTemporalSectionState(),
       });
 
       await useScenarioStore.getState().saveImmediateInactiveScenario(scenario, { noSummaryReload: true });

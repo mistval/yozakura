@@ -6,31 +6,32 @@ import type {
   UserTurnAction,
 } from '../engine/scenario_loop/types';
 import { scenarioLoopPromiseCallbacks } from '../engine/scenario_loop/flow_control';
-import { useActiveChatStore } from './active_chat_store';
-
-type ScenarioLoopPhase = 'user' | 'npc';
 
 export type UserRequestedPhaseTransition = 'none' | 'paused' | 'stopped';
 
 type ScenarioLoopStateStoreState = {
-  currentPhase: ScenarioLoopPhase;
   autoMode: boolean;
   runState: ScenarioLoopRunState;
   runningForScenario: string | undefined;
   userRequestedPhaseTransition: UserRequestedPhaseTransition;
+  lastTemporalDayIndex: number | undefined;
 
   setScenario: (scenarioId: string | undefined) => void;
-  setPhase: (phase: ScenarioLoopPhase) => void;
   setAutoMode: (enabled: boolean) => void;
   setRunState: (runState: ScenarioLoopRunState) => void;
   setUserRequestedPhaseTransition: (value: UserRequestedPhaseTransition) => void;
+  setLastTemporalDayIndex: (dayIndex: number | undefined) => void;
   resetLoopState: () => void;
   submitChatMessage: (message: string) => boolean;
   submitChatSkipTurn: () => boolean;
   submitChatSpeakAs: (characterId: string) => boolean;
   submitChatRequestEnd: (opts?: Pick<ChatUserInputRequestEnd, 'forceNoEffect'>) => boolean;
+  submitChatDeleteMessage: (messageId: string) => boolean;
+  submitChatRedoMessage: (messageId: string) => boolean;
+  submitChatEditMessage: (messageId: string, newContent: string) => boolean;
+  submitChatGenerateImage: (prompt: string) => boolean;
   submitUserWait: () => boolean;
-  submitUserMove: (destinationLocationId: string) => boolean;
+  submitUserMove: (destinationLocationId: string, consumesTurn: boolean) => boolean;
   submitUserChatAction: (characterId: string) => boolean;
 };
 
@@ -51,27 +52,17 @@ function resolveChatUserInputAction(action: ChatUserInputAction): boolean {
     return false;
   }
 
-  if (useActiveChatStore.getState().chatState !== 'awaiting_user_input') {
-    return false;
-  }
-
   pending.resolve(action);
   scenarioLoopPromiseCallbacks.userChatAction = undefined;
   return true;
 }
 
 export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((set) => ({
-  currentPhase: 'user',
   autoMode: false,
   runState: 'idle',
   runningForScenario: undefined,
   userRequestedPhaseTransition: 'none',
-
-  setPhase(phase: ScenarioLoopPhase) {
-    set({
-      currentPhase: phase,
-    });
-  },
+  lastTemporalDayIndex: undefined,
 
   setAutoMode(enabled: boolean) {
     set({
@@ -87,11 +78,15 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
     set({ userRequestedPhaseTransition: value });
   },
 
+  setLastTemporalDayIndex(dayIndex: number | undefined) {
+    set({ lastTemporalDayIndex: dayIndex });
+  },
+
   resetLoopState() {
     set({
-      currentPhase: 'user',
       runState: 'idle',
       userRequestedPhaseTransition: 'none',
+      lastTemporalDayIndex: undefined,
     });
   },
 
@@ -122,16 +117,33 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
     } satisfies ChatUserInputRequestEnd);
   },
 
+  submitChatDeleteMessage(messageId: string) {
+    return resolveChatUserInputAction({ actionType: 'delete_message', messageId });
+  },
+
+  submitChatRedoMessage(messageId: string) {
+    return resolveChatUserInputAction({ actionType: 'redo_message', messageId });
+  },
+
+  submitChatEditMessage(messageId: string, newContent: string) {
+    return resolveChatUserInputAction({ actionType: 'edit_message', messageId, newContent });
+  },
+
+  submitChatGenerateImage(prompt: string) {
+    return resolveChatUserInputAction({ actionType: 'generate_image', prompt });
+  },
+
   submitUserWait() {
     return resolveUserTurnAction({
       actionType: 'wait',
     });
   },
 
-  submitUserMove(destinationLocationId: string) {
+  submitUserMove(destinationLocationId: string, consumesTurn: boolean) {
     return resolveUserTurnAction({
       actionType: 'move',
       destinationLocationId,
+      consumesTurn,
     });
   },
 
@@ -143,6 +155,6 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
   },
 
   setScenario: (scenarioId) => {
-    set({ runningForScenario: scenarioId });
+    set({ runningForScenario: scenarioId, lastTemporalDayIndex: undefined });
   },
 }));

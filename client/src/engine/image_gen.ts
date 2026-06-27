@@ -6,7 +6,12 @@ import { runWithInteractiveRetry } from './interative_retry.js';
 import { useSettingsStore } from '../state/settings_store.js';
 import type { Character } from './types.js';
 import type { SettingsScriptHelpers } from './settings/settings_scripts/settings_script.js';
-import { resolveImageScript } from './settings/settings_scripts/image/image_scripts.js';
+import {
+  getBuiltinImageScript,
+  resolveImageScript,
+} from './settings/settings_scripts/image/image_scripts.js';
+import { loadCustomScriptSource } from './settings/settings_scripts/custom_scripts.js';
+import { createSeededRandom } from './settings/settings_scripts/seeded_random.js';
 import {
   getSettingsScriptSection,
   resolveControls,
@@ -18,8 +23,7 @@ import {
 } from './settings/settings_scripts/settings_scripts_state.js';
 import type { ImagePromptType } from './settings/settings_scripts/image/image_script_types';
 
-const IMAGE_GENERATION_RETRY_HINT =
-  'The backend server might not be running or the image provider might be unavailable.';
+const IMAGE_GENERATION_RETRY_HINT = 'The image provider might be unavailable or misconfigured.';
 
 function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -41,7 +45,10 @@ async function dispatchImageGeneration(
     signal: options.abortSignal,
     run: async () => {
       const section = getSettingsScriptSection(IMAGE_GENERATION_SECTION_ID);
-      const resolved = resolveImageScript(section.selectedScriptId, section.customScriptSource);
+      const source = getBuiltinImageScript(section.selectedScriptId)
+        ? ''
+        : ((await loadCustomScriptSource(IMAGE_GENERATION_SECTION_ID, section.selectedScriptId)) ?? '');
+      const resolved = resolveImageScript(section.selectedScriptId, source);
       if (!resolved.ok) {
         throw new Error(resolved.error);
       }
@@ -62,6 +69,7 @@ async function dispatchImageGeneration(
             makeTextFileGroupKey(IMAGE_GENERATION_SECTION_ID, section.selectedScriptId, controlId),
             fileId
           ),
+        createSeededRandom,
       };
 
       const results = await resolved.script.generateImages(

@@ -1,16 +1,18 @@
 import z from 'zod';
 
 export const IMAGE_GENERATION_SECTION_ID = 'imageGeneration';
-export const CUSTOM_SCRIPT_ID = 'custom';
 export const DEFAULT_IMAGE_SCRIPT_ID = 'automatic1111';
 
 export function makeTextFileGroupKey(sectionId: string, scriptId: string, controlId: string): string {
   return `${sectionId}::${scriptId}::${controlId}`;
 }
 
+export function customScriptGroupKey(sectionId: string): string {
+  return `customScript::${sectionId}`;
+}
+
 export const settingsScriptSectionStateSchema = z.object({
   selectedScriptId: z.string(),
-  customScriptSource: z.string(),
   controlValues: z.record(z.string(), z.record(z.string(), z.string())),
 });
 
@@ -23,7 +25,6 @@ export type SettingsScriptsState = z.infer<typeof settingsScriptsStateSchema>;
 export const DEFAULT_SETTINGS_SCRIPTS_STATE: SettingsScriptsState = {
   [IMAGE_GENERATION_SECTION_ID]: {
     selectedScriptId: DEFAULT_IMAGE_SCRIPT_ID,
-    customScriptSource: '',
     controlValues: {},
   },
 };

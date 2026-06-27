@@ -7,7 +7,7 @@ import { offscreenMemoryUpdateConversationGoalContextSchema } from '../prompt_te
 class OffscreenMemoryUpdateConversationGoalSystemTemplate extends PromptTemplateBase<
   z.infer<typeof offscreenMemoryUpdateConversationGoalContextSchema>
 > {
-  public readonly defaultTemplateString = `Your job is to decide whether newly learned information should change <%= it.focusedCharacter.firstName %>'s next conversation goal with <%= it.targetCharacter.firstName %>. You will be given <%= it.focusedCharacter.firstName %>'s current memories of <%= it.targetCharacter.firstName %>, their existing goal towards them (if any), and one new piece of information that <%= it.focusedCharacter.firstName %> just learned about <%= it.targetCharacter.firstName %>.
+  public readonly defaultTemplateString = `Your job is to decide whether newly learned information should change <%= it.focusedCharacter.firstName %>'s next conversation goal with <%= it.targetCharacter.firstName %>. You will be given <%= it.focusedCharacter.firstName %>'s current memories of <%= it.targetCharacter.firstName %>, their existing goal towards them (if any), and one new piece of information that <%= it.focusedCharacter.firstName %> just learned regarding <%= it.targetCharacter.firstName %>.
 
 If the new piece of information suggests a more important goal for <%= it.focusedCharacter.firstName %> to pursue with <%= it.targetCharacter.firstName %>, you should write a new goal. Otherwise, you should keep the old goal.
 
@@ -16,6 +16,7 @@ If you decide to keep the old goal:
 
 If you decide to write a new goal for <%= it.focusedCharacter.firstName %> to pursue with <%= it.targetCharacter.firstName %>:
 - Write a goal that provides strong narrative momentum.
+- Prioritize taking decisive action rather than just planning.
 - Be specific and provide sufficient context.
 - Output only the updated goal and nothing else`;
   public readonly contextSchema = offscreenMemoryUpdateConversationGoalContextSchema;
@@ -38,12 +39,12 @@ class OffscreenMemoryUpdateConversationGoalUserTemplate extends PromptTemplateBa
 </current_aggregate_memories>
 
 Existing goal that <%= it.focusedCharacter.firstName %> wanted to pursue with <%= it.targetCharacter.firstName %>:
-<existing_conversation_topic>
+<existing_goal>
 <%= it.targetCharacterRelationship?.nextConversationGoal || (it.focusedCharacter.firstName + ' does not have a goal to pursue with ' + it.targetCharacter.firstName + ' yet.') %>
 
-</existing_conversation_topic>
+</existing_goal>
 
-Newly learned information about <%= it.targetCharacter.firstName %>:
+Newly learned information regarding <%= it.targetCharacter.firstName %>:
 <new_information>
 <%= it.candidateInformation %>
 

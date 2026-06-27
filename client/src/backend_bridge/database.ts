@@ -6,14 +6,20 @@ import {
   storedConversationSchema,
   scenarioSchema,
   worldMapSchema,
+  scenarioCharacterGroupSchema,
+  scenarioCharacterGroupScheduleSchema,
+  scenarioEventSchema,
   type CharacterPair,
   type Character,
   type CharacterRelationship,
   type StoredConversation,
+  type ScenarioEvent,
   type Scenario,
   type WorldMap,
   type RootPersistedObject,
   type ScenarioSummary,
+  type ScenarioCharacterGroup,
+  type ScenarioCharacterGroupSchedule,
 } from '../engine/types.js';
 import { assert } from '../errors/application_error';
 import { newId } from '../util/id';
@@ -28,6 +34,9 @@ const TABLE_CONVERSATION = 'conversation';
 const TABLE_CONVERSATION_PARTICIPANT = 'conversation_participant';
 const TABLE_MAP = 'map';
 const TABLE_KEY_VALUE = 'key_value';
+const TABLE_SCENARIO_CHARACTER_GROUP = 'scenario_character_group';
+const TABLE_SCENARIO_CHARACTER_GROUP_SCHEDULE = 'scenario_character_group_schedule';
+const TABLE_SCENARIO_EVENT_LOG = 'scenario_event_log';
 
 function buildSqlPlaceholders(count: number): string {
   return Array(count).fill('?').join(', ');
@@ -200,6 +209,25 @@ const SELECT_CONVERSATION_BY_ID_SQL = `
   LIMIT 1
 `;
 
+const UPSERT_SCENARIO_EVENT_SQL = `
+  INSERT INTO ${TABLE_SCENARIO_EVENT_LOG} (id, scenario_id, event_type, data, created_at, updated_at)
+  VALUES (?, ?, ?, ?, ${sqlDatetimeNow()}, ${sqlDatetimeNow()})
+  ON CONFLICT(id)
+  DO UPDATE SET
+    data = excluded.data,
+    scenario_id = excluded.scenario_id,
+    event_type = excluded.event_type,
+    updated_at = ${sqlDatetimeNow()}
+`;
+
+const SELECT_SCENARIO_EVENT_PAGE_SQL = `
+  SELECT *
+  FROM ${TABLE_SCENARIO_EVENT_LOG}
+  WHERE scenario_id = ?
+  ORDER BY rowid DESC
+  LIMIT ? OFFSET ?
+`;
+
 const SELECT_MAP_BY_ID_SQL = `
   SELECT *
   FROM ${TABLE_MAP}
@@ -256,6 +284,13 @@ const dataRowSchema = baseRowSchema.extend({
 
 type ConversationPageResult = {
   entries: StoredConversation[];
+  page: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+};
+
+export type ScenarioEventPageResult = {
+  entries: ScenarioEvent[];
   page: number;
   hasPreviousPage: boolean;
   hasNextPage: boolean;
@@ -615,6 +650,35 @@ export async function storeConversation(scenarioId: string, entry: StoredConvers
   ]);
 }
 
+export async function storeScenarioEvent(scenarioId: string, event: ScenarioEvent) {
+  await dbRun(UPSERT_SCENARIO_EVENT_SQL, [
+    [event.id, scenarioId, event.eventType, encodeStoredData(event, scenarioEventSchema)],
+  ]);
+}
+
+export async function loadScenarioEventPage(
+  scenarioId: string,
+  page: number,
+  pageSize: number = 100
+): Promise<ScenarioEventPageResult> {
+  const coercedPage = coerceToPositiveInteger(page, 1);
+  const coercedPageSize = coerceToPositiveInteger(pageSize, 100);
+  const offset = (coercedPage - 1) * coercedPageSize;
+
+  const entries = await selectDataRows(
+    SELECT_SCENARIO_EVENT_PAGE_SQL,
+    [[scenarioId, coercedPageSize + 1, offset]],
+    scenarioEventSchema
+  );
+
+  return {
+    entries: entries.slice(0, coercedPageSize),
+    page: coercedPage,
+    hasPreviousPage: coercedPage > 1,
+    hasNextPage: entries.length > coercedPageSize,
+  };
+}
+
 export async function deleteScenarioDatabase(scenarioId: string) {
   await dbRun(DELETE_SCENARIO_BY_ID_SQL, [[scenarioId]]);
 }
@@ -648,7 +712,7 @@ const UPSERT_USER_TEXT_FILE_SQL = `
 `;
 
 const SELECT_USER_TEXT_FILES_BY_GROUP_SQL = `
-  SELECT id, file_name
+  SELECT id, file_name, group_key, file_content
   FROM ${TABLE_USER_TEXT_FILES}
   WHERE group_key = ?
 `;
@@ -665,15 +729,20 @@ const DELETE_USER_TEXT_FILE_SQL = `
   WHERE id = ?
 `;
 
-export type UserTextFileSummary = { id: string; fileName: string };
+export type UserTextFileSummary = { id: string; fileName: string; groupKey: string; fileContent: string };
 
-export async function listUserTextFiles(groupKey: string): Promise<UserTextFileSummary[]> {
+export async function loadUserTextFiles(groupKey: string): Promise<UserTextFileSummary[]> {
   const rows = await selectTypedMultiQuery(
     SELECT_USER_TEXT_FILES_BY_GROUP_SQL,
     [[groupKey]],
-    z.object({ id: z.string(), file_name: z.string() })
+    z.object({ id: z.string(), file_name: z.string(), group_key: z.string(), file_content: z.string() })
   );
-  return rows.map((row) => ({ id: row.id, fileName: row.file_name }));
+  return rows.map((row) => ({
+    id: row.id,
+    fileName: row.file_name,
+    groupKey: row.group_key,
+    fileContent: row.file_content,
+  }));
 }
 
 export async function loadUserTextFileContent(groupKey: string, id: string): Promise<string | undefined> {
@@ -696,6 +765,95 @@ export async function saveUserTextFile(file: {
 
 export async function deleteUserTextFile(id: string): Promise<void> {
   await dbRun(DELETE_USER_TEXT_FILE_SQL, [[id]]);
+}
+
+const UPSERT_SCENARIO_CHARACTER_GROUP_SQL = `
+  INSERT INTO ${TABLE_SCENARIO_CHARACTER_GROUP} (id, scenario_id, data, created_at, updated_at)
+  SELECT
+    json_extract(value, '$[0]'),
+    json_extract(value, '$[1]'),
+    json_extract(value, '$[2]'),
+    ${sqlDatetimeNow()},
+    ${sqlDatetimeNow()}
+  FROM json_each(?)
+  WHERE TRUE
+  ON CONFLICT(id)
+  DO UPDATE SET
+    data = excluded.data,
+    updated_at = ${sqlDatetimeNow()}
+`;
+
+const SELECT_SCENARIO_CHARACTER_GROUPS_SQL = `
+  SELECT *
+  FROM ${TABLE_SCENARIO_CHARACTER_GROUP}
+  WHERE scenario_id = ?
+`;
+
+const DELETE_SCENARIO_CHARACTER_GROUP_SQL = `
+  DELETE FROM ${TABLE_SCENARIO_CHARACTER_GROUP}
+  WHERE id = ?
+`;
+
+const UPSERT_GROUP_SCHEDULE_SQL = `
+  INSERT INTO ${TABLE_SCENARIO_CHARACTER_GROUP_SCHEDULE} (id, scenario_id, group_id, data, created_at, updated_at)
+  VALUES (?, ?, ?, ?, ${sqlDatetimeNow()}, ${sqlDatetimeNow()})
+  ON CONFLICT(id)
+  DO UPDATE SET
+    data = excluded.data,
+    updated_at = ${sqlDatetimeNow()}
+`;
+
+const SELECT_GROUP_SCHEDULES_SQL = `
+  SELECT *
+  FROM ${TABLE_SCENARIO_CHARACTER_GROUP_SCHEDULE}
+  WHERE scenario_id = ?
+`;
+
+const DELETE_GROUP_SCHEDULE_SQL = `
+  DELETE FROM ${TABLE_SCENARIO_CHARACTER_GROUP_SCHEDULE}
+  WHERE id = ?
+`;
+
+export async function storeScenarioCharacterGroups(groups: ScenarioCharacterGroup[]) {
+  if (groups.length === 0) return;
+  await dbRun(UPSERT_SCENARIO_CHARACTER_GROUP_SQL, [
+    [
+      JSON.stringify(
+        groups.map((group) => [
+          group.id,
+          group.scenarioId,
+          encodeStoredData(group, scenarioCharacterGroupSchema),
+        ])
+      ),
+    ],
+  ]);
+}
+
+export async function loadScenarioCharacterGroups(scenarioId: string) {
+  return selectDataRows(SELECT_SCENARIO_CHARACTER_GROUPS_SQL, [[scenarioId]], scenarioCharacterGroupSchema);
+}
+
+export async function deleteScenarioCharacterGroup(id: string) {
+  await dbRun(DELETE_SCENARIO_CHARACTER_GROUP_SQL, [[id]]);
+}
+
+export async function storeGroupSchedule(schedule: ScenarioCharacterGroupSchedule) {
+  await dbRun(UPSERT_GROUP_SCHEDULE_SQL, [
+    [
+      schedule.id,
+      schedule.scenarioId,
+      schedule.groupId,
+      encodeStoredData(schedule, scenarioCharacterGroupScheduleSchema),
+    ],
+  ]);
+}
+
+export async function loadGroupSchedules(scenarioId: string) {
+  return selectDataRows(SELECT_GROUP_SCHEDULES_SQL, [[scenarioId]], scenarioCharacterGroupScheduleSchema);
+}
+
+export async function deleteGroupSchedule(id: string) {
+  await dbRun(DELETE_GROUP_SCHEDULE_SQL, [[id]]);
 }
 
 export function createPersistedObject<

@@ -1,5 +1,5 @@
 import { assertNonNullish } from '../errors/application_error';
-import { getActiveChatParticipants, useActiveChatStore } from '../state/active_chat_store';
+import { getActiveChatParticipants, useTurnMachineStore } from '../state/turn_machine_store';
 import { useScenarioCharacterStore } from '../state/scenario_character_store';
 import { useSettingsStore } from '../state/settings_store.js';
 import { buildCharacterNameIndex, matchStringToIndex } from './tokenization';
@@ -10,7 +10,7 @@ export class MemoryRAGHelper {
   private readonly unsubscribe: () => void;
 
   constructor() {
-    this.unsubscribe = useActiveChatStore.subscribe((newState, prevState) => {
+    this.unsubscribe = useTurnMachineStore.subscribe((newState, prevState) => {
       if (prevState.participantIds !== newState.participantIds) {
         this.rebuildMentionIndex();
 

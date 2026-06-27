@@ -7,8 +7,8 @@ import {
   getActiveChatGossipCharacter,
   getActiveChatMedium,
   getActiveChatParticipants,
-  useActiveChatStore,
-} from '../../state/active_chat_store.js';
+  useTurnMachineStore,
+} from '../../state/turn_machine_store.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import type {
   CharacterEditorExecutionContext,
@@ -22,7 +22,9 @@ import type {
   TargetedConversationExecutionContext,
 } from './prompt_template_context_fields.js';
 import { useSettingsStore } from '../../state/settings_store.js';
+import { useTemporalContextStore } from '../../state/temporal_context_store.js';
 import { generatePersonalityTraits } from '../../util/personality.js';
+import { getCharacterMovementConstraint } from '../character_schedule/get_scheduled_move.js';
 import _ from 'lodash';
 
 const globalWritableContext = {};
@@ -123,6 +125,7 @@ function buildScenarioTemplateContext(): ScenarioExecutionContext {
     allCharacters: Object.values(scenarioCharacterStore.scenarioCharactersById).map(toContextCharacter),
     userCharacter: toContextCharacter(userCharacter),
     scenario: scenarioStore.activeScenario,
+    temporalContext: useTemporalContextStore.getState().plainText,
     worldMap: scenarioStore.activeScenarioMap,
     getRelationship: (characterAId: string, characterBId: string) =>
       useScenarioCharacterRelationshipStore.getState().getCharacterRelationship(characterAId, characterBId),
@@ -130,7 +133,7 @@ function buildScenarioTemplateContext(): ScenarioExecutionContext {
 }
 
 async function buildChatTemplateContext(focusedCharacter?: Character): Promise<ConversationExecutionContext> {
-  const activeChatStore = useActiveChatStore.getState();
+  const activeChatStore = useTurnMachineStore.getState();
   const scenarioCharacterStore = useScenarioCharacterStore.getState();
 
   if (!activeChatStore.isActive()) {
@@ -170,7 +173,7 @@ export async function buildFocusedChatTemplateContext(
   assertNonNullish(focusedCharacter, 'Focused character not found in scenario characters');
 
   const chatTemplateContext = await buildChatTemplateContext(focusedCharacter);
-  const currentLocation = useActiveChatStore.getState().getChatCharacterLocation(focusedCharacter.id);
+  const currentLocation = useTurnMachineStore.getState().getChatCharacterLocation(focusedCharacter.id);
   assertNonNullish(currentLocation, 'currentLocation not found');
 
   return {
@@ -183,7 +186,8 @@ export async function buildFocusedChatTemplateContext(
       chatTemplateContext.allCharacters
     ),
     focusedCharacterChatInstructions:
-      useActiveChatStore.getState().chatInstructionsByCharacterId[focusedCharacter.id] ?? '',
+      useTurnMachineStore.getState().chatInstructionsByCharacterId[focusedCharacter.id] ?? '',
+    characterMovementConstraint: getCharacterMovementConstraint(focusedCharacter),
   };
 }
 

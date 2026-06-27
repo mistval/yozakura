@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { settingsScriptSectionStateSchema } from './settings/settings_scripts/settings_scripts_state.js';
 
 export type OpenAIChatCompletionRequestMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -151,6 +152,9 @@ Alice: I have a pet cat named Whiskers who is very mischievous.`,
     description:
       'Brief summaries of past conversations involving this character, used to help the model keep track of important past events and relationships. A new conversation is added after every conversation the character is involved in, and only the most recent ten (by default) summaries are kept in this array.',
   }),
+  groupIds: z.array(z.string()).meta({
+    description: 'The IDs of the character groups this character belongs to within the scenario.',
+  }),
 });
 
 export type Character = z.infer<typeof characterSchema>;
@@ -184,10 +188,18 @@ export const ephemeralLocationSchema = worldMapLocationSchema.extend({
 
 export type EphemeralLocation = z.infer<typeof ephemeralLocationSchema>;
 
+export const mapZoneSchema = basePersistedObjectSchema.extend({
+  name: z.string(),
+  locationIds: z.array(z.string()),
+});
+
+export type MapZone = z.infer<typeof mapZoneSchema>;
+
 export const worldMapSchema = basePersistedObjectSchema.extend({
   name: z.string(),
   description: z.string(),
   locations: z.array(worldMapLocationSchema),
+  zones: z.array(mapZoneSchema),
 });
 
 export type WorldMap = z.infer<typeof worldMapSchema>;
@@ -196,6 +208,10 @@ export const scenarioSchema = basePersistedObjectSchema.extend({
   mapId: z.string(),
   userCharacterId: z.string(),
   turnNumber: z.number(),
+  temporalContext: settingsScriptSectionStateSchema.meta({
+    description:
+      'The temporal/environmental context configuration for this scenario: the selected temporal script and its control values.',
+  }),
   mapOverrides: z
     .object({
       name: z.string().optional().meta({
@@ -219,6 +235,38 @@ export type ScenarioSummary = {
   createdAt: string;
   updatedAt: string;
 };
+
+export const movementPolicySchema = z.enum(['teleport', 'jump', 'rush', 'casual']);
+export type MovementPolicy = z.infer<typeof movementPolicySchema>;
+
+export const scenarioCharacterGroupSchema = basePersistedObjectSchema.extend({
+  scenarioId: z.string(),
+  name: z.string(),
+  privateZones: z.array(z.string()),
+});
+
+export type ScenarioCharacterGroup = z.infer<typeof scenarioCharacterGroupSchema>;
+
+export const scheduleSegmentSchema = z.object({
+  id: z.string(),
+  startTurn: z.number().int().nonnegative(),
+  endTurn: z.number().int().positive(),
+  zoneId: z.string(),
+  movementPolicy: movementPolicySchema,
+  obedienceRate: z.number(),
+  reason: z.string().optional(),
+});
+
+export type ScheduleSegment = z.infer<typeof scheduleSegmentSchema>;
+
+export const scenarioCharacterGroupScheduleSchema = basePersistedObjectSchema.extend({
+  scenarioId: z.string(),
+  groupId: z.string(),
+  lengthInTurns: z.number().int().positive(),
+  segments: z.array(scheduleSegmentSchema),
+});
+
+export type ScenarioCharacterGroupSchedule = z.infer<typeof scenarioCharacterGroupScheduleSchema>;
 
 export const characterRelationshipSchema = basePersistedObjectSchema.extend({
   fromId: z.string(),
@@ -318,9 +366,6 @@ const conversationStateUpdateNodeSchema: z.ZodType<ConversationStateUpdateNode> 
     .passthrough()
 );
 
-export const timeOfDaySchema = z.enum(['morning', 'afternoon', 'evening', 'night']);
-export type TimeOfDay = z.infer<typeof timeOfDaySchema>;
-
 const baseMessageSchema = basePersistedObjectSchema.extend({
   id: z.string(),
 });
@@ -396,3 +441,19 @@ export const storedConversationSchema = basePersistedObjectSchema.extend({
 });
 
 export type StoredConversation = z.infer<typeof storedConversationSchema>;
+
+export const scenarioMovementEventSchema = basePersistedObjectSchema.extend({
+  eventType: z.literal('movement'),
+  turnNumber: z.number(),
+  characterId: z.string(),
+  characterName: z.string(),
+  movementPolicy: movementPolicySchema.optional(),
+  fromLocationName: z.string(),
+  toLocationName: z.string(),
+});
+
+export type ScenarioMovementEvent = z.infer<typeof scenarioMovementEventSchema>;
+
+export const scenarioEventSchema = z.discriminatedUnion('eventType', [scenarioMovementEventSchema]);
+
+export type ScenarioEvent = z.infer<typeof scenarioEventSchema>;

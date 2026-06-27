@@ -1,15 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  deleteUserTextFile,
-  listUserTextFiles,
-  loadUserTextFileContent,
-  saveUserTextFile,
-  type UserTextFileSummary,
-} from '../../../backend_bridge/database.js';
-import { getErrorMessage } from '../../../errors/error_util.js';
-import { newId } from '../../../util/id.js';
-import { SpoilerSection } from '../../ui/SpoilerSection.js';
+import { useState } from 'react';
+import { useUserTextFileList } from './useUserTextFileList.js';
 import SettingFieldLabel from '../ui/SettingFieldLabel.js';
+import DeleteButton from '../../ui/DeleteButton.js';
 
 const NEW_OPTION = '__new__';
 
@@ -30,56 +22,12 @@ export default function TextFileListField({
   tooltipHtml,
   htmlFor,
 }: TextFileListFieldProps) {
-  const [files, setFiles] = useState<UserTextFileSummary[]>([]);
+  const { files, error, busy, create, save, remove } = useUserTextFileList(groupKey);
   const [isCreating, setIsCreating] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [content, setContent] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const refreshFiles = useCallback(async () => {
-    try {
-      setFiles(await listUserTextFiles(groupKey));
-    } catch (e) {
-      setError(getErrorMessage(e));
-    }
-  }, [groupKey]);
-
-  useEffect(() => {
-    void refreshFiles();
-  }, [refreshFiles]);
 
   const selectedFile = files.find((file) => file.id === value);
-
-  useEffect(() => {
-    if (!value || isCreating) {
-      setContent('');
-      return;
-    }
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        const text = await loadUserTextFileContent(groupKey, value);
-        if (!cancelled) {
-          setContent(text ?? '');
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(getErrorMessage(e));
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [groupKey, value, isCreating]);
-
-  useEffect(() => {
-    if (!isCreating) {
-      setNameDraft(selectedFile?.fileName ?? '');
-    }
-  }, [selectedFile?.fileName, isCreating]);
 
   const handleSelectChange = (next: string) => {
     if (next === NEW_OPTION) {
@@ -93,39 +41,10 @@ export default function TextFileListField({
   };
 
   const handleCreate = async () => {
-    setBusy(true);
-    setError('');
-    try {
-      const id = newId();
-      await saveUserTextFile({ id, groupKey, fileName: nameDraft.trim() || 'Untitled', fileContent: '' });
-      await refreshFiles();
+    const id = await create(nameDraft, content);
+    if (id) {
       setIsCreating(false);
       onChange(id);
-    } catch (e) {
-      setError(getErrorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleRename = async () => {
-    if (!selectedFile) {
-      return;
-    }
-    setBusy(true);
-    setError('');
-    try {
-      await saveUserTextFile({
-        id: selectedFile.id,
-        groupKey,
-        fileName: nameDraft.trim() || selectedFile.fileName,
-        fileContent: content,
-      });
-      await refreshFiles();
-    } catch (e) {
-      setError(getErrorMessage(e));
-    } finally {
-      setBusy(false);
     }
   };
 
@@ -133,31 +52,8 @@ export default function TextFileListField({
     if (!selectedFile) {
       return;
     }
-    setBusy(true);
-    setError('');
-    try {
-      await deleteUserTextFile(selectedFile.id);
-      const remaining = await listUserTextFiles(groupKey);
-      setFiles(remaining);
-      onChange(remaining[0]?.id ?? '');
-    } catch (e) {
-      setError(getErrorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleSaveContent = async (nextContent: string) => {
-    if (!selectedFile) {
-      return;
-    }
-    await saveUserTextFile({
-      id: selectedFile.id,
-      groupKey,
-      fileName: selectedFile.fileName,
-      fileContent: nextContent,
-    });
-    setContent(nextContent);
+    const nextId = await remove(selectedFile.id);
+    onChange(nextId ?? '');
   };
 
   return (
@@ -169,6 +65,7 @@ export default function TextFileListField({
         onChange={(event) => handleSelectChange(event.target.value)}
         className="rounded-input"
       >
+        {!isCreating && !value && <option value="">Select a file…</option>}
         {!isCreating && value && !selectedFile && <option value={value}>{value}</option>}
         {files.map((file) => (
           <option key={file.id} value={file.id}>
@@ -179,58 +76,61 @@ export default function TextFileListField({
       </select>
 
       {isCreating ? (
-        <div className="flex gap-2 items-center">
+        <div className="space-y-2 bordered-section">
           <input
+            aria-label="New file name"
             value={nameDraft}
             onChange={(event) => setNameDraft(event.target.value)}
-            placeholder="New file name"
+            placeholder="File name"
             className="rounded-input"
           />
-          <button
-            type="button"
-            onClick={() => void handleCreate()}
-            disabled={busy}
-            className="shrink-0 px-3 py-1 border rounded-sm"
-          >
-            Create
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsCreating(false)}
-            className="shrink-0 px-3 py-1 border rounded-sm"
-          >
-            Cancel
-          </button>
-        </div>
-      ) : selectedFile ? (
-        <>
-          <div className="flex gap-2 items-center">
-            <input
-              value={nameDraft}
-              onChange={(event) => setNameDraft(event.target.value)}
-              className="rounded-input"
-            />
+          <textarea
+            aria-label="File content"
+            rows={12}
+            spellCheck={false}
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            className="rounded-input font-mono text-sm w-full"
+          />
+          <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => void handleRename()}
-              disabled={busy}
-              className="shrink-0 px-3 py-1 border rounded-sm"
+              onClick={() => setIsCreating(false)}
+              className="px-3 py-1 border rounded-sm"
             >
-              Save name
+              Cancel
             </button>
             <button
               type="button"
-              onClick={() => void handleDelete()}
+              onClick={() => void handleCreate()}
               disabled={busy}
-              className="shrink-0 px-3 py-1 border rounded-sm"
+              className="px-3 py-1 border rounded-sm"
             >
-              Delete
+              Create
             </button>
           </div>
-          <SpoilerSection title="Edit file content" initialValue={content} onSave={handleSaveContent}>
-            {null}
-          </SpoilerSection>
-        </>
+        </div>
+      ) : selectedFile ? (
+        <div className="space-y-2 bordered-section">
+          <textarea
+            aria-label="File content"
+            rows={12}
+            spellCheck={false}
+            value={selectedFile.fileContent}
+            onChange={(event) => void save(selectedFile.id, selectedFile.fileName, event.target.value)}
+            className="rounded-input font-mono text-sm w-full"
+          />
+          <div className="flex justify-end">
+            <DeleteButton
+              onConfirm={handleDelete}
+              disabled={busy}
+              confirmTitle="Delete File"
+              confirmLabel="Delete File"
+              label="Delete file"
+              confirmMessage={`Delete "${selectedFile.fileName || 'Untitled'}"? This cannot be undone.`}
+            />
+          </div>
+        </div>
       ) : null}
 
       {error && <div className="error-card">{error}</div>}

@@ -1,9 +1,9 @@
 import * as Database from '../../backend_bridge/database';
 import { assert } from '../../errors/application_error';
-import { getActiveChatMedium, getActiveChatParticipants } from '../../state/active_chat_store';
+import { getActiveChatMedium, getActiveChatParticipants } from '../../state/turn_machine_store';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store';
-import { useScenarioStore } from '../../state/scenario_store';
+import { getRequiredUserCharacterId, useScenarioStore } from '../../state/scenario_store';
 import { useSettingsStore } from '../../state/settings_store';
 import { newId } from '../../util/id';
 import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
@@ -73,10 +73,9 @@ export async function generateCharacterEndOfChatUpdates(
   } = useScenarioCharacterRelationshipStore.getState();
   const { saveScenarioCharacterFields, addConversationSummary } = useScenarioCharacterStore.getState();
 
-  const userCharacterId = activeScenario?.userCharacterId;
+  const userCharacterId = getRequiredUserCharacterId();
 
   assert(activeScenario, 'No scenario');
-  assert(userCharacterId, 'No user character');
 
   if (fromCharacterPerspective.id === userCharacterId) {
     throw new Error('Cannot generate end of chat updates for the user character');

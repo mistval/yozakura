@@ -60,7 +60,7 @@ export const GRAPH_THEMES = {
   agape: makeTheme('#f6e6c8', '#aa7639', '#618b53', '#2a0d00', '#ddb887', '#cda06a'),
   yozakura: makeTheme('#0d101a', '#b96b95', '#5f9b73', '#ffd8e6', '#43304b', '#59405d'),
   mercurial: makeTheme('#151107', '#a07a3e', '#8da66e', '#f5e7c1', '#5a4727', '#6b562f'),
-  mpk: makeTheme('#040805', '#5da97f', '#54b07a', '#d7ffe3', '#244734', '#2f6046'),
+  mpk: makeTheme('#040805', '#5da97f', '#d7ffe3', '#d7ffe3', '#244734', '#2f6046'),
 };
 
 export function useGraphTheme(): Theme {

@@ -10,9 +10,9 @@ class NextConversationGoalUpdatesSystemTemplate extends PromptTemplateBase<
   public readonly defaultTemplateString = `Given <%= it.focusedCharacter.firstName %>'s character persona, their memory about <%= it.targetCharacter.firstName %>, and the transcript of a conversation that just happened involving both of them, you must write a goal for <%= it.focusedCharacter.firstName %> in their next interaction with <%= it.targetCharacter.firstName %>.
 
 Rules:
-- Prioritize specific plans and goals that were discussed in the conversation.
+- Prioritize specific goals that were discussed in the conversation.
+- Prioritize taking decisive action rather than just planning.
 - Write in the third person perspective.
-- Output up to one paragraph.
 - Choose a goal that provides strong narrative momentum.
 - Be specific and provide sufficient context.
 - Output the goal and nothing else`;
