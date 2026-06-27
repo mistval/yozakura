@@ -14,6 +14,8 @@ import {
   removeByIdentity,
 } from '../../util/array.js';
 import { assertNonNullish } from '../../errors/application_error.js';
+import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
+import { useMapModal } from '../MapModalContext.js';
 
 export type ZoneEdits = Partial<Pick<MapZone, 'name' | 'locationIds'>>;
 
@@ -37,7 +39,9 @@ export default function MapZoneEditor({
   mapClasses?: string[];
 }) {
   const graphTheme = useGraphTheme();
+  const { closeMap } = useMapModal();
   const [selectedZoneId, setSelectedZoneId] = useState<string | undefined>(undefined);
+  const { showCharacterOverview, open: characterOverviewIsOpen } = useCharacterOverview();
   const groups = useCharacterGroupStore((s) => s.groups);
   const selectedZone = findById(map.zones, selectedZoneId ?? '');
   const zoneMembers = selectedZone?.locationIds ?? [];
@@ -185,7 +189,7 @@ export default function MapZoneEditor({
             </div>
 
             {!isGlobalContext && (
-              <div className="space-y-1">
+              <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="text-sm font-medium">Private to groups</div>
                   <InfoTooltip
@@ -210,6 +214,19 @@ export default function MapZoneEditor({
                     ))}
                   </div>
                 )}
+                <button
+                  onClick={() => {
+                    if (characterOverviewIsOpen) {
+                      closeMap();
+                    }
+
+                    showCharacterOverview({
+                      target: 'groups',
+                    });
+                  }}
+                >
+                  🙋‍♂️ Create Character Group
+                </button>
               </div>
             )}
           </div>

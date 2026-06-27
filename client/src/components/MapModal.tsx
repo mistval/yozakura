@@ -62,7 +62,7 @@ function MapModalInner() {
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const user = useUserCharacter();
   const graphTheme = useGraphTheme();
-  const { showCharacterOverview } = useCharacterOverview();
+  const { showCharacterOverview, open: characterOverviewIsOpen } = useCharacterOverview();
 
   const graphRef = useRef<GraphCanvasRef | null>(null);
   const groupRefs = useRef(new Map<string, HTMLDivElement>());
@@ -353,7 +353,16 @@ function MapModalInner() {
                             onClick={(e) => {
                               e.stopPropagation();
                               if (isSelected) {
-                                showCharacterOverview({ selectedIds: [character.id], scrolldown: true });
+                                if (characterOverviewIsOpen) {
+                                  // TODO: Quick fix for inability to control query param ordering via useQuery
+                                  closeMap();
+                                }
+
+                                showCharacterOverview({
+                                  selectedIds: [character.id],
+                                  scrolldown: true,
+                                  target: 'character',
+                                });
                               } else {
                                 toggleSelectedLocation(location.id, { center: true });
                               }

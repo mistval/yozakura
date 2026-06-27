@@ -4,7 +4,7 @@ import { ArrayParam, StringParam, useQueryParams } from 'use-query-params';
 import { FlagParam } from '../../hooks/useModalQueryParam.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 
-type CharacterOverviewTarget = 'overview' | 'character' | 'add-characters';
+type CharacterOverviewTarget = 'overview' | 'character' | 'add-characters' | 'groups';
 
 type ShowCharacterOverviewParams = {
   target?: CharacterOverviewTarget;
@@ -58,6 +58,8 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
     const target = incoming?.target || 'overview';
     const next: Record<string, unknown> = { characteroverview: true };
 
+    next.cotab = undefined;
+
     if (target === 'character' && incoming?.characterId) {
       next.co_character = incoming.characterId;
     }
@@ -69,6 +71,9 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
     }
     if (incoming?.scrolldown) {
       next.scrolldown = 'true';
+    }
+    if (target === 'groups') {
+      next.cotab = 'groups';
     }
 
     setParams(next as Parameters<typeof setParams>[0]);
