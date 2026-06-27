@@ -22,6 +22,7 @@ import SettingFieldLabel from '../ui/SettingFieldLabel.js';
 import SettingsScriptControls from './SettingsScriptControls.js';
 import { useUserTextFileList } from './useUserTextFileList.js';
 import AIAssistantInstructionsButton from '../../ui/AIAssistantInstructionsButton.js';
+import { useTextareaPasteWarningGate } from '../pasteWarning/useTextareaPasteWarningGate.js';
 
 const NEW_CUSTOM_OPTION = '__new_custom_script__';
 
@@ -59,6 +60,8 @@ export default function CustomScriptSettings({
   const [buttonData, setButtonData] = useState<Record<string, unknown>>({});
   const [customSource, setCustomSource] = useState('');
   const [selectOpened, setSelectOpened] = useState(false);
+
+  const { onPasteWithWarning, warningModal } = useTextareaPasteWarningGate({});
 
   const isBuiltin = builtinOptions.some((option) => option.value === selectedScriptId);
   const selectedCustom = customScripts.files.find((file) => file.id === selectedScriptId);
@@ -251,6 +254,14 @@ export default function CustomScriptSettings({
               onScriptSaved();
             }}
             className="rounded-input font-mono text-sm w-full"
+            onPaste={(event) => {
+              onPasteWithWarning(event, {
+                value: customSource,
+                applyValue: (val) => {
+                  setCustomSource(val);
+                },
+              });
+            }}
           />
 
           {customScripts.error && <div className="error-card">{customScripts.error}</div>}
@@ -279,6 +290,8 @@ export default function CustomScriptSettings({
           </button>
         </div>
       )}
+
+      {warningModal}
     </div>
   );
 }

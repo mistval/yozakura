@@ -179,24 +179,17 @@ export class ChatCoordinator {
   ) {
     return this.turnMachineStore().doWithState('generating_image', async () => {
       return withPhaseTransitionGate(async (abortSignal) => {
-        try {
-          const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
-          const files = await generateChatImage({
-            fullPrompt,
-            saveTo,
-            abortSignal,
-          });
+        const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
+        const files = await generateChatImage({
+          fullPrompt,
+          saveTo,
+          abortSignal,
+        });
 
-          const firstFile = files[0];
-          assertNonNullish(firstFile, 'No file returned from image generation call');
+        const firstFile = files[0];
+        assertNonNullish(firstFile, 'No file returned from image generation call');
 
-          this.setTranscript(this.transcript().addImageMessage(firstFile).updatedTranscript);
-        } catch (err) {
-          void showNonRetriableErrorCardIfNeeded({
-            error: err,
-            operationType: 'image.generate',
-          });
-        }
+        this.setTranscript(this.transcript().addImageMessage(firstFile).updatedTranscript);
       }, opts);
     });
   }
