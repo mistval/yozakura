@@ -52,7 +52,7 @@ export class ChatCoordinator {
   }
 
   public static enterActiveChat() {
-    this.activeChatStore().enterActiveChat();
+    this.turnMachineStore().enterActiveChat();
   }
 
   public static isChatMessageLimitReached(): boolean {
@@ -60,7 +60,7 @@ export class ChatCoordinator {
   }
 
   private static getChatMessageLimit(): number {
-    const chatState = this.activeChatStore();
+    const chatState = this.turnMachineStore();
     const settings = useSettingsStore.getState();
 
     if (chatState.userIsParticipant() || this.isChatPaused()) {
@@ -75,11 +75,11 @@ export class ChatCoordinator {
   }
 
   public static deactivate() {
-    this.activeChatStore().deactivateChat();
+    this.turnMachineStore().deactivateChat();
   }
 
   public static addParticipant(participantId: string) {
-    return this.activeChatStore().addChatParticipant(participantId);
+    return this.turnMachineStore().addChatParticipant(participantId);
   }
 
   public static removeParticipant(participantId: string) {
@@ -87,23 +87,23 @@ export class ChatCoordinator {
       useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
     }
 
-    return this.activeChatStore().removeChatParticipant(participantId);
+    return this.turnMachineStore().removeChatParticipant(participantId);
   }
 
   public static setStateAwaitingCharacterInput() {
-    this.activeChatStore().setStateAwaitingCharacterInput();
+    this.turnMachineStore().setStateAwaitingCharacterInput();
   }
 
   public static setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation) {
-    this.activeChatStore().setEphemeralLocation(setter);
+    this.turnMachineStore().setEphemeralLocation(setter);
   }
 
   public static setChatInstructions(instructions: string) {
-    this.activeChatStore().setChatInstructions(instructions);
+    this.turnMachineStore().setChatInstructions(instructions);
   }
 
   public static setCharacterChatInstructions(characterId: string, instructions: string) {
-    this.activeChatStore().setCharacterChatInstructions(characterId, instructions);
+    this.turnMachineStore().setCharacterChatInstructions(characterId, instructions);
   }
 
   public static deleteMessageById(messageId: string) {
@@ -160,7 +160,7 @@ export class ChatCoordinator {
     primaryCharacterId: string,
     opts: { isUserInteraction?: boolean | undefined } = {}
   ) {
-    return this.activeChatStore().doWithState('generating_image', async () => {
+    return this.turnMachineStore().doWithState('generating_image', async () => {
       return withPhaseTransitionGate(async (abortSignal) => {
         const primaryCharacter = this.getCharacterById(primaryCharacterId);
         const generatedScenePrompt = await chatSceneImageChainGroup.renderAndExecute(
@@ -177,7 +177,7 @@ export class ChatCoordinator {
     fullPrompt: string,
     opts?: { isUserInteraction?: boolean | undefined }
   ) {
-    return this.activeChatStore().doWithState('generating_image', async () => {
+    return this.turnMachineStore().doWithState('generating_image', async () => {
       return withPhaseTransitionGate(async (abortSignal) => {
         try {
           const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
@@ -435,15 +435,15 @@ export class ChatCoordinator {
   }
 
   private static setStateProcessingMemories(statusInfo: string) {
-    this.activeChatStore().setStateProcessingMemories(statusInfo);
+    this.turnMachineStore().setStateProcessingMemories(statusInfo);
   }
 
-  private static activeChatStore() {
+  private static turnMachineStore() {
     return useTurnMachineStore.getState();
   }
 
   private static memoryRagHelper() {
-    const helper = this.activeChatStore().memoryRagHelper;
+    const helper = this.turnMachineStore().memoryRagHelper;
     assertNonNullish(helper, 'MemoryRAGHelper is not initialized');
     return helper;
   }
@@ -453,18 +453,18 @@ export class ChatCoordinator {
   }
 
   private static setTranscript(transcript: ConversationTranscript) {
-    this.activeChatStore().setTranscript(transcript);
+    this.turnMachineStore().setTranscript(transcript);
   }
 
   private static transcript() {
-    const { transcript } = this.activeChatStore();
+    const { transcript } = this.turnMachineStore();
     assertNonNullish(transcript, 'Transcript is not initialized');
 
     return transcript;
   }
 
   private static async pauseAfterNpcOnlyMessage() {
-    if (this.activeChatStore().userIsParticipant()) {
+    if (this.turnMachineStore().userIsParticipant()) {
       return;
     }
 
@@ -508,7 +508,7 @@ export class ChatCoordinator {
     }
 
     const autoImageNpcOnly = settings.autoImageNpcOnly;
-    if (autoImageNpcOnly && this.activeChatStore().userIsParticipant()) {
+    if (autoImageNpcOnly && this.turnMachineStore().userIsParticipant()) {
       return;
     }
 
@@ -576,7 +576,7 @@ export class ChatCoordinator {
   }
 
   private static initiatorId() {
-    return this.activeChatStore().initiatorId;
+    return this.turnMachineStore().initiatorId;
   }
 
   private static initiator() {
