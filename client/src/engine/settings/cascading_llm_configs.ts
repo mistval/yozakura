@@ -100,6 +100,12 @@ export const DEFAULT_LLM_CONFIGS: LLMConfigById = {
     rule: "context.promptTemplateGroup === 'gen_intelligent_next_speaker_select'",
     llmMetaOptions: JSON.stringify({ max_tokens: 200 }),
   },
+  'intelligent-judge-chat-end': {
+    id: 'intelligent-judge-chat-end',
+    name: 'Chat: Intelligent Judge Conversation End',
+    rule: "context.promptTemplateGroup === 'gen_conversation_end_judgement'",
+    llmMetaOptions: JSON.stringify({ max_tokens: 200 }),
+  },
   'conversation-rolling-summary': {
     id: 'conversation-rolling-summary',
     name: 'Chat Memory: Summarize Conversation',

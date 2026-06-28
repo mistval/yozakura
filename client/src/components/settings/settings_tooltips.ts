@@ -43,9 +43,13 @@ export const settingsTooltips = {
   'npc.chatEndMode':
     '<strong>Fixed length</strong> ends NPC-only chats at a fixed message count. <strong>Intelligent</strong> uses an LLM judge to decide when a conversation has reached a natural stopping point.',
   'npc.intelligentMinLength':
-    'The minimum length of an NPC-only conversation, in messages. The judge will not run, and the chat will not end, until at least this many messages have been sent.',
+    'The minimum length of a one-on-one NPC-only conversation, in messages. The judge will not run, and the chat will not end, until at least this many messages have been sent.',
   'npc.intelligentMaxLength':
-    "The maximum length of an NPC-only conversation, in messages. The chat is force-ended once this many messages have been sent (unless it's paused and being driven by the user).",
+    "The maximum length of a one-on-one NPC-only conversation, in messages. The chat is force-ended once this many messages have been sent (unless it's paused and being driven by the user).",
+  'npc.intelligentGroupMinLength':
+    'The minimum length of a group NPC-only conversation (three or more participants), in messages. The judge will not run, and the chat will not end, until at least this many messages have been sent.',
+  'npc.intelligentGroupMaxLength':
+    "The maximum length of a group NPC-only conversation (three or more participants), in messages. The chat is force-ended once this many messages have been sent (unless it's paused and being driven by the user).",
   'npc.intelligentTargetLength':
     'The suggested good length for one-on-one NPC-only chats, in messages. Passed to the judge as guidance: it becomes more willing to end the conversation once this length is exceeded. This is a suggestion, not a hard limit.',
   'npc.intelligentGroupTargetLength':

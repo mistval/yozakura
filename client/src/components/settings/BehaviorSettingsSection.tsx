@@ -39,6 +39,8 @@ export default function BehaviorSettingsSection() {
   const npcChatEndMode = useSettingsStore((s) => s.npcChatEndMode);
   const intelligentChatEndMinLength = useSettingsStore((s) => s.intelligentChatEndMinLength);
   const intelligentChatEndMaxLength = useSettingsStore((s) => s.intelligentChatEndMaxLength);
+  const intelligentChatEndGroupMinLength = useSettingsStore((s) => s.intelligentChatEndGroupMinLength);
+  const intelligentChatEndGroupMaxLength = useSettingsStore((s) => s.intelligentChatEndGroupMaxLength);
   const intelligentChatEndTargetLength = useSettingsStore((s) => s.intelligentChatEndTargetLength);
   const intelligentChatEndGroupTargetLength = useSettingsStore((s) => s.intelligentChatEndGroupTargetLength);
   const intelligentChatEndJudgementInterval = useSettingsStore((s) => s.intelligentChatEndJudgementInterval);
@@ -76,6 +78,8 @@ export default function BehaviorSettingsSection() {
     npcChatEndMode,
     intelligentChatEndMinLength,
     intelligentChatEndMaxLength,
+    intelligentChatEndGroupMinLength,
+    intelligentChatEndGroupMaxLength,
     intelligentChatEndTargetLength,
     intelligentChatEndGroupTargetLength,
     intelligentChatEndJudgementInterval,
@@ -306,7 +310,7 @@ export default function BehaviorSettingsSection() {
   const intelligentChatEndRows: NumericSettingRowConfig[] = [
     {
       id: 'intelligent-chat-end-min-length',
-      label: 'Min length',
+      label: 'Min length (one-on-one chat)',
       tooltipKey: 'npc.intelligentMinLength',
       min: 1,
       step: 1,
@@ -317,13 +321,35 @@ export default function BehaviorSettingsSection() {
     },
     {
       id: 'intelligent-chat-end-max-length',
-      label: 'Max length',
+      label: 'Max length (one-on-one chat)',
       tooltipKey: 'npc.intelligentMaxLength',
       min: 1,
       step: 1,
       value: intelligentChatEndMaxLength,
       apply: (nextValue) => ({
         intelligentChatEndMaxLength: enforceMinInt(nextValue, 1),
+      }),
+    },
+    {
+      id: 'intelligent-chat-end-group-min-length',
+      label: 'Min length (group chat)',
+      tooltipKey: 'npc.intelligentGroupMinLength',
+      min: 1,
+      step: 1,
+      value: intelligentChatEndGroupMinLength,
+      apply: (nextValue) => ({
+        intelligentChatEndGroupMinLength: enforceMinInt(nextValue, 1),
+      }),
+    },
+    {
+      id: 'intelligent-chat-end-group-max-length',
+      label: 'Max length (group chat)',
+      tooltipKey: 'npc.intelligentGroupMaxLength',
+      min: 1,
+      step: 1,
+      value: intelligentChatEndGroupMaxLength,
+      apply: (nextValue) => ({
+        intelligentChatEndGroupMaxLength: enforceMinInt(nextValue, 1),
       }),
     },
     {

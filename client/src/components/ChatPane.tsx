@@ -31,6 +31,7 @@ export default function ChatPane() {
   const richNpcMessageCount = useSettingsStore((s) => s.richNpcMessageCount);
   const npcChatEndMode = useSettingsStore((s) => s.npcChatEndMode);
   const intelligentChatEndMaxLength = useSettingsStore((s) => s.intelligentChatEndMaxLength);
+  const intelligentChatEndGroupMaxLength = useSettingsStore((s) => s.intelligentChatEndGroupMaxLength);
   const editImagePromptsBeforeDispatch = useSettingsStore((s) => s.editImagePromptsBeforeDispatch);
   const transcript = useTurnMachineStore((state) => state.transcript);
   const chatMode = useActiveChatMedium();
@@ -109,7 +110,7 @@ export default function ChatPane() {
 
     if (!includesUser) {
       if (npcChatEndMode === 'intelligent') {
-        messageLimit = intelligentChatEndMaxLength;
+        messageLimit = participants.length > 2 ? intelligentChatEndGroupMaxLength : intelligentChatEndMaxLength;
       } else if (participants.length <= 2) {
         messageLimit = richNpcMessageCount * 2;
       } else {

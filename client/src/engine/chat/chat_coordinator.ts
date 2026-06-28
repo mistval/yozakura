@@ -78,15 +78,22 @@ export class ChatCoordinator {
       ? settings.intelligentChatEndGroupTargetLength
       : settings.intelligentChatEndTargetLength;
 
+    const minLength = isGroup
+      ? settings.intelligentChatEndGroupMinLength
+      : settings.intelligentChatEndMinLength;
+    const maxLength = isGroup
+      ? settings.intelligentChatEndGroupMaxLength
+      : settings.intelligentChatEndMaxLength;
+
     const decision = await decideIntelligentChatEnd({
       currentLength,
-      minLength: settings.intelligentChatEndMinLength,
-      maxLength: settings.intelligentChatEndMaxLength,
+      minLength,
+      maxLength,
       judgementInterval: settings.intelligentChatEndJudgementInterval,
       runJudge: () =>
         this.runConversationEndJudge({
           targetLength,
-          maxLength: settings.intelligentChatEndMaxLength,
+          maxLength,
           currentLength,
           historyLength: settings.intelligentChatEndJudgeHistoryLength,
         }),

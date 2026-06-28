@@ -14,13 +14,14 @@ class ConversationEndJudgeSystemTemplate extends PromptTemplateBase<Conversation
 A conversation may be at a good stopping point when one of the following has occurred:
 1. Something with significant narrative potential has been discussed or planned in detail.
 2. The characters involved in the conversation have developed their relationship towards each other significantly.
-3. The conversation is becoming repetitive or uninteresting.
+3. Significant new information about characters has been revealed.
+4. The conversation is becoming repetitive or uninteresting.
 
 A conversation may need continuation if:
 1. The characters are still deliberating substantively.
 2. The latest messages are still developing the conversation substantively.
 
-You will also be given a target conversation length and a max conversation length. You should be more aggressive about ending the conversation when it exceeds the target length, less aggressive when it's shorter. The target length is a suggestion and just one factor in your judgement.
+You will also be given a target conversation length and a max conversation length. You should be more aggressive about ending the conversation when it exceeds the target length, less aggressive when it's shorter. The target length is a suggestion and just one factor in your judgement. The separate max length provides flexibility to allow longer conversations to achieve narrative momentum.
 
 Output a single token: either "CONTINUE" or "STOP", nothing else.`;
   public readonly contextSchema = conversationEndJudgeExecutionContextSchema;
