@@ -122,13 +122,13 @@ export const DEFAULT_LLM_CONFIGS: LLMConfigById = {
     id: 'offscreen-conversation-goal',
     name: 'Chat Memory: Offscreen Character Conversation Goal Update',
     rule: "context.promptTemplateGroup === 'gen_offscreen_character_binary_update_next_convo_goal'",
-    llmMetaOptions: JSON.stringify({ max_tokens: 200 }),
+    llmMetaOptions: JSON.stringify({ max_tokens: 250 }),
   },
   'next-conversation-goal': {
     id: 'next-conversation-goal',
     name: 'Chat Memory: Onscreen Character Conversation Goal Update',
     rule: "context.promptTemplateGroup === 'gen_convo_goal'",
-    llmMetaOptions: JSON.stringify({ max_tokens: 200 }),
+    llmMetaOptions: JSON.stringify({ max_tokens: 250 }),
   },
   'relationship-tag-update': {
     id: 'relationship-tag-update',
