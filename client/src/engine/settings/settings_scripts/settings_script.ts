@@ -28,8 +28,7 @@ const settingsScriptNumberControlSchema = z
     step: z.number().optional(),
   })
   .meta({
-    description:
-      'A numeric input. The stored value is always a string; parse it (e.g. with Number()) inside generateImages.',
+    description: 'A numeric input. The stored value is always a string; parse it (e.g. with Number()).',
   });
 
 const settingsScriptPasswordControlSchema = z
@@ -58,7 +57,7 @@ const settingsScriptJsonControlSchema = z
   })
   .meta({
     description:
-      'A textarea whose value is validated to be valid JSON. The stored value is the raw JSON string; parse it inside generateImages.',
+      'A textarea whose value is validated to be valid JSON. The stored value is the raw JSON string; you must parse it.',
   });
 
 const settingsScriptDropdownSelectControlSchema = z
@@ -117,7 +116,7 @@ const settingsScriptTextFileListControlSchema = z
   })
   .meta({
     description:
-      'A picker for a named, user-editable text file (e.g. a ComfyUI workflow), with create / edit / delete. The stored control value is the selected file id; load the file content at run time with `helpers.loadUserTextFile(controlId, fileId)`. Files persist outside the settings blob.',
+      'A picker for a named, user-editable text file (e.g. a ComfyUI workflow), with create / edit / delete. The stored control value is the selected file id; load the file content at run time with `helpers.loadUserTextFile(controlId, fileId)`.',
   });
 
 export const settingsScriptControlSchema = z.discriminatedUnion('type', [

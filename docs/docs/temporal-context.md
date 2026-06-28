@@ -47,7 +47,7 @@ In the Temporal Context dropdown, choose **+ New custom script…** to create on
 
 Click the **🤖 AI Assistant Instructions 🗒️** button, copy the instructions it shows, and send them to your favorite frontier LLM with a description of what you want. It will write the script, which you can paste back into the editor. All of the built-in scripts were written by Claude Opus 4.8 Extra, with minor back and forth. I have also found Gemini Pro to do a great job, for free.
 
-If you would like to write or modify a script by hand, you can refer to the built-in scripts [here](https://github.com/mistval/yozakura/tree/main/client/src/engine/settings/settings_scripts/temporal/builtins) to see how they are structured.
+If you would like to write or modify a script by hand, you can refer to the built-in scripts [here](https://github.com/mistval/yozakura/tree/main/client/src/engine/settings/settings_scripts/temporal/builtins) to see how they are structured. Or, give your AI assistant the doc and ask it to explain the structure to you.
 
 ## Date and time
 
