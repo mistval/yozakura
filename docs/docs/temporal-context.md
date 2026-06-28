@@ -55,6 +55,10 @@ Temporal context advances with the scenario's turn number. The script decides ho
 
 A script can return a **day index** that ticks up once per in-world day. When it changes, characters re-roll their daily auto-selected wardrobes, so a character can end up dressed differently from one day to the next. Returning this is optional. Without it, the wardrobe auto-select feature will never trigger.
 
+## Start Date
+
+The built-in scripts all set `Start date` to the Monday on or before you created the scenario, by default. This means turn 0 is always a Monday at dawn, unless you change `Start date`. If you plan to use the [schedule](schedules.md) feature and you want to have week-long schedules, it will usually make your life easier to use a Monday as your temporal context `Start date` (or Sunday, if you consider that the first day of the week) so that the schedule bar starts on the first day of the week.
+
 ## How far you can take it
 
 Because the script decides both what the header shows and what the characters are told, anything you can compute from the turn number can become part of the world. A few directions beyond weather:
