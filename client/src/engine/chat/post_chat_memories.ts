@@ -1,12 +1,11 @@
 import * as Database from '../../backend_bridge/database';
 import { assert } from '../../errors/application_error';
 import { getActiveChatMedium, getActiveChatParticipants } from '../../state/turn_machine_store';
-import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
-import { useScenarioCharacterStore } from '../../state/scenario_character_store';
 import { getRequiredUserCharacterId, useScenarioStore } from '../../state/scenario_store';
 import { useSettingsStore } from '../../state/settings_store';
 import { newId } from '../../util/id';
 import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
+import { EndOfChatUpdateAccumulator } from './end_of_chat_update_accumulator';
 import type { MemoryRAGHelper } from '../memory_rag_helper';
 import { conversationRollingSummaryChainGroup } from '../prompt_templates/memories/conversation_rolling_summary';
 import { nextConversationGoalUpdatesChainGroup } from '../prompt_templates/memories/next_conversation_goal_updates';
@@ -64,18 +63,11 @@ const gatedRenderFunctions = {
 
 export async function generateCharacterEndOfChatUpdates(
   fromCharacterPerspective: Character,
+  accumulator: EndOfChatUpdateAccumulator,
   memoryRagHelper: MemoryRAGHelper,
   onProgress: (statusInfo: string) => void
 ) {
   const { activeScenario } = useScenarioStore.getState();
-  const {
-    saveRelationshipFields,
-    addPairwiseConversationSummary,
-    addPairwiseLearnedInformation,
-    getCharacterRelationship,
-  } = useScenarioCharacterRelationshipStore.getState();
-  const { saveScenarioCharacterFields, addConversationSummary } = useScenarioCharacterStore.getState();
-
   const userCharacterId = getRequiredUserCharacterId();
 
   assert(activeScenario, 'No scenario');
@@ -97,7 +89,7 @@ export async function generateCharacterEndOfChatUpdates(
 
   // Summarize the conversation from fromCharacterPerspective's point of view
   const conversationSummaryResultText = await gatedRenderFunctions.conversationRollingSummaryChainGroup(
-    await buildFocusedChatTemplateContext(fromCharacterPerspective.id)
+    await buildFocusedChatTemplateContext(fromCharacterPerspective.id, accumulator.resolvers)
   );
 
   const conversationId = newId();
@@ -112,11 +104,11 @@ export async function generateCharacterEndOfChatUpdates(
     chatMedium: getActiveChatMedium(),
   });
 
-  addConversationSummary(fromCharacterPerspective.id, conversationSummaryEntry);
+  accumulator.stageConversationSummary(fromCharacterPerspective.id, conversationSummaryEntry);
 
-  const newRollingConversationSummaries =
-    useScenarioCharacterStore.getState().scenarioCharactersById[fromCharacterPerspective.id]!
-      .rollingConversationSummaries;
+  const newRollingConversationSummaries = accumulator.resolvedCharacter(
+    fromCharacterPerspective.id
+  ).rollingConversationSummaries;
 
   const pairwiseUpdates: Array<
     ConversationPairwiseUpdate & {
@@ -130,7 +122,7 @@ export async function generateCharacterEndOfChatUpdates(
   for (const otherCharacter of memoryUpdateTargets) {
     onProgress(`Updating ${fromCharacterPerspective.firstName}'s memories of ${otherCharacter.firstName}...`);
 
-    const initialPairwiseRelationship = await getCharacterRelationship(
+    const initialPairwiseRelationship = await accumulator.resolvedRelationship(
       fromCharacterPerspective.id,
       otherCharacter.id
     );
@@ -139,17 +131,15 @@ export async function generateCharacterEndOfChatUpdates(
       (mentioned) => mentioned.id === otherCharacter.id
     );
 
-    const shouldAppendConversationSummary = !isOffscreenMention;
-
-    if (shouldAppendConversationSummary) {
-      await addPairwiseConversationSummary(initialPairwiseRelationship, conversationSummaryEntry);
-    }
-
     let newLearnedInformation: OffscreenLearnedInformation | undefined;
 
     if (isOffscreenMention) {
       const extractedInformation = await gatedRenderFunctions.offscreenMemoryExtractionChainGroup(
-        await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id)
+        await buildTargetedChatTemplateContext(
+          fromCharacterPerspective.id,
+          otherCharacter.id,
+          accumulator.resolvers
+        )
       );
 
       if (extractedInformation) {
@@ -161,41 +151,54 @@ export async function generateCharacterEndOfChatUpdates(
           source: `A conversation between ${participants.map((participant) => `${participant.firstName} ${participant.lastName}`).join(', ')}`,
         });
 
-        await addPairwiseLearnedInformation(initialPairwiseRelationship, newLearnedInformation);
+        await accumulator.stagePairwiseLearnedInformation(
+          fromCharacterPerspective.id,
+          otherCharacter.id,
+          newLearnedInformation
+        );
 
         const replacementConversationGoal =
           await gatedRenderFunctions.offscreenMemoryUpdateConversationGoalChainGroup(
             await buildOffscreenMemoryUpdateConversationGoalContext(
               fromCharacterPerspective.id,
               otherCharacter.id,
-              extractedInformation
+              extractedInformation,
+              accumulator.resolvers
             )
           );
 
         if (replacementConversationGoal) {
-          await saveRelationshipFields(initialPairwiseRelationship, {
+          accumulator.stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
             nextConversationGoal: replacementConversationGoal,
           });
         }
 
         const newPairwiseMemory = await gatedRenderFunctions.rollingPairwiseMemoryRewriteChainGroup(
-          await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id)
+          await buildTargetedChatTemplateContext(
+            fromCharacterPerspective.id,
+            otherCharacter.id,
+            accumulator.resolvers
+          )
         );
 
-        await saveRelationshipFields(initialPairwiseRelationship, {
+        accumulator.stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
           memory: newPairwiseMemory,
         });
 
         const updatedRelationshipDescriptor =
           await gatedRenderFunctions.relationshipDescriptorUpdateChainGroup(
-            await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id)
+            await buildTargetedChatTemplateContext(
+              fromCharacterPerspective.id,
+              otherCharacter.id,
+              accumulator.resolvers
+            )
           );
 
-        await saveRelationshipFields(initialPairwiseRelationship, {
+        accumulator.stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
           descriptor: updatedRelationshipDescriptor,
         });
 
-        const updatedPairwiseRelationship = await getCharacterRelationship(
+        const updatedPairwiseRelationship = await accumulator.resolvedRelationship(
           fromCharacterPerspective.id,
           otherCharacter.id
         );
@@ -222,23 +225,22 @@ export async function generateCharacterEndOfChatUpdates(
       continue;
     }
 
+    await accumulator.stagePairwiseConversationSummary(
+      fromCharacterPerspective.id,
+      otherCharacter.id,
+      conversationSummaryEntry
+    );
+
     const pairwiseContext = await buildTargetedChatTemplateContext(
       fromCharacterPerspective.id,
-      otherCharacter.id
+      otherCharacter.id,
+      accumulator.resolvers
     );
 
     const newConversationGoal =
       await gatedRenderFunctions.nextConversationGoalUpdatesChainGroup(pairwiseContext);
 
-    await saveRelationshipFields(initialPairwiseRelationship, {
-      nextConversationGoal: newConversationGoal,
-    });
-
     const newMemory = await gatedRenderFunctions.rollingPairwiseMemoryRewriteChainGroup(pairwiseContext);
-
-    await saveRelationshipFields(initialPairwiseRelationship, {
-      memory: newMemory,
-    });
 
     const newRelationshipDescriptor =
       await gatedRenderFunctions.relationshipDescriptorUpdateChainGroup(pairwiseContext);
@@ -249,12 +251,14 @@ export async function generateCharacterEndOfChatUpdates(
       useSettingsStore.getState().userFamiliarityInteractionMultiplier
     );
 
-    await saveRelationshipFields(initialPairwiseRelationship, {
-      familiarity: familiarity.new,
+    accumulator.stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
+      nextConversationGoal: newConversationGoal,
+      memory: newMemory,
       descriptor: newRelationshipDescriptor,
+      familiarity: familiarity.new,
     });
 
-    const updatedPairwiseRelationship = await getCharacterRelationship(
+    const updatedPairwiseRelationship = await accumulator.resolvedRelationship(
       fromCharacterPerspective.id,
       otherCharacter.id
     );
@@ -279,12 +283,12 @@ export async function generateCharacterEndOfChatUpdates(
 
   onProgress(`Rewriting global memory for ${fromCharacterPerspective.firstName}...`);
 
-  const oldGlobalMemory = fromCharacterPerspective.globalMemories;
+  const oldGlobalMemory = accumulator.resolvedCharacter(fromCharacterPerspective.id).globalMemories;
   const newGlobalMemory = await gatedRenderFunctions.rollingGlobalMemoryRewriteChainGroup(
-    await buildFocusedChatTemplateContext(fromCharacterPerspective.id)
+    await buildFocusedChatTemplateContext(fromCharacterPerspective.id, accumulator.resolvers)
   );
 
-  await saveScenarioCharacterFields(fromCharacterPerspective.id, {
+  accumulator.stageCharacterFields(fromCharacterPerspective.id, {
     globalMemories: newGlobalMemory,
   });
 

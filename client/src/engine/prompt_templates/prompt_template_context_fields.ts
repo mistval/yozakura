@@ -8,6 +8,12 @@ import {
   worldMapLocationSchema,
   worldMapSchema,
 } from '../types';
+import type { Character, CharacterRelationship } from '../types';
+
+export type ContextResolvers = {
+  getCharacter?: (id: string) => Character | undefined;
+  getRelationship?: (fromId: string, toId: string) => Promise<CharacterRelationship | undefined>;
+};
 
 const characterSchema = internalCharacterSchema
   .pick({
@@ -318,9 +324,7 @@ export const conversationEndJudgeExecutionContextSchema = conversationExecutionC
     })
 );
 
-export type ConversationEndJudgeExecutionContext = z.infer<
-  typeof conversationEndJudgeExecutionContextSchema
->;
+export type ConversationEndJudgeExecutionContext = z.infer<typeof conversationEndJudgeExecutionContextSchema>;
 
 export type PromptExecutionContext =
   | GlobalExecutionContext

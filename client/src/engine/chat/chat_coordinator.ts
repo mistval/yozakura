@@ -29,6 +29,7 @@ import { conversationEndJudgeTemplatesGroup } from '../prompt_templates/chat/con
 import { chatSystemPromptChain } from '../prompt_templates/chat/chat_system_prompt';
 import { memoryRagPromptTemplatesGroup } from '../prompt_templates/chat/memory_rag_prompt';
 import { newId } from '../../util/id';
+import { EndOfChatUpdateAccumulator } from './end_of_chat_update_accumulator';
 import { buildConversationStateUpdates, generateCharacterEndOfChatUpdates } from './post_chat_memories';
 import { wait } from '../../util/promise';
 import { getRequiredRandomChoice } from '../../util/array';
@@ -248,17 +249,27 @@ export class ChatCoordinator {
     const scenario = getRequiredActiveScenario();
 
     if (!noEffect) {
+      // One shared accumulator stages every character's updates as a single source of truth;
+      // nothing is persisted until commit() runs after all characters are processed, so
+      // cancelling/crashing partway through leaves all characters and relationships untouched.
+      const accumulator = new EndOfChatUpdateAccumulator();
       const characterUpdates: Array<Awaited<ReturnType<typeof generateCharacterEndOfChatUpdates>>> = [];
 
       for (const participant of getAllActiveChatSpeakers()) {
         if (participant.id !== this.getUserCharacter().id) {
           characterUpdates.push(
-            await generateCharacterEndOfChatUpdates(participant, this.memoryRagHelper(), (statusInfo) =>
-              this.setStateProcessingMemories(statusInfo)
+            await generateCharacterEndOfChatUpdates(
+              participant,
+              accumulator,
+              this.memoryRagHelper(),
+              (statusInfo) => this.setStateProcessingMemories(statusInfo)
             )
           );
         }
       }
+
+      // Past the cancellation point: flush all staged updates, then record the conversation.
+      await accumulator.commit();
 
       const conversationLog: StoredConversation = Database.createPersistedObject({
         participants: this.transcript().participants,

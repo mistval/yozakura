@@ -5,11 +5,8 @@ import {
   type CharacterPair,
   type CharacterRelationship,
   type CharacterRelationships,
-  type ConversationSummary,
-  type OffscreenLearnedInformation,
 } from '../engine/types.js';
 import { applyLazyFamiliarityDecay, createRelationship, relationshipKey } from '../engine/relationship.js';
-import { trimNewestByCreatedAt } from '../util/array.js';
 import { getRequiredActiveScenario } from './scenario_store.js';
 
 type RelationshipSaveKey = Pick<CharacterRelationship, 'fromId' | 'toId'>;
@@ -20,14 +17,6 @@ type ScenarioCharacterRelationshipStoreState = {
   saveRelationshipFields: (
     saveKey: RelationshipSaveKey,
     fields: Partial<CharacterRelationship>
-  ) => Promise<CharacterRelationship>;
-  addPairwiseConversationSummary: (
-    saveKey: RelationshipSaveKey,
-    summary: ConversationSummary
-  ) => Promise<CharacterRelationship>;
-  addPairwiseLearnedInformation: (
-    saveKey: RelationshipSaveKey,
-    information: OffscreenLearnedInformation
   ) => Promise<CharacterRelationship>;
 };
 
@@ -147,26 +136,6 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
       );
 
       return updated;
-    },
-
-    addPairwiseConversationSummary: async (saveKey, summary) => {
-      const relationship = await get().getCharacterRelationship(saveKey.fromId, saveKey.toId);
-
-      return get().saveRelationshipFields(relationship, {
-        rollingPairwiseSummaries: trimNewestByCreatedAt(
-          relationship.rollingPairwiseSummaries.concat(summary)
-        ),
-      });
-    },
-
-    addPairwiseLearnedInformation: async (saveKey, information) => {
-      const relationship = await get().getCharacterRelationship(saveKey.fromId, saveKey.toId);
-
-      return get().saveRelationshipFields(relationship, {
-        rollingOffscreenLearnedInformation: trimNewestByCreatedAt(
-          relationship.rollingOffscreenLearnedInformation.concat(information)
-        ),
-      });
     },
   })
 );

@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import * as Database from '../backend_bridge/database.js';
 import * as Files from '../backend_bridge/files.js';
-import { type WorldMap, type ConversationSummary, type Character, type Scenario } from '../engine/types.js';
+import { type WorldMap, type Character, type Scenario } from '../engine/types.js';
 import { assertNonNullish } from '../errors/application_error.js';
-import { getRequiredRandomChoice, trimNewestByCreatedAt } from '../util/array.js';
+import { getRequiredRandomChoice } from '../util/array.js';
 import {
   getRequiredActiveScenario,
   getRequiredActiveScenarioMap,
@@ -31,7 +31,6 @@ type ScenarioCharacterStoreState = {
   ) => void;
   saveInactiveScenarioCharacterImmediate: (character: Character) => Promise<void>;
   saveScenarioCharacterFields: (id: string, fields: Partial<Character>) => void;
-  addConversationSummary: (characterId: string, summary: ConversationSummary) => void;
   addGlobalCharacterToActiveScenario: (
     character: Character,
     scenarioArgs?: {
@@ -187,24 +186,6 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     const byId = get().scenarioCharactersById;
     const filtered = ids.map((id) => byId[id]).filter(Boolean) as Character[];
     return filtered;
-  },
-
-  addConversationSummary: (characterId, summary) => {
-    const character = get().getRequiredCharacterById(characterId);
-
-    return get().saveScenarioCharacter(character, undefined, (prev) => {
-      assertNonNullish(
-        prev,
-        'addConversationSummary setter called with non-existent previous character for id: ' + characterId
-      );
-
-      return {
-        ...prev,
-        rollingConversationSummaries: trimNewestByCreatedAt(
-          prev.rollingConversationSummaries.concat(summary)
-        ),
-      };
-    });
   },
 
   async addGlobalCharacterToActiveScenario(character: Character): Promise<Character> {
