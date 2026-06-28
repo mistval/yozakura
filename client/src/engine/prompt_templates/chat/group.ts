@@ -1,5 +1,6 @@
 import { TemplateGroup } from '../template_group';
 import { moderationNextSpeakerTemplatesGroup } from './moderation_next_speaker';
+import { conversationEndJudgeTemplatesGroup } from './conversation_end_judge';
 import { memoryRagPromptTemplatesGroup } from './memory_rag_prompt';
 import { chatSceneImageChainGroup } from './chat_scene_image';
 import { chatSystemPromptChain } from './chat_system_prompt';
@@ -11,6 +12,7 @@ export const runtimeChatTemplatesGroup = new TemplateGroup({
   children: [
     chatSystemPromptChain,
     moderationNextSpeakerTemplatesGroup,
+    conversationEndJudgeTemplatesGroup,
     chatSceneImageChainGroup,
     memoryRagPromptTemplatesGroup,
   ],

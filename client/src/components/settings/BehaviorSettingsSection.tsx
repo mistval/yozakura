@@ -1,5 +1,6 @@
 import {
   useSettingsStore,
+  type NpcChatEndMode,
   type SettingsPatch,
   type SpeakerSelectionMode,
 } from '../../state/settings_store.js';
@@ -11,9 +12,39 @@ import SettingFieldLabel from './ui/SettingFieldLabel.js';
 import { settingsTooltips, type SettingsTooltipKey } from './settings_tooltips.js';
 import { clampUnitRate, enforceMin, enforceMinInt, toPercent } from '../../util/numeric.js';
 
+type NumericSettingRowConfig = {
+  id: string;
+  label: string;
+  tooltipKey: SettingsTooltipKey;
+  min?: number;
+  max?: number;
+  step?: number;
+  value: number;
+  apply: (nextValue: number) => SettingsPatch;
+};
+
+function TwoColGrid({ children, colSpan = 1 }: { children: React.ReactNode; colSpan?: number }) {
+  return (
+    <div
+      className={`rounded-lg border p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface-soft col-span-${colSpan}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function BehaviorSettingsSection() {
   const richNpcMessageCount = useSettingsStore((s) => s.richNpcMessageCount);
   const groupChatMessageLimit = useSettingsStore((s) => s.groupChatMessageLimit);
+  const npcChatEndMode = useSettingsStore((s) => s.npcChatEndMode);
+  const intelligentChatEndMinLength = useSettingsStore((s) => s.intelligentChatEndMinLength);
+  const intelligentChatEndMaxLength = useSettingsStore((s) => s.intelligentChatEndMaxLength);
+  const intelligentChatEndTargetLength = useSettingsStore((s) => s.intelligentChatEndTargetLength);
+  const intelligentChatEndGroupTargetLength = useSettingsStore((s) => s.intelligentChatEndGroupTargetLength);
+  const intelligentChatEndJudgementInterval = useSettingsStore((s) => s.intelligentChatEndJudgementInterval);
+  const intelligentChatEndJudgeHistoryLength = useSettingsStore(
+    (s) => s.intelligentChatEndJudgeHistoryLength
+  );
   const familiarityGain = useSettingsStore((s) => s.familiarityGain);
   const familiarityDecay = useSettingsStore((s) => s.familiarityDecay);
   const userFamiliarityInteractionMultiplier = useSettingsStore(
@@ -42,6 +73,13 @@ export default function BehaviorSettingsSection() {
   }, [
     richNpcMessageCount,
     groupChatMessageLimit,
+    npcChatEndMode,
+    intelligentChatEndMinLength,
+    intelligentChatEndMaxLength,
+    intelligentChatEndTargetLength,
+    intelligentChatEndGroupTargetLength,
+    intelligentChatEndJudgementInterval,
+    intelligentChatEndJudgeHistoryLength,
     familiarityGain,
     familiarityDecay,
     userFamiliarityInteractionMultiplier,
@@ -62,38 +100,7 @@ export default function BehaviorSettingsSection() {
     pauseAtNpcChatStart,
   ]);
 
-  const numericSettingRows: Array<{
-    id: string;
-    label: string;
-    tooltipKey: SettingsTooltipKey;
-    min?: number;
-    max?: number;
-    step?: number;
-    value: number;
-    apply: (nextValue: number) => SettingsPatch;
-  }> = [
-    {
-      id: 'npc-rich-message-count',
-      label: 'Two-way NPC chat messages per NPC',
-      tooltipKey: 'npc.richMessageCount',
-      min: 1,
-      max: Number.MAX_SAFE_INTEGER,
-      step: 1,
-      value: richNpcMessageCount,
-      apply: (nextValue) => ({
-        richNpcMessageCount: enforceMinInt(nextValue, 1),
-      }),
-    },
-    {
-      id: 'npc-group-chat-message-limit',
-      label: 'Group NPC chat total message limit',
-      tooltipKey: 'npc.groupLimit',
-      min: 1,
-      value: groupChatMessageLimit,
-      apply: (nextValue) => ({
-        groupChatMessageLimit: enforceMinInt(nextValue, 1),
-      }),
-    },
+  const numericSettingRows: NumericSettingRowConfig[] = [
     {
       id: 'relationship-familiarity-gain',
       label: 'Familiarity gain per interaction',
@@ -270,12 +277,137 @@ export default function BehaviorSettingsSection() {
     },
   ];
 
+  const fixedChatEndRows: NumericSettingRowConfig[] = [
+    {
+      id: 'npc-rich-message-count',
+      label: 'Two-way NPC chat messages per NPC',
+      tooltipKey: 'npc.richMessageCount',
+      min: 1,
+      max: Number.MAX_SAFE_INTEGER,
+      step: 1,
+      value: richNpcMessageCount,
+      apply: (nextValue) => ({
+        richNpcMessageCount: enforceMinInt(nextValue, 1),
+      }),
+    },
+    {
+      id: 'npc-group-chat-message-limit',
+      label: 'Group NPC chat total message limit',
+      tooltipKey: 'npc.groupLimit',
+      min: 1,
+      step: 1,
+      value: groupChatMessageLimit,
+      apply: (nextValue) => ({
+        groupChatMessageLimit: enforceMinInt(nextValue, 1),
+      }),
+    },
+  ];
+
+  const intelligentChatEndRows: NumericSettingRowConfig[] = [
+    {
+      id: 'intelligent-chat-end-min-length',
+      label: 'Min length',
+      tooltipKey: 'npc.intelligentMinLength',
+      min: 1,
+      step: 1,
+      value: intelligentChatEndMinLength,
+      apply: (nextValue) => ({
+        intelligentChatEndMinLength: enforceMinInt(nextValue, 1),
+      }),
+    },
+    {
+      id: 'intelligent-chat-end-max-length',
+      label: 'Max length',
+      tooltipKey: 'npc.intelligentMaxLength',
+      min: 1,
+      step: 1,
+      value: intelligentChatEndMaxLength,
+      apply: (nextValue) => ({
+        intelligentChatEndMaxLength: enforceMinInt(nextValue, 1),
+      }),
+    },
+    {
+      id: 'intelligent-chat-end-target-length',
+      label: 'Target length (one-on-one chat)',
+      tooltipKey: 'npc.intelligentTargetLength',
+      min: 1,
+      step: 1,
+      value: intelligentChatEndTargetLength,
+      apply: (nextValue) => ({
+        intelligentChatEndTargetLength: enforceMinInt(nextValue, 1),
+      }),
+    },
+    {
+      id: 'intelligent-chat-end-group-target-length',
+      label: 'Target length (group chat)',
+      tooltipKey: 'npc.intelligentGroupTargetLength',
+      min: 1,
+      step: 1,
+      value: intelligentChatEndGroupTargetLength,
+      apply: (nextValue) => ({
+        intelligentChatEndGroupTargetLength: enforceMinInt(nextValue, 1),
+      }),
+    },
+    {
+      id: 'intelligent-chat-end-judgement-interval',
+      label: 'Judgement interval',
+      tooltipKey: 'npc.intelligentJudgementInterval',
+      min: 1,
+      step: 1,
+      value: intelligentChatEndJudgementInterval,
+      apply: (nextValue) => ({
+        intelligentChatEndJudgementInterval: enforceMinInt(nextValue, 1),
+      }),
+    },
+    {
+      id: 'intelligent-chat-end-judge-history-length',
+      label: 'Judge message history length',
+      tooltipKey: 'npc.intelligentJudgeHistoryLength',
+      min: 1,
+      step: 1,
+      value: intelligentChatEndJudgeHistoryLength,
+      apply: (nextValue) => ({
+        intelligentChatEndJudgeHistoryLength: enforceMinInt(nextValue, 1),
+      }),
+    },
+  ];
+
+  const chatEndRows = npcChatEndMode === 'fixed' ? fixedChatEndRows : intelligentChatEndRows;
+
+  const renderNumericSettingRow = (setting: NumericSettingRowConfig) => {
+    const displayValue = drafts.hasOwnProperty(setting.id) ? Number(drafts[setting.id]) : setting.value;
+
+    return (
+      <NumericSettingRow
+        key={setting.id}
+        id={setting.id}
+        label={setting.label}
+        tooltipHtml={settingsTooltips[setting.tooltipKey]}
+        min={setting.min}
+        max={setting.max}
+        step={setting.step}
+        value={displayValue}
+        onChange={(nextValue) => {
+          setDrafts((prev) => ({ ...prev, [setting.id]: nextValue }));
+        }}
+        onBlur={() => {
+          const raw = drafts.hasOwnProperty(setting.id) ? Number(drafts[setting.id]) : setting.value;
+          setSettings(setting.apply(raw));
+          setDrafts((prev) => {
+            const copy = { ...prev, [setting.id]: raw };
+            return copy;
+          });
+        }}
+      />
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div>
         <h2 className="text-2xl font-semibold">Behavior Settings</h2>
       </div>
-      <div className="rounded-lg border p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface-soft">
+      <TwoColGrid>
         <div className="space-y-2">
           <SettingFieldLabel
             text="Speaker selection mode"
@@ -333,34 +465,31 @@ export default function BehaviorSettingsSection() {
           </div>
         ))}
 
-        {numericSettingRows.map((setting) => {
-          const displayValue = drafts.hasOwnProperty(setting.id) ? Number(drafts[setting.id]) : setting.value;
+        {numericSettingRows.map(renderNumericSettingRow)}
 
-          return (
-            <NumericSettingRow
-              key={setting.id}
-              id={setting.id}
-              label={setting.label}
-              tooltipHtml={settingsTooltips[setting.tooltipKey]}
-              min={setting.min}
-              max={setting.max}
-              step={setting.step}
-              value={displayValue}
-              onChange={(nextValue) => {
-                setDrafts((prev) => ({ ...prev, [setting.id]: nextValue }));
-              }}
-              onBlur={() => {
-                const raw = drafts.hasOwnProperty(setting.id) ? Number(drafts[setting.id]) : setting.value;
-                setSettings(setting.apply(raw));
-                setDrafts((prev) => {
-                  const copy = { ...prev, [setting.id]: raw };
-                  return copy;
-                });
-              }}
+        <TwoColGrid colSpan={2}>
+          <div className="space-y-2 col-span-2">
+            <SettingFieldLabel
+              text="NPC chat end mode"
+              htmlFor="npc-chat-end-mode"
+              tooltipHtml={settingsTooltips['npc.chatEndMode']}
             />
-          );
-        })}
-      </div>
+            <select
+              id="npc-chat-end-mode"
+              value={npcChatEndMode}
+              onChange={(event) => {
+                setSettings({ npcChatEndMode: event.target.value as NpcChatEndMode });
+              }}
+              className="rounded-input"
+            >
+              <option value="fixed">Fixed length</option>
+              <option value="intelligent">Intelligent</option>
+            </select>
+          </div>
+
+          {chatEndRows.map(renderNumericSettingRow)}
+        </TwoColGrid>
+      </TwoColGrid>
     </div>
   );
 }

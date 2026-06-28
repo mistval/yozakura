@@ -4,9 +4,11 @@ import { showNonRetriableErrorCardIfNeeded } from '../interative_retry.js';
 import { buildFullPrompt, generateChatImage } from '../image_gen.js';
 import {
   buildChatModeratorContext,
+  buildConversationEndJudgeContext,
   buildFocusedChatTemplateContext,
   buildMemoryRagTemplateContext,
 } from '../prompt_templates/prompt_context_builder';
+import { decideIntelligentChatEnd, type ChatEndDecision } from './intelligent_chat_end';
 import { useSettingsStore, type SpeakerSelectionMode } from '../../state/settings_store.js';
 import * as Database from '../../backend_bridge/database.js';
 import type { Character, ChatMessage, EphemeralLocation, StoredConversation } from '../types';
@@ -23,6 +25,7 @@ import {
 } from '../../state/turn_machine_store';
 import { chatSceneImageChainGroup } from '../prompt_templates/chat/chat_scene_image';
 import { moderationNextSpeakerTemplatesGroup } from '../prompt_templates/chat/moderation_next_speaker';
+import { conversationEndJudgeTemplatesGroup } from '../prompt_templates/chat/conversation_end_judge';
 import { chatSystemPromptChain } from '../prompt_templates/chat/chat_system_prompt';
 import { memoryRagPromptTemplatesGroup } from '../prompt_templates/chat/memory_rag_prompt';
 import { newId } from '../../util/id';
@@ -55,23 +58,52 @@ export class ChatCoordinator {
     this.turnMachineStore().enterActiveChat();
   }
 
-  public static isChatMessageLimitReached(): boolean {
-    return this.countChatMessages() >= this.getChatMessageLimit();
-  }
-
-  private static getChatMessageLimit(): number {
+  public static async shouldEndNpcChat(): Promise<boolean> {
     const chatState = this.turnMachineStore();
     const settings = useSettingsStore.getState();
 
     if (chatState.userIsParticipant() || this.isChatPaused()) {
-      return Number.MAX_SAFE_INTEGER;
+      return false;
     }
 
-    if (chatState.participantIds.length > 2) {
-      return settings.groupChatMessageLimit;
+    const currentLength = this.countChatMessages();
+    const isGroup = chatState.participantIds.length > 2;
+
+    if (settings.npcChatEndMode === 'fixed') {
+      const limit = isGroup ? settings.groupChatMessageLimit : settings.richNpcMessageCount * 2;
+      return currentLength >= limit;
     }
 
-    return settings.richNpcMessageCount * 2;
+    const targetLength = isGroup
+      ? settings.intelligentChatEndGroupTargetLength
+      : settings.intelligentChatEndTargetLength;
+
+    const decision = await decideIntelligentChatEnd({
+      currentLength,
+      minLength: settings.intelligentChatEndMinLength,
+      maxLength: settings.intelligentChatEndMaxLength,
+      judgementInterval: settings.intelligentChatEndJudgementInterval,
+      runJudge: () =>
+        this.runConversationEndJudge({
+          targetLength,
+          maxLength: settings.intelligentChatEndMaxLength,
+          currentLength,
+          historyLength: settings.intelligentChatEndJudgeHistoryLength,
+        }),
+    });
+
+    return decision === 'stop';
+  }
+
+  private static runConversationEndJudge(args: {
+    targetLength: number;
+    maxLength: number;
+    currentLength: number;
+    historyLength: number;
+  }): Promise<ChatEndDecision> {
+    return this.turnMachineStore().doWithState('judging_conversation_end', async () =>
+      conversationEndJudgeTemplatesGroup.renderAndExecute(await buildConversationEndJudgeContext(args))
+    );
   }
 
   public static deactivate() {

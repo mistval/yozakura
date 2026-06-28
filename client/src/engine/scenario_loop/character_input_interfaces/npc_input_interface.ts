@@ -131,7 +131,7 @@ export class NPCInputInterface extends CharacterInputInterface {
   }
 
   public async getNextChatInput(): Promise<ChatInputResult> {
-    if (ChatCoordinator.isChatMessageLimitReached()) {
+    if (await ChatCoordinator.shouldEndNpcChat()) {
       return { input: { actionType: 'request_end_chat' } };
     }
 

@@ -13,6 +13,7 @@ import { useScenarioStore } from '../../state/scenario_store.js';
 import type {
   CharacterEditorExecutionContext,
   ContextCharacter,
+  ConversationEndJudgeExecutionContext,
   ConversationExecutionContext,
   FocusedConversationExecutionContext,
   GlobalExecutionContext,
@@ -235,6 +236,18 @@ export async function buildChatModeratorContext(
   return {
     ...(await buildChatTemplateContext()),
     speakerCandidates: speakerCandidates.map(toContextCharacter),
+  };
+}
+
+export async function buildConversationEndJudgeContext(conversationEndJudge: {
+  targetLength: number;
+  maxLength: number;
+  currentLength: number;
+  historyLength: number;
+}): Promise<ConversationEndJudgeExecutionContext> {
+  return {
+    ...(await buildChatTemplateContext()),
+    conversationEndJudge,
   };
 }
 

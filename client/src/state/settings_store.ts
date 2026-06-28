@@ -27,6 +27,8 @@ export type PromptTemplateOverride = {
 
 const speakerSelectionModeSchema = z.enum(['round_robin', 'intelligent']);
 export type SpeakerSelectionMode = z.infer<typeof speakerSelectionModeSchema>;
+const npcChatEndModeSchema = z.enum(['fixed', 'intelligent']);
+export type NpcChatEndMode = z.infer<typeof npcChatEndModeSchema>;
 const chatPaneWidthSchema = z.enum(['narrow', 'medium', 'wide', 'extra_wide', 'unconstrained']);
 export type ChatPaneWidth = z.infer<typeof chatPaneWidthSchema>;
 
@@ -64,6 +66,13 @@ const settingsSchema = z.object({
   autoImageRate: z.number(),
   autoImageNpcOnly: z.boolean(),
   groupChatMessageLimit: z.number(),
+  npcChatEndMode: npcChatEndModeSchema,
+  intelligentChatEndMinLength: z.number(),
+  intelligentChatEndMaxLength: z.number(),
+  intelligentChatEndTargetLength: z.number(),
+  intelligentChatEndGroupTargetLength: z.number(),
+  intelligentChatEndJudgementInterval: z.number(),
+  intelligentChatEndJudgeHistoryLength: z.number(),
   offscreenMentionLimit: z.number(),
   rollingConversationSummaryLimit: z.number(),
   offscreenLearnedInformationLimit: z.number(),
@@ -133,6 +142,13 @@ const DEFAULT_SETTINGS: Settings = {
   autoImageRate: 0,
   autoImageNpcOnly: false,
   groupChatMessageLimit: 20,
+  npcChatEndMode: 'fixed',
+  intelligentChatEndMinLength: 6,
+  intelligentChatEndMaxLength: 30,
+  intelligentChatEndTargetLength: 12,
+  intelligentChatEndGroupTargetLength: 20,
+  intelligentChatEndJudgementInterval: 1,
+  intelligentChatEndJudgeHistoryLength: 20,
   offscreenMentionLimit: 2,
   rollingConversationSummaryLimit: 10,
   offscreenLearnedInformationLimit: 10,

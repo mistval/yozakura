@@ -29,6 +29,8 @@ export default function ChatPane() {
   const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
   const groupChatMessageLimit = useSettingsStore((s) => s.groupChatMessageLimit);
   const richNpcMessageCount = useSettingsStore((s) => s.richNpcMessageCount);
+  const npcChatEndMode = useSettingsStore((s) => s.npcChatEndMode);
+  const intelligentChatEndMaxLength = useSettingsStore((s) => s.intelligentChatEndMaxLength);
   const editImagePromptsBeforeDispatch = useSettingsStore((s) => s.editImagePromptsBeforeDispatch);
   const transcript = useTurnMachineStore((state) => state.transcript);
   const chatMode = useActiveChatMedium();
@@ -102,16 +104,33 @@ export default function ChatPane() {
   const showSkipButton = participants.length > 2;
   const chatPaneWidthClass = CHAT_PANE_WIDTH_CLASS_BY_SETTING[chatPaneWidth];
 
-  const messageLimit = includesUser
-    ? undefined
-    : participants.length > 2
-      ? groupChatMessageLimit
-      : richNpcMessageCount * 2;
+  const topBarStatus = (() => {
+    let messageLimit: number | undefined;
 
-  const npcOnlyProgressLabel =
-    includesUser || isPaused
-      ? ''
-      : `NPC-only chat in progress (${transcript?.countCharacterChatMessages()}/${messageLimit || 10} messages).`;
+    if (!includesUser) {
+      if (npcChatEndMode === 'intelligent') {
+        messageLimit = intelligentChatEndMaxLength;
+      } else if (participants.length <= 2) {
+        messageLimit = richNpcMessageCount * 2;
+      } else {
+        messageLimit = groupChatMessageLimit;
+      }
+    }
+
+    if (generatingAutoImage) {
+      return 'Generating image...';
+    } else if (chatState === 'selecting_speaker') {
+      return 'Selecting speaker...';
+    } else if (chatState === 'judging_conversation_end') {
+      return 'Deciding whether to end...';
+    } else if (processingMemories) {
+      return chatMemoryUpdateStatus;
+    } else if (!(includesUser || isPaused)) {
+      return `NPC-only chat in progress (${transcript?.countCharacterChatMessages()}/${messageLimit || 10} messages).`;
+    } else {
+      return '';
+    }
+  })();
 
   const primaryNpc = nonUserParticipants[0];
   assertNonNullish(primaryNpc);
@@ -307,11 +326,7 @@ export default function ChatPane() {
               : 'Group Chat'}
         </h3>
         <div className="flex items-center gap-3">
-          {!chatMemoryUpdateStatus && !generatingAutoImage && npcOnlyProgressLabel && (
-            <div className="text-sm text-secondary">{npcOnlyProgressLabel}</div>
-          )}
-          {chatMemoryUpdateStatus && <div className="text-sm text-secondary">{chatMemoryUpdateStatus}</div>}
-          {generatingAutoImage && <div className="text-sm text-secondary">Generating image...</div>}
+          {topBarStatus && <div className="text-sm text-secondary">{topBarStatus}</div>}
           {!processingMemories && (
             <button type="button" onClick={() => setShowChatSettings(true)}>
               Chat Settings

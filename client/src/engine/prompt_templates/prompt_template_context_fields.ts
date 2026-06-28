@@ -171,6 +171,17 @@ Alice and Charlie chatted online about their weekend plans. Charlie mentioned th
   speakerCandidates: z.array(characterSchema).meta({
     description: 'The list of characters who are eligible to speak next in the conversation.',
   }),
+  conversationEndJudge: z
+    .object({
+      targetLength: z.number(),
+      maxLength: z.number(),
+      currentLength: z.number(),
+      historyLength: z.number(),
+    })
+    .meta({
+      description:
+        'Length constraints for the conversation-end judge prompt. targetLength is the suggested good length for the current chat (one-on-one or group), maxLength is the hard ceiling, currentLength is how many character messages have been sent so far, and historyLength is how many of the most recent messages the judge is shown.',
+    }),
   characterMovementConstraint: z
     .object({
       status: z.enum(['in_designated_zone', 'moving_towards_designated_zone']),
@@ -296,6 +307,21 @@ export type ModerationNextSpeakerExecutionContext = z.infer<
   typeof moderationNextSpeakerExecutionContextSchema
 >;
 
+export const conversationEndJudgeExecutionContextSchema = conversationExecutionContextSchema.and(
+  contextSchemaFields
+    .pick({
+      conversationEndJudge: true,
+    })
+    .meta({
+      description:
+        'This ConversationEndJudgeExecutionContext is available to the Conversation End Judgement prompt, and is identical to ConversationExecutionContext except for adding the conversationEndJudge field.',
+    })
+);
+
+export type ConversationEndJudgeExecutionContext = z.infer<
+  typeof conversationEndJudgeExecutionContextSchema
+>;
+
 export type PromptExecutionContext =
   | GlobalExecutionContext
   | ScenarioExecutionContext
@@ -305,4 +331,5 @@ export type PromptExecutionContext =
   | TargetedConversationExecutionContext
   | OffscreenMemoryUpdateConversationGoalExecutionContext
   | ModerationNextSpeakerExecutionContext
+  | ConversationEndJudgeExecutionContext
   | MemoryRagExectionContext;

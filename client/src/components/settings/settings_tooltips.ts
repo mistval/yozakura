@@ -40,6 +40,20 @@ export const settingsTooltips = {
   'npc.userGossipChanceMultiplier':
     "Multiplier applied only to the user's gossip target selection weight when the user is a gossip target candidate. <strong>0</strong> disables user selection as a gossip target. <strong>1</strong> is neutral. Higher than 1 makes the user more likely to be selected as the gossip target than their baseline chance (which is controlled by familiarity). Increase this if you like being the center of attention.",
   'npc.groupLimit': 'The total number of messages generated during an NPC-only group chat.',
+  'npc.chatEndMode':
+    '<strong>Fixed length</strong> ends NPC-only chats at a fixed message count. <strong>Intelligent</strong> uses an LLM judge to decide when a conversation has reached a natural stopping point.',
+  'npc.intelligentMinLength':
+    'The minimum length of an NPC-only conversation, in messages. The judge will not run, and the chat will not end, until at least this many messages have been sent.',
+  'npc.intelligentMaxLength':
+    "The maximum length of an NPC-only conversation, in messages. The chat is force-ended once this many messages have been sent (unless it's paused and being driven by the user).",
+  'npc.intelligentTargetLength':
+    'The suggested good length for one-on-one NPC-only chats, in messages. Passed to the judge as guidance: it becomes more willing to end the conversation once this length is exceeded. This is a suggestion, not a hard limit.',
+  'npc.intelligentGroupTargetLength':
+    'The suggested good length for NPC-only group chats (three or more participants), in messages. Passed to the judge as guidance: it becomes more willing to end the conversation once this length is exceeded. This is a suggestion, not a hard limit.',
+  'npc.intelligentJudgementInterval':
+    'How often the judge runs once the minimum length is reached, in messages. <strong>1</strong> runs the judge after every message, <strong>2</strong> every other message, and so on. Higher values reduce the number of judge calls but may miss the optimal stopping point',
+  'npc.intelligentJudgeHistoryLength':
+    'How many of the most recent messages the judge can see when deciding whether to end the conversation.',
   'npc.offscreenMentionLimit':
     'The maximum number of characters who are not participating in a chat to inject memories for when they are mentioned. A higher number may decrease conversation coherence.',
   'npc.rollingSummaryLimit':
