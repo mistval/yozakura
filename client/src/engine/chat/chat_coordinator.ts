@@ -34,6 +34,7 @@ import { buildConversationStateUpdates, generateCharacterEndOfChatUpdates } from
 import { wait } from '../../util/promise';
 import { getRequiredRandomChoice } from '../../util/array';
 import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
+import { rethrowSignalException } from '../scenario_loop/flow_control';
 
 export class ChatCoordinator {
   public static async prepareChatStart(participantIds: string[]): Promise<StartChatSessionArgs> {
@@ -569,19 +570,28 @@ export class ChatCoordinator {
   private static async maybeGenerateAutoImageForMessage(
     chatMessage: Extract<ChatMessage, { messageType: 'chat_message' }>
   ) {
-    const settings = useSettingsStore.getState();
+    try {
+      const settings = useSettingsStore.getState();
 
-    if (Math.random() >= settings.autoImageRate) {
-      return;
+      if (Math.random() >= settings.autoImageRate) {
+        return;
+      }
+
+      const autoImageNpcOnly = settings.autoImageNpcOnly;
+      if (autoImageNpcOnly && this.turnMachineStore().userIsParticipant()) {
+        return;
+      }
+
+      const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId);
+      await this.generateImageFromPrompt(fullPrompt);
+    } catch (err) {
+      rethrowSignalException(err);
+
+      await showNonRetriableErrorCardIfNeeded({
+        error: err,
+        operationType: 'auto_image.generate',
+      });
     }
-
-    const autoImageNpcOnly = settings.autoImageNpcOnly;
-    if (autoImageNpcOnly && this.turnMachineStore().userIsParticipant()) {
-      return;
-    }
-
-    const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId);
-    await this.generateImageFromPrompt(fullPrompt);
   }
 
   private static async trackOffscreenMentions(

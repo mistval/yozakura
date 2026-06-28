@@ -180,6 +180,7 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
           continue;
         }
 
+        useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
         rethrowSignalException(err);
 
         void showNonRetriableErrorCardIfNeeded({
