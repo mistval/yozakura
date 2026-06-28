@@ -110,7 +110,8 @@ export default function ChatPane() {
 
     if (!includesUser) {
       if (npcChatEndMode === 'intelligent') {
-        messageLimit = participants.length > 2 ? intelligentChatEndGroupMaxLength : intelligentChatEndMaxLength;
+        messageLimit =
+          participants.length > 2 ? intelligentChatEndGroupMaxLength : intelligentChatEndMaxLength;
       } else if (participants.length <= 2) {
         messageLimit = richNpcMessageCount * 2;
       } else {
@@ -173,9 +174,7 @@ export default function ChatPane() {
   const openImagePrompt = async () => {
     const imageCharacterId = transcript.getMostRecentSpeakerId() ?? primaryNpc.id;
 
-    const fullPrompt = await ChatCoordinator.buildSceneImageFullPrompt(imageCharacterId, {
-      isUserInteraction: true,
-    });
+    const fullPrompt = await ChatCoordinator.buildSceneImageFullPrompt(imageCharacterId);
 
     if (editImagePromptsBeforeDispatch) {
       setImagePrompt(fullPrompt);

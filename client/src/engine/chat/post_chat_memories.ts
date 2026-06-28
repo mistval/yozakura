@@ -41,9 +41,12 @@ function createGatedRenderFunction<
   return (
     firstArg: Parameters<TTemplateRenderer['renderAndExecute']>[0]
   ): Promise<Awaited<ReturnType<TTemplateRenderer['renderAndExecute']>>> => {
-    return withPhaseTransitionGate((abortSignal) => {
-      return templateRenderer.renderAndExecute(firstArg, { abortSignal });
-    });
+    return withPhaseTransitionGate(
+      (abortSignal) => {
+        return templateRenderer.renderAndExecute(firstArg, { abortSignal });
+      },
+      { pauseBehavior: 'abort' }
+    );
   };
 }
 
