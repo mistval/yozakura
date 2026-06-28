@@ -14,6 +14,7 @@ export const titanTemporalScript: TemporalContextBuiltInSettingsScript = {
       id: 'startDate',
       type: 'calendar',
       label: 'Start date (Earth)',
+      tooltipHtml: 'The date of turn 0',
       default: SCENARIO_CREATE_DATE_SENTINEL,
       width: 'full',
     },

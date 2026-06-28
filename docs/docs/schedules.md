@@ -81,7 +81,7 @@ Obedience only affects AI-controlled movement. The move suggestions for the user
 
 ## The reason field
 
-The optional **Reason** on a schedule segment is a short note completing the thought "They are here because…", for example "they work the morning shift here". While the schedule is keeping a character in that zone (or traveling towards it), the reason is added to their system prompt so they can act in character. The text injected into system prompts, by default, looks like "Alice is currently here because **they work the morning shift**", or while she is still on her way, "Alice is currently moving towards the Cafe because **they work the morning shift**". Leave it blank and no reason is mentioned.
+The optional **Reason** on a schedule segment is a short note completing the thought "They are here because…", for example "they work the morning shift here". While the schedule is keeping a character in that zone (or traveling towards it), the reason is added to their system prompt so they can act in character. The text injected into system prompts, by default, looks like "Alice is currently here because **they work the morning shift here**", or while she is still on her way, "Alice is currently moving towards the Cafe because **they work the morning shift here**". Leave it blank and no reason is injected, and the character won't be aware that they're moving intentionally.
 
 ## Private zones
 

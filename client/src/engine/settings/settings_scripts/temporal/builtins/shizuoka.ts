@@ -21,6 +21,7 @@ export const shizuokaTemporalScript: TemporalContextBuiltInSettingsScript = {
       id: 'startDate',
       type: 'calendar',
       label: 'Start date',
+      tooltipHtml: 'The date of turn 0',
       default: SCENARIO_CREATE_DATE_SENTINEL,
       width: 'full',
     },

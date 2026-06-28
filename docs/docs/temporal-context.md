@@ -47,13 +47,17 @@ In the Temporal Context dropdown, choose **+ New custom script…** to create on
 
 Click the **🤖 AI Assistant Instructions 🗒️** button, copy the instructions it shows, and send them to your favorite frontier LLM with a description of what you want. It will write the script, which you can paste back into the editor. All of the built-in scripts were written by Claude Opus 4.8 Extra, with minor back and forth. I have also found Gemini Pro to do a great job, for free.
 
-If you would like to write or modify a script by hand, you can refer to the built-in scripts [here](https://github.com/mistval/yozakura/tree/main/client/src/engine/settings/settings_scripts/temporal/builtins) to see how they are structured.
+If you would like to write or modify a script by hand, you can refer to the built-in scripts [here](https://github.com/mistval/yozakura/tree/main/client/src/engine/settings/settings_scripts/temporal/builtins) to see how they are structured. Or, give your AI assistant the doc and ask it to explain the structure to you.
 
 ## Date and time
 
 Temporal context advances with the scenario's turn number. The script decides how many turns make up a day and what to call each slice of it. The built-in scripts default to eight turns per day, with periods named Dawn, Morning, Midday, Afternoon, Evening, Dusk, Night, and Midnight. Custom scripts can have as many turns per day as you want, and you can name the time periods whatever you want. It is not strictly necessary to even have "days", you could have a scenario with a completely alien concept of time, or none at all.
 
 A script can return a **day index** that ticks up once per in-world day. When it changes, characters re-roll their daily auto-selected wardrobes, so a character can end up dressed differently from one day to the next. Returning this is optional. Without it, the wardrobe auto-select feature will never trigger.
+
+## Start Date
+
+The built-in scripts all set `Start date` to the Monday on or before you created the scenario, by default. This means turn 0 is always a Monday at dawn, unless you change `Start date`. If you plan to use the [schedule](schedules.md) feature and you want to have week-long schedules, it will usually make your life easier to use a Monday as your temporal context `Start date` (or Sunday, if you consider that the first day of the week) so that the schedule bar starts on the first day of the week.
 
 ## How far you can take it
 

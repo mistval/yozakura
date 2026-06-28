@@ -125,11 +125,19 @@ export function temporalControls(defaults: TemporalDefaults): SettingsScriptCont
   ];
 }
 
+function mondayOnOrBefore(isoDatetime: string): string {
+  const date = new Date(isoDatetime);
+  const day = date.getUTCDay();
+  const daysSinceMonday = (day + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - daysSinceMonday);
+  return date.toISOString().slice(0, 10);
+}
+
 export function resolveSentinelStartDates(
   controlValues: SettingsControlValues,
   scenarioCreatedAt: string | undefined
 ): SettingsControlValues {
-  const resolvedDate = (scenarioCreatedAt ?? new Date().toISOString()).slice(0, 10);
+  const resolvedDate = mondayOnOrBefore(scenarioCreatedAt ?? new Date().toISOString());
   let resolved: SettingsControlValues | undefined;
   for (const [id, value] of Object.entries(controlValues)) {
     if (value === SCENARIO_CREATE_DATE_SENTINEL) {

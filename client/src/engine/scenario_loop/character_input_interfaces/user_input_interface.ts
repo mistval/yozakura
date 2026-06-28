@@ -31,7 +31,7 @@ export class UserInputInterface extends CharacterInputInterface {
 
         return promise.promise;
       },
-      { isUserInteraction: true }
+      { pauseBehavior: 'ignore' }
     );
 
     return { input };
@@ -67,7 +67,7 @@ export class UserInputInterface extends CharacterInputInterface {
 
         return promise.promise;
       },
-      { isUserInteraction: true }
+      { pauseBehavior: 'ignore' }
     );
 
     const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();

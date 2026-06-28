@@ -16,6 +16,7 @@ import {
 } from '../engine/types.js';
 import { ConversationTranscript } from '../engine/chat/transcript.js';
 import { MemoryRAGHelper } from '../engine/memory_rag_helper.js';
+import type { ContextResolvers } from '../engine/prompt_templates/prompt_template_context_fields.js';
 import type { OmitFunctions } from '../util/types.js';
 import { getRequiredActiveScenario, getRequiredUserCharacterId, useScenarioStore } from './scenario_store.js';
 import { useScenarioCharacterStore, useUserCharacter } from './scenario_character_store.js';
@@ -28,7 +29,8 @@ export type ChatState =
   | 'processing_memories'
   | 'character_speaking'
   | 'awaiting_character_input'
-  | 'selecting_speaker';
+  | 'selecting_speaker'
+  | 'judging_conversation_end';
 
 export type StartChatSessionArgs = {
   participantIds: string[];
@@ -233,17 +235,20 @@ export function useChatUserLocation() {
   return getCharacterLocation(userCharacter.id, getRequiredCharacterById, map, ephemeralLocation);
 }
 
-export async function getActiveChatGossipCharacter(fromCharacterId?: string) {
+export async function getActiveChatGossipCharacter(fromCharacterId?: string, resolvers?: ContextResolvers) {
   const activeChatStore = useTurnMachineStore.getState();
   if (!activeChatStore.gossipTargetCharacterId) {
     return {};
   }
 
-  const gossipTargetCharacter = getRequiredCharacterById(activeChatStore.gossipTargetCharacterId);
+  const gossipTargetId = activeChatStore.gossipTargetCharacterId;
+  const gossipTargetCharacter =
+    resolvers?.getCharacter?.(gossipTargetId) ?? getRequiredCharacterById(gossipTargetId);
   const gossipTargetRelationship = fromCharacterId
-    ? await useScenarioCharacterRelationshipStore
+    ? ((await resolvers?.getRelationship?.(fromCharacterId, gossipTargetId)) ??
+      (await useScenarioCharacterRelationshipStore
         .getState()
-        .getCharacterRelationship(fromCharacterId, activeChatStore.gossipTargetCharacterId)
+        .getCharacterRelationship(fromCharacterId, gossipTargetId)))
     : undefined;
 
   return {

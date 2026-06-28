@@ -17,7 +17,8 @@ import { UserInputInterface } from './character_input_interfaces/user_input_inte
 import {
   rethrowSignalException,
   ScenarioLoopAbortSignalException,
-  UserAbortSignalException,
+  UserPauseSignalException,
+  UserStopSignalException,
 } from './flow_control';
 import { persistTurn } from './turn_persistence';
 import type { TurnMove, TurnMoveOutcome } from './types';
@@ -38,7 +39,7 @@ export async function runTurnLoop(
 
       prioritizeUser = false;
     } catch (err) {
-      if (err instanceof UserAbortSignalException) {
+      if (err instanceof UserStopSignalException) {
         const loopState = useScenarioLoopStateStore.getState();
         loopState.setAutoMode(false);
         loopState.setUserRequestedPhaseTransition('none');
@@ -151,7 +152,7 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
         } else if (input.actionType === 'speak_as') {
           nextSpeaker = await ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: input.characterId });
         } else if (input.actionType === 'request_end_chat') {
-          return closeChatSession(input.forceNoEffect);
+          return await closeChatSession(input.forceNoEffect);
         } else if (input.actionType === 'send_message') {
           await ChatCoordinator.addCharacterMessage(nextSpeaker.id, input.message);
           nextSpeaker = await ChatCoordinator.selectNextSpeaker();
@@ -165,13 +166,21 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
         } else if (input.actionType === 'edit_message') {
           ChatCoordinator.editMessageById(input.messageId, input.newContent);
         } else if (input.actionType === 'generate_image') {
-          await ChatCoordinator.generateImageFromPrompt(input.prompt, { isUserInteraction: true });
+          await ChatCoordinator.generateImageFromPrompt(input.prompt);
         } else {
           assert(false, 'Unknown chat input action');
         }
 
         persistTurn();
       } catch (err) {
+        if (err instanceof UserPauseSignalException) {
+          nextSpeaker = await ChatCoordinator.selectNextSpeaker({
+            forcedSpeakerId: getRequiredUserCharacterId(),
+          });
+          continue;
+        }
+
+        useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
         rethrowSignalException(err);
 
         void showNonRetriableErrorCardIfNeeded({

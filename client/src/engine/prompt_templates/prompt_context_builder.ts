@@ -13,6 +13,8 @@ import { useScenarioStore } from '../../state/scenario_store.js';
 import type {
   CharacterEditorExecutionContext,
   ContextCharacter,
+  ContextResolvers,
+  ConversationEndJudgeExecutionContext,
   ConversationExecutionContext,
   FocusedConversationExecutionContext,
   GlobalExecutionContext,
@@ -34,6 +36,21 @@ function toContextCharacter(character: Character): ContextCharacter {
     ...character,
     xmlTagSafeName: `${character.firstName}_${character.lastName}`.toLowerCase().replaceAll(/\s+/g, '_'),
   };
+}
+
+function resolveContextCharacter(id: string, resolvers?: ContextResolvers): Character | undefined {
+  return resolvers?.getCharacter?.(id) ?? useScenarioCharacterStore.getState().scenarioCharactersById[id];
+}
+
+async function resolveContextRelationship(
+  fromId: string,
+  toId: string,
+  resolvers?: ContextResolvers
+): Promise<CharacterRelationship> {
+  return (
+    (await resolvers?.getRelationship?.(fromId, toId)) ??
+    (await useScenarioCharacterRelationshipStore.getState().getCharacterRelationship(fromId, toId))
+  );
 }
 
 function formatPairwiseMemoriesForPrompt(
@@ -108,12 +125,14 @@ function buildGlobalTemplateContext(): GlobalExecutionContext {
   };
 }
 
-function buildScenarioTemplateContext(): ScenarioExecutionContext {
+function buildScenarioTemplateContext(resolvers?: ContextResolvers): ScenarioExecutionContext {
   const scenarioStore = useScenarioStore.getState();
   const scenarioCharacterStore = useScenarioCharacterStore.getState();
 
-  const userCharacter =
-    scenarioCharacterStore.scenarioCharactersById[scenarioStore.activeScenario?.userCharacterId || ''];
+  const userCharacter = resolveContextCharacter(
+    scenarioStore.activeScenario?.userCharacterId || '',
+    resolvers
+  );
   assertNonNullish(userCharacter, 'User character not found in scenario characters');
 
   if (!scenarioStore.activeScenario || !scenarioStore.activeScenarioMap) {
@@ -122,19 +141,23 @@ function buildScenarioTemplateContext(): ScenarioExecutionContext {
 
   return {
     ...buildGlobalTemplateContext(),
-    allCharacters: Object.values(scenarioCharacterStore.scenarioCharactersById).map(toContextCharacter),
+    allCharacters: Object.values(scenarioCharacterStore.scenarioCharactersById)
+      .map((character) => resolvers?.getCharacter?.(character.id) ?? character)
+      .map(toContextCharacter),
     userCharacter: toContextCharacter(userCharacter),
     scenario: scenarioStore.activeScenario,
     temporalContext: useTemporalContextStore.getState().plainText,
     worldMap: scenarioStore.activeScenarioMap,
     getRelationship: (characterAId: string, characterBId: string) =>
-      useScenarioCharacterRelationshipStore.getState().getCharacterRelationship(characterAId, characterBId),
+      resolveContextRelationship(characterAId, characterBId, resolvers),
   };
 }
 
-async function buildChatTemplateContext(focusedCharacter?: Character): Promise<ConversationExecutionContext> {
+async function buildChatTemplateContext(
+  focusedCharacter?: Character,
+  resolvers?: ContextResolvers
+): Promise<ConversationExecutionContext> {
   const activeChatStore = useTurnMachineStore.getState();
-  const scenarioCharacterStore = useScenarioCharacterStore.getState();
 
   if (!activeChatStore.isActive()) {
     throw new Error('buildChatTemplateContext() should only be called when a chat is active');
@@ -145,16 +168,19 @@ async function buildChatTemplateContext(focusedCharacter?: Character): Promise<C
   const mentionedOffscreenCharacterIds =
     activeChatStore.transcript.getAllMentionedOffscreenRaggedCharacterIds();
   const raggedCharacters = mentionedOffscreenCharacterIds
-    .map((id) => scenarioCharacterStore.scenarioCharactersById[id])
+    .map((id) => resolveContextCharacter(id, resolvers))
     .filter((char): char is Character => char !== undefined);
 
   const { gossipTargetCharacter, gossipTargetRelationship } = await getActiveChatGossipCharacter(
-    focusedCharacter?.id
+    focusedCharacter?.id,
+    resolvers
   );
 
   return {
-    ...(await buildScenarioTemplateContext()),
-    participants: getActiveChatParticipants().map(toContextCharacter),
+    ...(await buildScenarioTemplateContext(resolvers)),
+    participants: getActiveChatParticipants()
+      .map((participant) => resolvers?.getCharacter?.(participant.id) ?? participant)
+      .map(toContextCharacter),
     chatMedium: getActiveChatMedium(),
     raggedCharacters: raggedCharacters.map(toContextCharacter),
     transcript: activeChatStore.transcript.toTextTranscript(focusedCharacter?.id),
@@ -166,13 +192,13 @@ async function buildChatTemplateContext(focusedCharacter?: Character): Promise<C
 }
 
 export async function buildFocusedChatTemplateContext(
-  focusedCharacterId: string
+  focusedCharacterId: string,
+  resolvers?: ContextResolvers
 ): Promise<FocusedConversationExecutionContext> {
-  const scenarioCharacterStore = useScenarioCharacterStore.getState();
-  const focusedCharacter = scenarioCharacterStore.scenarioCharactersById[focusedCharacterId];
+  const focusedCharacter = resolveContextCharacter(focusedCharacterId, resolvers);
   assertNonNullish(focusedCharacter, 'Focused character not found in scenario characters');
 
-  const chatTemplateContext = await buildChatTemplateContext(focusedCharacter);
+  const chatTemplateContext = await buildChatTemplateContext(focusedCharacter, resolvers);
   const currentLocation = useTurnMachineStore.getState().getChatCharacterLocation(focusedCharacter.id);
   assertNonNullish(currentLocation, 'currentLocation not found');
 
@@ -193,28 +219,27 @@ export async function buildFocusedChatTemplateContext(
 
 export async function buildTargetedChatTemplateContext(
   focusedCharacterId: string,
-  targetCharacterId: string
+  targetCharacterId: string,
+  resolvers?: ContextResolvers
 ): Promise<TargetedConversationExecutionContext> {
-  const scenarioCharacterStore = useScenarioCharacterStore.getState();
-  const focusedCharacter = scenarioCharacterStore.scenarioCharactersById[focusedCharacterId];
-  const targetCharacter = scenarioCharacterStore.scenarioCharactersById[targetCharacterId];
-
-  assertNonNullish(focusedCharacter, 'Focused character not found in scenario characters');
+  const targetCharacter = resolveContextCharacter(targetCharacterId, resolvers);
   assertNonNullish(targetCharacter, 'Target character not found in scenario characters');
 
-  const focusedContext = await buildFocusedChatTemplateContext(focusedCharacterId);
+  const focusedContext = await buildFocusedChatTemplateContext(focusedCharacterId, resolvers);
+
+  const targetCharacterRelationship = await resolveContextRelationship(
+    focusedCharacterId,
+    targetCharacterId,
+    resolvers
+  );
 
   return {
     ...focusedContext,
     targetCharacter: toContextCharacter(targetCharacter),
-    targetCharacterRelationship: await useScenarioCharacterRelationshipStore
-      .getState()
-      .getCharacterRelationship(focusedCharacter.id, targetCharacter.id),
+    targetCharacterRelationship,
     targetCharacterFormattedRollingMemoriesText: formatPairwiseMemoriesForPrompt(
-      await useScenarioCharacterRelationshipStore
-        .getState()
-        .getCharacterRelationship(focusedCharacter.id, targetCharacter.id),
-      toContextCharacter(focusedCharacter),
+      targetCharacterRelationship,
+      focusedContext.focusedCharacter,
       toContextCharacter(targetCharacter),
       focusedContext.allCharacters
     ),
@@ -238,13 +263,26 @@ export async function buildChatModeratorContext(
   };
 }
 
+export async function buildConversationEndJudgeContext(conversationEndJudge: {
+  targetLength: number;
+  maxLength: number;
+  currentLength: number;
+  historyLength: number;
+}): Promise<ConversationEndJudgeExecutionContext> {
+  return {
+    ...(await buildChatTemplateContext()),
+    conversationEndJudge,
+  };
+}
+
 export async function buildOffscreenMemoryUpdateConversationGoalContext(
   fromCharacterId: string,
   toCharacterId: string,
-  candidateInformation: string
+  candidateInformation: string,
+  resolvers?: ContextResolvers
 ) {
   return {
-    ...(await buildTargetedChatTemplateContext(fromCharacterId, toCharacterId)),
+    ...(await buildTargetedChatTemplateContext(fromCharacterId, toCharacterId, resolvers)),
     candidateInformation,
   };
 }
