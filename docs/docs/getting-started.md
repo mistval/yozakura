@@ -11,7 +11,7 @@ keywords:
   - ai simulation
 ---
 
-There are three main ways to run Yozakura. The native electron application is the fastest to set up for most users and is dead easy. The Docker image has some advantages for more advanced users who are familiar with Docker, especially on Linux or MacOS. Cloning from GitHub is mainly for development and modifications.
+There are three main ways to run Yozakura. The native electron application is the fastest to set up for most users and is dead easy. The Docker image has some advantages for more advanced users who are familiar with Docker, especially on Linux or MacOS. Cloning from GitHub is mainly intended for development and modifications, but is also a viable way to install and run Yozakura if that's your preference.
 
 ## Electron
 

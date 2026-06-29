@@ -242,11 +242,13 @@ export class ConversationTranscript {
 
   public deleteMessagesAboveAndIncluding(messageId: string) {
     const indexOfMessage = this.messages.findIndex((message) => message.message.id === messageId);
-    if (indexOfMessage === -1) {
-      throw new Error(`Message with ID ${messageId} not found in transcript`);
-    }
+    const message = this.messages[indexOfMessage];
+    assertNonNullish(message, `Message with ID ${messageId} not found in transcript`);
 
-    return new ConversationTranscript(this.messages.slice(0, indexOfMessage), this.participants);
+    return {
+      newTranscript: new ConversationTranscript(this.messages.slice(0, indexOfMessage), this.participants),
+      deletedMessage: message,
+    };
   }
 
   public addJoinMessage(joiner: TranscriptParticipant) {

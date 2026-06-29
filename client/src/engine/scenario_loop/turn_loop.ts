@@ -161,8 +161,10 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
         } else if (input.actionType === 'delete_message') {
           ChatCoordinator.deleteMessageById(input.messageId);
         } else if (input.actionType === 'redo_message') {
-          await ChatCoordinator.redoMessageById(input.messageId);
-          nextSpeaker = await ChatCoordinator.selectNextSpeaker();
+          const { deletedMessageSpeakerId } = ChatCoordinator.deleteMessagesAboveAndIncluding(
+            input.messageId
+          );
+          nextSpeaker = await ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: deletedMessageSpeakerId });
         } else if (input.actionType === 'edit_message') {
           ChatCoordinator.editMessageById(input.messageId, input.newContent);
         } else if (input.actionType === 'generate_image') {

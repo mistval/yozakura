@@ -26,10 +26,10 @@ export function persistTurn() {
 
       const snapshot = useTurnMachineStore.getState().serialize();
 
-      if (snapshot === undefined) {
-        await Database.deleteKeyValue(key);
-      } else {
+      if (snapshot) {
         await Database.storeKeyValue(key, snapshot, serializedTurnSchema);
+      } else {
+        await Database.deleteKeyValue(key);
       }
     },
     'turn',

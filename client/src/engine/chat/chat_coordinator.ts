@@ -162,23 +162,13 @@ export class ChatCoordinator {
     return deletedMessage;
   }
 
-  public static redoMessageById(messageId: string) {
-    const hasMessage = this.transcript().containsMessage(messageId);
-    assert(hasMessage, 'Cannot redo a message that does not exist in the transcript');
+  public static deleteMessagesAboveAndIncluding(messageId: string) {
+    const { newTranscript, deletedMessage } = this.transcript().deleteMessagesAboveAndIncluding(messageId);
+    this.setTranscript(newTranscript);
 
-    while (this.transcript().getMostRecentMessage()!.message.id !== messageId) {
-      this.deleteMessageById(this.transcript().getMostRecentMessage()!.message.id);
-    }
-
-    const deletedMessage = this.deleteMessageById(messageId);
-    assertNonNullish(deletedMessage, 'Deleted message should not be null when redoing');
-
-    const forcedSpeakerId = deletedMessage.associatedCharacter?.id;
-    if (!forcedSpeakerId) {
-      throw new Error('Trying to redo a non-chat message?');
-    }
-
-    return this.speakAsNpc(forcedSpeakerId);
+    return {
+      deletedMessageSpeakerId: deletedMessage.associatedCharacter?.id,
+    };
   }
 
   public static editMessageById(id: string, newContent: string) {
