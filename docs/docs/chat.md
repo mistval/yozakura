@@ -14,7 +14,7 @@ keywords:
 
 ## Images on Demand
 
-After setting up an image model, use the Gen Image button to generate an image.
+After setting up an image model, use the Image button to generate an image.
 
 ![in chat image](/img/in_chat_image_2.png)
 
@@ -75,3 +75,15 @@ View a history of all conversations via the conversation log, and see the memori
 ![conversation log](/img/convo_log.png)
 
 ![conversation log detail](/img/convo_log_detail.png)
+
+## Pause
+
+Use the pause button to pause automatic next speaker selection. This allows you to take granular control of the chat, even if you aren't taking part in it. Choose who speaks next, edit/delete messages, generate images, set character instructions, add/remove characters, and more. There's also a setting you can enable to always pause at NPC chat start if you prefer to start every NPC chat in hands-on mode.
+
+![npc chat image](/img/npc_chat.png)
+
+## Set Instructions
+
+Click a character card on the chat's left pane to open character chat settings, where you can set instructions for the character, among other things. These instructions will be injected into their system prompt and is another way you can influence the direction of a conversation. Similarly, the chat settings modal (in the chat's top bar) has a place for instructions that will be given to all participants in the chat.
+
+![npc chat image](/img/chat_instructions.png)
