@@ -18,7 +18,7 @@ export const settingsTooltips = {
   'image.negativePrompt':
     'This text is appended as a <strong>negative prompt</strong> to discourage unwanted visual artifacts.',
   'image.editPromptBeforeDispatch':
-    'When enabled, generated image prompts open in an editor before the request is sent to the image API. When disabled, prompts are dispatched immediately without an opportunity to edit.',
+    'When enabled, generated image prompts open in an editor before the request is sent to the image API. When disabled, prompts are dispatched immediately without an opportunity to edit. This setting does not apply to auto image, which is always fully automatic.',
   'image.autoRate':
     'Chance that each new chat message automatically generates an image. <strong>0</strong> disables auto image and <strong>100</strong> triggers on every message.',
   'image.autoNpcOnly':
