@@ -14,7 +14,7 @@ Sometimes people assume due to the scale of Yozakura, generating memories and ma
 
 Smaller models are of course "stupider" and more prone to hallucination, misattribution, forgetfulness, etc, so the experience is qualitatively different from using larger models. But you can:
 
-1. Embrace it, the hallucinations can add spontaneity and fun if you let them
+1. Embrace hallucinations, which can add interesting spontaneity if you let them
 2. Or, you can get hands on and edit conversations and memories to clean up manually if you like being in the driver's seat and guiding the plot
 
 Below are some local models I've tried or have heard reports about (and if you find a particularly good model, please share your report too, you can contact via the [links page](links.md))
