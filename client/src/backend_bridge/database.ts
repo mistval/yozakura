@@ -21,7 +21,6 @@ import {
   type ScenarioCharacterGroup,
   type ScenarioCharacterGroupSchedule,
 } from '../engine/types.js';
-import { assert } from '../errors/application_error';
 import { newId } from '../util/id';
 import { runWithInteractiveRetry } from '../engine/interative_retry';
 import { ReadWriteDebouncer } from '../util/rw_debouncer';
@@ -634,8 +633,6 @@ export async function loadConversationById(conversationId: string) {
 }
 
 export async function storeConversation(scenarioId: string, entry: StoredConversation) {
-  assert(entry.participants.length > 1, 'Conversation must have at least two participants');
-
   const parsedEntry = storedConversationSchema.parse(entry);
   await dbRun(UPSERT_CONVERSATION_SQL, [
     [parsedEntry.id, scenarioId, encodeStoredData(parsedEntry, storedConversationSchema)],
@@ -644,7 +641,11 @@ export async function storeConversation(scenarioId: string, entry: StoredConvers
   await dbRun(UPSERT_CONVERSATION_PARTICIPANT_SQL, [
     [
       JSON.stringify(
-        parsedEntry.participants.map((participant) => [newId(), participant.id, parsedEntry.id])
+        parsedEntry.serializedTranscript.participants.map((participant) => [
+          newId(),
+          participant.id,
+          parsedEntry.id,
+        ])
       ),
     ],
   ]);

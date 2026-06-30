@@ -440,7 +440,6 @@ export type SerializedConversationTranscript = z.infer<typeof serializedConversa
 
 export const storedConversationSchema = basePersistedObjectSchema.extend({
   turnNumber: z.number(),
-  participants: z.array(transcriptParticipantSchema),
   label: z.string(),
   serializedTranscript: serializedConversationTranscriptSchema,
   characterUpdates: z.array(conversationCharacterUpdateSchema),

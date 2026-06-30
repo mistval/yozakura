@@ -178,7 +178,7 @@ class ChatMessageWrapper {
 export class ConversationTranscript {
   private constructor(
     public readonly messages: ChatMessageWrapper[],
-    public readonly participants: TranscriptParticipant[],
+    public readonly participantInfo: TranscriptParticipant[],
     private readonly ragHelper: MemoryRAGHelper,
     private readonly getOffscreenMentionLimit: () => number,
     private readonly getCurrentParticipantIds: (() => string[]) | undefined
@@ -187,7 +187,7 @@ export class ConversationTranscript {
   public serialize(): SerializedConversationTranscript {
     return Database.createPersistedObject({
       rawMessages: this.getRawMessages().map((m) => chatMessageSchema.parse(m)),
-      participants: this.participants,
+      participants: this.participantInfo,
       ragHelperState: this.ragHelper.serialize(),
     });
   }
@@ -226,7 +226,10 @@ export class ConversationTranscript {
     );
   }
 
-  private rebuild(messages: ChatMessageWrapper[], participants: TranscriptParticipant[] = this.participants) {
+  private rebuild(
+    messages: ChatMessageWrapper[],
+    participants: TranscriptParticipant[] = this.participantInfo
+  ) {
     return new ConversationTranscript(
       messages,
       participants,
@@ -243,11 +246,11 @@ export class ConversationTranscript {
   /* Mutators */
 
   public addParticipantUnique(participant: TranscriptParticipant | undefined) {
-    if (!participant || this.participants.some((p) => p.id === participant.id)) {
-      return this.participants;
+    if (!participant || this.participantInfo.some((p) => p.id === participant.id)) {
+      return this.participantInfo;
     }
 
-    return this.participants.concat(participant);
+    return this.participantInfo.concat(participant);
   }
 
   public deleteMessageById(messageId: string): {
@@ -509,7 +512,7 @@ export class ConversationTranscript {
       return this.getCurrentParticipantIds().includes(characterId);
     }
 
-    if (!this.participants.some((p) => p.id === characterId)) {
+    if (!this.participantInfo.some((p) => p.id === characterId)) {
       return false;
     }
 
@@ -563,7 +566,7 @@ export class ConversationTranscript {
 
       const shouldAddSpeakerName =
         message.message.messageType === 'chat_message' &&
-        this.participants.length > 2 &&
+        this.participantInfo.length > 2 &&
         message.message.senderId !== fromAICharacterIdPerspective;
 
       const promptMessages: OpenAIChatCompletionRequestMessage[] = [

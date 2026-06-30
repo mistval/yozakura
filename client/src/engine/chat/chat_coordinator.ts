@@ -255,7 +255,6 @@ export class ChatCoordinator {
       await accumulator.commit();
 
       const conversationLog: StoredConversation = Database.createPersistedObject({
-        participants: this.transcript().participants,
         serializedTranscript: this.transcript().serialize(),
         label: this.getPastTenseLabel(),
         characterUpdates,

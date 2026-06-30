@@ -178,7 +178,7 @@ describe('ConversationTranscript offscreen-mention RAG', () => {
     live.participantIds = [ALICE.id, BOB.id];
     transcript = transcript.removeParticipant(CAROL).updatedTranscript;
 
-    expect(transcript.participants.some((p) => p.id === CAROL.id)).toBe(true);
+    expect(transcript.participantInfo.some((p) => p.id === CAROL.id)).toBe(true);
     expect(transcript.getCoPresentSpeakerIds(ALICE.id)).not.toContain(CAROL.id);
   });
 

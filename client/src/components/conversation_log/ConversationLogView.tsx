@@ -106,7 +106,7 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
       <div className="flex gap-3 min-h-104">
         <div className="w-44 shrink-0 min-h-0 flex flex-col gap-3">
           <div className="space-y-2 overflow-y-auto min-h-0">
-            {selectedEntry.participants.map((participant) => {
+            {selectedEntry.serializedTranscript.participants.map((participant) => {
               const name = `${participant.firstName} ${participant.lastName}`.trim() || 'Unknown';
               const imagePath = participant.imagePath;
               return (
@@ -127,13 +127,13 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
             })}
           </div>
 
-          {selectedEntry.participants.length === 2 && (
+          {selectedEntry.serializedTranscript.participants.length === 2 && (
             <button
               onClick={() => {
                 closeConversationLog();
                 showCharacterOverview({
                   target: 'overview',
-                  selectedIds: selectedEntry.participants.map((p) => p.id),
+                  selectedIds: selectedEntry.serializedTranscript.participants.map((p) => p.id),
                   scrolldown: true,
                 });
               }}
