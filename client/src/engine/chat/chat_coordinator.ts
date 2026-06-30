@@ -6,7 +6,6 @@ import {
   buildChatModeratorContext,
   buildConversationEndJudgeContext,
   buildFocusedChatTemplateContext,
-  buildMemoryRagTemplateContext,
 } from '../prompt_templates/prompt_context_builder';
 import { decideIntelligentChatEnd, type ChatEndDecision } from './intelligent_chat_end';
 import { useSettingsStore, type SpeakerSelectionMode } from '../../state/settings_store.js';
@@ -27,7 +26,6 @@ import { chatSceneImageChainGroup } from '../prompt_templates/chat/chat_scene_im
 import { moderationNextSpeakerTemplatesGroup } from '../prompt_templates/chat/moderation_next_speaker';
 import { conversationEndJudgeTemplatesGroup } from '../prompt_templates/chat/conversation_end_judge';
 import { chatSystemPromptChain } from '../prompt_templates/chat/chat_system_prompt';
-import { memoryRagPromptTemplatesGroup } from '../prompt_templates/chat/memory_rag_prompt';
 import { newId } from '../../util/id';
 import { EndOfChatUpdateAccumulator } from './end_of_chat_update_accumulator';
 import { buildConversationStateUpdates, generateCharacterEndOfChatUpdates } from './post_chat_memories';
@@ -54,10 +52,6 @@ export class ChatCoordinator {
       initiatorId: firstParticipant.id,
       gossipTargetCharacterId,
     };
-  }
-
-  public static enterActiveChat() {
-    this.turnMachineStore().enterActiveChat();
   }
 
   public static async shouldEndNpcChat(): Promise<boolean> {
@@ -171,8 +165,8 @@ export class ChatCoordinator {
     };
   }
 
-  public static editMessageById(id: string, newContent: string) {
-    const { updatedTranscript } = this.transcript().editMessageById(id, newContent);
+  public static async editMessageById(id: string, newContent: string) {
+    const { updatedTranscript } = await this.transcript().editMessageById(id, newContent);
     this.setTranscript(updatedTranscript);
   }
 
@@ -182,11 +176,12 @@ export class ChatCoordinator {
     options: { forceSkipAutoImage?: boolean } = {}
   ) {
     const sender = this.getCharacterById(senderId);
-    const { updatedTranscript, newRawMessage } = this.transcript().addCharacterChatMessage(message, sender);
+    const { updatedTranscript, newRawMessage } = await this.transcript().addCharacterChatMessage(
+      message,
+      sender
+    );
 
     this.setTranscript(updatedTranscript);
-
-    await this.trackOffscreenMentions(sender, newRawMessage.id, message);
 
     if (!options.forceSkipAutoImage) {
       await this.maybeGenerateAutoImageForMessage(newRawMessage);
@@ -249,11 +244,8 @@ export class ChatCoordinator {
       for (const participant of getAllActiveChatSpeakers()) {
         if (participant.id !== this.getUserCharacter().id) {
           characterUpdates.push(
-            await generateCharacterEndOfChatUpdates(
-              participant,
-              accumulator,
-              this.memoryRagHelper(),
-              (statusInfo) => this.setStateProcessingMemories(statusInfo)
+            await generateCharacterEndOfChatUpdates(participant, accumulator, (statusInfo) =>
+              this.setStateProcessingMemories(statusInfo)
             )
           );
         }
@@ -332,15 +324,17 @@ export class ChatCoordinator {
             return this.transcript;
           }
 
-          const draftMessage = this.startStreamingNpcDraftMessage(speaker);
+          const draftMessage = await this.startStreamingNpcDraftMessage(speaker);
 
           const response = await chatCompletion(prompts, {
             promptTemplateGroup: 'gen_npc_response',
             promptContext,
             completionRequestId,
             abortSignal,
-            onTokens: (fullText: string) => {
-              this.setTranscript(this.transcript().editLatestMessage(fullText).updatedTranscript);
+            onTokens: async (fullText: string) => {
+              this.setTranscript(
+                (await this.transcript().editLatestMessage(fullText, { isStreaming: true })).updatedTranscript
+              );
             },
           });
 
@@ -350,7 +344,7 @@ export class ChatCoordinator {
 
           const didPause = !wasPaused && this.isChatPaused();
 
-          // We delete and re-add in order to trigger certain effects like memory RAG
+          // Delete and re-add. Slightly hacky way to trigger auto image and other effects.
           this.deleteMessageById(draftMessage.id);
           await this.addCharacterMessage(speaker.id, parsedResponse, { forceSkipAutoImage: didPause });
 
@@ -498,12 +492,6 @@ export class ChatCoordinator {
     return useTurnMachineStore.getState();
   }
 
-  private static memoryRagHelper() {
-    const helper = this.turnMachineStore().memoryRagHelper;
-    assertNonNullish(helper, 'MemoryRAGHelper is not initialized');
-    return helper;
-  }
-
   private static userCharacterId() {
     return getRequiredActiveScenario().userCharacterId;
   }
@@ -550,8 +538,11 @@ export class ChatCoordinator {
     }
   }
 
-  private static startStreamingNpcDraftMessage(sender: Character) {
-    const { updatedTranscript, newRawMessage } = this.transcript().addCharacterChatMessage('', sender);
+  private static async startStreamingNpcDraftMessage(sender: Character) {
+    const { updatedTranscript, newRawMessage } = await this.transcript().addCharacterChatMessage('', sender, {
+      isStreaming: true,
+    });
+
     this.setTranscript(updatedTranscript);
 
     return newRawMessage;
@@ -581,35 +572,6 @@ export class ChatCoordinator {
         error: err,
         operationType: 'auto_image.generate',
       });
-    }
-  }
-
-  private static async trackOffscreenMentions(
-    mentionedByCharacter: Character,
-    messageId: string,
-    lineWithSpeakerName: string
-  ) {
-    const newlyMentionedIds = this.memoryRagHelper().collectMentionedOffscreenCharacterIds(
-      messageId,
-      lineWithSpeakerName
-    );
-
-    for (const characterId of newlyMentionedIds) {
-      const mentionedCharacter = this.getCharacterById(characterId);
-      assertNonNullish(mentionedCharacter, `Character with ID ${characterId} not found`);
-
-      for (const participant of getActiveChatParticipants({ includeUser: false })) {
-        const focusedCharacter = this.getCharacterById(participant.id);
-
-        const reminder = await memoryRagPromptTemplatesGroup.render(
-          await buildMemoryRagTemplateContext(focusedCharacter, mentionedCharacter, mentionedByCharacter)
-        );
-
-        this.setTranscript(
-          this.transcript().addOffscreenRagMessage(participant.id, reminder[0]!.content, mentionedCharacter)
-            .updatedTranscript
-        );
-      }
     }
   }
 

@@ -1,0 +1,195 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { ConversationTranscript, type TranscriptRagDeps } from './transcript';
+import type { Character } from '../types';
+
+function char(id: string, firstName: string, lastName: string): Character {
+  return { id, firstName, lastName, imagePath: '' } as unknown as Character;
+}
+
+const ALICE = char('a', 'Alice', 'Anderson');
+const BOB = char('b', 'Bob', 'Baker');
+const CAROL = char('c', 'Carol', 'Carter');
+const DAVE = char('d', 'Dave', 'Dixon');
+const EVE = char('e', 'Eve', 'Evans');
+
+const ALL_CHARACTERS = [ALICE, BOB, CAROL, DAVE, EVE];
+
+type LiveState = { participantIds: string[]; limit: number };
+
+function makeDeps(live: LiveState): TranscriptRagDeps {
+  return {
+    getRagMessage: async (focusedId, mentionedId, senderId) => `RAG:${focusedId}<-${mentionedId}@${senderId}`,
+    getAllScenarioCharacters: () => ALL_CHARACTERS,
+    getReminderPerspectiveIds: () => [...live.participantIds],
+    getOffscreenMentionLimit: () => live.limit,
+    getCurrentParticipantIds: () => [...live.participantIds],
+  };
+}
+
+function freshTranscript(participantIds: string[], limit = 2) {
+  const live: LiveState = { participantIds: [...participantIds], limit };
+  return { transcript: ConversationTranscript.new(makeDeps(live)), live };
+}
+
+async function say(transcript: ConversationTranscript, speaker: Character, text: string) {
+  const { updatedTranscript } = await transcript.addCharacterChatMessage(text, speaker);
+  return updatedTranscript;
+}
+
+function systemContents(transcript: ConversationTranscript, perspectiveId: string): string[] {
+  return transcript
+    .toAIPromptMessages(perspectiveId)
+    .filter((message) => message.role === 'system')
+    .map((message) => message.content);
+}
+
+describe('ConversationTranscript offscreen-mention RAG', () => {
+  let transcript: ConversationTranscript;
+  let live: LiveState;
+
+  beforeEach(() => {
+    ({ transcript, live } = freshTranscript([ALICE.id, BOB.id, CAROL.id]));
+  });
+
+  it('does not inject a reminder about a character who is still present', async () => {
+    transcript = await say(transcript, CAROL, 'Hello everyone');
+    transcript = await say(transcript, ALICE, 'I ran into Carol earlier');
+
+    // Carol is still in the chat, so a reminder about her would be redundant with the system prompt.
+    expect(systemContents(transcript, BOB.id)).toEqual([]);
+  });
+
+  it('surfaces a reminder once the mentioned character leaves the chat', async () => {
+    transcript = await say(transcript, CAROL, 'Hello everyone');
+    transcript = await say(transcript, ALICE, 'I ran into Carol earlier');
+
+    live.participantIds = [ALICE.id, BOB.id];
+    transcript = transcript.removeParticipant(CAROL).updatedTranscript;
+
+    expect(systemContents(transcript, BOB.id)).toContain(`RAG:${BOB.id}<-${CAROL.id}@${ALICE.id}`);
+  });
+
+  it("scopes mentions to the focused character's presence window", async () => {
+    // Alice mentions Dave (offscreen) before Carol joins.
+    transcript = await say(transcript, ALICE, 'Remember Dave from school?');
+    transcript = await say(transcript, BOB, 'Yes I do');
+
+    transcript = transcript.addParticipant(CAROL).updatedTranscript;
+    live.participantIds = [ALICE.id, BOB.id, CAROL.id];
+    transcript = await say(transcript, ALICE, 'Welcome Carol');
+
+    // Alice was present for the Dave mention; Carol was not.
+    expect(transcript.getMentionedOffscreenCharacterIds(ALICE.id)).toContain(DAVE.id);
+    expect(transcript.getMentionedOffscreenCharacterIds(CAROL.id)).not.toContain(DAVE.id);
+  });
+
+  it('caps offscreen mentions at the limit and keeps first-mention order', async () => {
+    ({ transcript, live } = freshTranscript([ALICE.id, BOB.id], 1));
+
+    transcript = await say(transcript, ALICE, 'Saw Dave and then Eve yesterday');
+
+    expect(transcript.getMentionedOffscreenCharacterIds(BOB.id)).toEqual([DAVE.id]);
+
+    live.limit = 2;
+    expect(transcript.getMentionedOffscreenCharacterIds(BOB.id)).toEqual([DAVE.id, EVE.id]);
+  });
+
+  it('injects only one reminder per character even when mentioned repeatedly', async () => {
+    ({ transcript, live } = freshTranscript([ALICE.id, BOB.id]));
+
+    transcript = await say(transcript, ALICE, 'Dave said hi');
+    transcript = await say(transcript, BOB, 'Dave again?');
+
+    const daveReminders = systemContents(transcript, ALICE.id).filter((content) =>
+      content.includes(`<-${DAVE.id}@`)
+    );
+    expect(daveReminders).toHaveLength(1);
+  });
+
+  it('drops a reminder when an edit removes the mention and adds one when it introduces a mention', async () => {
+    ({ transcript, live } = freshTranscript([ALICE.id, BOB.id]));
+
+    const { updatedTranscript, newRawMessage } = await transcript.addCharacterChatMessage('Hi Dave', ALICE);
+    transcript = updatedTranscript;
+    expect(transcript.getMentionedOffscreenCharacterIds(BOB.id)).toEqual([DAVE.id]);
+
+    const edited = await transcript.editMessageById(newRawMessage.id, 'Hi Eve');
+    transcript = edited.updatedTranscript;
+
+    expect(transcript.getMentionedOffscreenCharacterIds(BOB.id)).toEqual([EVE.id]);
+  });
+
+  it("forgets a deleted message's mentions", async () => {
+    ({ transcript, live } = freshTranscript([ALICE.id, BOB.id]));
+
+    const { updatedTranscript, newRawMessage } = await transcript.addCharacterChatMessage('Hi Dave', ALICE);
+    transcript = updatedTranscript;
+
+    transcript = transcript.deleteMessageById(newRawMessage.id).updatedTranscript;
+
+    expect(transcript.getMentionedOffscreenCharacterIds(BOB.id)).toEqual([]);
+  });
+
+  it('round-trips through serialize/deserialize with no ragDeps and reproduces reminders', async () => {
+    transcript = await say(transcript, CAROL, 'Hello everyone');
+    transcript = await say(transcript, ALICE, 'I ran into Carol earlier');
+    live.participantIds = [ALICE.id, BOB.id];
+    transcript = transcript.removeParticipant(CAROL).updatedTranscript;
+
+    const serialized = transcript.serialize();
+
+    expect(serialized.ragHelperState).toBeDefined();
+
+    const readOnly = ConversationTranscript.deserialize(serialized);
+
+    expect(systemContents(readOnly, BOB.id)).toContain(`RAG:${BOB.id}<-${CAROL.id}@${ALICE.id}`);
+    expect(readOnly.hasMemoryRaggedCharacter(CAROL.id)).toBe(true);
+    expect(readOnly.hasMemoryRaggedCharacter(BOB.id)).toBe(false);
+  });
+
+  it('reports co-present speakers (who spoke while a character was present), excluding silent joiners', async () => {
+    transcript = await say(transcript, ALICE, 'Opening line');
+    transcript = await say(transcript, BOB, 'A reply');
+
+    // Carol joins, then a never-speaking Eve joins.
+    transcript = transcript.addParticipant(CAROL).updatedTranscript;
+    live.participantIds = [ALICE.id, BOB.id, CAROL.id];
+    transcript = await say(transcript, CAROL, 'Carol speaks');
+    transcript = transcript.addParticipant(EVE).updatedTranscript;
+    live.participantIds = [ALICE.id, BOB.id, CAROL.id, EVE.id];
+    transcript = await say(transcript, ALICE, 'Final line');
+
+    const alicesCoPresent = transcript.getCoPresentSpeakerIds(ALICE.id);
+    expect(alicesCoPresent).toEqual(expect.arrayContaining([BOB.id, CAROL.id]));
+    expect(alicesCoPresent).not.toContain(EVE.id); // joined but never spoke
+    expect(alicesCoPresent).not.toContain(ALICE.id); // excludes self
+
+    // Carol only co-existed with speakers after she joined.
+    const carolsCoPresent = transcript.getCoPresentSpeakerIds(CAROL.id);
+    expect(carolsCoPresent).toContain(ALICE.id);
+    expect(carolsCoPresent).not.toContain(BOB.id); // Bob only spoke before Carol joined
+  });
+
+  it('does not purge a silent participant who leaves (keeps them in participants, excludes from co-present)', async () => {
+    transcript = await say(transcript, ALICE, 'Hello');
+    transcript = await say(transcript, BOB, 'Hi');
+
+    // Carol never spoke; she leaves.
+    live.participantIds = [ALICE.id, BOB.id];
+    transcript = transcript.removeParticipant(CAROL).updatedTranscript;
+
+    expect(transcript.participants.some((p) => p.id === CAROL.id)).toBe(true);
+    expect(transcript.getCoPresentSpeakerIds(ALICE.id)).not.toContain(CAROL.id);
+  });
+
+  it('does not do RAG processing if we are streaming', async () => {
+    ({ transcript, live } = freshTranscript([ALICE.id, BOB.id]));
+
+    const { updatedTranscript } = await transcript.addCharacterChatMessage('Hi Dave', ALICE, {
+      isStreaming: true,
+    });
+
+    transcript = updatedTranscript;
+    expect(transcript.getMentionedOffscreenCharacterIds(BOB.id)).toEqual([]);
+  });
+});

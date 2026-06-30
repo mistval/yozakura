@@ -46,6 +46,9 @@ jobs:
           npm run typecheck --prefix server
           npm run typecheck --prefix docs
 
+      - name: Run client tests
+        run: npm run test --prefix client -- run
+
       - name: Collect changed files for prettier
         id: changed
         uses: tj-actions/changed-files@v45

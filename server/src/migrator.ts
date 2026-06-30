@@ -3,6 +3,7 @@ import { migration as migration0000InitialSchema } from './migrations/0000_initi
 import { migration as migration0001ImageSettingsScripts } from './migrations/0001_image_settings_scripts.js';
 import { migration as migration0002UserTextFiles } from './migrations/0002_user_text_files.js';
 import { migration as migration0003GroupsZonesSchedulesTemporal } from './migrations/0003_groups_zones_schedules_temporal.js';
+import { migration as migration0004RagHelperState } from './migrations/0004_rag_helper_state.js';
 import type { Migration } from './types.js';
 
 /**
@@ -17,6 +18,7 @@ const migrations: Migration[] = [
   migration0001ImageSettingsScripts,
   migration0002UserTextFiles,
   migration0003GroupsZonesSchedulesTemporal,
+  migration0004RagHelperState,
 ];
 
 function getUserVersion(db: Database.Database): number {
@@ -31,6 +33,8 @@ export function runMigrations(db: Database.Database): void {
     if (!migration) {
       return;
     }
+
+    console.log(`Running database migration #${version}`);
 
     const applyMigration = db.transaction(() => {
       const versionInTransaction = getUserVersion(db);
@@ -49,5 +53,7 @@ export function runMigrations(db: Database.Database): void {
     } catch (error) {
       throw new Error(`Migration ${version} failed: ${(error as Error).message}`, { cause: error });
     }
+
+    console.log(`Database migration #${version} complete`);
   }
 }

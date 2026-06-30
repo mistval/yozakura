@@ -127,8 +127,6 @@ function advanceState(currentCharacterShouldMoveAgain: boolean) {
 }
 
 async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Promise<{ noEffect: boolean }> {
-  ChatCoordinator.enterActiveChat();
-
   if (
     useSettingsStore.getState().pauseAtNpcChatStart &&
     !useTurnMachineStore.getState().userIsParticipant()
@@ -166,7 +164,7 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
           );
           nextSpeaker = await ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: deletedMessageSpeakerId });
         } else if (input.actionType === 'edit_message') {
-          ChatCoordinator.editMessageById(input.messageId, input.newContent);
+          await ChatCoordinator.editMessageById(input.messageId, input.newContent);
         } else if (input.actionType === 'generate_image') {
           await ChatCoordinator.generateImageFromPrompt(input.prompt);
         } else {

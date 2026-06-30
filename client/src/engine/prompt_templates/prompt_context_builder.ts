@@ -165,8 +165,9 @@ async function buildChatTemplateContext(
 
   assertNonNullish(activeChatStore.transcript, 'Expected transcript for active chat context');
 
-  const mentionedOffscreenCharacterIds =
-    activeChatStore.transcript.getAllMentionedOffscreenRaggedCharacterIds();
+  const mentionedOffscreenCharacterIds = focusedCharacter
+    ? activeChatStore.transcript.getMentionedOffscreenCharacterIds(focusedCharacter.id)
+    : [];
   const raggedCharacters = mentionedOffscreenCharacterIds
     .map((id) => resolveContextCharacter(id, resolvers))
     .filter((char): char is Character => char !== undefined);
