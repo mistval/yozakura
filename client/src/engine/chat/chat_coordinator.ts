@@ -166,7 +166,7 @@ export class ChatCoordinator {
   }
 
   public static async editMessageById(id: string, newContent: string) {
-    const { updatedTranscript } = await this.transcript().editMessageById(id, newContent);
+    const { updatedTranscript } = this.transcript().editMessageById(id, newContent);
     this.setTranscript(updatedTranscript);
   }
 
@@ -176,10 +176,7 @@ export class ChatCoordinator {
     options: { forceSkipAutoImage?: boolean } = {}
   ) {
     const sender = this.getCharacterById(senderId);
-    const { updatedTranscript, newRawMessage } = await this.transcript().addCharacterChatMessage(
-      message,
-      sender
-    );
+    const { updatedTranscript, newRawMessage } = this.transcript().addCharacterChatMessage(message, sender);
 
     this.setTranscript(updatedTranscript);
 
@@ -332,7 +329,7 @@ export class ChatCoordinator {
             abortSignal,
             onTokens: async (fullText: string) => {
               this.setTranscript(
-                (await this.transcript().editLatestMessage(fullText, { isStreaming: true })).updatedTranscript
+                this.transcript().editLatestMessage(fullText, { isStreaming: true }).updatedTranscript
               );
             },
           });
@@ -538,7 +535,7 @@ export class ChatCoordinator {
   }
 
   private static async startStreamingNpcDraftMessage(sender: Character) {
-    const { updatedTranscript, newRawMessage } = await this.transcript().addCharacterChatMessage('', sender, {
+    const { updatedTranscript, newRawMessage } = this.transcript().addCharacterChatMessage('', sender, {
       isStreaming: true,
     });
 

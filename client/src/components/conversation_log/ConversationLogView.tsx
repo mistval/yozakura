@@ -85,10 +85,6 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
     return ConversationTranscript.deserialize(selectedEntry.serializedTranscript);
   }, [selectedEntry.serializedTranscript]);
 
-  const referencesUser = useMemo(() => {
-    return transcript.hasMemoryRaggedCharacter(userId);
-  }, [transcript, userId]);
-
   return (
     <>
       <div className="flex justify-between items-center">
