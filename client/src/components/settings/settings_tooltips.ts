@@ -22,7 +22,7 @@ export const settingsTooltips = {
   'image.autoRate':
     'Chance that each new chat message automatically generates an image. <strong>0</strong> disables auto image and <strong>100</strong> triggers on every message.',
   'image.autoNpcOnly':
-    'When enabled, auto image runs only for NPC-only chats. If the user is a chat participant, auto image will not trigger and images can only be generated via the Gen Image button.',
+    'When enabled, auto image runs only for NPC-only chats. If the user is a chat participant, auto image will not trigger and images can only be generated via the Image button.',
   'image.width': 'Target width (in pixels) for generated chat images.',
   'image.height': 'Target height (in pixels) for generated chat images.',
   'image.cardWidth': 'Target width (in pixels) for character card image generation.',

@@ -547,7 +547,7 @@ export default function ChatPane() {
           </button>
         )}
         <button type="button" onClick={openImagePrompt} disabled={!isAwaitingCharacterInput}>
-          Gen Image
+          Image
         </button>
       </div>
 
