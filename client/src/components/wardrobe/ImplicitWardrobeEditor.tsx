@@ -144,7 +144,7 @@ export default function ImplicitWardrobeEditor({
             />
 
             {hasText && (
-              <div className="space-y-2 pt-1">
+              <div className="flex justify-between">
                 <div className="flex items-center gap-2">
                   <label className="flex items-center gap-1 text-xs text-secondary whitespace-nowrap">
                     <span>Autoselect group</span>

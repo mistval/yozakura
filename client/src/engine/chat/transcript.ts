@@ -245,7 +245,7 @@ export class ConversationTranscript {
 
   /* Mutators */
 
-  public addParticipantUnique(participant: TranscriptParticipant | undefined) {
+  public addParticipantUnique(participant: TranscriptParticipant) {
     if (!participant || this.participantInfo.some((p) => p.id === participant.id)) {
       return this.participantInfo;
     }
@@ -412,7 +412,10 @@ export class ConversationTranscript {
   private addMessage(message: ChatMessage, character: TranscriptParticipant | undefined) {
     const newMessage = new ChatMessageWrapper(message, character);
     return {
-      updatedTranscript: this.rebuild(this.messages.concat(newMessage), this.addParticipantUnique(character)),
+      updatedTranscript: this.rebuild(
+        this.messages.concat(newMessage),
+        character ? this.addParticipantUnique(character) : this.participantInfo
+      ),
       newMessage,
     };
   }
