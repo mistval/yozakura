@@ -332,7 +332,7 @@ export class ConversationTranscript {
     };
   }
 
-  public async addCharacterChatMessage(
+  public addCharacterChatMessage(
     message: string,
     speaker: TranscriptParticipant,
     opts?: { isStreaming?: boolean }

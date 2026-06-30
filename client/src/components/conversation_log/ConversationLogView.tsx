@@ -99,7 +99,6 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
             </button>
           )}
           <h2 className="text-lg font-semibold">{selectedEntry.label || 'Conversation'}</h2>
-          {referencesUser && <span className="text-xs text-muted">(might reference user)</span>}
         </div>
         <div className="text-sm text-muted">Turn {selectedEntry.turnNumber || 0}</div>
       </div>
