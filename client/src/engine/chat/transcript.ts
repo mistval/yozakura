@@ -32,6 +32,34 @@ function buildRagHelper(ragDeps?: TranscriptRagDeps, serializedState?: Serialize
   );
 }
 
+function bisectMessagesById(
+  messages: ChatMessageWrapper[],
+  id: string | undefined
+): [ChatMessageWrapper[], ChatMessageWrapper[]] {
+  if (!id) {
+    return [messages, []];
+  }
+
+  const indexOf = messages.findIndex((m) => m.getId() === id);
+  if (indexOf === -1) {
+    return [messages, []];
+  }
+
+  const beforeAndIncluding = messages.slice(0, indexOf + 1);
+  const after = messages.slice(indexOf + 1);
+
+  return [beforeAndIncluding, after];
+}
+
+function concatAfterMessageId(
+  messages: ChatMessageWrapper[],
+  id: string | undefined,
+  newMessage: ChatMessageWrapper
+) {
+  const [before, after] = bisectMessagesById(messages, id);
+  return before.concat(newMessage, after);
+}
+
 class ChatMessageWrapper {
   constructor(
     public readonly message: ChatMessage,
@@ -320,14 +348,14 @@ export class ConversationTranscript {
     };
   }
 
-  public addImageMessage(imageUrl: string) {
+  public addImageMessage(imageUrl: string, opts?: { afterMessageId?: string | undefined }) {
     const newRawMessage = Database.createPersistedObject({
       messageType: 'image',
       imageUrl,
     }) satisfies ImageMessage;
 
     return {
-      ...this.addMessage(newRawMessage, undefined),
+      ...this.addMessage(newRawMessage, undefined, opts),
       newRawMessage,
     };
   }
@@ -438,11 +466,17 @@ export class ConversationTranscript {
     };
   }
 
-  private addMessage(message: ChatMessage, character: TranscriptParticipant | undefined) {
+  private addMessage(
+    message: ChatMessage,
+    character: TranscriptParticipant | undefined,
+    opts?: {
+      afterMessageId?: string | undefined;
+    }
+  ) {
     const newMessage = new ChatMessageWrapper(message, character);
     return {
       updatedTranscript: this.rebuild(
-        this.messages.concat(newMessage),
+        concatAfterMessageId(this.messages, opts?.afterMessageId, newMessage),
         character ? this.addParticipantUnique(character) : this.participantInfo
       ),
       newMessage,
@@ -459,8 +493,10 @@ export class ConversationTranscript {
     return this.messages.map((wrapper) => wrapper.message);
   }
 
-  public getRawConversationMessages() {
-    return this.messages.filter((wrapper) => !wrapper.isPresenceMarker()).map((wrapper) => wrapper.message);
+  public getRawConversationMessages(opts?: { upToMessageId?: string }) {
+    return bisectMessagesById(this.messages, opts?.upToMessageId)[0]
+      .filter((wrapper) => !wrapper.isPresenceMarker())
+      .map((wrapper) => wrapper.message);
   }
 
   public getMostRecentMessage() {
@@ -506,13 +542,17 @@ export class ConversationTranscript {
     return [...idsSet][0];
   }
 
-  public aggregateMessagesWithinPresenceWindows(characterId: string) {
+  public aggregateMessagesWithinPresenceWindows(
+    characterId: string,
+    opts: { upToMessageId?: string | undefined } = {}
+  ) {
+    const [messagesToConsider] = bisectMessagesById(this.messages, opts.upToMessageId);
     const partialPresence = this.messages.some((message) =>
       message.isJoinOrLeaveMessageForCharacter(characterId)
     );
 
     if (!partialPresence) {
-      return this.messages;
+      return messagesToConsider;
     }
 
     const firstPresenceMessage = this.messages.find((message) =>
@@ -525,7 +565,7 @@ export class ConversationTranscript {
 
     let isPresent = firstPresenceMessage.message.systemMessageType === 'leave';
 
-    return this.messages.filter((message, i, messages) => {
+    return messagesToConsider.filter((message, i, messages) => {
       const nextMessage = messages[i + 1];
 
       // We include one message before the join message, as it's often the case that the character joins in response to something being said, and having that context can be helpful for understanding the conversation.
@@ -658,16 +698,22 @@ export class ConversationTranscript {
     );
   }
 
-  public toTextTranscript(fromCharacterIdPerspective?: string) {
+  public toTextTranscript(
+    opts: { fromCharacterIdPerspective?: string | undefined; upToMessageId?: string | undefined } = {}
+  ) {
     if (this.messages.length === 0) {
       return '(no messages yet)';
     }
 
-    return (
-      fromCharacterIdPerspective
-        ? this.aggregateMessagesWithinPresenceWindows(fromCharacterIdPerspective)
-        : this.messages
-    )
+    const presentMessages = opts.fromCharacterIdPerspective
+      ? this.aggregateMessagesWithinPresenceWindows(opts.fromCharacterIdPerspective, opts)
+      : bisectMessagesById(this.messages, opts.upToMessageId)[0];
+
+    if (presentMessages.length === 0) {
+      return '(no messages yet)';
+    }
+
+    return presentMessages
       .flatMap((m) => {
         if (m.isPresenceMarker()) {
           return [];
@@ -692,12 +738,15 @@ export class ConversationTranscript {
       .join('\n');
   }
 
-  public getMentionedOffscreenCharacterIds(focusedCharacterId: string): string[] {
+  public getMentionedOffscreenCharacterIds(
+    focusedCharacterId: string,
+    opts?: { upToMessageId?: string | undefined }
+  ): string[] {
     const limit = Math.max(1, Math.round(this.getOffscreenMentionLimit()));
     const seen = new Set<string>();
     const result: string[] = [];
 
-    for (const message of this.aggregateMessagesWithinPresenceWindows(focusedCharacterId)) {
+    for (const message of this.aggregateMessagesWithinPresenceWindows(focusedCharacterId, opts)) {
       if (message.message.messageType !== 'chat_message') {
         continue;
       }

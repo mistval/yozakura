@@ -155,7 +155,10 @@ function buildScenarioTemplateContext(resolvers?: ContextResolvers): ScenarioExe
 
 async function buildChatTemplateContext(
   focusedCharacter?: Character,
-  resolvers?: ContextResolvers
+  resolvers?: ContextResolvers,
+  opts?: {
+    upToMessageId?: string | undefined;
+  }
 ): Promise<ConversationExecutionContext> {
   const activeChatStore = useTurnMachineStore.getState();
 
@@ -166,7 +169,7 @@ async function buildChatTemplateContext(
   assertNonNullish(activeChatStore.transcript, 'Expected transcript for active chat context');
 
   const mentionedOffscreenCharacterIds = focusedCharacter
-    ? activeChatStore.transcript.getMentionedOffscreenCharacterIds(focusedCharacter.id)
+    ? activeChatStore.transcript.getMentionedOffscreenCharacterIds(focusedCharacter.id, opts)
     : [];
   const raggedCharacters = mentionedOffscreenCharacterIds
     .map((id) => resolveContextCharacter(id, resolvers))
@@ -184,7 +187,10 @@ async function buildChatTemplateContext(
       .map(toContextCharacter),
     chatMedium: getActiveChatMedium(),
     raggedCharacters: raggedCharacters.map(toContextCharacter),
-    transcript: activeChatStore.transcript.toTextTranscript(focusedCharacter?.id),
+    transcript: activeChatStore.transcript.toTextTranscript({
+      fromCharacterIdPerspective: focusedCharacter?.id,
+      upToMessageId: opts?.upToMessageId,
+    }),
     conversationMessages: activeChatStore.transcript.getRawConversationMessages(),
     gossipTargetCharacter: gossipTargetCharacter ? toContextCharacter(gossipTargetCharacter) : undefined,
     gossipTargetRelationship,
@@ -194,12 +200,15 @@ async function buildChatTemplateContext(
 
 export async function buildFocusedChatTemplateContext(
   focusedCharacterId: string,
-  resolvers?: ContextResolvers
+  resolvers?: ContextResolvers,
+  opts?: {
+    upToMessageId?: string | undefined;
+  }
 ): Promise<FocusedConversationExecutionContext> {
   const focusedCharacter = resolveContextCharacter(focusedCharacterId, resolvers);
   assertNonNullish(focusedCharacter, 'Focused character not found in scenario characters');
 
-  const chatTemplateContext = await buildChatTemplateContext(focusedCharacter, resolvers);
+  const chatTemplateContext = await buildChatTemplateContext(focusedCharacter, resolvers, opts);
   const currentLocation = useTurnMachineStore.getState().getChatCharacterLocation(focusedCharacter.id);
   assertNonNullish(currentLocation, 'currentLocation not found');
 

@@ -55,6 +55,7 @@ interface ChatUserInputEditMessage {
 interface ChatUserInputGenerateImage {
   actionType: 'generate_image';
   prompt: string;
+  afterMessageId: string | undefined;
 }
 
 export type ChatUserInputAction =

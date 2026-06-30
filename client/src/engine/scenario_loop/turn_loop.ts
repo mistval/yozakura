@@ -166,7 +166,9 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
         } else if (input.actionType === 'edit_message') {
           await ChatCoordinator.editMessageById(input.messageId, input.newContent);
         } else if (input.actionType === 'generate_image') {
-          await ChatCoordinator.generateImageFromPrompt(input.prompt);
+          await ChatCoordinator.generateImageFromPrompt(input.prompt, {
+            afterMessageId: input.afterMessageId,
+          });
         } else {
           assert(false, 'Unknown chat input action');
         }

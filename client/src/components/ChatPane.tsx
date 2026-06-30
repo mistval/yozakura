@@ -52,6 +52,7 @@ export default function ChatPane() {
   const [settingsCharacterId, setSettingsCharacterId] = useState<string | undefined>(undefined);
   const [editingMessageId, setEditingMessageId] = useState<string | undefined>(undefined);
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
+  const [imageAfterMessageId, setImageAfterMessageId] = useState<string | undefined>(undefined);
 
   const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
   const autoScrollUnlockedRef = useRef(true);
@@ -171,23 +172,30 @@ export default function ChatPane() {
     submitChatSpeakAs(participant.id);
   };
 
-  const openImagePrompt = async () => {
-    const imageCharacterId = transcript.getMostRecentSpeakerId() ?? primaryNpc.id;
+  const openImagePrompt = async (afterMessageId?: string) => {
+    const imageCharacterId = afterMessageId
+      ? transcript.getMessageById(afterMessageId)!.asCharacterChatMessage().senderId
+      : (transcript.getMostRecentSpeakerId() ?? primaryNpc.id);
 
-    const fullPrompt = await ChatCoordinator.buildSceneImageFullPrompt(imageCharacterId);
+    const fullPrompt = await ChatCoordinator.buildSceneImageFullPrompt(imageCharacterId, {
+      upToMessageId: afterMessageId,
+    });
 
     if (editImagePromptsBeforeDispatch) {
       setImagePrompt(fullPrompt);
       setShowImagePrompt(true);
+      setImageAfterMessageId(afterMessageId);
       return;
     }
 
-    submitChatGenerateImage(fullPrompt);
+    submitChatGenerateImage(fullPrompt, afterMessageId);
+    setImageAfterMessageId(undefined);
   };
 
   const generateImageNow = () => {
     setShowImagePrompt(false);
-    submitChatGenerateImage(imagePrompt);
+    submitChatGenerateImage(imagePrompt, imageAfterMessageId);
+    setImageAfterMessageId(undefined);
   };
 
   const deleteMessage = (id: string) => {
@@ -472,6 +480,22 @@ export default function ChatPane() {
                     🗑
                   </button>
 
+                  {entry.isCharacterChatMessage() && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const id = entry.getId();
+                        openImagePrompt(id);
+                      }}
+                      disabled={!isAwaitingCharacterInput}
+                      title="Retry message"
+                      aria-label="Retry message"
+                      className="px-1 h-5 w-5 flex items-center justify-center"
+                    >
+                      🖼️
+                    </button>
+                  )}
+
                   {entry.isCharacterChatMessage() &&
                     entry.asCharacterChatMessage().senderId !== userCharacter.id && (
                       <button
@@ -546,7 +570,7 @@ export default function ChatPane() {
             Skip
           </button>
         )}
-        <button type="button" onClick={openImagePrompt} disabled={!isAwaitingCharacterInput}>
+        <button type="button" onClick={() => openImagePrompt(undefined)} disabled={!isAwaitingCharacterInput}>
           Image
         </button>
       </div>

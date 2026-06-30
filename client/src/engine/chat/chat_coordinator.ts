@@ -190,13 +190,16 @@ export class ChatCoordinator {
     return userCharacter && this.transcript().hasMessagesFromCharacter(userCharacter.id);
   }
 
-  public static async buildSceneImageFullPrompt(primaryCharacterId: string) {
+  public static async buildSceneImageFullPrompt(
+    primaryCharacterId: string,
+    opts?: { upToMessageId?: string | undefined }
+  ) {
     return this.turnMachineStore().doWithState('generating_image', async () => {
       return withPhaseTransitionGate(
         async (abortSignal) => {
           const primaryCharacter = this.getCharacterById(primaryCharacterId);
           const generatedScenePrompt = await chatSceneImageChainGroup.renderAndExecute(
-            await buildFocusedChatTemplateContext(primaryCharacter.id),
+            await buildFocusedChatTemplateContext(primaryCharacter.id, undefined, opts),
             { abortSignal }
           );
 
@@ -207,7 +210,10 @@ export class ChatCoordinator {
     });
   }
 
-  public static async generateImageFromPrompt(fullPrompt: string) {
+  public static async generateImageFromPrompt(
+    fullPrompt: string,
+    opts?: { afterMessageId?: string | undefined }
+  ) {
     return this.turnMachineStore().doWithState('generating_image', async () => {
       return withPhaseTransitionGate(
         async (abortSignal) => {
@@ -221,7 +227,7 @@ export class ChatCoordinator {
           const firstFile = files[0];
           assertNonNullish(firstFile, 'No file returned from image generation call');
 
-          this.setTranscript(this.transcript().addImageMessage(firstFile).updatedTranscript);
+          this.setTranscript(this.transcript().addImageMessage(firstFile, opts).updatedTranscript);
         },
         { pauseBehavior: 'ignore' }
       );

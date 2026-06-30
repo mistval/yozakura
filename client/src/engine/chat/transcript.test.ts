@@ -246,7 +246,7 @@ describe('ConversationTranscript offscreen-mention RAG', () => {
 
     expect(transcript.getVisibleMessages(BOB.id).some((m) => m.isPresenceMarker())).toBe(false);
 
-    const text = transcript.toTextTranscript(BOB.id);
+    const text = transcript.toTextTranscript({ fromCharacterIdPerspective: BOB.id });
     expect(text.match(/Carol has joined the chat\./g) ?? []).toHaveLength(1);
     expect(text.match(/Carol has left the chat\./g) ?? []).toHaveLength(1);
   });
@@ -279,5 +279,98 @@ describe('ConversationTranscript offscreen-mention RAG', () => {
     // A second build reuses the cached render.
     await t.toAIPromptMessages(BOB.id);
     expect(renderCount).toBe(1);
+  });
+});
+
+describe('ConversationTranscript image generation before the latest message', () => {
+  it('appends a generated image at the end of the transcript by default', async () => {
+    const { transcript } = freshTranscript([ALICE.id, BOB.id]);
+    const first = await transcript.addCharacterChatMessage('first', ALICE);
+    const second = await first.updatedTranscript.addCharacterChatMessage('second', BOB);
+
+    const imageResult = second.updatedTranscript.addImageMessage('img.png');
+
+    expect(imageResult.updatedTranscript.getRawMessages().map((m) => m.id)).toEqual([
+      first.newRawMessage.id,
+      second.newRawMessage.id,
+      imageResult.newRawMessage.id,
+    ]);
+  });
+
+  it('inserts a generated image immediately after the specified message', async () => {
+    const { transcript } = freshTranscript([ALICE.id, BOB.id]);
+    const first = await transcript.addCharacterChatMessage('first', ALICE);
+    const second = await first.updatedTranscript.addCharacterChatMessage('second', BOB);
+
+    const imageResult = second.updatedTranscript.addImageMessage('img.png', {
+      afterMessageId: first.newRawMessage.id,
+    });
+
+    expect(imageResult.updatedTranscript.getRawMessages().map((m) => m.id)).toEqual([
+      first.newRawMessage.id,
+      imageResult.newRawMessage.id,
+      second.newRawMessage.id,
+    ]);
+  });
+
+  it('truncates getRawConversationMessages up to and including the cutoff message', async () => {
+    const { transcript } = freshTranscript([ALICE.id, BOB.id]);
+    const first = await transcript.addCharacterChatMessage('first', ALICE);
+    const second = await first.updatedTranscript.addCharacterChatMessage('second', BOB);
+    const third = await second.updatedTranscript.addCharacterChatMessage('third', ALICE);
+
+    expect(
+      third.updatedTranscript
+        .getRawConversationMessages({ upToMessageId: second.newRawMessage.id })
+        .map((m) => m.id)
+    ).toEqual([first.newRawMessage.id, second.newRawMessage.id]);
+  });
+
+  it('filters toTextTranscript by perspective when called with the options object', async () => {
+    const { transcript, live } = freshTranscript([ALICE.id, BOB.id]);
+    let t = await say(transcript, ALICE, 'early one');
+    t = await say(t, BOB, 'early two');
+
+    t = t.addParticipant(CAROL).updatedTranscript;
+    live.participantIds = [ALICE.id, BOB.id, CAROL.id];
+    t = await say(t, CAROL, 'carol arrives');
+
+    expect(t.toTextTranscript()).toContain('early one');
+
+    const carolView = t.toTextTranscript({ fromCharacterIdPerspective: CAROL.id });
+    expect(carolView).not.toContain('early one');
+    expect(carolView).toContain('carol arrives');
+  });
+
+  it('excludes offscreen mentions that occur after the cutoff message', async () => {
+    const { transcript } = freshTranscript([ALICE.id, BOB.id]);
+    const first = await transcript.addCharacterChatMessage('Saw Dave today', ALICE);
+    const t = (await first.updatedTranscript.addCharacterChatMessage('Eve was there too', BOB))
+      .updatedTranscript;
+
+    expect(t.getMentionedOffscreenCharacterIds(BOB.id)).toEqual(expect.arrayContaining([DAVE.id, EVE.id]));
+
+    expect(t.getMentionedOffscreenCharacterIds(BOB.id, { upToMessageId: first.newRawMessage.id })).toEqual([
+      DAVE.id,
+    ]);
+  });
+
+  it('focusing an image on a character who joined after the cutoff yields an empty scene transcript', async () => {
+    const { transcript, live } = freshTranscript([ALICE.id, BOB.id]);
+    const first = await transcript.addCharacterChatMessage('Alice opening', ALICE);
+    let t = await say(first.updatedTranscript, BOB, 'Bob reply');
+
+    t = t.addParticipant(CAROL).updatedTranscript;
+    live.participantIds = [ALICE.id, BOB.id, CAROL.id];
+    t = await say(t, CAROL, 'Carol latest');
+
+    expect(t.getMostRecentSpeakerId()).toBe(CAROL.id);
+
+    const sceneTranscript = t.toTextTranscript({
+      fromCharacterIdPerspective: CAROL.id,
+      upToMessageId: first.newRawMessage.id,
+    });
+
+    expect(sceneTranscript).toBe('(no messages yet)');
   });
 });
