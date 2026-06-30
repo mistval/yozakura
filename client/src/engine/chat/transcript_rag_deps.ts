@@ -1,6 +1,6 @@
 import { useScenarioCharacterStore } from '../../state/scenario_character_store';
 import { useSettingsStore } from '../../state/settings_store';
-import { getActiveChatParticipants, useTurnMachineStore } from '../../state/turn_machine_store';
+import { useTurnMachineStore } from '../../state/turn_machine_store';
 import { memoryRagPromptTemplatesGroup } from '../prompt_templates/chat/memory_rag_prompt';
 import { buildMemoryRagTemplateContext } from '../prompt_templates/prompt_context_builder';
 import type { TranscriptRagDeps } from './transcript';
@@ -21,8 +21,6 @@ export function buildTranscriptRagDeps(): TranscriptRagDeps {
       return rendered[0]!.content;
     },
     getAllScenarioCharacters: () => useScenarioCharacterStore.getState().scenarioCharacters,
-    getReminderPerspectiveIds: () =>
-      getActiveChatParticipants({ includeUser: false }).map((participant) => participant.id),
     getOffscreenMentionLimit: () => useSettingsStore.getState().offscreenMentionLimit,
     getCurrentParticipantIds: () => useTurnMachineStore.getState().participantIds,
   };

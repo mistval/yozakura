@@ -286,7 +286,7 @@ export class ChatCoordinator {
       completionRequestId,
     });
 
-    const aiPromptMessages = this.transcript().toAIPromptMessages(speaker.id);
+    const aiPromptMessages = await this.transcript().toAIPromptMessages(speaker.id);
     const prompts = [renderedPrompts[0]!].concat(aiPromptMessages);
 
     if (aiPromptMessages.length > 0) {

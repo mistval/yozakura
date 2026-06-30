@@ -389,6 +389,8 @@ const joinLeaveSystemMessageSchema = baseSystemMessageSchema.extend({
 
 export type JoinLeaveSystemMessage = z.infer<typeof joinLeaveSystemMessageSchema>;
 
+export const TRANSCRIPT_SYSTEM = '__transcript_system__';
+
 const characterMessageSchema = baseMessageSchema.extend({
   messageType: z.literal('chat_message'),
   senderId: z.string(),

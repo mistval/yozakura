@@ -1,5 +1,6 @@
 import {
   chatMessageSchema,
+  TRANSCRIPT_SYSTEM,
   type Character,
   type CharacterMessage,
   type ChatMessage,
@@ -17,7 +18,6 @@ import { MemoryRAGHelper, type RagMessageDelegate } from '../memory_rag_helper';
 export type TranscriptRagDeps = {
   getRagMessage: RagMessageDelegate;
   getAllScenarioCharacters: () => Character[];
-  getReminderPerspectiveIds: () => string[];
   getOffscreenMentionLimit: () => number;
   getCurrentParticipantIds: () => string[];
 };
@@ -28,7 +28,6 @@ function buildRagHelper(ragDeps?: TranscriptRagDeps, serializedState?: Serialize
   return new MemoryRAGHelper(
     ragDeps?.getRagMessage ?? (async () => ''),
     ragDeps?.getAllScenarioCharacters ?? (() => []),
-    ragDeps?.getReminderPerspectiveIds ?? (() => []),
     serializedState
   );
 }
@@ -96,10 +95,18 @@ class ChatMessageWrapper {
     return this.message.senderId === characterId;
   }
 
+  isPresenceMarker() {
+    return (
+      this.message.messageType === 'system_message' &&
+      this.message.isPrivateToCharacterId === TRANSCRIPT_SYSTEM
+    );
+  }
+
   isJoinMessageForCharacter(characterId: string) {
     return (
       this.message.messageType === 'system_message' &&
       this.message.systemMessageType === 'join' &&
+      this.message.isPrivateToCharacterId === TRANSCRIPT_SYSTEM &&
       this.message.characterId === characterId
     );
   }
@@ -108,6 +115,7 @@ class ChatMessageWrapper {
     return (
       this.message.messageType === 'system_message' &&
       this.message.systemMessageType === 'leave' &&
+      this.message.isPrivateToCharacterId === TRANSCRIPT_SYSTEM &&
       this.message.characterId === characterId
     );
   }
@@ -265,6 +273,8 @@ export class ConversationTranscript {
       };
     }
 
+    assert(!messageToDelete.isPresenceMarker(), 'Cannot delete a transcript presence marker');
+
     this.ragHelper.deleteMessage(messageId);
 
     return {
@@ -289,14 +299,23 @@ export class ConversationTranscript {
   }
 
   private addJoinMessage(joiner: TranscriptParticipant) {
+    const marker = Database.createPersistedObject({
+      messageType: 'system_message',
+      systemMessageType: 'join',
+      characterId: joiner.id,
+      isPrivateToCharacterId: TRANSCRIPT_SYSTEM,
+    }) satisfies JoinLeaveSystemMessage;
+
     const newRawMessage = Database.createPersistedObject({
       messageType: 'system_message',
       systemMessageType: 'join',
       characterId: joiner.id,
     }) satisfies JoinLeaveSystemMessage;
 
+    const withMarker = this.addMessage(marker, joiner).updatedTranscript;
+
     return {
-      ...this.addMessage(newRawMessage, joiner),
+      ...withMarker.addMessage(newRawMessage, joiner),
       newRawMessage,
     };
   }
@@ -326,7 +345,7 @@ export class ConversationTranscript {
 
     // Defer RAG processing until message is finished. Optimization.
     if (!opts?.isStreaming) {
-      await this.ragHelper.addMessage(newRawMessage.id, message, speaker.id);
+      this.ragHelper.addMessage(newRawMessage.id, message, speaker.id);
     }
 
     return {
@@ -345,7 +364,7 @@ export class ConversationTranscript {
     return { updatedTranscript: this.addJoinMessage(joiner).updatedTranscript };
   }
 
-  public async editMessageById(messageId: string, newContent: string, opts?: { isStreaming?: boolean }) {
+  public editMessageById(messageId: string, newContent: string, opts?: { isStreaming?: boolean }) {
     const messageToEdit = this.messages.find((message) => message.message.id === messageId);
     if (!messageToEdit) {
       throw new Error(`Message with ID ${messageId} not found in transcript`);
@@ -366,7 +385,7 @@ export class ConversationTranscript {
 
     // Defer RAG processing until finished streaming
     if (!opts?.isStreaming && newMessage.isCharacterChatMessage()) {
-      await this.ragHelper.editMessage(
+      this.ragHelper.editMessage(
         newMessage.getId(),
         newContent,
         newMessage.asCharacterChatMessage().senderId
@@ -401,9 +420,19 @@ export class ConversationTranscript {
       participant
     );
 
+    const marker = new ChatMessageWrapper(
+      Database.createPersistedObject({
+        messageType: 'system_message',
+        systemMessageType: 'leave',
+        characterId: participant.id,
+        isPrivateToCharacterId: TRANSCRIPT_SYSTEM,
+      }) satisfies JoinLeaveSystemMessage,
+      participant
+    );
+
     return {
       updatedTranscript: this.rebuild(
-        this.messages.concat(leaveMessage),
+        this.messages.concat(leaveMessage, marker),
         this.addParticipantUnique(participant)
       ),
     };
@@ -428,6 +457,10 @@ export class ConversationTranscript {
 
   public getRawMessages() {
     return this.messages.map((wrapper) => wrapper.message);
+  }
+
+  public getRawConversationMessages() {
+    return this.messages.filter((wrapper) => !wrapper.isPresenceMarker()).map((wrapper) => wrapper.message);
   }
 
   public getMostRecentMessage() {
@@ -555,13 +588,16 @@ export class ConversationTranscript {
     return [...speakerIds];
   }
 
-  public toAIPromptMessages(fromAICharacterIdPerspective: string): OpenAIChatCompletionRequestMessage[] {
+  public async toAIPromptMessages(
+    fromAICharacterIdPerspective: string
+  ): Promise<OpenAIChatCompletionRequestMessage[]> {
     const limit = Math.max(1, Math.round(this.getOffscreenMentionLimit()));
     const injectedMentionedIds = new Set<string>();
+    const promptMessages: OpenAIChatCompletionRequestMessage[] = [];
 
-    return this.aggregateMessagesWithinPresenceWindows(fromAICharacterIdPerspective).flatMap((message) => {
+    for (const message of this.aggregateMessagesWithinPresenceWindows(fromAICharacterIdPerspective)) {
       if (!message.isVisibleInPerspectiveContext(fromAICharacterIdPerspective, true)) {
-        return [];
+        continue;
       }
 
       const role = message.getPromptRole(fromAICharacterIdPerspective);
@@ -572,12 +608,10 @@ export class ConversationTranscript {
         this.participantInfo.length > 2 &&
         message.message.senderId !== fromAICharacterIdPerspective;
 
-      const promptMessages: OpenAIChatCompletionRequestMessage[] = [
-        {
-          role,
-          content: shouldAddSpeakerName ? message.messageWithSpeakerName() : message.getContent(),
-        },
-      ];
+      promptMessages.push({
+        role,
+        content: shouldAddSpeakerName ? message.messageWithSpeakerName() : message.getContent(),
+      });
 
       if (message.message.messageType === 'chat_message') {
         for (const ragMessage of this.ragHelper.getRAGMessagesForMessage(
@@ -593,20 +627,16 @@ export class ConversationTranscript {
           ) {
             continue;
           }
-          promptMessages.push({ role: 'system', content: ragMessage.content });
+          promptMessages.push({ role: 'system', content: await ragMessage.content() });
           injectedMentionedIds.add(ragMessage.mentionedCharacterId);
         }
       }
+    }
 
-      return promptMessages;
-    });
+    return promptMessages;
   }
 
   public hasMemoryRaggedCharacter(characterId: string): boolean {
-    if (this.isCurrentlyPresent(characterId)) {
-      return false;
-    }
-
     return this.messages.some(
       (message) =>
         message.message.messageType === 'chat_message' &&
@@ -639,6 +669,10 @@ export class ConversationTranscript {
         : this.messages
     )
       .flatMap((m) => {
+        if (m.isPresenceMarker()) {
+          return [];
+        }
+
         if (m.message.messageType === 'chat_message') {
           return m.messageWithSpeakerName().replace(/\n+/g, ' ');
         }

@@ -7,6 +7,11 @@ export type RagMessageDelegate = (
   mentionedByCharacterId: string
 ) => Promise<string>;
 
+export type RagReminder = {
+  mentionedCharacterId: string;
+  content: () => Promise<string>;
+};
+
 /**
  * Tracks which characters are mentioned in each chat message and caches the rendered
  * reminder ("memory RAG message") for each (perspective, mentioned, sender) 3-tuple.
@@ -18,19 +23,18 @@ export class MemoryRAGHelper {
   constructor(
     private readonly getRagMessage: RagMessageDelegate,
     private readonly getAllScenarioCharacters: () => Character[],
-    private readonly getReminderPerspectiveIds: () => string[],
     serializedState?: SerializedRagHelper
   ) {
     this.messageMentions = new Map(serializedState?.messageMentions ?? []);
     this.ragCache = new Map(serializedState?.ragCache ?? []);
   }
 
-  public async addMessage(messageId: string, text: string, senderId: string): Promise<void> {
-    await this.recordMentions(messageId, text, senderId);
+  public addMessage(messageId: string, text: string, senderId: string): void {
+    this.recordMentions(messageId, text, senderId);
   }
 
-  public async editMessage(messageId: string, newText: string, senderId: string): Promise<void> {
-    await this.recordMentions(messageId, newText, senderId);
+  public editMessage(messageId: string, newText: string, senderId: string): void {
+    this.recordMentions(messageId, newText, senderId);
   }
 
   public deleteMessage(messageId: string): void {
@@ -41,24 +45,16 @@ export class MemoryRAGHelper {
     return this.messageMentions.get(messageId)?.mentionedCharacterIds ?? [];
   }
 
-  public getRAGMessagesForMessage(messageId: string, fromPerspectiveId: string): RagMessage[] {
+  public getRAGMessagesForMessage(messageId: string, fromPerspectiveId: string): RagReminder[] {
     const entry = this.messageMentions.get(messageId);
     if (!entry) {
       return [];
     }
 
-    const messages: RagMessage[] = [];
-    for (const mentionedCharacterId of entry.mentionedCharacterIds) {
-      const cached = this.ragCache.get(
-        this.cacheKey(fromPerspectiveId, mentionedCharacterId, entry.senderId)
-      );
-
-      if (cached) {
-        messages.push(cached);
-      }
-    }
-
-    return messages;
+    return entry.mentionedCharacterIds.map((mentionedCharacterId) => ({
+      mentionedCharacterId,
+      content: () => this.getRagContent(fromPerspectiveId, mentionedCharacterId, entry.senderId),
+    }));
   }
 
   public serialize(): SerializedRagHelper {
@@ -68,10 +64,9 @@ export class MemoryRAGHelper {
     };
   }
 
-  private async recordMentions(messageId: string, text: string, senderId: string): Promise<void> {
+  private recordMentions(messageId: string, text: string, senderId: string): void {
     const mentionedCharacterIds = this.matchMentions(text);
     this.messageMentions.set(messageId, { senderId, mentionedCharacterIds });
-    await this.ensureRemindersCached(mentionedCharacterIds, senderId);
   }
 
   private matchMentions(text: string): string[] {
@@ -79,24 +74,21 @@ export class MemoryRAGHelper {
     return matchStringToIndex(text, mentionIndex);
   }
 
-  private async ensureRemindersCached(mentionedCharacterIds: string[], senderId: string): Promise<void> {
-    const perspectiveIds = this.getReminderPerspectiveIds();
+  private async getRagContent(
+    perspectiveId: string,
+    mentionedCharacterId: string,
+    senderId: string
+  ): Promise<string> {
+    const key = this.cacheKey(perspectiveId, mentionedCharacterId, senderId);
 
-    for (const mentionedCharacterId of mentionedCharacterIds) {
-      for (const perspectiveId of perspectiveIds) {
-        if (perspectiveId === mentionedCharacterId) {
-          continue;
-        }
-
-        const key = this.cacheKey(perspectiveId, mentionedCharacterId, senderId);
-        if (this.ragCache.has(key)) {
-          continue;
-        }
-
-        const content = await this.getRagMessage(perspectiveId, mentionedCharacterId, senderId);
-        this.ragCache.set(key, { mentionedCharacterId, content });
-      }
+    const cached = this.ragCache.get(key);
+    if (cached) {
+      return cached.content;
     }
+
+    const content = await this.getRagMessage(perspectiveId, mentionedCharacterId, senderId);
+    this.ragCache.set(key, { mentionedCharacterId, content });
+    return content;
   }
 
   private cacheKey(perspectiveId: string, mentionedCharacterId: string, senderId: string): string {

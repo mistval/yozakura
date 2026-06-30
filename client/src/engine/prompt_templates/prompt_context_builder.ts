@@ -185,7 +185,7 @@ async function buildChatTemplateContext(
     chatMedium: getActiveChatMedium(),
     raggedCharacters: raggedCharacters.map(toContextCharacter),
     transcript: activeChatStore.transcript.toTextTranscript(focusedCharacter?.id),
-    conversationMessages: activeChatStore.transcript.getRawMessages(),
+    conversationMessages: activeChatStore.transcript.getRawConversationMessages(),
     gossipTargetCharacter: gossipTargetCharacter ? toContextCharacter(gossipTargetCharacter) : undefined,
     gossipTargetRelationship,
     chatInstructions: activeChatStore.chatInstructions,
