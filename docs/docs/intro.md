@@ -22,9 +22,9 @@ This article gives a brief peek at the main features of Yozakura via screenshots
 
 ## Chat
 
-During the user turn, choose one or more characters to chat with (below, Beatrix is the user in a three-way chat).
+During the user turn, choose one or more characters to chat with.
 
-![group chat image](/img/in_chat_image_2.png)
+![group chat image](/img/in_chat_image.png)
 
 ## Memories
 
@@ -34,11 +34,9 @@ After each chat, NPC memories are updated. The memory system is designed for con
 
 ## NPC Chat
 
-Once the user's turn is finished, NPCs each get a chance to move around the map or talk to other characters (including the user).
+Once the user's turn is finished, NPCs each get a chance to move around the map or talk to other characters (including the user). Each chat displays onscreen as it happens. If an image API is configured, images can be generated automatically as NPCs converse with each other.
 
-You can see this happening from the NPC's perspective. Each chat displays onscreen as it happens. If an image API is configured, images can be generated automatically as NPCs converse with each other.
-
-You can use the `Pause` button at any time to take control: add/remove characters from the chat (including yourself if you want), choose who speaks next, generate images, delete or edit messages, set instructions for each character, move characters, and more.
+You can use the `Pause` button at any time to take control: add/remove characters from the chat (including yourself if you want), choose who speaks next, generate images, delete or edit messages, set instructions for each character, move characters, and more. Or you can just let it play out autonomously. You don't even need to be anywhere near your computer.
 
 By default, NPC chats end after a fixed number of messages, but you can also configure an LLM judge to decide when the chat has reached a good stopping point.
 
