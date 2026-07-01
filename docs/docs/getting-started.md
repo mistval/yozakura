@@ -28,12 +28,12 @@ Installation:
 
 ## Docker
 
-### Prerequisites:
+Prerequisites:
 
 1. You need access to an LLM via a completions API.
 2. You need to have [Docker](https://docs.docker.com/desktop/) installed
 
-### Installation:
+Installation:
 
 **Using Docker compose**: Save this [docker-compose.yml](https://github.com/mistval/yozakura/blob/main/docker-compose.yml) file somewhere and run `docker compose up -d` in that directory.
 
