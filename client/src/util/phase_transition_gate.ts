@@ -1,9 +1,9 @@
 import {
+  UserAbortCurrentGenerationSignalException,
   ScenarioLoopAbortSignalException,
   UserPauseSignalException,
   UserStopSignalException,
 } from '../engine/scenario_loop/flow_control.js';
-import { assertNonNullish } from '../errors/application_error.js';
 import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 
@@ -14,34 +14,54 @@ export async function withPhaseTransitionGate<T>(
   opts?: PhaseTransitionGateOptions
 ): Promise<T> {
   const pauseBehavior = opts?.pauseBehavior ?? 'wait';
-  let { userRequestedPhaseTransition } = useScenarioLoopStateStore.getState();
+  const loopState = useScenarioLoopStateStore.getState();
 
-  if (userRequestedPhaseTransition === 'paused' && pauseBehavior === 'abort') {
+  if (loopState.userRequestedPhaseTransition === 'paused' && pauseBehavior === 'abort') {
     throw new UserPauseSignalException();
   }
 
-  if (userRequestedPhaseTransition === 'stopped') {
+  if (loopState.userRequestedPhaseTransition === 'stopped') {
     throw new UserStopSignalException();
   }
 
+  if (loopState.userRequestedGenerationAbort) {
+    loopState.setUserRequestedGenerationAbort(false);
+    throw new UserAbortCurrentGenerationSignalException();
+  }
+
   const abortController = new AbortController();
-  let ErrorConstructor: (new () => Error) | undefined;
+
+  let onCatch = () => {};
 
   const unsubscribeLoopState = useScenarioLoopStateStore.subscribe((state) => {
     if (state.userRequestedPhaseTransition === 'stopped') {
-      ErrorConstructor = UserStopSignalException;
+      onCatch = () => {
+        throw new UserStopSignalException();
+      };
       abortController.abort();
     }
 
     if (state.userRequestedPhaseTransition === 'paused' && pauseBehavior === 'abort') {
-      ErrorConstructor = UserPauseSignalException;
+      onCatch = () => {
+        throw new UserPauseSignalException();
+      };
+      abortController.abort();
+    }
+
+    if (state.userRequestedGenerationAbort) {
+      onCatch = () => {
+        useScenarioLoopStateStore.getState().setUserRequestedGenerationAbort(false);
+        throw new UserAbortCurrentGenerationSignalException();
+      };
       abortController.abort();
     }
   });
 
   const unsubscribeScenarioState = useScenarioStore.subscribe((newState, prevState) => {
     if (newState.activeScenario?.id !== prevState.activeScenario?.id) {
-      ErrorConstructor = ScenarioLoopAbortSignalException;
+      onCatch = () => {
+        throw new ScenarioLoopAbortSignalException();
+      };
       abortController.abort();
     }
   });
@@ -50,8 +70,7 @@ export async function withPhaseTransitionGate<T>(
     return await fn(abortController.signal);
   } catch (error) {
     if (abortController.signal.aborted) {
-      assertNonNullish(ErrorConstructor);
-      throw new ErrorConstructor();
+      onCatch();
     }
 
     throw error;

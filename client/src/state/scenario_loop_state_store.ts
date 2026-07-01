@@ -9,17 +9,23 @@ import { scenarioLoopPromiseCallbacks } from '../engine/scenario_loop/flow_contr
 
 export type UserRequestedPhaseTransition = 'none' | 'paused' | 'stopped';
 
+export type PendingImagePromptEdit = { prompt: string; afterMessageId: string | undefined };
+
 type ScenarioLoopStateStoreState = {
   autoMode: boolean;
   runState: ScenarioLoopRunState;
   runningForScenario: string | undefined;
   userRequestedPhaseTransition: UserRequestedPhaseTransition;
+  userRequestedGenerationAbort: boolean;
+  pendingImagePromptEdit: PendingImagePromptEdit | undefined;
   lastTemporalDayIndex: number | undefined;
 
   setScenario: (scenarioId: string | undefined) => void;
   setAutoMode: (enabled: boolean) => void;
   setRunState: (runState: ScenarioLoopRunState) => void;
   setUserRequestedPhaseTransition: (value: UserRequestedPhaseTransition) => void;
+  setUserRequestedGenerationAbort: (value: boolean) => void;
+  setPendingImagePromptEdit: (value: PendingImagePromptEdit | undefined) => void;
   setLastTemporalDayIndex: (dayIndex: number | undefined) => void;
   resetLoopState: () => void;
   submitChatMessage: (message: string) => boolean;
@@ -29,6 +35,7 @@ type ScenarioLoopStateStoreState = {
   submitChatDeleteMessage: (messageId: string) => boolean;
   submitChatRedoMessage: (messageId: string) => boolean;
   submitChatEditMessage: (messageId: string, newContent: string) => boolean;
+  submitChatRequestImage: (afterMessageId: string | undefined) => boolean;
   submitChatGenerateImage: (prompt: string, afterMessageId: string | undefined) => boolean;
   submitUserWait: () => boolean;
   submitUserMove: (destinationLocationId: string, consumesTurn: boolean) => boolean;
@@ -62,6 +69,8 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
   runState: 'idle',
   runningForScenario: undefined,
   userRequestedPhaseTransition: 'none',
+  userRequestedGenerationAbort: false,
+  pendingImagePromptEdit: undefined,
   lastTemporalDayIndex: undefined,
 
   setAutoMode(enabled: boolean) {
@@ -78,6 +87,14 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
     set({ userRequestedPhaseTransition: value });
   },
 
+  setUserRequestedGenerationAbort(value: boolean) {
+    set({ userRequestedGenerationAbort: value });
+  },
+
+  setPendingImagePromptEdit(value: PendingImagePromptEdit | undefined) {
+    set({ pendingImagePromptEdit: value });
+  },
+
   setLastTemporalDayIndex(dayIndex: number | undefined) {
     set({ lastTemporalDayIndex: dayIndex });
   },
@@ -86,6 +103,8 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
     set({
       runState: 'idle',
       userRequestedPhaseTransition: 'none',
+      userRequestedGenerationAbort: false,
+      pendingImagePromptEdit: undefined,
       lastTemporalDayIndex: undefined,
     });
   },
@@ -127,6 +146,10 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
 
   submitChatEditMessage(messageId: string, newContent: string) {
     return resolveChatUserInputAction({ actionType: 'edit_message', messageId, newContent });
+  },
+
+  submitChatRequestImage(afterMessageId: string | undefined) {
+    return resolveChatUserInputAction({ actionType: 'request_image', afterMessageId });
   },
 
   submitChatGenerateImage(prompt: string, afterMessageId: string | undefined) {

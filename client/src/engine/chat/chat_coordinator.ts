@@ -190,6 +190,21 @@ export class ChatCoordinator {
     return userCharacter && this.transcript().hasMessagesFromCharacter(userCharacter.id);
   }
 
+  public static async buildSceneImagePromptForRequest(afterMessageId: string | undefined) {
+    const imageCharacterId = afterMessageId
+      ? this.transcript().getMessageById(afterMessageId)!.asCharacterChatMessage().senderId
+      : (this.transcript().getMostRecentSpeakerId() ?? this.firstNonUserParticipantId());
+
+    return this.buildSceneImageFullPrompt(imageCharacterId, { upToMessageId: afterMessageId });
+  }
+
+  private static firstNonUserParticipantId(): string {
+    const userCharacterId = this.getUserCharacter().id;
+    const participant = getActiveChatParticipants().find((p) => p.id !== userCharacterId);
+    assertNonNullish(participant, 'No non-user participant available for image generation');
+    return participant.id;
+  }
+
   public static async buildSceneImageFullPrompt(
     primaryCharacterId: string,
     opts?: { upToMessageId?: string | undefined }
@@ -328,31 +343,36 @@ export class ChatCoordinator {
 
           const draftMessage = await this.startStreamingNpcDraftMessage(speaker);
 
-          const response = await chatCompletion(prompts, {
-            promptTemplateGroup: 'gen_npc_response',
-            promptContext,
-            completionRequestId,
-            abortSignal,
-            onTokens: async (fullText: string) => {
-              this.setTranscript(
-                this.transcript().editLatestMessage(fullText, { isStreaming: true }).updatedTranscript
-              );
-            },
-          });
+          try {
+            const response = await chatCompletion(prompts, {
+              promptTemplateGroup: 'gen_npc_response',
+              promptContext,
+              completionRequestId,
+              abortSignal,
+              onTokens: async (fullText: string) => {
+                this.setTranscript(
+                  this.transcript().editLatestMessage(fullText, { isStreaming: true }).updatedTranscript
+                );
+              },
+            });
 
-          const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
-            completionRequestId,
-          });
+            const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
+              completionRequestId,
+            });
 
-          const didPause = !wasPaused && this.isChatPaused();
+            const didPause = !wasPaused && this.isChatPaused();
 
-          // Delete and re-add. Slightly hacky way to trigger auto image and other effects.
-          this.deleteMessageById(draftMessage.id);
-          await this.addCharacterMessage(speaker.id, parsedResponse, { forceSkipAutoImage: didPause });
+            // Delete and re-add. Slightly hacky way to trigger auto image and other effects.
+            this.deleteMessageById(draftMessage.id);
+            await this.addCharacterMessage(speaker.id, parsedResponse, { forceSkipAutoImage: didPause });
 
-          await this.pauseAfterNpcOnlyMessage();
+            await this.pauseAfterNpcOnlyMessage();
 
-          return this.transcript;
+            return this.transcript;
+          } catch (err) {
+            this.deleteMessageById(draftMessage.id);
+            throw err;
+          }
         },
         { pauseBehavior: 'ignore' }
       );
