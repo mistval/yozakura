@@ -36,6 +36,7 @@ export default function ScenarioView() {
   const getCharacterRelationships = useScenarioCharacterRelationshipStore(
     (state) => state.getCharacterRelationships
   );
+  const ephemeralLocation = useTurnMachineStore((s) => s.ephemeralLocation);
   const schedulesByGroupId = useCharacterGroupStore((state) => state.schedulesByGroupId);
   const temporalDisplayHtml = useTemporalContextStore((state) => state.displayHtml);
   const { showCharacterOverview } = useCharacterOverview();
@@ -131,22 +132,28 @@ export default function ScenarioView() {
       ) as Record<string, string[]>,
     [activeMap]
   );
-  const location = perspectiveLocationId ? locationById[perspectiveLocationId] : activeMap?.locations[0];
+  const location =
+    ephemeralLocation ||
+    (perspectiveLocationId ? locationById[perspectiveLocationId] : activeMap?.locations[0]);
 
   const closeActiveChatSession = () => {
     ChatCoordinator.deactivate();
   };
 
   const charactersHere = useMemo(() => {
+    if (ephemeralLocation) {
+      return activeParticipants;
+    }
+
     if (!scenario) return [];
     return Object.values(charactersById)
       .filter((character): character is Character => Boolean(character))
       .filter((character) => character.locationId === perspectiveLocationId)
       .sort((a, b) => (a.id === scenario.userCharacterId ? 1 : b.id === scenario.userCharacterId ? -1 : 0));
-  }, [scenario, perspectiveLocationId, charactersById]);
+  }, [scenario, perspectiveLocationId, charactersById, ephemeralLocation, activeParticipants]);
 
   useEffect(() => {
-    if (!scenario || !perspectiveCharacter || charactersHere.length === 0) {
+    if (!perspectiveCharacter || charactersHere.length === 0) {
       setVisibleRelationships({});
       return;
     }
@@ -171,13 +178,7 @@ export default function ScenarioView() {
     return () => {
       cancelled = true;
     };
-  }, [
-    scenario?.id,
-    scenario?.turnNumber,
-    perspectiveCharacter?.id,
-    charactersHere,
-    getCharacterRelationships,
-  ]);
+  }, [perspectiveCharacter?.id, charactersHere, getCharacterRelationships]);
 
   const adjacentLocations = useMemo(() => {
     const ids: string[] = perspectiveLocationId ? locationAdjacenyById[perspectiveLocationId] || [] : [];
@@ -287,8 +288,7 @@ export default function ScenarioView() {
             onWait={() => {
               submitUserWait();
             }}
-            disabled={!canSubmitUserTurn}
-            canMove={!showNpcPhaseControls}
+            canMove={canSubmitUserTurn}
             suggestion={moveSuggestion}
           />
 

@@ -31,7 +31,7 @@ const HIGHLIGHT_RING: Record<MoveHighlight, string> = {
   allowed: 'ring-2 ring-success-ring',
 };
 
-function MoveButtons({ suggestion, adjacentLocationIds, disabled, onMove, onWait }: LocationPanelProps) {
+function MoveButtons({ suggestion, adjacentLocationIds, onMove, onWait }: LocationPanelProps) {
   const { orderedLocations, forbiddenIds } = useMemo(() => {
     const suggestedLocations = suggestion?.suggestedLocations ?? [];
     const suggestedIds = new Set(suggestedLocations.map((entry) => entry.id));
@@ -57,7 +57,6 @@ function MoveButtons({ suggestion, adjacentLocationIds, disabled, onMove, onWait
               key={entry.id}
               type="button"
               onClick={() => onMove(entry.id)}
-              disabled={disabled}
               className={highlight ? HIGHLIGHT_RING[highlight] : undefined}
             >
               {locked ? `🔒 ${entry.name}` : entry.name}
@@ -68,7 +67,6 @@ function MoveButtons({ suggestion, adjacentLocationIds, disabled, onMove, onWait
           <button
             type="button"
             onClick={onWait}
-            disabled={disabled}
             className={suggestion?.highlightWait ? HIGHLIGHT_RING.allowed : undefined}
           >
             Wait
@@ -80,7 +78,7 @@ function MoveButtons({ suggestion, adjacentLocationIds, disabled, onMove, onWait
 }
 
 export default function LocationPanel(props: LocationPanelProps) {
-  const { location, canMove = true } = props;
+  const { location, canMove } = props;
 
   return (
     <div className="space-y-3">

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import _ from 'lodash';
 import { z } from 'zod';
@@ -182,9 +183,13 @@ export function useActiveChatParticipants(): Character[] {
   const participantIds = useTurnMachineStore((state) => state.participantIds);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
 
-  return participantIds
-    .map((id) => charactersById[id])
-    .filter((character): character is Character => Boolean(character));
+  return useMemo(
+    () =>
+      participantIds
+        .map((id) => charactersById[id])
+        .filter((character): character is Character => Boolean(character)),
+    [participantIds, charactersById]
+  );
 }
 
 export function getActiveChatMedium(
