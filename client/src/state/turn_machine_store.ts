@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import _ from 'lodash';
 import { z } from 'zod';
@@ -15,7 +16,7 @@ import {
   wardrobeSchema,
 } from '../engine/types.js';
 import { ConversationTranscript } from '../engine/chat/transcript.js';
-import { MemoryRAGHelper } from '../engine/memory_rag_helper.js';
+import { buildTranscriptRagDeps } from '../engine/chat/transcript_rag_deps.js';
 import type { ContextResolvers } from '../engine/prompt_templates/prompt_template_context_fields.js';
 import type { OmitFunctions } from '../util/types.js';
 import { getRequiredActiveScenario, getRequiredUserCharacterId, useScenarioStore } from './scenario_store.js';
@@ -77,7 +78,6 @@ type BaseTurnMachineStoreState = {
   preConversationWardrobeSnapshotByCharacterId: Record<string, Wardrobe[]>;
   ephemeralLocation: EphemeralLocation | undefined;
   initiatorId: string | undefined;
-  memoryRagHelper: MemoryRAGHelper | undefined;
   chatInstructions: string;
   chatInstructionsByCharacterId: Record<string, string>;
 
@@ -91,7 +91,6 @@ type BaseTurnMachineStoreState = {
   recordChat: (initiatorId: string, withIds: string[]) => void;
   hasChatted: (characterAId: string, characterBId: string) => boolean;
   beginChat: (args: StartChatSessionArgs) => void;
-  enterActiveChat: () => void;
   deactivateChat: () => void;
   reset: () => void;
   serialize: () => SerializedTurn | undefined;
@@ -124,7 +123,6 @@ type ActiveChatTurnMachineStoreState = OmitFunctions<BaseTurnMachineStoreState> 
   preConversationWardrobeSnapshotByCharacterId: Record<string, Wardrobe[]>;
   ephemeralLocation: WorldMapLocation | undefined;
   initiatorId: string | undefined;
-  memoryRagHelper: MemoryRAGHelper;
 };
 
 type InactiveChatFields = Omit<
@@ -142,7 +140,6 @@ const inactiveChatTurnMachineState: InactiveChatFields = {
   preConversationWardrobeSnapshotByCharacterId: {},
   ephemeralLocation: undefined,
   initiatorId: undefined,
-  memoryRagHelper: undefined,
   chatInstructions: '',
   chatInstructionsByCharacterId: {},
 };
@@ -186,9 +183,13 @@ export function useActiveChatParticipants(): Character[] {
   const participantIds = useTurnMachineStore((state) => state.participantIds);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
 
-  return participantIds
-    .map((id) => charactersById[id])
-    .filter((character): character is Character => Boolean(character));
+  return useMemo(
+    () =>
+      participantIds
+        .map((id) => charactersById[id])
+        .filter((character): character is Character => Boolean(character)),
+    [participantIds, charactersById]
+  );
 }
 
 export function getActiveChatMedium(
@@ -361,34 +362,18 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       initiatorId: args.initiatorId,
       gossipTargetCharacterId: args.gossipTargetCharacterId,
       chatState: 'awaiting_character_input',
-      transcript: ConversationTranscript.new(),
+      transcript: ConversationTranscript.new(buildTranscriptRagDeps()),
       preConversationWardrobeSnapshotByCharacterId: Object.fromEntries(
         participants.map((p) => [p.id, p.wardrobes])
       ),
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
-  enterActiveChat() {
-    const transcript = get().transcript;
-    assertNonNullish(transcript, 'Cannot enter chat without a transcript');
-
-    const memoryRagHelper = new MemoryRAGHelper();
-    for (const rawMessage of transcript.getRawMessages()) {
-      if (rawMessage.messageType === 'chat_message') {
-        memoryRagHelper.collectMentionedOffscreenCharacterIds(rawMessage.id, rawMessage.message);
-      }
-    }
-
-    set({ memoryRagHelper } satisfies Partial<BaseTurnMachineStoreState>);
-  },
-
   deactivateChat() {
-    get().memoryRagHelper?.teardown();
     set(inactiveChatTurnMachineState);
   },
 
   reset() {
-    get().memoryRagHelper?.teardown();
     set({
       ...inactiveChatTurnMachineState,
       turnMachineState: undefined,
@@ -429,7 +414,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       ...base,
       ...chatFields,
       chatState: 'awaiting_character_input',
-      transcript: ConversationTranscript.deserialize(serializedTranscript),
+      transcript: ConversationTranscript.deserialize(serializedTranscript, buildTranscriptRagDeps()),
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
@@ -485,8 +470,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
 
     const participant = getRequiredCharacterById(participantId);
     const nextParticipantIds = activeState.participantIds.concat(participantId);
-    const nextTranscript =
-      activeState.transcript.updateMessagesForParticipantJoining(participant).updatedTranscript;
+    const nextTranscript = activeState.transcript.addParticipant(participant).updatedTranscript;
 
     set({
       participantIds: nextParticipantIds,
@@ -510,16 +494,14 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       throw new Error('Cannot remove participant from a two-person chat');
     }
 
+    const participant = getRequiredCharacterById(participantId);
     const nextParticipantIds = activeState.participantIds.filter((id) => id !== participantId);
-    const { updatedTranscript, didPurge } =
-      activeState.transcript.updateMessagesForParticipantLeaving(participantId);
+    const { updatedTranscript } = activeState.transcript.removeParticipant(participant);
 
     set({
       participantIds: nextParticipantIds,
       transcript: updatedTranscript,
-      removedParticipantIds: didPurge
-        ? currentState.removedParticipantIds
-        : currentState.removedParticipantIds.concat(participantId),
+      removedParticipantIds: currentState.removedParticipantIds.concat(participantId),
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 

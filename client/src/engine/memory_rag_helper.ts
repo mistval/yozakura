@@ -1,95 +1,97 @@
-import { assertNonNullish } from '../errors/application_error';
-import { getActiveChatParticipants, useTurnMachineStore } from '../state/turn_machine_store';
-import { useScenarioCharacterStore } from '../state/scenario_character_store';
-import { useSettingsStore } from '../state/settings_store.js';
+import type { Character, RagMessage, SerializedRagHelper } from './types';
 import { buildCharacterNameIndex, matchStringToIndex } from './tokenization';
 
+export type RagMessageDelegate = (
+  focusedCharacterId: string,
+  mentionedCharacterId: string,
+  mentionedByCharacterId: string
+) => Promise<string>;
+
+export type RagReminder = {
+  mentionedCharacterId: string;
+  content: () => Promise<string>;
+};
+
+/**
+ * Tracks which characters are mentioned in each chat message and caches the rendered
+ * reminder ("memory RAG message") for each (perspective, mentioned, sender) 3-tuple.
+ */
 export class MemoryRAGHelper {
-  private mentionKeyToCharacterIds: Map<string, string[]> = new Map();
-  private readonly messageIdToMentionedCharacterIds: Map<string, string[]> = new Map();
-  private readonly unsubscribe: () => void;
+  private readonly messageMentions: Map<string, { senderId: string; mentionedCharacterIds: string[] }>;
+  private readonly ragCache: Map<string, RagMessage>;
 
-  constructor() {
-    this.unsubscribe = useTurnMachineStore.subscribe((newState, prevState) => {
-      if (prevState.participantIds !== newState.participantIds) {
-        this.rebuildMentionIndex();
-
-        const participantIdSet = new Set(newState.participantIds);
-        for (const [messageId, mentionedCharacterIds] of this.messageIdToMentionedCharacterIds.entries()) {
-          const nextMentionedCharacterIds = mentionedCharacterIds.filter((id) => !participantIdSet.has(id));
-          if (nextMentionedCharacterIds.length > 0) {
-            this.messageIdToMentionedCharacterIds.set(messageId, nextMentionedCharacterIds);
-          } else {
-            this.messageIdToMentionedCharacterIds.delete(messageId);
-          }
-        }
-      }
-    });
+  constructor(
+    private readonly getRagMessage: RagMessageDelegate,
+    private readonly getAllScenarioCharacters: () => Character[],
+    serializedState?: SerializedRagHelper
+  ) {
+    this.messageMentions = new Map(serializedState?.messageMentions ?? []);
+    this.ragCache = new Map(serializedState?.ragCache ?? []);
   }
 
-  public teardown() {
-    this.unsubscribe();
+  public addMessage(messageId: string, text: string, senderId: string): void {
+    this.recordMentions(messageId, text, senderId);
   }
 
-  public collectMentionedOffscreenCharacterIds(messageId: string, messageText: string) {
-    this.rebuildMentionIndex();
+  public editMessage(messageId: string, newText: string, senderId: string): void {
+    this.recordMentions(messageId, newText, senderId);
+  }
 
-    const previouslyMentioned = this.getMentionedOffscreenCharacterIdSet();
+  public deleteMessage(messageId: string): void {
+    this.messageMentions.delete(messageId);
+  }
 
-    const matches = matchStringToIndex(messageText, this.mentionKeyToCharacterIds);
-    const uniqueMatchesThisMessage: string[] = [];
-    const seenThisMessage = new Set<string>();
+  public getMentionedCharacterIds(messageId: string): string[] {
+    return this.messageMentions.get(messageId)?.mentionedCharacterIds ?? [];
+  }
 
-    while (matches.length > 0) {
-      const candidateId = matches.pop();
-      assertNonNullish(candidateId, 'Candidate ID from matches should not be null');
-      if (!seenThisMessage.has(candidateId)) {
-        uniqueMatchesThisMessage.push(candidateId);
-        seenThisMessage.add(candidateId);
-      }
+  public getRAGMessagesForMessage(messageId: string, fromPerspectiveId: string): RagReminder[] {
+    const entry = this.messageMentions.get(messageId);
+    if (!entry) {
+      return [];
     }
 
-    this.messageIdToMentionedCharacterIds.set(messageId, uniqueMatchesThisMessage);
-
-    const currentlyMentioned = this.getMentionedOffscreenCharacterIdSet();
-    const newMatchesThisMessage = uniqueMatchesThisMessage.filter(
-      (id) => currentlyMentioned.has(id) && !previouslyMentioned.has(id)
-    );
-
-    return newMatchesThisMessage;
+    return entry.mentionedCharacterIds.map((mentionedCharacterId) => ({
+      mentionedCharacterId,
+      content: () => this.getRagContent(fromPerspectiveId, mentionedCharacterId, entry.senderId),
+    }));
   }
 
-  public deleteMessage(messageId: string) {
-    this.messageIdToMentionedCharacterIds.delete(messageId);
+  public serialize(): SerializedRagHelper {
+    return {
+      messageMentions: [...this.messageMentions],
+      ragCache: [...this.ragCache],
+    };
   }
 
-  public getMentionedOffscreenCharacters() {
-    return useScenarioCharacterStore
-      .getState()
-      .getCharactersByIds(Array.from(this.getMentionedOffscreenCharacterIdSet()));
+  private recordMentions(messageId: string, text: string, senderId: string): void {
+    const mentionedCharacterIds = this.matchMentions(text);
+    this.messageMentions.set(messageId, { senderId, mentionedCharacterIds });
   }
 
-  private rebuildMentionIndex() {
-    const allCharacters = Object.values(useScenarioCharacterStore.getState().scenarioCharactersById);
-    const participants = getActiveChatParticipants({ includeRemoved: true });
-    const participantIdSet = new Set(participants.map((p) => p.id));
-    const nonParticipantCharacters = allCharacters.filter((character) => !participantIdSet.has(character.id));
-    this.mentionKeyToCharacterIds = buildCharacterNameIndex(nonParticipantCharacters);
+  private matchMentions(text: string): string[] {
+    const mentionIndex = buildCharacterNameIndex(this.getAllScenarioCharacters());
+    return matchStringToIndex(text, mentionIndex);
   }
 
-  private getMentionedOffscreenCharacterIdSet() {
-    const maxOffscreenMentions = Math.max(1, Math.round(useSettingsStore.getState().offscreenMentionLimit));
-    const mentionedIds = new Set<string>();
+  private async getRagContent(
+    perspectiveId: string,
+    mentionedCharacterId: string,
+    senderId: string
+  ): Promise<string> {
+    const key = this.cacheKey(perspectiveId, mentionedCharacterId, senderId);
 
-    for (const characterIds of this.messageIdToMentionedCharacterIds.values()) {
-      for (const characterId of characterIds) {
-        if (mentionedIds.size >= maxOffscreenMentions) {
-          return mentionedIds;
-        }
-        mentionedIds.add(characterId);
-      }
+    const cached = this.ragCache.get(key);
+    if (cached) {
+      return cached.content;
     }
 
-    return mentionedIds;
+    const content = await this.getRagMessage(perspectiveId, mentionedCharacterId, senderId);
+    this.ragCache.set(key, { mentionedCharacterId, content });
+    return content;
+  }
+
+  private cacheKey(perspectiveId: string, mentionedCharacterId: string, senderId: string): string {
+    return `${perspectiveId}:${mentionedCharacterId}:${senderId}`;
   }
 }

@@ -29,7 +29,7 @@ type ScenarioLoopStateStoreState = {
   submitChatDeleteMessage: (messageId: string) => boolean;
   submitChatRedoMessage: (messageId: string) => boolean;
   submitChatEditMessage: (messageId: string, newContent: string) => boolean;
-  submitChatGenerateImage: (prompt: string) => boolean;
+  submitChatGenerateImage: (prompt: string, afterMessageId: string | undefined) => boolean;
   submitUserWait: () => boolean;
   submitUserMove: (destinationLocationId: string, consumesTurn: boolean) => boolean;
   submitUserChatAction: (characterId: string) => boolean;
@@ -129,8 +129,8 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
     return resolveChatUserInputAction({ actionType: 'edit_message', messageId, newContent });
   },
 
-  submitChatGenerateImage(prompt: string) {
-    return resolveChatUserInputAction({ actionType: 'generate_image', prompt });
+  submitChatGenerateImage(prompt: string, afterMessageId: string | undefined) {
+    return resolveChatUserInputAction({ actionType: 'generate_image', prompt, afterMessageId });
   },
 
   submitUserWait() {

@@ -147,9 +147,11 @@ export default function ConversationSearchList({
                   >
                     <span>
                       {entry.label || 'Conversation'}
-                      {userId && entry.transcript.hasMemoryRaggedCharacter(userId) && (
-                        <span className="text-xs text-muted ml-2">(might reference user)</span>
-                      )}
+                      {userId &&
+                        !entry.transcript.participantInfo.some((i) => i.id === userId) &&
+                        entry.transcript.hasMemoryRaggedCharacter(userId) && (
+                          <span className="text-xs text-muted ml-2">(might reference user)</span>
+                        )}
                     </span>
                     <span className="text-xs text-muted">{new Date(entry.createdAt).toLocaleString()}</span>
                   </button>

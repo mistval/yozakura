@@ -21,7 +21,6 @@ import {
   type ScenarioCharacterGroup,
   type ScenarioCharacterGroupSchedule,
 } from '../engine/types.js';
-import { assert } from '../errors/application_error';
 import { newId } from '../util/id';
 import { runWithInteractiveRetry } from '../engine/interative_retry';
 import { ReadWriteDebouncer } from '../util/rw_debouncer';
@@ -634,8 +633,6 @@ export async function loadConversationById(conversationId: string) {
 }
 
 export async function storeConversation(scenarioId: string, entry: StoredConversation) {
-  assert(entry.participants.length > 1, 'Conversation must have at least two participants');
-
   const parsedEntry = storedConversationSchema.parse(entry);
   await dbRun(UPSERT_CONVERSATION_SQL, [
     [parsedEntry.id, scenarioId, encodeStoredData(parsedEntry, storedConversationSchema)],
@@ -644,7 +641,11 @@ export async function storeConversation(scenarioId: string, entry: StoredConvers
   await dbRun(UPSERT_CONVERSATION_PARTICIPANT_SQL, [
     [
       JSON.stringify(
-        parsedEntry.participants.map((participant) => [newId(), participant.id, parsedEntry.id])
+        parsedEntry.serializedTranscript.participants.map((participant) => [
+          newId(),
+          participant.id,
+          parsedEntry.id,
+        ])
       ),
     ],
   ]);
@@ -883,21 +884,17 @@ export async function doAsDataWrite(
     debouncerKey: string;
   }
 ) {
-  if (opts?.debouncerKey) {
-    await runWithInteractiveRetry({
-      operationType: `database.debounce.write.${objectType}`,
-      hint: 'The backend server might not be running. Changes are failing to save. Data may be lost.',
-      run: async () => {
-        await databaseDebouncer.write(opts.debouncerKey, func);
-      },
-    });
-  } else {
-    await runWithInteractiveRetry({
-      operationType: `database.write.${objectType}`,
-      hint: 'The backend server might not be running. Changes are failing to save. Data may be lost.',
-      run: func,
-    });
-  }
+  await runWithInteractiveRetry({
+    operationType: `database.write.${objectType}`,
+    hint: 'The backend server might not be running. Changes are failing to save. Data may be lost.',
+    run: () => {
+      if (opts?.debouncerKey) {
+        return databaseDebouncer.write(opts.debouncerKey, func);
+      } else {
+        return func();
+      }
+    },
+  });
 }
 
 export async function doAsDataRead<TReadType>(
@@ -907,19 +904,15 @@ export async function doAsDataRead<TReadType>(
     debouncerKey: string;
   }
 ) {
-  if (opts?.debouncerKey) {
-    return runWithInteractiveRetry({
-      operationType: `database.debounce.read.${objectType}`,
-      hint: 'The backend server might not be running.',
-      run: async () => {
-        return databaseDebouncer.read(opts.debouncerKey, func) as TReadType;
-      },
-    });
-  } else {
-    return runWithInteractiveRetry({
-      operationType: `database.read.${objectType}`,
-      hint: 'The backend server might not be running.',
-      run: func,
-    });
-  }
+  return runWithInteractiveRetry({
+    operationType: `database.read.${objectType}`,
+    hint: 'The backend server might not be running.',
+    run: () => {
+      if (opts?.debouncerKey) {
+        return databaseDebouncer.read(opts.debouncerKey, func) as Promise<TReadType>;
+      } else {
+        return func();
+      }
+    },
+  });
 }

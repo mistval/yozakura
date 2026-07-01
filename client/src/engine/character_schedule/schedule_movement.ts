@@ -94,26 +94,25 @@ export function resolveForbiddenLocationIds(input: {
   mapZones: MapZone[];
 }): Set<string> {
   const forbidden = new Set<string>();
-  const groupsForPrivateZone = new Map<string, string[]>();
+  const zoneDict = new Map(input.mapZones.map((zone) => [zone.id, zone]));
+  const groupsAllowedInPrivateLocation = new Map<string, string[]>();
+
   for (const group of input.characterGroups) {
     for (const zoneId of group.privateZones) {
-      groupsForPrivateZone.set(zoneId, (groupsForPrivateZone.get(zoneId) ?? []).concat(group.id));
+      const zone = zoneDict.get(zoneId);
+      for (const location of zone?.locationIds ?? []) {
+        groupsAllowedInPrivateLocation.set(
+          location,
+          (groupsAllowedInPrivateLocation.get(location) ?? []).concat(group.id)
+        );
+      }
     }
   }
 
-  for (const zone of input.mapZones) {
-    const allowedGroups = groupsForPrivateZone.get(zone.id);
-    if (!allowedGroups) {
-      continue;
-    }
-
+  for (const [location, allowedGroups] of groupsAllowedInPrivateLocation.entries()) {
     const isMember = allowedGroups.some((groupId) => input.character.groupIds.includes(groupId));
-    if (isMember) {
-      continue;
-    }
-
-    for (const locationId of zone.locationIds) {
-      forbidden.add(locationId);
+    if (!isMember) {
+      forbidden.add(location);
     }
   }
 

@@ -389,14 +389,7 @@ const joinLeaveSystemMessageSchema = baseSystemMessageSchema.extend({
 
 export type JoinLeaveSystemMessage = z.infer<typeof joinLeaveSystemMessageSchema>;
 
-const memoryCharacterRagMessageSchema = baseSystemMessageSchema.extend({
-  systemMessageType: z.literal('memory_character_rag'),
-  mentionedCharacterId: z.string(),
-  message: z.string(),
-  isPrivateToCharacterId: z.string(),
-});
-
-export type MemoryCharacterRagMessage = z.infer<typeof memoryCharacterRagMessageSchema>;
+export const TRANSCRIPT_SYSTEM = '__transcript_system__';
 
 const characterMessageSchema = baseMessageSchema.extend({
   messageType: z.literal('chat_message'),
@@ -410,7 +403,6 @@ export const chatMessageSchema = z.union([
   characterMessageSchema,
   joinLeaveSystemMessageSchema,
   imageMessageSchema,
-  memoryCharacterRagMessageSchema,
 ]);
 
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
@@ -424,16 +416,32 @@ const transcriptParticipantSchema = characterSchema.pick({
 
 export type TranscriptParticipant = z.infer<typeof transcriptParticipantSchema>;
 
+export const ragMessageSchema = z.object({
+  mentionedCharacterId: z.string(),
+  content: z.string(),
+});
+
+export type RagMessage = z.infer<typeof ragMessageSchema>;
+
+export const serializedRagHelperSchema = z.object({
+  messageMentions: z.array(
+    z.tuple([z.string(), z.object({ senderId: z.string(), mentionedCharacterIds: z.array(z.string()) })])
+  ),
+  ragCache: z.array(z.tuple([z.string(), ragMessageSchema])),
+});
+
+export type SerializedRagHelper = z.infer<typeof serializedRagHelperSchema>;
+
 export const serializedConversationTranscriptSchema = basePersistedObjectSchema.extend({
   rawMessages: z.array(chatMessageSchema),
   participants: z.array(transcriptParticipantSchema),
+  ragHelperState: serializedRagHelperSchema,
 });
 
 export type SerializedConversationTranscript = z.infer<typeof serializedConversationTranscriptSchema>;
 
 export const storedConversationSchema = basePersistedObjectSchema.extend({
   turnNumber: z.number(),
-  participants: z.array(transcriptParticipantSchema),
   label: z.string(),
   serializedTranscript: serializedConversationTranscriptSchema,
   characterUpdates: z.array(conversationCharacterUpdateSchema),

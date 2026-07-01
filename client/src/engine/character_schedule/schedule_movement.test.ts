@@ -83,6 +83,24 @@ function makeSchedule(
 }
 
 describe('resolveScheduledMove', () => {
+  it('(bugfix) when two private zones overlap, allow members of either group to enter the overlapping locations', () => {
+    const privateZone1 = makeZone('z1', ['A', 'B']);
+    const privateZone2 = makeZone('z2', ['B', 'C']);
+    const group1 = makeGroup('g1', ['z1']);
+    const group2 = makeGroup('g2', ['z2']);
+    const char = { id: 'npc', locationId: 'B', groupIds: ['g1'] };
+    const result = resolveUserMovementSuggestion({
+      character: char,
+      turnNumber: 0,
+      locations: LINE_LOCATIONS,
+      mapZones: [privateZone1, privateZone2],
+      groupSchedulesByGroupId: {},
+      characterGroups: [group1, group2],
+    });
+
+    expect(result?.forbiddenLocationIds).toEqual(['C']);
+  });
+
   it('returns wait with no groups and no zones', () => {
     const result = resolveScheduledMove(
       {

@@ -1,12 +1,16 @@
 import * as Database from '../../backend_bridge/database';
 import { assert } from '../../errors/application_error';
-import { getActiveChatMedium, getActiveChatParticipants } from '../../state/turn_machine_store';
+import {
+  getActiveChatMedium,
+  getActiveChatParticipants,
+  useTurnMachineStore,
+} from '../../state/turn_machine_store';
 import { getRequiredUserCharacterId, useScenarioStore } from '../../state/scenario_store';
+import { useScenarioCharacterStore } from '../../state/scenario_character_store';
 import { useSettingsStore } from '../../state/settings_store';
 import { newId } from '../../util/id';
 import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
 import { EndOfChatUpdateAccumulator } from './end_of_chat_update_accumulator';
-import type { MemoryRAGHelper } from '../memory_rag_helper';
 import { conversationRollingSummaryChainGroup } from '../prompt_templates/memories/conversation_rolling_summary';
 import { nextConversationGoalUpdatesChainGroup } from '../prompt_templates/memories/next_conversation_goal_updates';
 import { offscreenMemoryExtractionChainGroup } from '../prompt_templates/memories/offscreen_memory_extraction';
@@ -64,7 +68,6 @@ const gatedRenderFunctions = {
 export async function generateCharacterEndOfChatUpdates(
   fromCharacterPerspective: Character,
   accumulator: EndOfChatUpdateAccumulator,
-  memoryRagHelper: MemoryRAGHelper,
   onProgress: (statusInfo: string) => void
 ) {
   const { activeScenario } = useScenarioStore.getState();
@@ -76,14 +79,19 @@ export async function generateCharacterEndOfChatUpdates(
     throw new Error('Cannot generate end of chat updates for the user character');
   }
 
-  const participants = getActiveChatParticipants({ includeRemoved: true });
-  const otherParticipants = participants.filter(
-    (participant) => participant.id !== fromCharacterPerspective.id
-  );
+  const transcript = useTurnMachineStore.getState().transcript;
+  assert(transcript, 'Cannot generate end of chat updates without a transcript');
 
-  // Decide which characters to update fromCharacterPerspective's memories towards
-  const offscreenMentionedCharacters = memoryRagHelper.getMentionedOffscreenCharacters();
-  const memoryUpdateTargets = otherParticipants.concat(offscreenMentionedCharacters);
+  const participants = getActiveChatParticipants({ includeRemoved: true });
+
+  const coPresentSpeakerIds = transcript.getCoPresentSpeakerIds(fromCharacterPerspective.id);
+  const offscreenOnlyIds = transcript
+    .getMentionedOffscreenCharacterIds(fromCharacterPerspective.id)
+    .filter((id) => !coPresentSpeakerIds.includes(id));
+
+  const memoryUpdateTargets = useScenarioCharacterStore
+    .getState()
+    .getCharactersByIds(coPresentSpeakerIds.concat(offscreenOnlyIds));
 
   onProgress(`Summarizing conversation for ${fromCharacterPerspective.firstName}...`);
 
@@ -127,9 +135,7 @@ export async function generateCharacterEndOfChatUpdates(
       otherCharacter.id
     );
 
-    const isOffscreenMention = offscreenMentionedCharacters.some(
-      (mentioned) => mentioned.id === otherCharacter.id
-    );
+    const isOffscreenMention = offscreenOnlyIds.includes(otherCharacter.id);
 
     let newLearnedInformation: OffscreenLearnedInformation | undefined;
 

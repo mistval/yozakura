@@ -15,7 +15,7 @@ const IDENTITY_RESPONSE_PRE_PARSER: ResponsePreParser = (response) => response;
 type ChatCompletionOptions = {
   promptContext: PromptExecutionContext;
   promptTemplateGroup: string;
-  onTokens?: (fullText: string) => void | undefined;
+  onTokens?: (fullText: string) => Promise<void | undefined>;
   completionRequestId: string;
   abortSignal?: AbortSignal | undefined;
   [key: string]: unknown;
