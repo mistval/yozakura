@@ -185,7 +185,7 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
         useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
         rethrowSignalException(err);
 
-        void showNonRetriableErrorCardIfNeeded({
+        await showNonRetriableErrorCardIfNeeded({
           error: err,
           operationType: 'chat_loop_inner',
           hint: 'Control will be handed to the user',

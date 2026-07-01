@@ -472,7 +472,7 @@ export class ChatCoordinator {
         'Reached end of selectNextSpeaker function unexpectedly. Unknown speaker selection strategy?'
       );
     } catch (err) {
-      void showNonRetriableErrorCardIfNeeded({
+      await showNonRetriableErrorCardIfNeeded({
         error: err,
         operationType: 'select_next_speaker',
         hint: 'Control will be handed to first participant',
