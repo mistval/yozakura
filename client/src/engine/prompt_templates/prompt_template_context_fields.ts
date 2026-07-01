@@ -313,14 +313,14 @@ export type ModerationNextSpeakerExecutionContext = z.infer<
   typeof moderationNextSpeakerExecutionContextSchema
 >;
 
-export const conversationEndJudgeExecutionContextSchema = conversationExecutionContextSchema.and(
+export const conversationEndJudgeExecutionContextSchema = focusedConversationExecutionContextSchema.and(
   contextSchemaFields
     .pick({
       conversationEndJudge: true,
     })
     .meta({
       description:
-        'This ConversationEndJudgeExecutionContext is available to the Conversation End Judgement prompt, and is identical to ConversationExecutionContext except for adding the conversationEndJudge field.',
+        'This ConversationEndJudgeExecutionContext is available to the Conversation End Judgement prompt. The focusedCharacter is the most recent speaker in the conversation.',
     })
 );
 

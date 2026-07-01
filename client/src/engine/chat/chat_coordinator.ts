@@ -54,7 +54,7 @@ export class ChatCoordinator {
     };
   }
 
-  public static async shouldEndNpcChat(): Promise<boolean> {
+  public static async shouldEndNpcChat(fromCharacterPerspectiveId: string): Promise<boolean> {
     const chatState = this.turnMachineStore();
     const settings = useSettingsStore.getState();
 
@@ -87,7 +87,7 @@ export class ChatCoordinator {
       maxLength,
       judgementInterval: settings.intelligentChatEndJudgementInterval,
       runJudge: () =>
-        this.runConversationEndJudge({
+        this.runConversationEndJudge(fromCharacterPerspectiveId, {
           targetLength,
           maxLength,
           currentLength,
@@ -98,17 +98,20 @@ export class ChatCoordinator {
     return decision === 'stop';
   }
 
-  private static runConversationEndJudge(args: {
-    targetLength: number;
-    maxLength: number;
-    currentLength: number;
-    historyLength: number;
-  }): Promise<ChatEndDecision> {
+  private static runConversationEndJudge(
+    fromPerspectiveId: string,
+    lengthParameters: {
+      targetLength: number;
+      maxLength: number;
+      currentLength: number;
+      historyLength: number;
+    }
+  ): Promise<ChatEndDecision> {
     return this.turnMachineStore().doWithState('judging_conversation_end', () => {
       return withPhaseTransitionGate(
         async (abortSignal) => {
           return conversationEndJudgeTemplatesGroup.renderAndExecute(
-            await buildConversationEndJudgeContext(args),
+            await buildConversationEndJudgeContext(fromPerspectiveId, lengthParameters),
             { abortSignal }
           );
         },

@@ -209,11 +209,11 @@ export class NPCInputInterface extends CharacterInputInterface {
   }
 
   public async getNextChatInput(): Promise<ChatInputResult> {
-    if (await ChatCoordinator.shouldEndNpcChat()) {
+    await ChatCoordinator.speakAsNpc(this.characterId);
+
+    if (await ChatCoordinator.shouldEndNpcChat(this.characterId)) {
       return { input: { actionType: 'request_end_chat' } };
     }
-
-    await ChatCoordinator.speakAsNpc(this.characterId);
 
     return { input: { actionType: 'spoke' } };
   }
