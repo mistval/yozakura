@@ -544,7 +544,11 @@ export default function ChatPane() {
           className="flex-1"
         />
         {isGenerating ? (
-          <button type="button" onClick={() => setUserRequestedGenerationAbort(true)} aria-label="Stop generation">
+          <button
+            type="button"
+            onClick={() => setUserRequestedGenerationAbort(true)}
+            aria-label="Stop generation"
+          >
             ■
           </button>
         ) : (
