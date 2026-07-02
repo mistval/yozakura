@@ -1,38 +1,56 @@
-import { assertNonNullish } from '../../errors/application_error.js';
-import type { WorldMap, WorldMapLocation } from '../types.js';
-import { breadthFirstSearch } from './graph_search.js';
+import { assert } from '../../errors/application_error.js';
+import type { WorldMap } from '../types.js';
+
+export function setMapAdjacency(
+  map: WorldMap,
+  locationId: string,
+  targetId: string,
+  connected: boolean
+): WorldMap {
+  assert(locationId !== targetId, 'Trying to set adjacency to self');
+
+  const ids = new Set(getLocationIds(map));
+  assert(ids.has(locationId) && ids.has(targetId), 'Could not find location and target');
+
+  return {
+    ...map,
+    locations: map.locations.map((location) => {
+      const otherId =
+        location.id === locationId ? targetId : location.id === targetId ? locationId : undefined;
+
+      if (!otherId) {
+        return location;
+      }
+
+      const withoutOther = location.adjacency.filter((id) => id !== otherId);
+      return {
+        ...location,
+        adjacency: connected ? withoutOther.concat(otherId) : withoutOther,
+      };
+    }),
+  };
+}
+
+export function removeMapLocation(map: WorldMap, locationId: string): WorldMap {
+  assert(map.locations.length > 1, 'Cannot remove the last location from a map');
+
+  return {
+    ...map,
+    locations: map.locations
+      .filter((location) => location.id !== locationId)
+      .map((location) => ({
+        ...location,
+        adjacency: location.adjacency.filter((id) => id !== locationId),
+      })),
+    zones: map.zones.map((zone) => ({
+      ...zone,
+      locationIds: zone.locationIds.filter((id) => id !== locationId),
+    })),
+  };
+}
 
 export function getLocationIds(map: WorldMap) {
   return map.locations.map((location) => location.id);
-}
-
-export function getConnectivityIslands(locations: WorldMapLocation[]) {
-  const locationsById = new Map(locations.map((location) => [location.id, location] as const));
-  const unvisited = new Set(locations.map((location) => location.id));
-  const islands: WorldMapLocation[][] = [];
-
-  while (unvisited.size > 0) {
-    const startId = unvisited.values().next().value as string | undefined;
-    assertNonNullish(startId);
-
-    const { order } = breadthFirstSearch(
-      startId,
-      (locationId) => locationsById.get(locationId)?.adjacency ?? []
-    );
-
-    const islandLocations: WorldMapLocation[] = [];
-    for (const locationId of order) {
-      unvisited.delete(locationId);
-      const location = locationsById.get(locationId);
-      if (location) {
-        islandLocations.push(location);
-      }
-    }
-
-    islands.push(islandLocations);
-  }
-
-  return islands;
 }
 
 export function validateWorldMap(worldMap: Pick<WorldMap, 'name' | 'description' | 'locations'>) {

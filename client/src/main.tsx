@@ -41,7 +41,6 @@ function AppRoutes() {
         <Route path="/scenario/new" element={<ScenarioSetup />} />
         <Route path="/scenario/:scenarioId/*" element={<ScenarioView />} />
         <Route path="/maps" element={<MapList />} />
-        <Route path="/maps/new/*" element={<MapEditor />} />
         <Route path="/maps/:id/*" element={<MapEditor />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

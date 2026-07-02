@@ -16,6 +16,7 @@ import {
   useCurrentTurnCharacterId,
 } from '../state/turn_machine_store';
 import { useScenarioStore } from '../state/scenario_store.js';
+import { useMapStore } from '../state/map_store.js';
 import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from '../state/scenario_character_relationship_store.js';
@@ -32,6 +33,7 @@ export default function ScenarioView() {
   const scenario = useScenarioStore((state) => state.activeScenario);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const noMapsExist = useMapStore((s) => s.mapsAreLoaded && s.maps.length === 0);
   const loadScenarioState = useScenarioStore((state) => state.refreshScenario);
   const getCharacterRelationships = useScenarioCharacterRelationshipStore(
     (state) => state.getCharacterRelationships
@@ -229,6 +231,26 @@ export default function ScenarioView() {
     setAutoModeEnabled(true);
     submitUserWait();
   };
+
+  if (noMapsExist) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 space-y-3">
+        <h1 className="text-2xl font-semibold">You need to create a map</h1>
+        <div className="text-sm text-secondary">
+          There are no maps, and scenarios cannot run without one. Create a map, then come back to this
+          scenario.
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => navigate('/maps')}>
+            Open Map Editor
+          </button>
+          <button type="button" onClick={() => navigate('/')}>
+            Main Menu
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!scenario || !user || !perspectiveCharacter || !activeMap) {
     return (
