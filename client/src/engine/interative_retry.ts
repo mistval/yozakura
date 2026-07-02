@@ -230,6 +230,10 @@ export async function runWithInteractiveRetry<T>(options: RunWithInteractiveRetr
       } catch (error) {
         rethrowSignalException(error);
 
+        if ((error as any)?.name === 'AbortError') {
+          throw error;
+        }
+
         if (error instanceof InteractiveRetryError) {
           throw error;
         }
