@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { StringParam, useQueryParam } from 'use-query-params';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
 import DeleteButton from '../components/ui/DeleteButton.js';
+import Tabs from '../components/ui/Tabs.js';
 import type { WorldMap } from '../engine/types.js';
 import { validateWorldMap } from '../engine/map/world_map.js';
 import { useMapStore } from '../state/map_store.js';
@@ -15,6 +17,9 @@ export default function MapEditor() {
 
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
   const map = useMapStore((s) => (id ? s.mapsById[id] : undefined));
+
+  const [tabParam, setTabParam] = useQueryParam('tab', StringParam);
+  const tab = tabParam === 'zones' ? 'zones' : 'locations';
 
   const validationErrors = useMemo(() => (map ? validateWorldMap(map) : []), [map]);
 
@@ -91,18 +96,28 @@ export default function MapEditor() {
         />
       </div>
 
-      <MapGraphEditor map={map} updateMap={updateThisMap} className="h-[80vh]" />
-
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Map Zones</h2>
-        <p>Group map locations into zones for use in the schedule system</p>
-        <MapZoneEditor
-          map={map}
-          updateMap={updateThisMap}
-          isGlobalContext={true}
-          mapClasses={['min-h-200']}
-        />
-      </div>
+      <Tabs
+        tabs={[
+          { id: 'locations', label: 'Locations' },
+          { id: 'zones', label: 'Map Zones' },
+        ]}
+        activeId={tab}
+        onChange={(id) => setTabParam(id === 'zones' ? 'zones' : undefined)}
+      >
+        {tab === 'locations' ? (
+          <MapGraphEditor map={map} updateMap={updateThisMap} className="h-[80vh]" />
+        ) : (
+          <div className="space-y-3">
+            <p>Group map locations into zones for use in the schedule system</p>
+            <MapZoneEditor
+              map={map}
+              updateMap={updateThisMap}
+              isGlobalContext={true}
+              mapClasses={['min-h-200']}
+            />
+          </div>
+        )}
+      </Tabs>
 
       {validationErrors.length > 0 && (
         <div className="rounded-sm border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning-text space-y-1">
