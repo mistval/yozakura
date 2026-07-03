@@ -14,7 +14,7 @@ Rules:
 - The information should be something that can help color <%= it.focusedCharacter.firstName %>'s future interactions with <%= it.targetCharacter.firstName %>, or their future conversations about <%= it.targetCharacter.firstName %>.
 - Prioritize information that provides narrative momentum, such as relationship details between <%= it.targetCharacter.firstName %> and other characters, actionable intentions between characters, plans, insights, or facts. Anything that would make for good "gossip" is valuable.
 - If the information is hearsay or inferred rather than explicit, include appropriate hedging and qualifications in the output.
-- Consider <%= it.focusedCharacter.firstName %>'s unique personality and what kind of information they might want to remember.
+- Consider <%= it.focusedCharacter.firstName %>'s unique personality and what kind of information they might want to take into their next conversation with or about <%= it.targetCharacter.firstName %>.
 - The information must come from the conversation transcript.
 
 Output format:

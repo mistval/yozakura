@@ -56,7 +56,7 @@ export const useMapStore = create<{
       updatedAt: new Date().toISOString(),
     } satisfies WorldMap;
 
-    get().setMaps(concatUniqueById(get().maps, map));
+    get().setMaps(concatUniqueById(get().maps, withUpdatedFields));
 
     void Database.doAsDataWrite(
       async () => {

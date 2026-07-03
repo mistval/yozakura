@@ -52,6 +52,11 @@ interface ChatUserInputEditMessage {
   newContent: string;
 }
 
+interface ChatUserInputRequestImage {
+  actionType: 'request_image';
+  afterMessageId: string | undefined;
+}
+
 interface ChatUserInputGenerateImage {
   actionType: 'generate_image';
   prompt: string;
@@ -66,6 +71,7 @@ export type ChatUserInputAction =
   | ChatUserInputDeleteMessage
   | ChatUserInputRedoMessage
   | ChatUserInputEditMessage
+  | ChatUserInputRequestImage
   | ChatUserInputGenerateImage;
 
 // A unified move that any character (user or NPC) can take on their turn.

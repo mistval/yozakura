@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMapStore } from '../state/map_store.js';
 import { useMemo } from 'react';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
+import { createEmptyWorldMap } from '../engine/map/map_factories.js';
 
 export default function MapList() {
   const navigate = useNavigate();
@@ -21,7 +22,14 @@ export default function MapList() {
           <button type="button" onClick={() => navigate('/')}>
             Back
           </button>
-          <button type="button" onClick={() => navigate('/maps/new')}>
+          <button
+            type="button"
+            onClick={() => {
+              const newMap = createEmptyWorldMap();
+              useMapStore.getState().saveMap(newMap);
+              navigate(`/maps/${newMap.id}`);
+            }}
+          >
             Create New Map
           </button>
           <button type="button" onClick={() => openSettings()} aria-label="Settings" title="Settings">

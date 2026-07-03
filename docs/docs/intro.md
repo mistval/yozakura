@@ -60,7 +60,7 @@ Maps in Yozakura are just a list of locations, their names, descriptions, and wh
 
 ## Control Character Schedules
 
-Characters can be grouped together and given [schedules](schedules.md), controlling how/when/why they move around the map. The enables concepts like characters going to work, retiring to their homes at night, going dungeon crawling together on the weekend, and more. Characters who are grouped together will naturally interact more due to shared proximity, forming closer (but not always necessarily positive) relationships.
+Characters can be grouped together and given [schedules](schedules.md), controlling how/when/why they move around the map. This enables concepts like characters going to work, retiring to their homes at night, going dungeon crawling together on the weekend, and more. Characters who are grouped together will naturally interact more due to shared proximity, forming closer (but not always necessarily positive) relationships.
 
 ![The schedule timeline with a few segments, the now marker, and a segment's detail panel open](/img/schedule_editor_yozakura.png)
 

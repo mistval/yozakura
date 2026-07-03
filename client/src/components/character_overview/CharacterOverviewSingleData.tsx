@@ -261,6 +261,47 @@ export default function CharacterOverviewSingleData({
           >
             {selectedSingleCharacter.globalMemories || '(none)'}
           </SpoilerSection>
+          <SpoilerSection title="Past conversation summaries">
+            {selectedSingleCharacter.rollingConversationSummaries.length === 0 ? (
+              <div className="text-sm text-muted">No past conversation summaries yet.</div>
+            ) : (
+              <div className="space-y-2">
+                {selectedSingleCharacter.rollingConversationSummaries.map((summary, index) => (
+                  <SpoilerSection
+                    key={`${summary.conversationId}-${index}`}
+                    title={`Summary ${index + 1} (Turn ${summary.turnNumber})`}
+                    initialValue={summary.summary || ''}
+                    onSave={(newValue: string) => {
+                      const updatedSummaries = selectedSingleCharacter.rollingConversationSummaries.map(
+                        (entry, entryIndex) =>
+                          entryIndex === index
+                            ? {
+                                ...entry,
+                                summary: newValue,
+                              }
+                            : entry
+                      );
+
+                      return saveScenarioCharacterFields(selectedSingleCharacter.id, {
+                        rollingConversationSummaries: updatedSummaries,
+                      });
+                    }}
+                    onDelete={() => {
+                      const updatedSummaries = selectedSingleCharacter.rollingConversationSummaries.filter(
+                        (_, entryIndex) => entryIndex !== index
+                      );
+
+                      return saveScenarioCharacterFields(selectedSingleCharacter.id, {
+                        rollingConversationSummaries: updatedSummaries,
+                      });
+                    }}
+                  >
+                    {summary.summary || '(none)'}
+                  </SpoilerSection>
+                ))}
+              </div>
+            )}
+          </SpoilerSection>
         </div>
       )}
       <ConversationSearchList

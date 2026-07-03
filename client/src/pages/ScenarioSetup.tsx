@@ -56,8 +56,7 @@ export default function ScenarioSetup() {
   }, [globalCharactersAreLoaded]);
 
   useEffect(() => {
-    if (!mapsAreLoaded || selectedMapId) return;
-    assertNonNullish(maps[0], 'Expected at least one map');
+    if (!mapsAreLoaded || selectedMapId || !maps[0]) return;
     setSelectedMapId(maps[0].id);
   }, [mapsAreLoaded, maps, selectedMapId]);
 
@@ -148,7 +147,24 @@ export default function ScenarioSetup() {
       </div>
       {error && <div className="text-danger-text text-sm">{error}</div>}
 
-      {sortedCharacters.length > 0 && (
+      {mapsAreLoaded && maps.length === 0 && (
+        <div className="text-sm text-secondary">
+          You don't have any maps yet.{' '}
+          <a
+            href="/maps"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/maps');
+            }}
+            className="underline text-primary hover:text-primary-strong"
+          >
+            Create a map
+          </a>{' '}
+          to start a scenario.
+        </div>
+      )}
+
+      {sortedCharacters.length > 0 && maps.length > 0 && (
         <div className="space-y-1">
           <label className="block text-sm font-medium" htmlFor="map-select">
             Map

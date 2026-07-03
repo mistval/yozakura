@@ -315,12 +315,12 @@ function updateCharacterLocationsForMapChange(map: WorldMap) {
   const locationIds = map.locations.map((location) => location.id);
   const locationIdsSet = new Set(locationIds);
 
-  const movedCharacters = scenarioCharacterStore.scenarioCharacters.map((c) => {
-    return {
+  const movedCharacters = scenarioCharacterStore.scenarioCharacters
+    .filter((c) => !locationIdsSet.has(c.locationId))
+    .map((c) => ({
       ...c,
-      locationId: locationIdsSet.has(c.locationId) ? c.locationId : getRequiredRandomChoice(locationIds),
-    };
-  });
+      locationId: getRequiredRandomChoice(locationIds),
+    }));
 
   scenarioCharacterStore.saveScenarioCharacters(movedCharacters);
 }

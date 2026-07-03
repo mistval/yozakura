@@ -42,7 +42,6 @@ async function dispatchImageGeneration(
   return runWithInteractiveRetry({
     operationType: 'api.generate_image',
     hint: IMAGE_GENERATION_RETRY_HINT,
-    signal: options.abortSignal,
     run: async () => {
       const section = getSettingsScriptSection(IMAGE_GENERATION_SECTION_ID);
       const source = getBuiltinImageScript(section.selectedScriptId)

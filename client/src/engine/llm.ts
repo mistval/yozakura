@@ -187,7 +187,6 @@ export async function chatCompletion(
   return runWithInteractiveRetry<string>({
     operationType: 'api.llm_completion',
     maxRetries: Number.POSITIVE_INFINITY,
-    signal: options.abortSignal,
     run: async () => {
       const {
         promptTemplateGroup,

@@ -7,6 +7,7 @@ import {
 } from '../state/interactive_retry_store.js';
 import { InteractiveRetryError } from '../errors/interactive_retry_error.js';
 import { getErrorMessage } from '../errors/error_util.js';
+import { rethrowSignalException } from './scenario_loop/flow_control.js';
 
 type RunWithInteractiveRetryOptions<T> = {
   operationType: string;
@@ -15,7 +16,6 @@ type RunWithInteractiveRetryOptions<T> = {
   maxRetries?: number;
   shouldRetry?: (error: unknown, attempt: number) => boolean;
   hint?: string | ((error: unknown, attempt: number) => string | undefined);
-  signal?: AbortSignal | undefined;
 };
 
 type Deferred<T> = {
@@ -94,6 +94,10 @@ export async function showNonRetriableErrorCardIfNeeded(
 ): Promise<boolean> {
   if (options.error instanceof InteractiveRetryError) {
     return false;
+  }
+
+  if (options.error) {
+    rethrowSignalException(options.error);
   }
 
   const operationId = nextInteractiveRetryOperationId;
@@ -224,11 +228,13 @@ export async function runWithInteractiveRetry<T>(options: RunWithInteractiveRetr
         const result = await options.run(attempt);
         return result;
       } catch (error) {
-        if (error instanceof InteractiveRetryError) {
+        rethrowSignalException(error);
+
+        if ((error as any)?.name === 'AbortError') {
           throw error;
         }
 
-        if (options.signal?.aborted) {
+        if (error instanceof InteractiveRetryError) {
           throw error;
         }
 

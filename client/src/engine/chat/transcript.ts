@@ -130,7 +130,7 @@ class ChatMessageWrapper {
     );
   }
 
-  isJoinMessageForCharacter(characterId: string) {
+  isHiddenJoinMessageForCharacter(characterId: string) {
     return (
       this.message.messageType === 'system_message' &&
       this.message.systemMessageType === 'join' &&
@@ -139,7 +139,7 @@ class ChatMessageWrapper {
     );
   }
 
-  isLeaveMessageForCharacter(characterId: string) {
+  isHiddenLeaveMessageForCharacter(characterId: string) {
     return (
       this.message.messageType === 'system_message' &&
       this.message.systemMessageType === 'leave' &&
@@ -148,8 +148,18 @@ class ChatMessageWrapper {
     );
   }
 
-  isJoinOrLeaveMessageForCharacter(characterId: string) {
-    return this.isJoinMessageForCharacter(characterId) || this.isLeaveMessageForCharacter(characterId);
+  isHiddenJoinOrLeaveMessageForCharacter(characterId: string) {
+    return (
+      this.isHiddenJoinMessageForCharacter(characterId) || this.isHiddenLeaveMessageForCharacter(characterId)
+    );
+  }
+
+  isPresenceChangeForCharacter(characterId: string) {
+    return (
+      this.message.messageType === 'system_message' &&
+      (this.message.systemMessageType === 'join' || this.message.systemMessageType === 'leave') &&
+      this.message.characterId === characterId
+    );
   }
 
   getSpeakerName() {
@@ -439,6 +449,15 @@ export class ConversationTranscript {
   }
 
   public removeParticipant(participant: TranscriptParticipant) {
+    if (!this.hasMessagesFromCharacter(participant.id)) {
+      return {
+        updatedTranscript: this.rebuild(
+          this.messages.filter((message) => !message.isPresenceChangeForCharacter(participant.id)),
+          this.participantInfo.filter((p) => p.id !== participant.id)
+        ),
+      };
+    }
+
     const leaveMessage = new ChatMessageWrapper(
       Database.createPersistedObject({
         messageType: 'system_message',
@@ -548,7 +567,7 @@ export class ConversationTranscript {
   ) {
     const [messagesToConsider] = bisectMessagesById(this.messages, opts.upToMessageId);
     const partialPresence = this.messages.some((message) =>
-      message.isJoinOrLeaveMessageForCharacter(characterId)
+      message.isHiddenJoinOrLeaveMessageForCharacter(characterId)
     );
 
     if (!partialPresence) {
@@ -556,25 +575,27 @@ export class ConversationTranscript {
     }
 
     const firstPresenceMessage = this.messages.find((message) =>
-      message.isJoinOrLeaveMessageForCharacter(characterId)
+      message.isHiddenJoinOrLeaveMessageForCharacter(characterId)
     );
 
     if (!firstPresenceMessage || firstPresenceMessage?.message.messageType !== 'system_message') {
       throw new Error('Expected first presence message to be a system message');
     }
 
-    let isPresent = firstPresenceMessage.message.systemMessageType === 'leave';
+    let isPresent =
+      firstPresenceMessage.message.systemMessageType === 'leave' ||
+      this.messages[0]?.isHiddenJoinMessageForCharacter(characterId);
 
     return messagesToConsider.filter((message, i, messages) => {
       const nextMessage = messages[i + 1];
 
       // We include one message before the join message, as it's often the case that the character joins in response to something being said, and having that context can be helpful for understanding the conversation.
-      if (nextMessage?.isJoinMessageForCharacter(characterId)) {
+      if (nextMessage?.isHiddenJoinMessageForCharacter(characterId)) {
         isPresent = true;
         return true;
       }
 
-      if (message.isLeaveMessageForCharacter(characterId)) {
+      if (message.isHiddenLeaveMessageForCharacter(characterId)) {
         isPresent = false;
         return true;
       }
@@ -593,26 +614,26 @@ export class ConversationTranscript {
     }
 
     const lastPresenceEvent = this.messages.findLast((message) =>
-      message.isJoinOrLeaveMessageForCharacter(characterId)
+      message.isHiddenJoinOrLeaveMessageForCharacter(characterId)
     );
 
-    return lastPresenceEvent ? lastPresenceEvent.isJoinMessageForCharacter(characterId) : true;
+    return lastPresenceEvent ? lastPresenceEvent.isHiddenJoinMessageForCharacter(characterId) : true;
   }
 
   public getCoPresentSpeakerIds(characterId: string): string[] {
     const speakerIds = new Set<string>();
 
     const firstPresenceEvent = this.messages.find((message) =>
-      message.isJoinOrLeaveMessageForCharacter(characterId)
+      message.isHiddenJoinOrLeaveMessageForCharacter(characterId)
     );
-    let present = !firstPresenceEvent || firstPresenceEvent.isLeaveMessageForCharacter(characterId);
+    let present = !firstPresenceEvent || firstPresenceEvent.isHiddenLeaveMessageForCharacter(characterId);
 
     for (const message of this.messages) {
-      if (message.isJoinMessageForCharacter(characterId)) {
+      if (message.isHiddenJoinMessageForCharacter(characterId)) {
         present = true;
         continue;
       }
-      if (message.isLeaveMessageForCharacter(characterId)) {
+      if (message.isHiddenLeaveMessageForCharacter(characterId)) {
         present = false;
         continue;
       }

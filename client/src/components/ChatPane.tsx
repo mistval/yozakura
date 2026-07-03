@@ -32,7 +32,6 @@ export default function ChatPane() {
   const npcChatEndMode = useSettingsStore((s) => s.npcChatEndMode);
   const intelligentChatEndMaxLength = useSettingsStore((s) => s.intelligentChatEndMaxLength);
   const intelligentChatEndGroupMaxLength = useSettingsStore((s) => s.intelligentChatEndGroupMaxLength);
-  const editImagePromptsBeforeDispatch = useSettingsStore((s) => s.editImagePromptsBeforeDispatch);
   const transcript = useTurnMachineStore((state) => state.transcript);
   const chatMode = useActiveChatMedium();
   const participants = useActiveChatParticipants();
@@ -46,13 +45,10 @@ export default function ChatPane() {
   const userLocation = useChatUserLocation();
 
   const [inputIsNonEmpty, setInputIsNonEmpty] = useState(false);
-  const [imagePrompt, setImagePrompt] = useState('');
-  const [showImagePrompt, setShowImagePrompt] = useState(false);
   const [showChatSettings, setShowChatSettings] = useState(false);
   const [settingsCharacterId, setSettingsCharacterId] = useState<string | undefined>(undefined);
   const [editingMessageId, setEditingMessageId] = useState<string | undefined>(undefined);
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
-  const [imageAfterMessageId, setImageAfterMessageId] = useState<string | undefined>(undefined);
 
   const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
   const autoScrollUnlockedRef = useRef(true);
@@ -65,6 +61,7 @@ export default function ChatPane() {
   const submitChatDeleteMessage = useScenarioLoopStateStore((state) => state.submitChatDeleteMessage);
   const submitChatRedoMessage = useScenarioLoopStateStore((state) => state.submitChatRedoMessage);
   const submitChatEditMessage = useScenarioLoopStateStore((state) => state.submitChatEditMessage);
+  const submitChatRequestImage = useScenarioLoopStateStore((state) => state.submitChatRequestImage);
   const submitChatGenerateImage = useScenarioLoopStateStore((state) => state.submitChatGenerateImage);
   const userRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.userRequestedPhaseTransition
@@ -72,10 +69,22 @@ export default function ChatPane() {
   const setUserRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.setUserRequestedPhaseTransition
   );
+  const setUserRequestedGenerationAbort = useScenarioLoopStateStore(
+    (state) => state.setUserRequestedGenerationAbort
+  );
+  const pendingImagePromptEdit = useScenarioLoopStateStore((state) => state.pendingImagePromptEdit);
+  const setPendingImagePromptEdit = useScenarioLoopStateStore((state) => state.setPendingImagePromptEdit);
 
   const generatingAutoImage = chatState === 'generating_image';
   const processingMemories = chatState === 'processing_memories';
   const chatMemoryUpdateStatus = processingMemories ? (processingMemoryStatusInfo ?? '') : '';
+
+  const isGenerating =
+    chatState === 'character_speaking' ||
+    chatState === 'generating_image' ||
+    chatState === 'selecting_speaker' ||
+    chatState === 'judging_conversation_end' ||
+    chatState === 'processing_memories';
 
   const participantById = useMemo(
     () => Object.fromEntries(participants.map((participant) => [participant.id, participant])),
@@ -171,31 +180,14 @@ export default function ChatPane() {
     assertNonNullish(participant, `Participant with ID ${participantId} not found`);
     submitChatSpeakAs(participant.id);
   };
-
-  const openImagePrompt = async (afterMessageId?: string) => {
-    const imageCharacterId = afterMessageId
-      ? transcript.getMessageById(afterMessageId)!.asCharacterChatMessage().senderId
-      : (transcript.getMostRecentSpeakerId() ?? primaryNpc.id);
-
-    const fullPrompt = await ChatCoordinator.buildSceneImageFullPrompt(imageCharacterId, {
-      upToMessageId: afterMessageId,
-    });
-
-    if (editImagePromptsBeforeDispatch) {
-      setImagePrompt(fullPrompt);
-      setShowImagePrompt(true);
-      setImageAfterMessageId(afterMessageId);
+  const confirmImagePrompt = () => {
+    if (!pendingImagePromptEdit) {
       return;
     }
 
-    submitChatGenerateImage(fullPrompt, afterMessageId);
-    setImageAfterMessageId(undefined);
-  };
-
-  const generateImageNow = () => {
-    setShowImagePrompt(false);
-    submitChatGenerateImage(imagePrompt, imageAfterMessageId);
-    setImageAfterMessageId(undefined);
+    const { prompt, afterMessageId } = pendingImagePromptEdit;
+    setPendingImagePromptEdit(undefined);
+    submitChatGenerateImage(prompt, afterMessageId);
   };
 
   const deleteMessage = (id: string) => {
@@ -485,7 +477,7 @@ export default function ChatPane() {
                       type="button"
                       onClick={() => {
                         const id = entry.getId();
-                        openImagePrompt(id);
+                        submitChatRequestImage(id);
                       }}
                       disabled={!isAwaitingCharacterInput}
                       title="Retry message"
@@ -551,13 +543,19 @@ export default function ChatPane() {
           rows={2}
           className="flex-1"
         />
-        <button
-          type="button"
-          onClick={send}
-          disabled={!isAwaitingCharacterInput || !inputIsNonEmpty || !isAwaitingCharacterInput}
-        >
-          Send
-        </button>
+        {isGenerating ? (
+          <button
+            type="button"
+            onClick={() => setUserRequestedGenerationAbort(true)}
+            aria-label="Stop generation"
+          >
+            ■
+          </button>
+        ) : (
+          <button type="button" onClick={send} disabled={!isAwaitingCharacterInput || !inputIsNonEmpty}>
+            Send
+          </button>
+        )}
         {showSkipButton && (
           <button
             type="button"
@@ -570,17 +568,25 @@ export default function ChatPane() {
             Skip
           </button>
         )}
-        <button type="button" onClick={() => openImagePrompt(undefined)} disabled={!isAwaitingCharacterInput}>
+        <button
+          type="button"
+          onClick={() => submitChatRequestImage(undefined)}
+          disabled={!isAwaitingCharacterInput}
+        >
           Image
         </button>
       </div>
 
       <ImagePromptModal
-        open={showImagePrompt}
-        prompt={imagePrompt}
-        onChange={setImagePrompt}
-        onCancel={() => setShowImagePrompt(false)}
-        onConfirm={generateImageNow}
+        open={Boolean(pendingImagePromptEdit)}
+        prompt={pendingImagePromptEdit?.prompt ?? ''}
+        onChange={(prompt) =>
+          setPendingImagePromptEdit(
+            pendingImagePromptEdit ? { ...pendingImagePromptEdit, prompt } : undefined
+          )
+        }
+        onCancel={() => setPendingImagePromptEdit(undefined)}
+        onConfirm={confirmImagePrompt}
       />
 
       <ChatSettings open={showChatSettings} onClose={() => setShowChatSettings(false)} />

@@ -34,6 +34,14 @@ type ScenarioStoreState = {
   refreshScenarioSummaries: () => Promise<ScenarioSummary[]>;
 };
 
+function applyMapOverrides(map: WorldMap, scenario: Scenario): WorldMap {
+  return {
+    ...map,
+    name: scenario.mapOverrides?.name ?? map.name,
+    description: scenario.mapOverrides?.description ?? map.description,
+  };
+}
+
 export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
   activeScenario: undefined,
   activeScenarioMap: undefined,
@@ -82,11 +90,7 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
 
     set({
       activeScenario: nextScenario,
-      activeScenarioMap: {
-        ...selectedMap,
-        name: nextScenario.mapOverrides?.name ?? selectedMap.name,
-        description: nextScenario.mapOverrides?.description ?? selectedMap.description,
-      },
+      activeScenarioMap: applyMapOverrides(selectedMap, nextScenario),
     });
 
     get().updateScenario(() => nextScenario);
@@ -141,7 +145,7 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
       throw new Error(`Map not found: ${mapId}`);
     }
 
-    get().updateScenario(
+    const nextScenario = get().updateScenario(
       (prev) =>
         ({
           ...prev,
@@ -150,7 +154,7 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     );
 
     set({
-      activeScenarioMap: selectedMap,
+      activeScenarioMap: applyMapOverrides(selectedMap, nextScenario),
     });
   },
 
@@ -166,17 +170,13 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
       ...overrides,
     };
 
-    get().updateScenario((prev) => ({
+    const nextScenario = get().updateScenario((prev) => ({
       ...prev,
       mapOverrides: newOverrides,
     }));
 
     set({
-      activeScenarioMap: {
-        ...baseMap,
-        name: newOverrides?.name ?? baseMap.name,
-        description: newOverrides?.description ?? baseMap.description,
-      },
+      activeScenarioMap: applyMapOverrides(baseMap, nextScenario),
     });
   },
 
@@ -273,12 +273,35 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
 useMapStore.subscribe((newState, prevState) => {
   const scenarioState = useScenarioStore.getState();
   const pendingScenarioId = scenarioState.pendingScenarioId;
-  if (newState.mapsAreLoaded && !prevState.mapsAreLoaded && pendingScenarioId) {
-    scenarioState.refreshScenario(pendingScenarioId);
+  if (pendingScenarioId && newState.maps.length > 0) {
+    void scenarioState.refreshScenario(pendingScenarioId);
+    return;
   }
 
-  if (scenarioState.activeScenarioMap) {
-    scenarioState.setScenarioMap(scenarioState.activeScenarioMap.id);
+  const activeMapId = scenarioState.activeScenarioMap?.id;
+  if (!activeMapId) {
+    return;
+  }
+
+  const newMap = newState.mapsById[activeMapId];
+  if (newMap) {
+    if (newMap !== prevState.mapsById[activeMapId]) {
+      scenarioState.setScenarioMap(activeMapId);
+    }
+    return;
+  }
+
+  // The active map was deleted; switch to another map, or if none are left,
+  // unload the scenario and reload it once a map exists again.
+  const fallbackMap = MapHelper.getNewestUpdatedMap(newState.maps);
+  if (fallbackMap) {
+    scenarioState.setScenarioMap(fallbackMap.id);
+  } else {
+    useScenarioStore.setState({
+      activeScenario: undefined,
+      activeScenarioMap: undefined,
+      pendingScenarioId: scenarioState.activeScenario?.id,
+    });
   }
 });
 

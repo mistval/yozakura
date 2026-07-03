@@ -273,14 +273,17 @@ export async function buildChatModeratorContext(
   };
 }
 
-export async function buildConversationEndJudgeContext(conversationEndJudge: {
-  targetLength: number;
-  maxLength: number;
-  currentLength: number;
-  historyLength: number;
-}): Promise<ConversationEndJudgeExecutionContext> {
+export async function buildConversationEndJudgeContext(
+  fromCharacterPerspectiveId: string,
+  conversationEndJudge: {
+    targetLength: number;
+    maxLength: number;
+    currentLength: number;
+    historyLength: number;
+  }
+): Promise<ConversationEndJudgeExecutionContext> {
   return {
-    ...(await buildChatTemplateContext()),
+    ...(await buildFocusedChatTemplateContext(fromCharacterPerspectiveId)),
     conversationEndJudge,
   };
 }

@@ -54,7 +54,7 @@ export class ChatCoordinator {
     };
   }
 
-  public static async shouldEndNpcChat(): Promise<boolean> {
+  public static async shouldEndNpcChat(fromCharacterPerspectiveId: string): Promise<boolean> {
     const chatState = this.turnMachineStore();
     const settings = useSettingsStore.getState();
 
@@ -87,7 +87,7 @@ export class ChatCoordinator {
       maxLength,
       judgementInterval: settings.intelligentChatEndJudgementInterval,
       runJudge: () =>
-        this.runConversationEndJudge({
+        this.runConversationEndJudge(fromCharacterPerspectiveId, {
           targetLength,
           maxLength,
           currentLength,
@@ -98,17 +98,20 @@ export class ChatCoordinator {
     return decision === 'stop';
   }
 
-  private static runConversationEndJudge(args: {
-    targetLength: number;
-    maxLength: number;
-    currentLength: number;
-    historyLength: number;
-  }): Promise<ChatEndDecision> {
+  private static runConversationEndJudge(
+    fromPerspectiveId: string,
+    lengthParameters: {
+      targetLength: number;
+      maxLength: number;
+      currentLength: number;
+      historyLength: number;
+    }
+  ): Promise<ChatEndDecision> {
     return this.turnMachineStore().doWithState('judging_conversation_end', () => {
       return withPhaseTransitionGate(
         async (abortSignal) => {
           return conversationEndJudgeTemplatesGroup.renderAndExecute(
-            await buildConversationEndJudgeContext(args),
+            await buildConversationEndJudgeContext(fromPerspectiveId, lengthParameters),
             { abortSignal }
           );
         },
@@ -188,6 +191,21 @@ export class ChatCoordinator {
   public static hasUserChatMessages() {
     const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();
     return userCharacter && this.transcript().hasMessagesFromCharacter(userCharacter.id);
+  }
+
+  public static async buildSceneImagePromptForRequest(afterMessageId: string | undefined) {
+    const imageCharacterId = afterMessageId
+      ? this.transcript().getMessageById(afterMessageId)!.asCharacterChatMessage().senderId
+      : (this.transcript().getMostRecentSpeakerId() ?? this.firstNonUserParticipantId());
+
+    return this.buildSceneImageFullPrompt(imageCharacterId, { upToMessageId: afterMessageId });
+  }
+
+  private static firstNonUserParticipantId(): string {
+    const userCharacterId = this.getUserCharacter().id;
+    const participant = getActiveChatParticipants().find((p) => p.id !== userCharacterId);
+    assertNonNullish(participant, 'No non-user participant available for image generation');
+    return participant.id;
   }
 
   public static async buildSceneImageFullPrompt(
@@ -328,31 +346,36 @@ export class ChatCoordinator {
 
           const draftMessage = await this.startStreamingNpcDraftMessage(speaker);
 
-          const response = await chatCompletion(prompts, {
-            promptTemplateGroup: 'gen_npc_response',
-            promptContext,
-            completionRequestId,
-            abortSignal,
-            onTokens: async (fullText: string) => {
-              this.setTranscript(
-                this.transcript().editLatestMessage(fullText, { isStreaming: true }).updatedTranscript
-              );
-            },
-          });
+          try {
+            const response = await chatCompletion(prompts, {
+              promptTemplateGroup: 'gen_npc_response',
+              promptContext,
+              completionRequestId,
+              abortSignal,
+              onTokens: async (fullText: string) => {
+                this.setTranscript(
+                  this.transcript().editLatestMessage(fullText, { isStreaming: true }).updatedTranscript
+                );
+              },
+            });
 
-          const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
-            completionRequestId,
-          });
+            const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
+              completionRequestId,
+            });
 
-          const didPause = !wasPaused && this.isChatPaused();
+            const didPause = !wasPaused && this.isChatPaused();
 
-          // Delete and re-add. Slightly hacky way to trigger auto image and other effects.
-          this.deleteMessageById(draftMessage.id);
-          await this.addCharacterMessage(speaker.id, parsedResponse, { forceSkipAutoImage: didPause });
+            // Delete and re-add. Slightly hacky way to trigger auto image and other effects.
+            this.deleteMessageById(draftMessage.id);
+            await this.addCharacterMessage(speaker.id, parsedResponse, { forceSkipAutoImage: didPause });
 
-          await this.pauseAfterNpcOnlyMessage();
+            await this.pauseAfterNpcOnlyMessage();
 
-          return this.transcript;
+            return this.transcript;
+          } catch (err) {
+            this.deleteMessageById(draftMessage.id);
+            throw err;
+          }
         },
         { pauseBehavior: 'ignore' }
       );
@@ -472,7 +495,7 @@ export class ChatCoordinator {
         'Reached end of selectNextSpeaker function unexpectedly. Unknown speaker selection strategy?'
       );
     } catch (err) {
-      void showNonRetriableErrorCardIfNeeded({
+      await showNonRetriableErrorCardIfNeeded({
         error: err,
         operationType: 'select_next_speaker',
         hint: 'Control will be handed to first participant',
