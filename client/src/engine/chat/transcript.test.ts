@@ -171,16 +171,51 @@ describe('ConversationTranscript offscreen-mention RAG', () => {
     expect(carolsCoPresent).not.toContain(BOB.id); // Bob only spoke before Carol joined
   });
 
-  it('does not purge a silent participant who leaves (keeps them in participants, excludes from co-present)', async () => {
+  it('erases a participant who leaves without ever having spoken, as if they were never there', async () => {
     transcript = await say(transcript, ALICE, 'Hello');
     transcript = await say(transcript, BOB, 'Hi');
 
-    // Carol never spoke; she leaves.
+    // Carol joins (adding a visible announcement and a hidden marker) but never speaks.
+    transcript = transcript.addParticipant(CAROL).updatedTranscript;
+    live.participantIds = [ALICE.id, BOB.id, CAROL.id];
+    expect(transcript.participantInfo.some((p) => p.id === CAROL.id)).toBe(true);
+    expect(
+      transcript.messages.some(
+        (m) => m.message.messageType === 'system_message' && m.message.characterId === CAROL.id
+      )
+    ).toBe(true);
+
+    // She leaves without having spoken.
     live.participantIds = [ALICE.id, BOB.id];
     transcript = transcript.removeParticipant(CAROL).updatedTranscript;
 
-    expect(transcript.participantInfo.some((p) => p.id === CAROL.id)).toBe(true);
+    // She is gone from the participants array and no join/leave messages or markers remain.
+    expect(transcript.participantInfo.some((p) => p.id === CAROL.id)).toBe(false);
+    expect(
+      transcript.messages.some(
+        (m) => m.message.messageType === 'system_message' && m.message.characterId === CAROL.id
+      )
+    ).toBe(false);
     expect(transcript.getCoPresentSpeakerIds(ALICE.id)).not.toContain(CAROL.id);
+
+    // The transcript is identical to one where Carol was never involved at all.
+    expect(transcript.getRawMessages().map((m) => m.messageType)).toEqual(['chat_message', 'chat_message']);
+  });
+
+  it('keeps a participant who spoke before leaving, adding the usual leave announcement and marker', async () => {
+    transcript = await say(transcript, ALICE, 'Hello');
+
+    transcript = transcript.addParticipant(CAROL).updatedTranscript;
+    live.participantIds = [ALICE.id, BOB.id, CAROL.id];
+    transcript = await say(transcript, CAROL, 'Carol here');
+
+    live.participantIds = [ALICE.id, BOB.id];
+    transcript = transcript.removeParticipant(CAROL).updatedTranscript;
+
+    // Because Carol spoke, she is retained: her join/leave presence events survive.
+    expect(transcript.participantInfo.some((p) => p.id === CAROL.id)).toBe(true);
+    expect(transcript.messages.some((m) => m.isHiddenJoinMessageForCharacter(CAROL.id))).toBe(true);
+    expect(transcript.messages.some((m) => m.isHiddenLeaveMessageForCharacter(CAROL.id))).toBe(true);
   });
 
   it('does not do RAG processing if we are streaming', async () => {
