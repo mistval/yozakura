@@ -89,7 +89,7 @@ export const settingsTooltips = {
   'llm.tokenStreaming':
     'When enabled, NPC responses stream token-by-token. This requires your OpenAI-compatible API provider to support streaming (SSE).',
   'llm.responsePreParser':
-    'Optional JavaScript function source that pre-processes raw model responses for this option group. Leave blank to inherit from earlier matching groups. It must evaluate to a function like <code>(response) => string</code>. The parser runs before any parsers configured for prompt templates.',
+    'Optional JavaScript function source that pre-processes raw model responses for this option group. Leave blank to inherit from earlier matching groups. It must evaluate to a function like <code>(response) => string</code>. This parser runs before any parsers configured for prompt templates.',
   'llm.model':
     'If your API accepts a <code>model</code> field in request bodies to select the model, set it here. This is saved as the <code>model</code> field of the meta options below.',
   'llm.metaOptions':

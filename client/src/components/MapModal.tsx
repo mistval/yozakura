@@ -119,7 +119,7 @@ function MapModalInner() {
     >
       <div className="flex shrink-0 items-center justify-between border-b border-border-default px-4 py-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-xl font-semibold">Map</h2>
+          <h2 className="text-xl font-semibold">{map?.name || 'Loading...'}</h2>
           {map && (
             <DeleteButton
               label="Delete map"
