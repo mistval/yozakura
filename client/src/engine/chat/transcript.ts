@@ -582,7 +582,9 @@ export class ConversationTranscript {
       throw new Error('Expected first presence message to be a system message');
     }
 
-    let isPresent = firstPresenceMessage.message.systemMessageType === 'leave';
+    let isPresent =
+      firstPresenceMessage.message.systemMessageType === 'leave' ||
+      this.messages[0]?.isHiddenJoinMessageForCharacter(characterId);
 
     return messagesToConsider.filter((message, i, messages) => {
       const nextMessage = messages[i + 1];

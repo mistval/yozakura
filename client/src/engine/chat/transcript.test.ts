@@ -49,6 +49,23 @@ describe('ConversationTranscript offscreen-mention RAG', () => {
     ({ transcript, live } = freshTranscript([ALICE.id, BOB.id, CAROL.id]));
   });
 
+  it('handles first message being a join message', async () => {
+    transcript = await say(transcript, CAROL, 'Hello everyone');
+    transcript = transcript.addParticipant(EVE).updatedTranscript;
+
+    for (const message of transcript.getRawMessages()) {
+      if (
+        !(message.messageType === 'system_message' && message.isPrivateToCharacterId === TRANSCRIPT_SYSTEM)
+      ) {
+        transcript = transcript.deleteMessageById(message.id).updatedTranscript;
+      }
+    }
+
+    transcript = await say(transcript, ALICE, 'I ran into Carol earlier');
+    const evePerspective = transcript.aggregateMessagesWithinPresenceWindows(EVE.id);
+    expect(evePerspective).toHaveLength(1);
+  });
+
   it('does not inject a reminder about a character who is still present', async () => {
     transcript = await say(transcript, CAROL, 'Hello everyone');
     transcript = await say(transcript, ALICE, 'I ran into Carol earlier');
