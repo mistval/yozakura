@@ -12,7 +12,7 @@ keywords:
   - stable diffusion
 ---
 
-Yozakura requires you to bring your own AI LLM model/subscription (and optionally image generation model).
+Yozakura requires you to bring your own AI LLM model/subscription (and optionally an image generation model).
 
 You can run these models on your own machine if it's powerful enough, or use a cloud provider. Both approaches will be covered in this document, with suggested software and providers.
 
@@ -44,7 +44,7 @@ Click launch, then you can start Yozakura and you're good to go. When the initia
 
 If your machine can't comfortably run a local model, or you just want the better narrative coherence that stronger models can often provide, use a cloud provider instead.
 
-[OpenRouter](https://openrouter.ai) is an excellent provider that enables access to a huge number of models with pay-as-you-go pricing. However, any provider exposing an OpenAI compatible completions endpoint will work too.
+[OpenRouter](https://openrouter.ai) is an excellent provider that enables access to a huge number of models with pay-as-you-go pricing. But any other provider exposing an OpenAI compatible completions endpoint will work too.
 
 Setup:
 
