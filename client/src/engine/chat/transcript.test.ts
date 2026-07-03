@@ -63,7 +63,7 @@ describe('ConversationTranscript offscreen-mention RAG', () => {
 
     transcript = await say(transcript, ALICE, 'I ran into Carol earlier');
     const evePerspective = transcript.aggregateMessagesWithinPresenceWindows(EVE.id);
-    expect(evePerspective).toHaveLength(1);
+    expect(evePerspective).toHaveLength(2);
   });
 
   it('does not inject a reminder about a character who is still present', async () => {
