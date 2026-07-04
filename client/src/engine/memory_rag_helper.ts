@@ -51,10 +51,12 @@ export class MemoryRAGHelper {
       return [];
     }
 
-    return entry.mentionedCharacterIds.map((mentionedCharacterId) => ({
-      mentionedCharacterId,
-      content: () => this.getRagContent(fromPerspectiveId, mentionedCharacterId, entry.senderId),
-    }));
+    return entry.mentionedCharacterIds
+      .filter((id) => id !== fromPerspectiveId)
+      .map((mentionedCharacterId) => ({
+        mentionedCharacterId,
+        content: () => this.getRagContent(fromPerspectiveId, mentionedCharacterId, entry.senderId),
+      }));
   }
 
   public serialize(): SerializedRagHelper {

@@ -773,7 +773,11 @@ export class ConversationTranscript {
       }
 
       for (const mentionedCharacterId of this.ragHelper.getMentionedCharacterIds(message.message.id)) {
-        if (seen.has(mentionedCharacterId) || this.isCurrentlyPresent(mentionedCharacterId)) {
+        if (
+          seen.has(mentionedCharacterId) ||
+          this.isCurrentlyPresent(mentionedCharacterId) ||
+          mentionedCharacterId === focusedCharacterId
+        ) {
           continue;
         }
 
