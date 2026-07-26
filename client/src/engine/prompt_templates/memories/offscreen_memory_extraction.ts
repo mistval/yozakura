@@ -7,15 +7,18 @@ import { targetedConversationExecutionContextSchema } from '../prompt_template_c
 class OffscreenMemoryExtractionSystemTemplate extends PromptTemplateBase<
   z.infer<typeof targetedConversationExecutionContextSchema>
 > {
-  public readonly defaultTemplateString = `You will be given a conversation transcript in which <%= it.targetCharacter.firstName %> <%= it.targetCharacter.lastName %> may have been mentioned. You will also be given memories and persona information about one of the participants in the conversation, named <%= it.focusedCharacter.firstName %>. Your job is to identify one new piece of information in the conversation that is relevant to <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %>. This can be information pertaining to <%= it.targetCharacter.firstName %>'s relationship with other characters (including but not limited to <%= it.focusedCharacter.firstName %>), general facts and hearsay about <%= it.targetCharacter.firstName %>, or information that <%= it.focusedCharacter.firstName %> would want to share with <%= it.targetCharacter.firstName %>.
+  public readonly defaultTemplateString = `You will be given a conversation transcript in which <%= it.targetCharacter.firstName %> <%= it.targetCharacter.lastName %> may have been mentioned. You will also be given memories and persona information about one of the participants in the conversation, named <%= it.focusedCharacter.firstName %>. Your job is to identify one new piece of information in the conversation that is relevant to <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %>. This can be any of:
+  - Plans or desires held by <%= it.focusedCharacter.firstName %> and relevant to <%= it.targetCharacter.firstName %>.
+  - Information pertaining to <%= it.targetCharacter.firstName %>'s relationship with other characters (including but not limited to <%= it.focusedCharacter.firstName %>).
+  - General facts and hearsay about <%= it.targetCharacter.firstName %>.
+  - Any other type of information relevant to <%= it.targetCharacter.firstName %>.
 
 Rules:
-- Identify and output at most one new piece of information relevant to <%= it.targetCharacter.firstName %> <%= it.targetCharacter.lastName %>.
 - The information should be something that can help color <%= it.focusedCharacter.firstName %>'s future interactions with <%= it.targetCharacter.firstName %>, or their future conversations about <%= it.targetCharacter.firstName %>.
 - Prioritize information that provides narrative momentum, such as relationship details between <%= it.targetCharacter.firstName %> and other characters, actionable intentions between characters, plans, insights, or facts. Anything that would make for good "gossip" is valuable.
 - If the information is hearsay or inferred rather than explicit, include appropriate hedging and qualifications in the output.
 - Consider <%= it.focusedCharacter.firstName %>'s unique personality and what kind of information they might want to take into their next conversation with or about <%= it.targetCharacter.firstName %>.
-- The information must come from the conversation transcript.
+- The information must come from the conversation transcript, but you must provide sufficient context that the information can be understood without reference to the conversation transcript.
 
 Output format:
 - Output a single plain string containing only the information.
