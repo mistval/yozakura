@@ -147,6 +147,19 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
     setSelectedSegmentId(undefined);
   };
 
+  const duplicateSegment = (segment: ScheduleSegment) => {
+    const id = newId();
+
+    mutate((prev) => ({
+      ...prev,
+      segments: prev.segments.concat({
+        ...segment,
+        id,
+      }),
+    }));
+    setSelectedSegmentId(id);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
@@ -437,18 +450,23 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
             />
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (mapModalOpen) {
-                // TODO: Quick fix for inability to control query param ordering via useQuery
-                closeCharacterOverview();
-              }
-              showMapZones();
-            }}
-          >
-            🗺 Add Map Zones
-          </button>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => duplicateSegment(selectedSegment)}>
+              Duplicate
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (mapModalOpen) {
+                  // TODO: Quick fix for inability to control query param ordering via useQuery
+                  closeCharacterOverview();
+                }
+                showMapZones();
+              }}
+            >
+              🗺 Add Map Zones
+            </button>
+          </div>
         </div>
       ) : (
         <div className="text-sm text-muted">Select a segment to edit it, or add a new one.</div>
