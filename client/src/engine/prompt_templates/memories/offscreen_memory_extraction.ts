@@ -7,7 +7,7 @@ import { targetedConversationExecutionContextSchema } from '../prompt_template_c
 class OffscreenMemoryExtractionSystemTemplate extends PromptTemplateBase<
   z.infer<typeof targetedConversationExecutionContextSchema>
 > {
-  public readonly defaultTemplateString = `You will be given a conversation transcript in which <%= it.targetCharacter.firstName %> <%= it.targetCharacter.lastName %> may have been mentioned. You will also be given memories and persona information about one of the participants in the conversation, named <%= it.focusedCharacter.firstName %>. Your job is to identify one new piece of information in the conversation that is relevant to <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %>. This can be any of:
+  public readonly defaultTemplateString = `You will be given a conversation transcript in which <%= it.targetCharacter.firstName %> <%= it.targetCharacter.lastName %> may have been mentioned. You will also be given memories and persona information about one of the participants in the conversation, named <%= it.focusedCharacter.firstName %>. Your job is to identify the most important new information in the conversation that is relevant to <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %>. This can be any of:
   - Plans or desires held by <%= it.focusedCharacter.firstName %> and relevant to <%= it.targetCharacter.firstName %>.
   - Information pertaining to <%= it.targetCharacter.firstName %>'s relationship with other characters (including but not limited to <%= it.focusedCharacter.firstName %>).
   - General facts and hearsay about <%= it.targetCharacter.firstName %>.
