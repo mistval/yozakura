@@ -100,3 +100,4 @@ This allows the model to use up to 1000 tokens for reasoning. Note, I also had t
 1. I've found it works pretty well to give a thinking budget that's either 1000 tokens, or double the max desired output size, whichever is larger. Different models will likely work best with different numbers.
 2. Bigger is not always better. Reasoning models, especially weaker ones, might get into loops where they second-guess themselves unnecessarily, and output gets worse instead of better.
 3. Consider editing the prompt templates to instruct the model on _how_ to think. You may be able to improve behavior by doing so, though I haven't experimented much myself.
+4. You can read the reasoning step output in the [Template Render Log](yozakura://?settings=true&settingspath=prompt-templates%2Ftemplate-render-log) in Yozakura's `Prompt Templates` settings.

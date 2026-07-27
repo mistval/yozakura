@@ -210,24 +210,30 @@ export async function chatCompletion(
         ...(useSettingsStore.getState().tokenStreamingEnabled && onTokens ? { onTokens } : {}),
       };
 
-      const responseText = await Api.llmChat(payload, { ...transportOptions, signal: options.abortSignal });
+      const responseMessage = await Api.llmChat(payload, {
+        ...transportOptions,
+        signal: options.abortSignal,
+      });
 
       usePromptLogStore.getState().addEntry({
         payloadJson: stringifyForPromptLog(payload),
         transportOptionsJson: sanitizeTransportOptionsForPromptLog(transportOptions),
-        responseJson: stringifyForPromptLog(responseText),
+        responseJson: stringifyForPromptLog(responseMessage),
       });
+
+      const content = responseMessage?.content ?? '';
 
       if (completionRequestId) {
         useTemplateRenderLogStore.getState().postTemplateRender({
           completionRequestId,
           completions: {
-            rawResponse: responseText,
+            rawResponse: content,
+            reasoning: responseMessage?.reasoning_content,
           },
         });
       }
 
-      const cleaned = cleanLlmText(responseText, resolvedPromptOptions.responsePreParserSource);
+      const cleaned = cleanLlmText(content, resolvedPromptOptions.responsePreParserSource);
       if (!cleaned) {
         throw new Error('Empty LLM response');
       }

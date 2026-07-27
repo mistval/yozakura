@@ -55,6 +55,15 @@ export default function TemplateRenderLogSettingsSection() {
                   )}
                 </div>
 
+                {entry.completions?.reasoning?.trim() && (
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Reasoning</p>
+                    <pre className="max-h-72 overflow-auto rounded-sm border p-2 text-xs font-mono whitespace-pre-wrap wrap-break-word">
+                      {entry.completions.reasoning}
+                    </pre>
+                  </div>
+                )}
+
                 {entry.completions && (
                   <div className="space-y-1">
                     <p className="text-sm font-medium">Raw Response (Pre-parser)</p>
@@ -64,13 +73,13 @@ export default function TemplateRenderLogSettingsSection() {
                   </div>
                 )}
 
-                {entry.parser && (
+                {(entry.parser?.parsedResponse || false) && (
                   <div className="space-y-1">
                     <p className="text-sm font-medium">Parsed Response</p>
                     <pre className="max-h-72 overflow-auto rounded-sm border p-2 text-xs font-mono whitespace-pre-wrap wrap-break-word">
-                      {typeof entry.parser?.parsedResponse === 'string'
+                      {typeof entry.parser.parsedResponse === 'string'
                         ? entry.parser.parsedResponse
-                        : JSON.stringify(entry.parser?.parsedResponse, null, 2)}
+                        : JSON.stringify(entry.parser.parsedResponse, null, 2)}
                     </pre>
                   </div>
                 )}

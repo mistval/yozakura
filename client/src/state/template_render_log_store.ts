@@ -22,6 +22,7 @@ type TemplateRenderLogEntry = {
   completions?:
     | {
         rawResponse: string;
+        reasoning?: string | undefined;
       }
     | undefined;
   parser?:
@@ -43,6 +44,7 @@ type TemplateRenderLogStoreState = {
     template?: TemplateRenderLogRenderedTemplate;
     completions?: {
       rawResponse: string;
+      reasoning?: string | undefined;
     };
     parser?: {
       parsedResponse: unknown;
