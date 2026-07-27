@@ -11,9 +11,9 @@ class RelationshipDescriptorUpdateSystemTemplate extends PromptTemplateBase<
 1. A list of summaries of recent conversations that have taken place between <%= it.focusedCharacter.firstName %> and <%= it.targetCharacter.firstName %> (if any).
 2. A list of secondhand information that <%= it.focusedCharacter.firstName %> has heard about <%= it.targetCharacter.firstName %> (if any).
 3. A consolidated summary of <%= it.focusedCharacter.firstName %>'s memories towards <%= it.targetCharacter.firstName %> (if any).
-4. What <%= it.targetCharacter.firstName %> currently sees <%= it.focusedCharacter.firstName %> as being, in a broad descriptive sense (e.g. "friend", "rival", "jerk", "helper", "romantic interest", etc).
+4. What <%= it.focusedCharacter.firstName %> currently sees <%= it.targetCharacter.firstName %> as being, in a broad descriptive sense (e.g. "friend", "rival", "jerk", "helper", "romantic interest", etc).
 
-Your job is to use the available information to determine what <%= it.targetCharacter.firstName %> now sees <%= it.focusedCharacter.firstName %> as being, in a broad sense.
+Your job is to use the available information to determine what <%= it.focusedCharacter.firstName %> now sees <%= it.targetCharacter.firstName %> as being, in a broad sense.
 
 Rules:
 - Output just 1-3 words that represent what <%= it.focusedCharacter.firstName %> sees <%= it.targetCharacter.firstName %> as being now.
