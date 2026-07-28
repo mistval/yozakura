@@ -17,31 +17,50 @@ export type LlmChatOptions = {
   signal?: AbortSignal | undefined;
 };
 
+const normalizedOpenAIChatCompletionMessageSchema = z.object({
+  content: z.string(),
+  reasoning_content: z.string().optional(),
+});
+
+type NormalizedLLMChatMessage = z.infer<typeof normalizedOpenAIChatCompletionMessageSchema>;
+
 const openAIChatCompletionSchema = z.object({
   choices: z.array(
     z.object({
-      message: z.object({
-        content: z.string(),
-        reasoning_content: z.string().optional(),
+      message: normalizedOpenAIChatCompletionMessageSchema.extend({
+        reasoning: z.string().nullable().optional(),
+        reasoning_content: z.string().nullable().optional(),
       }),
     })
   ),
 });
 
-type LlmChatMessage = z.infer<typeof openAIChatCompletionSchema>['choices'][number]['message'];
+type RawLLMChatMessage = z.infer<typeof openAIChatCompletionSchema>['choices'][number]['message'];
 
 type ExtractedStreamChunk =
-  | { mode: 'delta'; message: Partial<LlmChatMessage> }
-  | { mode: 'full'; message: LlmChatMessage }
+  | { mode: 'delta'; message: Partial<NormalizedLLMChatMessage> }
+  | { mode: 'full'; message: NormalizedLLMChatMessage }
   | { mode: 'none' };
 
-function extractStreamMessageFields(value: unknown): Partial<LlmChatMessage> | undefined {
+function normalizeChatMessage(raw: RawLLMChatMessage): NormalizedLLMChatMessage {
+  const reasoningContent = raw.reasoning_content || raw.reasoning || undefined;
+
+  return {
+    ...raw,
+    reasoning_content: reasoningContent,
+  };
+}
+
+function extractStreamMessageFields(value: unknown): Partial<NormalizedLLMChatMessage> | undefined {
   if (!value || typeof value !== 'object') {
     return undefined;
   }
 
   const content = (value as { content?: unknown }).content;
-  const reasoningContent = (value as { reasoning_content?: unknown }).reasoning_content;
+  const reasoningContent =
+    (value as { reasoning_content?: unknown }).reasoning_content ||
+    (value as { reasoning?: unknown }).reasoning;
+
   if (typeof content !== 'string' && typeof reasoningContent !== 'string') {
     return undefined;
   }
@@ -102,7 +121,7 @@ function buildLlmHttpError(response: Response, responseText: string) {
 async function parseLlmStreamingResponse(
   response: Response,
   onTokens: LlmTokenCallback
-): Promise<LlmChatMessage> {
+): Promise<NormalizedLLMChatMessage> {
   const contentType = (response.headers.get('content-type') || '').toLowerCase();
   if (!contentType.includes('text/event-stream')) {
     const body = await response.text();
@@ -117,7 +136,7 @@ async function parseLlmStreamingResponse(
     throw new Error('Streaming response body was empty.');
   }
 
-  let combinedMessage: LlmChatMessage = { content: '' };
+  let combinedMessage: NormalizedLLMChatMessage = { content: '' };
   let pendingBuffer = '';
   let sawDoneMarker = false;
   const decoder = new TextDecoder();
@@ -199,7 +218,10 @@ async function parseLlmStreamingResponse(
   return combinedMessage;
 }
 
-export async function executeLlmChat(payload: Record<string, unknown>, options: LlmChatOptions = {}) {
+export async function executeLlmChat(
+  payload: Record<string, unknown>,
+  options: LlmChatOptions = {}
+): Promise<NormalizedLLMChatMessage | undefined> {
   const { targetUrl, authToken, onTokens, signal } = options;
   const streamingRequested = typeof onTokens === 'function';
 
@@ -235,7 +257,12 @@ export async function executeLlmChat(payload: Record<string, unknown>, options: 
   }
 
   const completion = await parseJSONResponse(openAIChatCompletionSchema, response);
-  return completion?.choices?.[0]?.message;
+  const message = completion?.choices?.[0]?.message;
+  if (message) {
+    return normalizeChatMessage(message);
+  }
+
+  return message;
 }
 
 export async function parseJSONResponse<TZodType>(

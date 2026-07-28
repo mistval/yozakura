@@ -18,7 +18,7 @@ Below we will walk through two examples of using a reasoning model. The details 
 
 **Make sure you have the latest version of KoboldCpp**. Some of the features used below are very new at the time of this writing. I am using v1.117.1.
 
-Gemma 4 26B A4B is an excellent model that runs pretty well on many consumer GPUs and has reasoning capability. I find that using reasoning for memory generation in Yozakura does significantly improve memory quality with this model, at the cost of taking much longer when a conversation ends.
+Gemma 4 26B A4B is an excellent model that runs pretty well on many consumer GPUs and has reasoning capability. I find that using reasoning for memory generation in Yozakura does significantly improve memory quality with this model, at the cost of taking much longer when a conversation ends. It's a very verbose reasoner.
 
 When loading the model in KoboldCpp, just enable the `Use Jinja` checkbox on the `Quick Launch` tab. Other than that, launch KoboldCpp normally.
 
