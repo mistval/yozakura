@@ -16,7 +16,7 @@ class RelationshipDescriptorUpdateSystemTemplate extends PromptTemplateBase<
 Your job is to use the available information to determine what <%= it.focusedCharacter.firstName %> now sees <%= it.targetCharacter.firstName %> as being, in a broad sense.
 
 Rules:
-- Output just 1-3 words that represent what <%= it.focusedCharacter.firstName %> sees <%= it.targetCharacter.firstName %> as being now.
+- Output just 1-5 words that represent what <%= it.focusedCharacter.firstName %> sees <%= it.targetCharacter.firstName %> as being now.
 - Examples: "Friend", "Rival", "Hated Enemy", "Boyfriend", "Mentor".
 - If the existing descriptor is already adequate, you may output that as-is.`;
   public readonly contextSchema = targetedConversationExecutionContextSchema;

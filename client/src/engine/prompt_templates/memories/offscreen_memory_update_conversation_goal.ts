@@ -9,13 +9,13 @@ class OffscreenMemoryUpdateConversationGoalSystemTemplate extends PromptTemplate
 > {
   public readonly defaultTemplateString = `Your job is to decide whether newly learned information should change <%= it.focusedCharacter.firstName %>'s next conversation goal with <%= it.targetCharacter.firstName %>. You will be given <%= it.focusedCharacter.firstName %>'s current memories of <%= it.targetCharacter.firstName %>, their existing goal towards them (if any), and some new information that <%= it.focusedCharacter.firstName %> just learned regarding <%= it.targetCharacter.firstName %>.
 
-If the new piece of information suggests a more important goal for <%= it.focusedCharacter.firstName %> to pursue with <%= it.targetCharacter.firstName %>, you should write a new goal. Otherwise, you should keep the old goal.
+If the new piece of information suggests a more important goal for <%= it.focusedCharacter.firstName %> to pursue with <%= it.targetCharacter.firstName %>, you should output a new goal. Otherwise, you should keep the old goal.
 
 If you decide to keep the old goal:
 - Output only "KEEP_OLD_GOAL" exactly.
 
-If you decide to write a new goal for <%= it.focusedCharacter.firstName %> to pursue with <%= it.targetCharacter.firstName %>:
-- Write a goal that provides strong narrative momentum.
+If you decide to output a new goal for <%= it.focusedCharacter.firstName %> to pursue with <%= it.targetCharacter.firstName %>:
+- Output a goal that provides strong narrative momentum.
 - Prioritize taking decisive action rather than just planning.
 - Be specific and provide sufficient context.
 - Output only the updated goal and nothing else`;
