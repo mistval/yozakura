@@ -50,7 +50,8 @@ export default function ChatPane() {
   const [editingMessageId, setEditingMessageId] = useState<string | undefined>(undefined);
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
 
-  const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
+  const transcriptContainerOuterRef = useRef<HTMLDivElement | null>(null);
+  const transcriptContainerInnerRef = useRef<HTMLDivElement | null>(null);
   const autoScrollUnlockedRef = useRef(true);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -232,21 +233,8 @@ export default function ChatPane() {
     return remaining <= 24;
   };
 
-  const scrollTranscriptToBottom = () => {
-    setTimeout(() => {
-      const container = transcriptContainerRef.current;
-      if (!container || !autoScrollUnlockedRef.current) {
-        return;
-      }
-
-      requestAnimationFrame(() => {
-        container.scrollTop = container.scrollHeight;
-      });
-    }, 25);
-  };
-
   const handleTranscriptScroll = () => {
-    const container = transcriptContainerRef.current;
+    const container = transcriptContainerOuterRef.current;
     if (!container) {
       return;
     }
@@ -302,8 +290,20 @@ export default function ChatPane() {
   }, [transcript?.countAllMessages() === 0]);
 
   useEffect(() => {
-    scrollTranscriptToBottom();
-  }, [transcript]);
+    if (!transcriptContainerInnerRef.current) {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      if (autoScrollUnlockedRef.current && transcriptContainerOuterRef.current) {
+        transcriptContainerOuterRef.current.scrollTop = transcriptContainerOuterRef.current.scrollHeight;
+      }
+    });
+
+    observer.observe(transcriptContainerInnerRef.current);
+
+    return () => observer.disconnect();
+  }, [transcriptContainerInnerRef.current]);
 
   if (!scenario || !userLocation) {
     return undefined;
@@ -396,135 +396,132 @@ export default function ChatPane() {
         </div>
 
         <div
-          ref={transcriptContainerRef}
+          ref={transcriptContainerOuterRef}
           onScroll={handleTranscriptScroll}
           className="border rounded-sm p-2 overflow-y-auto space-y-2 flex-1 min-h-0"
         >
-          {transcript.countAllMessages() === 0 && (
-            <div className="text-sm text-muted">
-              {participants[0]!.id === userCharacter.id
-                ? 'Say something to start the conversation, or choose an NPC to speak.'
-                : isPaused
-                  ? 'Click Speak on a character card to choose who talks next, or Start Chat to let them talk on their own.'
-                  : 'Conversation in progress...'}
-            </div>
-          )}
-          {transcript.getVisibleMessages(userCharacter.id).map((entry) => (
-            <div
-              key={entry.getId()}
-              className={`relative group ${entry.isSentByCharacter(userCharacter.id) ? 'text-right' : ''}`}
-            >
-              {entry.isImageMessage() ? (
-                <img
-                  src={entry.imageUrl()}
-                  alt="Generated"
-                  className="rounded-sm border inline-block"
-                  onLoad={scrollTranscriptToBottom}
-                />
-              ) : editingMessageId === entry.getId() && entry.isCharacterChatMessage() ? (
-                <div className="space-y-2">
-                  <div>
-                    <strong>{entry.getSpeakerName()}:</strong>
-                  </div>
-                  <textarea
-                    value={editingMessageDraft}
-                    onChange={(event) => setEditingMessageDraft(event.target.value)}
-                    rows={3}
-                    className="w-full border rounded-sm p-2 bg-inset text-sm"
-                    disabled={!isAwaitingCharacterInput}
-                  />
-                  <div className="flex justify-end gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setEditingMessageId(undefined)}
+          <div ref={transcriptContainerInnerRef} onScroll={handleTranscriptScroll} className="space-y-2">
+            {transcript.countAllMessages() === 0 && (
+              <div className="text-sm text-muted">
+                {participants[0]!.id === userCharacter.id
+                  ? 'Say something to start the conversation, or choose an NPC to speak.'
+                  : isPaused
+                    ? 'Click Speak on a character card to choose who talks next, or Start Chat to let them talk on their own.'
+                    : 'Conversation in progress...'}
+              </div>
+            )}
+            {transcript.getVisibleMessages(userCharacter.id).map((entry) => (
+              <div
+                key={entry.getId()}
+                className={`relative group ${entry.isSentByCharacter(userCharacter.id) ? 'text-right' : ''}`}
+              >
+                {entry.isImageMessage() ? (
+                  <img src={entry.imageUrl()} alt="Generated" className="rounded-sm border inline-block" />
+                ) : editingMessageId === entry.getId() && entry.isCharacterChatMessage() ? (
+                  <div className="space-y-2">
+                    <div>
+                      <strong>{entry.getSpeakerName()}:</strong>
+                    </div>
+                    <textarea
+                      value={editingMessageDraft}
+                      onChange={(event) => setEditingMessageDraft(event.target.value)}
+                      rows={3}
+                      className="w-full border rounded-sm p-2 bg-inset text-sm"
                       disabled={!isAwaitingCharacterInput}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={saveEditingMessageEdit}
-                      disabled={!isAwaitingCharacterInput || !editingMessageDraft.trim()}
-                    >
-                      Save
-                    </button>
+                    />
+                    <div className="flex justify-end gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setEditingMessageId(undefined)}
+                        disabled={!isAwaitingCharacterInput}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveEditingMessageEdit}
+                        disabled={!isAwaitingCharacterInput || !editingMessageDraft.trim()}
+                      >
+                        Save
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <>
-                  <strong>{entry.getSpeakerName()}</strong> <Markdown>{entry.getContent()}</Markdown>
-                </>
-              )}
+                ) : (
+                  <>
+                    <strong>{entry.getSpeakerName()}</strong> <Markdown>{entry.getContent()}</Markdown>
+                  </>
+                )}
 
-              {isAwaitingCharacterInput && !editingMessageId && (
-                <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs h-6 leading-none">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const id = entry.getId();
-                      deleteMessage(id);
-                    }}
-                    disabled={!isAwaitingCharacterInput}
-                    title="Delete message"
-                    aria-label="Delete message"
-                    className="px-1 h-5 w-5 flex items-center justify-center"
-                  >
-                    🗑
-                  </button>
-
-                  {entry.isCharacterChatMessage() && (
+                {isAwaitingCharacterInput && !editingMessageId && (
+                  <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs h-6 leading-none">
                     <button
                       type="button"
                       onClick={() => {
                         const id = entry.getId();
-                        submitChatRequestImage(id);
+                        deleteMessage(id);
                       }}
                       disabled={!isAwaitingCharacterInput}
-                      title="Retry message"
-                      aria-label="Retry message"
+                      title="Delete message"
+                      aria-label="Delete message"
                       className="px-1 h-5 w-5 flex items-center justify-center"
                     >
-                      🖼️
+                      🗑
                     </button>
-                  )}
 
-                  {entry.isCharacterChatMessage() &&
-                    entry.asCharacterChatMessage().senderId !== userCharacter.id && (
+                    {entry.isCharacterChatMessage() && (
                       <button
                         type="button"
                         onClick={() => {
                           const id = entry.getId();
-                          redoMessage(id);
+                          submitChatRequestImage(id);
                         }}
                         disabled={!isAwaitingCharacterInput}
                         title="Retry message"
                         aria-label="Retry message"
                         className="px-1 h-5 w-5 flex items-center justify-center"
                       >
-                        ↻
+                        🖼️
                       </button>
                     )}
 
-                  {!entry.isImageMessage() && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const id = entry.getId();
-                        setEditingMessageId(id);
-                        setEditingMessageDraft(entry.getContent());
-                      }}
-                      disabled={!isAwaitingCharacterInput}
-                      title="Edit message"
-                      aria-label="Edit message"
-                      className="px-1 h-5 w-5 flex items-center justify-center"
-                    >
-                      ✎
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+                    {entry.isCharacterChatMessage() &&
+                      entry.asCharacterChatMessage().senderId !== userCharacter.id && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const id = entry.getId();
+                            redoMessage(id);
+                          }}
+                          disabled={!isAwaitingCharacterInput}
+                          title="Retry message"
+                          aria-label="Retry message"
+                          className="px-1 h-5 w-5 flex items-center justify-center"
+                        >
+                          ↻
+                        </button>
+                      )}
+
+                    {!entry.isImageMessage() && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const id = entry.getId();
+                          setEditingMessageId(id);
+                          setEditingMessageDraft(entry.getContent());
+                        }}
+                        disabled={!isAwaitingCharacterInput}
+                        title="Edit message"
+                        aria-label="Edit message"
+                        className="px-1 h-5 w-5 flex items-center justify-center"
+                      >
+                        ✎
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

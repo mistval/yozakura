@@ -45,7 +45,7 @@ Conversation transcript:
 
 </transcript>
 
-Write the conversation summary now.`;
+Output the conversation summary now.`;
   public readonly contextSchema = focusedConversationExecutionContextSchema;
 
   public readonly templateName = 'Conversation Rolling Summary (User)';

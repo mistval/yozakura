@@ -17,46 +17,96 @@ export type LlmChatOptions = {
   signal?: AbortSignal | undefined;
 };
 
+const normalizedOpenAIChatCompletionMessageSchema = z.object({
+  content: z.string(),
+  reasoning_content: z.string().optional(),
+});
+
+type NormalizedLLMChatMessage = z.infer<typeof normalizedOpenAIChatCompletionMessageSchema>;
+
 const openAIChatCompletionSchema = z.object({
   choices: z.array(
     z.object({
-      message: z.object({
-        content: z.string(),
+      message: normalizedOpenAIChatCompletionMessageSchema.extend({
+        reasoning: z.string().nullable().optional(),
+        reasoning_content: z.string().nullable().optional(),
       }),
     })
   ),
 });
 
-function extractStreamChunkText(chunkPayload: unknown): { mode: 'delta' | 'full' | 'none'; text: string } {
+type RawLLMChatMessage = z.infer<typeof openAIChatCompletionSchema>['choices'][number]['message'];
+
+type ExtractedStreamChunk =
+  | { mode: 'delta'; message: Partial<NormalizedLLMChatMessage> }
+  | { mode: 'full'; message: NormalizedLLMChatMessage }
+  | { mode: 'none' };
+
+function normalizeChatMessage(raw: RawLLMChatMessage): NormalizedLLMChatMessage {
+  const reasoningContent = raw.reasoning_content || raw.reasoning || undefined;
+
+  return {
+    ...raw,
+    reasoning_content: reasoningContent,
+  };
+}
+
+function extractStreamMessageFields(value: unknown): Partial<NormalizedLLMChatMessage> | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const content = (value as { content?: unknown }).content;
+  const reasoningContent =
+    (value as { reasoning_content?: unknown }).reasoning_content ||
+    (value as { reasoning?: unknown }).reasoning;
+
+  if (typeof content !== 'string' && typeof reasoningContent !== 'string') {
+    return undefined;
+  }
+
+  return {
+    ...(typeof content === 'string' ? { content } : {}),
+    ...(typeof reasoningContent === 'string' ? { reasoning_content: reasoningContent } : {}),
+  };
+}
+
+function extractStreamChunkMessage(chunkPayload: unknown): ExtractedStreamChunk {
   if (!chunkPayload || typeof chunkPayload !== 'object') {
-    return { mode: 'none', text: '' };
+    return { mode: 'none' };
   }
 
   const choices = (chunkPayload as { choices?: unknown }).choices;
   if (!Array.isArray(choices) || choices.length === 0) {
-    return { mode: 'none', text: '' };
+    return { mode: 'none' };
   }
 
   const firstChoice = choices[0];
   if (!firstChoice || typeof firstChoice !== 'object') {
-    return { mode: 'none', text: '' };
+    return { mode: 'none' };
   }
 
   const delta = (firstChoice as { delta?: unknown }).delta;
-  if (delta && typeof delta === 'object' && typeof (delta as { content?: unknown }).content === 'string') {
-    return { mode: 'delta', text: (delta as { content: string }).content };
+  const deltaMessage = extractStreamMessageFields(delta);
+  if (deltaMessage) {
+    return { mode: 'delta', message: deltaMessage };
   }
 
   const message = (firstChoice as { message?: unknown }).message;
-  if (
-    message &&
-    typeof message === 'object' &&
-    typeof (message as { content?: unknown }).content === 'string'
-  ) {
-    return { mode: 'full', text: (message as { content: string }).content };
+  const fullMessage = extractStreamMessageFields(message);
+  if (fullMessage?.content !== undefined) {
+    return {
+      mode: 'full',
+      message: {
+        content: fullMessage.content,
+        ...(fullMessage.reasoning_content !== undefined
+          ? { reasoning_content: fullMessage.reasoning_content }
+          : {}),
+      },
+    };
   }
 
-  return { mode: 'none', text: '' };
+  return { mode: 'none' };
 }
 
 function buildLlmHttpError(response: Response, responseText: string) {
@@ -68,7 +118,10 @@ function buildLlmHttpError(response: Response, responseText: string) {
   return new Error(message);
 }
 
-async function parseLlmStreamingResponse(response: Response, onTokens: LlmTokenCallback): Promise<string> {
+async function parseLlmStreamingResponse(
+  response: Response,
+  onTokens: LlmTokenCallback
+): Promise<NormalizedLLMChatMessage> {
   const contentType = (response.headers.get('content-type') || '').toLowerCase();
   if (!contentType.includes('text/event-stream')) {
     const body = await response.text();
@@ -83,7 +136,7 @@ async function parseLlmStreamingResponse(response: Response, onTokens: LlmTokenC
     throw new Error('Streaming response body was empty.');
   }
 
-  let combinedText = '';
+  let combinedMessage: NormalizedLLMChatMessage = { content: '' };
   let pendingBuffer = '';
   let sawDoneMarker = false;
   const decoder = new TextDecoder();
@@ -106,16 +159,24 @@ async function parseLlmStreamingResponse(response: Response, onTokens: LlmTokenC
 
     let parsedPayload = JSON.parse(payload);
 
-    const extracted = extractStreamChunkText(parsedPayload);
-    if (extracted.mode === 'delta' && extracted.text) {
-      combinedText += extracted.text;
-      onTokens(combinedText);
+    const extracted = extractStreamChunkMessage(parsedPayload);
+    if (extracted.mode === 'delta') {
+      if (extracted.message.reasoning_content !== undefined) {
+        combinedMessage.reasoning_content =
+          (combinedMessage.reasoning_content ?? '') + extracted.message.reasoning_content;
+      }
+
+      if (extracted.message.content) {
+        combinedMessage.content += extracted.message.content;
+        onTokens(combinedMessage.content);
+      }
+
       return;
     }
 
     if (extracted.mode === 'full') {
-      combinedText = extracted.text;
-      onTokens(combinedText);
+      combinedMessage = extracted.message;
+      onTokens(combinedMessage.content);
     }
   };
 
@@ -154,10 +215,13 @@ async function parseLlmStreamingResponse(response: Response, onTokens: LlmTokenC
   pendingBuffer += decoder.decode();
   processBufferedLines(true);
 
-  return combinedText;
+  return combinedMessage;
 }
 
-export async function executeLlmChat(payload: Record<string, unknown>, options: LlmChatOptions = {}) {
+export async function executeLlmChat(
+  payload: Record<string, unknown>,
+  options: LlmChatOptions = {}
+): Promise<NormalizedLLMChatMessage | undefined> {
   const { targetUrl, authToken, onTokens, signal } = options;
   const streamingRequested = typeof onTokens === 'function';
 
@@ -193,7 +257,12 @@ export async function executeLlmChat(payload: Record<string, unknown>, options: 
   }
 
   const completion = await parseJSONResponse(openAIChatCompletionSchema, response);
-  return completion?.choices?.[0]?.message?.content || '';
+  const message = completion?.choices?.[0]?.message;
+  if (message) {
+    return normalizeChatMessage(message);
+  }
+
+  return message;
 }
 
 export async function parseJSONResponse<TZodType>(

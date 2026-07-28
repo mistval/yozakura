@@ -7,21 +7,21 @@ import { targetedConversationExecutionContextSchema } from '../prompt_template_c
 class RollingPairwiseMemoryRewriteSystemTemplate extends PromptTemplateBase<
   z.infer<typeof targetedConversationExecutionContextSchema>
 > {
-  public readonly defaultTemplateString = `You will be given the following types of information:
-1. An existing consolidated summary of <%= it.focusedCharacter.firstName %>'s memories towards <%= it.targetCharacter.firstName %> (if any).
-2. A list of summaries of recent conversations that have taken place between <%= it.focusedCharacter.firstName %> and <%= it.targetCharacter.firstName %> (if any).
-3. A list of secondhand information that <%= it.focusedCharacter.firstName %> has heard about <%= it.targetCharacter.firstName %> (if any).
-4. A goal for <%= it.focusedCharacter.firstName %> in their next interaction with <%= it.targetCharacter.firstName %> (if any) 
+  public readonly defaultTemplateString = `Your job is to read a list of past interaction summaries and use it to synthesize a consistent internal memory state for <%= it.focusedCharacter.firstName %> to bring into their future interactions with <%= it.targetCharacter.firstName %>. You will also have access to <%= it.focusedCharacter.firstName %>'s existing internal memory state, persona information, and immediate goal in their next interaction with <%= it.targetCharacter.firstName %>.
 
-Your job is to use the available information to update <%= it.focusedCharacter.firstName %>'s consolidated memory about <%= it.targetCharacter.firstName %>. The existing consolidated memory is now stale and needs updating to include newer details.
+Consider not only what happened, but the order it happened in, and how it shows evolution or insights into <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %> and their goals towards <%= it.targetCharacter.firstName %>.
+
+The purpose of the new internal memory state will be to inform the behavior of a roleplayer who will roleplay as <%= it.focusedCharacter.firstName %> in future interactions with <%= it.targetCharacter.firstName %>. Consider what information the roleplayer should know in order to accurately roleplay as <%= it.focusedCharacter.firstName %> in future interactions with <%= it.targetCharacter.firstName %>.
+
+The existing internal memory state that will be provided was previously generated based on an older version of the same rolling list of recent interaction summaries.
 
 Rules:
-- Your goal is to crystallize the current state of <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %> based on the provided logs.
-- First, prioritize information that is relevant to <%= it.focusedCharacter.firstName %>'s goal in their next interaction with <%= it.targetCharacter.firstName %> (if any), without restating the goal.
-- Second, prioritize <%= it.focusedCharacter.firstName %>'s broader goals and intentions towards <%= it.targetCharacter.firstName %>, relationship status, memories, and emotional trajectory relevant to the relationship.
-- From the existing consolidated memory, keep important details that remain plausible, even if they are not substantiated in the most recent conversation summaries.
-- Write in third person. Be specific and direct.
-- Output only the updated memory.`;
+- Prioritize actionable information that can be used to guide <%= it.focusedCharacter.firstName %>'s future behavior towards <%= it.targetCharacter.firstName %>.
+- Reference <%= it.focusedCharacter.firstName %>'s persona to guide prioritization and emotional valence.
+- Only include experientially earned information that is distinct from <%= it.focusedCharacter.firstName %>'s persona information (the roleplayer will be provided the persona information separately).
+- Provide sufficient context and reasoning for any goals or intentions.
+- Newer (bottom-most) conversation summaries should be weighted more heavily.
+- Output only the new internal memory state, nothing else.`;
   public readonly contextSchema = targetedConversationExecutionContextSchema;
 
   public readonly templateName = 'Rolling Pairwise Memory Rewrite (System)';
@@ -35,13 +35,19 @@ Rules:
 class RollingPairwiseMemoryRewriteUserTemplate extends PromptTemplateBase<
   z.infer<typeof targetedConversationExecutionContextSchema>
 > {
-  public readonly defaultTemplateString = `<%= it.focusedCharacter.firstName %>'s existing consolidated memory about <%= it.targetCharacter.firstName %>:
+  public readonly defaultTemplateString = `<%= it.focusedCharacter.firstName %>'s persona:
+<persona>
+<%= it.focusedCharacter.internalDescription %>
+
+</persona>
+
+<%= it.focusedCharacter.firstName %>'s existing internal memory state towards <%= it.targetCharacter.firstName %> (this is what you need to output a new version of):
 <existing_memory>
 <%= it.targetCharacterRelationship.memory || (it.focusedCharacter.firstName + ' has no memories about ' + it.targetCharacter.firstName + ' yet.') %>
 
 </existing_memory>
 
-Recent specific interactions with and information about <%= it.targetCharacter.firstName %> that <%= it.focusedCharacter.firstName %> remembers (oldest first):
+Recent summarized interactions with and information about <%= it.targetCharacter.firstName %> from <%= it.focusedCharacter.firstName %>'s perspective (oldest first):
 <%= it.targetCharacterFormattedRollingMemoriesText %>
 
 
@@ -52,7 +58,7 @@ Recent specific interactions with and information about <%= it.targetCharacter.f
 </goal>
 
 
-Output the updated memory now, prioritizing more recent information.`;
+Output the updated internal memory state for <%= it.focusedCharacter.firstName %> to bring into future interactions with <%= it.targetCharacter.firstName %>.`;
   public readonly contextSchema = targetedConversationExecutionContextSchema;
 
   public readonly templateName = 'Rolling Pairwise Memory Rewrite (User)';

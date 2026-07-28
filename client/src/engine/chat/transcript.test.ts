@@ -49,6 +49,15 @@ describe('ConversationTranscript offscreen-mention RAG', () => {
     ({ transcript, live } = freshTranscript([ALICE.id, BOB.id, CAROL.id]));
   });
 
+  it("does not return self as RAG'd character", async () => {
+    transcript = await say(transcript, CAROL, 'Hello Eve');
+    transcript = transcript.addParticipant(EVE).updatedTranscript;
+    const raggedFromEvePerspective = transcript.getMentionedOffscreenCharacterIds(EVE.id);
+    expect(raggedFromEvePerspective).toHaveLength(0);
+    const raggedFromCarolPerspective = transcript.getMentionedOffscreenCharacterIds(CAROL.id);
+    expect(raggedFromCarolPerspective).toHaveLength(1);
+  });
+
   it('handles first message being a join message', async () => {
     transcript = await say(transcript, CAROL, 'Hello everyone');
     transcript = transcript.addParticipant(EVE).updatedTranscript;

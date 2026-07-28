@@ -237,7 +237,7 @@ export async function generateCharacterEndOfChatUpdates(
       conversationSummaryEntry
     );
 
-    const pairwiseContext = await buildTargetedChatTemplateContext(
+    let pairwiseContext = await buildTargetedChatTemplateContext(
       fromCharacterPerspective.id,
       otherCharacter.id,
       accumulator.resolvers
@@ -246,10 +246,34 @@ export async function generateCharacterEndOfChatUpdates(
     const newConversationGoal =
       await gatedRenderFunctions.nextConversationGoalUpdatesChainGroup(pairwiseContext);
 
+    accumulator.stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
+      nextConversationGoal: newConversationGoal,
+    });
+
+    pairwiseContext = await buildTargetedChatTemplateContext(
+      fromCharacterPerspective.id,
+      otherCharacter.id,
+      accumulator.resolvers
+    );
+
     const newMemory = await gatedRenderFunctions.rollingPairwiseMemoryRewriteChainGroup(pairwiseContext);
+
+    accumulator.stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
+      memory: newMemory,
+    });
+
+    pairwiseContext = await buildTargetedChatTemplateContext(
+      fromCharacterPerspective.id,
+      otherCharacter.id,
+      accumulator.resolvers
+    );
 
     const newRelationshipDescriptor =
       await gatedRenderFunctions.relationshipDescriptorUpdateChainGroup(pairwiseContext);
+
+    accumulator.stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
+      descriptor: newRelationshipDescriptor,
+    });
 
     const familiarity = calculateInteractionUpdatedFamiliarity(
       initialPairwiseRelationship,
@@ -258,9 +282,6 @@ export async function generateCharacterEndOfChatUpdates(
     );
 
     accumulator.stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
-      nextConversationGoal: newConversationGoal,
-      memory: newMemory,
-      descriptor: newRelationshipDescriptor,
       familiarity: familiarity.new,
     });
 

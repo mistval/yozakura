@@ -7,7 +7,7 @@ import { targetedConversationExecutionContextSchema } from '../prompt_template_c
 class NextConversationGoalUpdatesSystemTemplate extends PromptTemplateBase<
   z.infer<typeof targetedConversationExecutionContextSchema>
 > {
-  public readonly defaultTemplateString = `Given <%= it.focusedCharacter.firstName %>'s character persona, their memory about <%= it.targetCharacter.firstName %>, and the transcript of a conversation that just happened involving both of them, you must write a goal for <%= it.focusedCharacter.firstName %> in their next interaction with <%= it.targetCharacter.firstName %>.
+  public readonly defaultTemplateString = `Given <%= it.focusedCharacter.firstName %>'s character persona, their memory about <%= it.targetCharacter.firstName %>, and the transcript of a conversation that just happened involving both of them, you must output a goal for <%= it.focusedCharacter.firstName %> in their next interaction with <%= it.targetCharacter.firstName %>.
 
 Rules:
 - Prioritize specific goals that were discussed in the conversation.
@@ -15,7 +15,8 @@ Rules:
 - Write in the third person perspective.
 - Choose a goal that provides strong narrative momentum.
 - Be specific and provide sufficient context.
-- Output the goal and nothing else`;
+- Be specific and creative about how <%= it.focusedCharacter.firstName %> might pursue this goal exactly. Specificity helps keep things moving along, creativity keeps it interesting.
+- Output the goal and necessary context, nothing else`;
   public readonly contextSchema = targetedConversationExecutionContextSchema;
 
   public readonly templateName = 'Next Conversation Goal (System)';
