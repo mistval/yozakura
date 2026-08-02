@@ -343,9 +343,9 @@ export function CharacterEditorModalProvider({
 
     await runWithField('save', async () => {
       if (isGlobalMode) {
-        await useGlobalCharactersStore.getState().saveGlobalCharacter(sanitizedCharacter, selectedImageFile);
+        useGlobalCharactersStore.getState().saveGlobalCharacter(sanitizedCharacter, selectedImageFile);
       } else {
-        await saveScenarioCharacter(sanitizedCharacter, selectedImageFile);
+        saveScenarioCharacter(sanitizedCharacter, selectedImageFile);
       }
 
       onClose();
