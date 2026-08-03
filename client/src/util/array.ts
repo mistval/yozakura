@@ -49,6 +49,25 @@ export function trimNewestByCreatedAt<T extends { createdAt: string }>(items: T[
     .slice(0, max);
 }
 
+export function concatUniqueByIds<TElementType extends { id: string }>(
+  arr: TElementType[],
+  newElements: TElementType[]
+) {
+  const newElementsById = new Map(newElements.map((e) => [e.id, e]));
+
+  return arr
+    .map((el) => {
+      const replacement = newElementsById.get(el.id);
+      if (replacement) {
+        newElementsById.delete(el.id);
+        return replacement;
+      }
+
+      return el;
+    })
+    .concat([...newElementsById.values()]);
+}
+
 export function concatUniqueById<TElementType extends { id: string }>(
   arr: TElementType[],
   newElement: TElementType
