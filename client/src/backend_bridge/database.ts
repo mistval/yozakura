@@ -395,7 +395,7 @@ export async function loadScenarioSummaries(): Promise<ScenarioSummary[]> {
   });
 }
 
-async function storeCharacterRelationships(relationships: CharacterRelationship[]) {
+export async function storeCharacterRelationships(relationships: CharacterRelationship[]) {
   if (relationships.length === 0) return;
   const rows = relationships.map((relationship) => [
     relationship.id,

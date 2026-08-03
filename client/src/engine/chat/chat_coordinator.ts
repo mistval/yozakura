@@ -12,6 +12,7 @@ import { useSettingsStore, type SpeakerSelectionMode } from '../../state/setting
 import * as Database from '../../backend_bridge/database.js';
 import type { Character, ChatMessage, EphemeralLocation, StoredConversation } from '../types';
 import { getRequiredActiveScenario } from '../../state/scenario_store.js';
+import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { ConversationTranscript } from './transcript';
@@ -27,7 +28,6 @@ import { moderationNextSpeakerTemplatesGroup } from '../prompt_templates/chat/mo
 import { conversationEndJudgeTemplatesGroup } from '../prompt_templates/chat/conversation_end_judge';
 import { chatSystemPromptChain } from '../prompt_templates/chat/chat_system_prompt';
 import { newId } from '../../util/id';
-import { EndOfChatUpdateAccumulator } from './end_of_chat_update_accumulator';
 import { buildConversationStateUpdates, generateCharacterEndOfChatUpdates } from './post_chat_memories';
 import { wait } from '../../util/promise';
 import { getRequiredRandomChoice } from '../../util/array';
@@ -256,24 +256,28 @@ export class ChatCoordinator {
     const scenario = getRequiredActiveScenario();
 
     if (!noEffect) {
-      // One shared accumulator stages every character's updates as a single source of truth;
-      // nothing is persisted until commit() runs after all characters are processed, so
-      // cancelling/crashing partway through leaves all characters and relationships untouched.
-      const accumulator = new EndOfChatUpdateAccumulator();
+      const characterStore = useScenarioCharacterStore.getState();
+      const relationshipStore = useScenarioCharacterRelationshipStore.getState();
       const characterUpdates: Array<Awaited<ReturnType<typeof generateCharacterEndOfChatUpdates>>> = [];
 
-      for (const participant of getAllActiveChatSpeakers()) {
-        if (participant.id !== this.getUserCharacter().id) {
-          characterUpdates.push(
-            await generateCharacterEndOfChatUpdates(participant, accumulator, (statusInfo) =>
-              this.setStateProcessingMemories(statusInfo)
-            )
-          );
+      try {
+        for (const participant of getAllActiveChatSpeakers()) {
+          if (participant.id !== this.getUserCharacter().id) {
+            characterUpdates.push(
+              await generateCharacterEndOfChatUpdates(participant, (statusInfo) =>
+                this.setStateProcessingMemories(statusInfo)
+              )
+            );
+          }
         }
-      }
 
-      // Past the cancellation point: flush all staged updates, then record the conversation.
-      await accumulator.commit();
+        await Promise.all([characterStore.commitAllChanges(), relationshipStore.commitAllChanges()]);
+      } catch {
+        await Promise.all([
+          characterStore.discardPendingChanges(),
+          relationshipStore.discardPendingChanges(),
+        ]);
+      }
 
       const conversationLog: StoredConversation = Database.createPersistedObject({
         serializedTranscript: this.transcript().serialize(),
