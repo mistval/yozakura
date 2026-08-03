@@ -1,17 +1,20 @@
-import _ from 'lodash';
 import { assert } from '../errors/application_error';
 import { showNonRetriableErrorCardIfNeeded } from '../engine/interative_retry';
+import { useScenarioStore } from './scenario_store';
 
 type OperationType = 'upsert' | 'delete';
 
 export type SyncMode = 'defer' | 'immediate';
 export type SyncOptions = { syncMode: SyncMode };
 
+export const IMMEDIATE_SYNC = { syncMode: 'immediate' } as const satisfies SyncOptions;
+export const DEFERRED_SYNC = { syncMode: 'defer' } as const satisfies SyncOptions;
+
 export interface IEphemeralStateDelegate<TEntityType> {
   // Upsert these entities into the store state
-  readonly setStoreState: (entity: TEntityType) => void;
+  readonly setStoreState: (entities: TEntityType[]) => void;
   // Delete these entities (by ID) from the store state
-  readonly deleteStoreState: (entity: TEntityType) => void;
+  readonly deleteStoreState: (entities: TEntityType[]) => void;
   // Write these entities to the database. Must be atomic (SQLite transaction or multi-upsert).
   readonly setDatabaseState: (entities: TEntityType[]) => Promise<void>;
   // Delete these entities from the database. Must be atomic (SQLite transaction or multi-delete).
@@ -21,10 +24,13 @@ export interface IEphemeralStateDelegate<TEntityType> {
 }
 
 export class EphemeralStateHelper<TEntityType extends { id: string }> {
-  private readonly pendingOperations: Array<{
-    operationType: OperationType;
-    entity: TEntityType;
-  }> = [];
+  private readonly pendingOperations = new Map<
+    string,
+    {
+      operationType: OperationType;
+      entity: TEntityType;
+    }
+  >();
 
   private databaseQueuePromise = Promise.resolve();
 
@@ -33,19 +39,29 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     private readonly delegate: IEphemeralStateDelegate<TEntityType>
   ) {}
 
-  public stageUpdatedEntity(entity: TEntityType, options?: SyncOptions) {
-    this.delegate.setStoreState(entity);
-    return this.handleDatabaseSync('upsert', entity, options);
+  public stageUpdatedEntity(entity: TEntityType, options: SyncOptions) {
+    return this.stageUpdatedEntities([entity], options);
   }
 
-  public stageDeletedEntity(entity: TEntityType, options?: SyncOptions) {
-    this.delegate.deleteStoreState(entity);
-    return this.handleDatabaseSync('delete', entity, options);
+  public stageUpdatedEntities(entities: TEntityType[], options: SyncOptions) {
+    this.assertCanSyncImmediately(entities, options);
+    this.delegate.setStoreState(entities);
+    return this.handleDatabaseSync('upsert', entities, options);
+  }
+
+  public stageDeletedEntity(entity: TEntityType, options: SyncOptions) {
+    return this.stageDeletedEntities([entity], options);
+  }
+
+  public stageDeletedEntities(entities: TEntityType[], options: SyncOptions) {
+    this.assertCanSyncImmediately(entities, options);
+    this.delegate.deleteStoreState(entities);
+    return this.handleDatabaseSync('delete', entities, options);
   }
 
   public async discardPendingChanges() {
-    const entities = this.pendingOperations.map((e) => e.entity);
-    this.pendingOperations.length = 0;
+    const entities = [...this.pendingOperations.values()].map((operation) => operation.entity);
+    this.pendingOperations.clear();
 
     if (entities.length > 0) {
       this.databaseQueuePromise = this.databaseQueuePromise
@@ -59,10 +75,8 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
   }
 
   public async commitChanges() {
-    // Take only the most recent operation for each entity
-    const uniqueOperations = _.uniqBy(this.pendingOperations.reverse(), (a) => a.entity.id);
-
-    this.pendingOperations.length = 0;
+    const uniqueOperations = [...this.pendingOperations.values()];
+    this.pendingOperations.clear();
 
     const updates = uniqueOperations.filter((o) => o.operationType === 'upsert').map((o) => o.entity);
     const deletes = uniqueOperations.filter((o) => o.operationType === 'delete').map((o) => o.entity);
@@ -76,27 +90,43 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     await this.databaseQueuePromise;
   }
 
-  private async handleDatabaseSync(operationType: OperationType, entity: TEntityType, options?: SyncOptions) {
-    const syncMode = options?.syncMode ?? 'defer';
+  public abandonPendingChanges() {
+    this.pendingOperations.clear();
+  }
 
-    if (syncMode === 'defer') {
-      this.pendingOperations.push({
-        operationType,
-        entity,
-      });
-    } else {
-      const hasPendingOperation = this.pendingOperations.some((o) => o.entity.id === entity.id);
-      if (hasPendingOperation) {
+  private assertCanSyncImmediately(entities: TEntityType[], options: SyncOptions) {
+    if (options.syncMode !== 'immediate') {
+      return;
+    }
+
+    for (const entity of entities) {
+      if (this.pendingOperations.has(entity.id)) {
         throw new Error(`Cannot immediately sync entity. Deferred sync is pending.`);
       }
+    }
+  }
 
-      if (operationType === 'delete') {
-        await this.doDeletes([entity]);
-      } else if (operationType === 'upsert') {
-        await this.doUpdates([entity]);
-      } else {
-        assert(false, 'Unknown sync operation type');
+  private async handleDatabaseSync(
+    operationType: OperationType,
+    entities: TEntityType[],
+    options: SyncOptions
+  ) {
+    if (options.syncMode === 'defer') {
+      for (const entity of entities) {
+        this.pendingOperations.set(entity.id, {
+          operationType,
+          entity,
+        });
       }
+      return;
+    }
+
+    if (operationType === 'delete') {
+      await this.doDeletes(entities);
+    } else if (operationType === 'upsert') {
+      await this.doUpdates(entities);
+    } else {
+      assert(false, 'Unknown sync operation type');
     }
   }
 
@@ -108,7 +138,7 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     } catch (err) {
       await showNonRetriableErrorCardIfNeeded({
         error: err,
-        operationType: 'database_sync',
+        operationType: 'database_sync_updated',
       });
 
       await this.delegate.refreshStoreStateFromDatabase(updates);
@@ -123,7 +153,7 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     } catch (err) {
       await showNonRetriableErrorCardIfNeeded({
         error: err,
-        operationType: 'database_sync',
+        operationType: 'database_sync_delete',
       });
 
       await this.delegate.refreshStoreStateFromDatabase(deletes);
@@ -132,9 +162,20 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
 }
 
 export const ephemeralStateSlice = <TEntityType extends { id: string }>(
-  delegate: IEphemeralStateDelegate<TEntityType>
+  delegate: IEphemeralStateDelegate<TEntityType>,
+  options?: {
+    discardPendingChangesOnScenarioChange?: boolean;
+  }
 ) => {
   const helper = new EphemeralStateHelper<TEntityType>(delegate);
+
+  if (options?.discardPendingChangesOnScenarioChange) {
+    useScenarioStore.subscribe((newState, previousState) => {
+      if (newState.activeScenario?.id !== previousState.activeScenario?.id) {
+        helper.abandonPendingChanges();
+      }
+    });
+  }
 
   return {
     ephemeralStateHelper: helper,

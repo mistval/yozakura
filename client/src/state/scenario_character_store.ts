@@ -3,15 +3,18 @@ import * as Database from '../backend_bridge/database.js';
 import * as Files from '../backend_bridge/files.js';
 import { type WorldMap, type Character, type Scenario } from '../engine/types.js';
 import { assertNonNullish } from '../errors/application_error.js';
-import { concatUniqueById, concatUniqueByIds, getRequiredRandomChoice, removeById } from '../util/array.js';
+import { concatUniqueByIds, getRequiredRandomChoice } from '../util/array.js';
 import {
   getRequiredActiveScenario,
   getRequiredActiveScenarioMap,
   useScenarioStore,
 } from './scenario_store.js';
 import { addOrReplaceVersionQueryParam, newId } from '../util/id.js';
-import { ephemeralStateSlice } from './ephemeral_state_helper.js';
-import _ from 'lodash';
+import { ephemeralStateSlice, IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
+
+type UpdatedScenarioCharacter = Character & {
+  imageFile?: File;
+};
 
 type ScenarioCharacterStoreState = {
   scenarioCharactersById: Record<string, Character>;
@@ -25,14 +28,14 @@ type ScenarioCharacterStoreState = {
   removeCharacterLocal: (characterId: string) => void;
   removeScenarioCharacter: (characterId: string) => Promise<void>;
   loadScenarioCharacters: () => Promise<void>;
-  saveScenarioCharacters: (character: Character[]) => void;
+  saveScenarioCharacters: (character: Character[], syncOptions?: SyncOptions) => void;
   saveScenarioCharacter: (
     character: Character,
     imageFile?: File,
     setter?: (prevCharacter: Character | undefined) => Character
   ) => void;
   saveInactiveScenarioCharacterImmediate: (character: Character) => Promise<void>;
-  saveScenarioCharacterFields: (id: string, fields: Partial<Character>) => void;
+  saveScenarioCharacterFields: (id: string, fields: Partial<Character>, syncOptions?: SyncOptions) => void;
   addGlobalCharacterToActiveScenario: (
     character: Character,
     scenarioArgs?: {
@@ -50,7 +53,7 @@ type ScenarioCharacterStoreState = {
     scenarioCharactersById?: Record<string, Character>
   ) => Character | undefined;
   getNPCs: () => Character[];
-} & ReturnType<typeof ephemeralStateSlice<Character>>;
+} & ReturnType<typeof ephemeralStateSlice<UpdatedScenarioCharacter>>;
 
 const DATABASE_OBJECT_NAME = 'scenario_character';
 
@@ -73,11 +76,9 @@ function getCharacterDataStructuresFromArray(characters: Character[]) {
   } satisfies Pick<ScenarioCharacterStoreState, 'scenarioCharacters' | 'scenarioCharactersById'>;
 }
 
-function getCharacterDataStructuresFromDict(characters: Record<string, Character>) {
-  return {
-    scenarioCharacters: Object.values(characters),
-    scenarioCharactersById: characters,
-  } satisfies Pick<ScenarioCharacterStoreState, 'scenarioCharacters' | 'scenarioCharactersById'>;
+function toPlainCharacter(updatedCharacter: UpdatedScenarioCharacter): Character {
+  const { imageFile: _imageFile, ...character } = updatedCharacter;
+  return character;
 }
 
 export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((set, get) => ({
@@ -85,35 +86,98 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
   scenarioCharactersById: {},
   scenarioCharactersAreLoaded: false,
 
-  ...ephemeralStateSlice({
-    setStoreState(entity: Character) {
-      set(getCharacterDataStructuresFromArray(concatUniqueById(get().scenarioCharacters, entity)));
-    },
+  ...ephemeralStateSlice(
+    {
+      setStoreState(entities: UpdatedScenarioCharacter[]) {
+        const characters = entities.map(toPlainCharacter);
+        set(getCharacterDataStructuresFromArray(concatUniqueByIds(get().scenarioCharacters, characters)));
+      },
 
-    deleteStoreState(entity: Character) {
-      set(getCharacterDataStructuresFromArray(removeById(get().scenarioCharacters, entity.id)));
-    },
+      deleteStoreState(entities: UpdatedScenarioCharacter[]) {
+        const ids = new Set(entities.map((entity) => entity.id));
+        set(
+          getCharacterDataStructuresFromArray(
+            get().scenarioCharacters.filter((character) => !ids.has(character.id))
+          )
+        );
+      },
 
-    async setDatabaseState(entities: Character[]) {
-      await Database.doAsDataWrite(async () => {
-        await Database.storeScenarioCharacters(entities);
-      }, `${DATABASE_OBJECT_NAME}.all`);
-    },
+      async setDatabaseState(entities: UpdatedScenarioCharacter[]) {
+        const debouncerKey = entities.length === 1 ? entities[0]!.id : `${DATABASE_OBJECT_NAME}.all`;
 
-    deleteDatabaseState(entities: Character[]) {
-      return Database.doAsDataWrite(async () => {
-        await Database.deleteScenarioCharacters(entities.map((e) => e.id));
-      }, DATABASE_OBJECT_NAME);
-    },
+        await Database.doAsDataWrite(
+          async () => {
+            const characters = await Promise.all(
+              entities.map(async (entity) => {
+                const character = get().scenarioCharactersById[entity.id];
+                if (!character) {
+                  return undefined;
+                }
 
-    async refreshStoreStateFromDatabase(entities: Character[]) {
-      const refreshed = await Database.doAsDataRead(() => {
-        return Database.loadScenarioCharactersByIds(entities.map((e) => e.id));
-      }, `${DATABASE_OBJECT_NAME}.partial.refresh`);
+                if (!entity.imageFile) {
+                  return character;
+                }
 
-      set(getCharacterDataStructuresFromArray(concatUniqueByIds(get().scenarioCharacters, refreshed)));
+                await Files.upload(
+                  character.imagePath,
+                  entity.imageFile,
+                  entity.imageFile.type || 'application/octet-stream'
+                );
+
+                const latestCharacter = get().scenarioCharactersById[entity.id];
+                if (!latestCharacter) {
+                  return undefined;
+                }
+
+                return {
+                  ...latestCharacter,
+                  imagePath: addOrReplaceVersionQueryParam(latestCharacter.imagePath),
+                };
+              })
+            );
+
+            const existingCharacters = characters.filter((character): character is Character =>
+              Boolean(character)
+            );
+            if (existingCharacters.length === 0) {
+              return;
+            }
+
+            await Database.storeScenarioCharacters(existingCharacters);
+            set(
+              getCharacterDataStructuresFromArray(
+                concatUniqueByIds(get().scenarioCharacters, existingCharacters)
+              )
+            );
+          },
+          `${DATABASE_OBJECT_NAME}.all`,
+          { debouncerKey }
+        );
+      },
+
+      deleteDatabaseState(entities: UpdatedScenarioCharacter[]) {
+        return Database.doAsDataWrite(
+          async () => {
+            await Database.deleteScenarioCharacters(entities.map((entity) => entity.id));
+          },
+          DATABASE_OBJECT_NAME,
+          {
+            debouncerKey: entities.length === 1 ? entities[0]!.id : `${DATABASE_OBJECT_NAME}.all`,
+          }
+        );
+      },
+
+      async refreshStoreStateFromDatabase(entities: UpdatedScenarioCharacter[]) {
+        const refreshed = await Database.doAsDataRead(
+          () => Database.loadScenarioCharactersByIds(entities.map((entity) => entity.id)),
+          `${DATABASE_OBJECT_NAME}.partial.refresh`
+        );
+
+        set(getCharacterDataStructuresFromArray(concatUniqueByIds(get().scenarioCharacters, refreshed)));
+      },
     },
-  }),
+    { discardPendingChangesOnScenarioChange: true }
+  ),
 
   setScenarioCharacters: (characters) => {
     set({
@@ -136,7 +200,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
       return;
     }
 
-    get().ephemeralStateHelper.stageDeletedEntity(characterToDelete);
+    await get().ephemeralStateHelper.stageDeletedEntity(characterToDelete, IMMEDIATE_SYNC);
   },
 
   loadScenarioCharacters: async () => {
@@ -156,60 +220,25 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
   saveScenarioCharacter: (character, imageFile, setter) => {
     setter ??= (prev) => ({ ...prev, ...character });
 
-    const state = get();
-    const newCharacter = setter(state.scenarioCharactersById[character.id]);
+    const newCharacter: UpdatedScenarioCharacter = {
+      ...setter(get().scenarioCharactersById[character.id]),
+      ...(imageFile ? { imageFile } : {}),
+    };
 
-    set(
-      getCharacterDataStructuresFromDict({
-        ...state.scenarioCharactersById,
-        [character.id]: newCharacter,
-      })
-    );
-
-    void Database.doAsDataWrite(
-      async () => {
-        const latestCharacter = get().scenarioCharactersById[character.id];
-        if (!latestCharacter) {
-          return;
-        }
-
-        await Database.storeScenarioCharacter(latestCharacter);
-
-        // TODO: Going to need to do something about saving files. Maybe we make an UpdatedCharacter type that has a file field, and we use that in the EphemeralStateHelper instead of a plain character.
-        if (imageFile) {
-          await Files.upload(
-            latestCharacter.imagePath,
-            imageFile,
-            imageFile.type || 'application/octet-stream'
-          );
-
-          get().saveScenarioCharacterFields(character.id, {
-            imagePath: addOrReplaceVersionQueryParam(character.imagePath),
-          });
-        }
-      },
-      DATABASE_OBJECT_NAME,
-      {
-        debouncerKey: character.id,
-      }
-    );
+    void get().ephemeralStateHelper.stageUpdatedEntity(newCharacter, IMMEDIATE_SYNC);
   },
 
-  saveScenarioCharacterFields: (id, fields) => {
+  saveScenarioCharacterFields: (id, fields, syncOptions = IMMEDIATE_SYNC) => {
     const char = get().scenarioCharactersById[id];
     assertNonNullish(char, 'saveScenarioCharacterFields called for non-existent characterId: ' + id);
 
-    return get().saveScenarioCharacter(char, undefined, (prev) => {
-      assertNonNullish(
-        prev,
-        'saveScenarioCharacterFields setter called with non-existent previous character for id: ' + id
-      );
-
-      return {
-        ...prev,
+    void get().ephemeralStateHelper.stageUpdatedEntity(
+      {
+        ...char,
         ...fields,
-      };
-    });
+      },
+      syncOptions
+    );
   },
 
   getCharactersByIds: (ids) => {
@@ -232,29 +261,12 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     return returnChar!;
   },
 
-  saveScenarioCharacters(characters: Character[]) {
+  saveScenarioCharacters(characters: Character[], syncOptions = IMMEDIATE_SYNC) {
     if (characters.length === 0) {
       return;
     }
 
-    const newCharactersById = {
-      ...get().scenarioCharactersById,
-      ...Object.fromEntries(characters.map((c) => [c.id, c])),
-    } satisfies { [id: string]: Character };
-
-    set(getCharacterDataStructuresFromDict(newCharactersById));
-
-    void Database.doAsDataWrite(async () => {
-      const latestCharacters = characters
-        .map((c) => get().scenarioCharactersById[c.id])
-        .filter((c): c is Character => Boolean(c));
-
-      if (latestCharacters.length === 0) {
-        return;
-      }
-
-      await Database.storeScenarioCharacters(latestCharacters);
-    }, `${DATABASE_OBJECT_NAME}.all`);
+    void get().ephemeralStateHelper.stageUpdatedEntities(characters, syncOptions);
   },
 
   async copyGlobalCharactersToInactiveScenarioImmediate(
