@@ -178,6 +178,12 @@ const SELECT_ALL_SCENARIO_CHARACTERS_SQL = `
   WHERE scenario_id = ?
 `;
 
+const SELECT_SCENARIO_CHARACTER_BY_ID_SQL = `
+  SELECT *
+  FROM ${TABLE_SCENARIO_CHARACTER}
+  WHERE id = ?;
+`;
+
 const SELECT_SCENARIO_BY_ID_SQL = `
   SELECT *
   FROM ${TABLE_SCENARIO}
@@ -506,6 +512,14 @@ export async function loadScenarioCharacters(scenarioId: string) {
   return selectDataRows(SELECT_ALL_SCENARIO_CHARACTERS_SQL, [[scenarioId]], characterSchema);
 }
 
+export async function loadScenarioCharactersByIds(ids: string[]) {
+  return selectDataRows(
+    SELECT_SCENARIO_CHARACTER_BY_ID_SQL,
+    ids.map((id) => [id]),
+    characterSchema
+  );
+}
+
 export async function loadMaps() {
   return selectDataRows(SELECT_ALL_MAPS_SQL, [[]], worldMapSchema);
 }
@@ -533,8 +547,15 @@ export async function deleteGlobalCharacter(id: string) {
   await dbRun(DELETE_CHARACTER_BY_ID_SQL, [[id]]);
 }
 
+export async function deleteScenarioCharacters(characterIds: string[]) {
+  await dbRun(
+    DELETE_SCENARIO_CHARACTER_BY_ID_SQL,
+    characterIds.map((id) => [id])
+  );
+}
+
 export async function deleteScenarioCharacter(characterId: string) {
-  await dbRun(DELETE_SCENARIO_CHARACTER_BY_ID_SQL, [[characterId]]);
+  return deleteScenarioCharacters([characterId]);
 }
 
 export async function loadScenario(scenarioId: string) {

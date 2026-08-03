@@ -3,13 +3,15 @@ import * as Database from '../backend_bridge/database.js';
 import * as Files from '../backend_bridge/files.js';
 import { type WorldMap, type Character, type Scenario } from '../engine/types.js';
 import { assertNonNullish } from '../errors/application_error.js';
-import { getRequiredRandomChoice } from '../util/array.js';
+import { concatUniqueById, concatUniqueByIds, getRequiredRandomChoice, removeById } from '../util/array.js';
 import {
   getRequiredActiveScenario,
   getRequiredActiveScenarioMap,
   useScenarioStore,
 } from './scenario_store.js';
 import { addOrReplaceVersionQueryParam, newId } from '../util/id.js';
+import { ephemeralStateSlice } from './ephemeral_state_helper.js';
+import _ from 'lodash';
 
 type ScenarioCharacterStoreState = {
   scenarioCharactersById: Record<string, Character>;
@@ -48,7 +50,7 @@ type ScenarioCharacterStoreState = {
     scenarioCharactersById?: Record<string, Character>
   ) => Character | undefined;
   getNPCs: () => Character[];
-};
+} & ReturnType<typeof ephemeralStateSlice<Character>>;
 
 const DATABASE_OBJECT_NAME = 'scenario_character';
 
@@ -83,6 +85,36 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
   scenarioCharactersById: {},
   scenarioCharactersAreLoaded: false,
 
+  ...ephemeralStateSlice({
+    setStoreState(entity: Character) {
+      set(getCharacterDataStructuresFromArray(concatUniqueById(get().scenarioCharacters, entity)));
+    },
+
+    deleteStoreState(entity: Character) {
+      set(getCharacterDataStructuresFromArray(removeById(get().scenarioCharacters, entity.id)));
+    },
+
+    async setDatabaseState(entities: Character[]) {
+      await Database.doAsDataWrite(async () => {
+        await Database.storeScenarioCharacters(entities);
+      }, `${DATABASE_OBJECT_NAME}.all`);
+    },
+
+    deleteDatabaseState(entities: Character[]) {
+      return Database.doAsDataWrite(async () => {
+        await Database.deleteScenarioCharacters(entities.map((e) => e.id));
+      }, DATABASE_OBJECT_NAME);
+    },
+
+    async refreshStoreStateFromDatabase(entities: Character[]) {
+      const refreshed = await Database.doAsDataRead(() => {
+        return Database.loadScenarioCharactersByIds(entities.map((e) => e.id));
+      }, `${DATABASE_OBJECT_NAME}.partial.refresh`);
+
+      set(getCharacterDataStructuresFromArray(concatUniqueByIds(get().scenarioCharacters, refreshed)));
+    },
+  }),
+
   setScenarioCharacters: (characters) => {
     set({
       ...getCharacterDataStructuresFromArray(characters),
@@ -99,15 +131,12 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
   },
 
   removeScenarioCharacter: async (characterId) => {
-    if (!get().scenarioCharactersById[characterId]) {
+    const characterToDelete = get().scenarioCharactersById[characterId];
+    if (!characterToDelete) {
       return;
     }
 
-    void Database.doAsDataWrite(async () => {
-      await Database.deleteScenarioCharacter(characterId);
-    }, DATABASE_OBJECT_NAME);
-
-    get().removeCharacterLocal(characterId);
+    get().ephemeralStateHelper.stageDeletedEntity(characterToDelete);
   },
 
   loadScenarioCharacters: async () => {
@@ -146,6 +175,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
 
         await Database.storeScenarioCharacter(latestCharacter);
 
+        // TODO: Going to need to do something about saving files. Maybe we make an UpdatedCharacter type that has a file field, and we use that in the EphemeralStateHelper instead of a plain character.
         if (imageFile) {
           await Files.upload(
             latestCharacter.imagePath,
