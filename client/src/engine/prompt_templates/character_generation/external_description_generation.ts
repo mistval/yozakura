@@ -12,7 +12,7 @@ Rules:
 - Write two or three sentences describing how this character appears and comes across to others.
 - Focus on externally observable details: appearance, demeanor, social presence, and any other traits visible to strangers or acquaintances.
 - Do not reveal internal motivations, secrets, or backstory that others would not observe.
-- Write only the description, nothing else.`;
+- Output only the description, nothing else.`;
 
   public readonly contextSchema = characterEditorExecutionContextSchema;
 
