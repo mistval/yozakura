@@ -11,6 +11,7 @@ import { useLlmConnectionTest } from '../../hooks/useLlmConnectionTest.js';
 import { useTextareaPasteWarningGate } from './pasteWarning/useTextareaPasteWarningGate.js';
 import { newId } from '../../util/id.js';
 import { readModelFromMetaOptions, writeModelToMetaOptions } from './meta_options_model.js';
+import DeleteButton from '../ui/DeleteButton.js';
 
 type ConfigDraft = LLMOptionsGroup;
 const DEFAULT_LLM_META_OPTIONS_SOURCE = JSON.stringify(LLM_DEFAULTS, null, 2);
@@ -377,7 +378,7 @@ export default function LlmSettingsSection() {
       const configCount = Object.keys(previous.llmConfigs || {}).length;
       if (configCount <= 1) return {};
 
-      return { llmConfigs: { [id]: undefined } };
+      return { llmConfigs: { [id]: null } };
     });
 
     if (editingId === id) {
@@ -447,15 +448,15 @@ export default function LlmSettingsSection() {
                       >
                         Edit
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => removeConfig(config.id)}
-                        disabled={!canDelete}
-                        title={canDelete ? 'Delete config' : 'Cannot delete the last remaining config'}
+                      <DeleteButton
                         className="px-3 py-1 border rounded-sm"
-                      >
-                        Delete
-                      </button>
+                        label="Delete"
+                        disabled={!canDelete}
+                        confirmTitle="Delete Options Group"
+                        confirmLabel="Delete"
+                        confirmMessage={`Are you sure you want to delete this options group? ("${config.name}")`}
+                        onConfirm={() => removeConfig(config.id)}
+                      />
                     </div>
                   </div>
                 ) : (
