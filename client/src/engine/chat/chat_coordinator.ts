@@ -272,11 +272,13 @@ export class ChatCoordinator {
         }
 
         await Promise.all([characterStore.commitAllChanges(), relationshipStore.commitAllChanges()]);
-      } catch {
+      } catch (err) {
         await Promise.all([
           characterStore.discardPendingChanges(),
           relationshipStore.discardPendingChanges(),
         ]);
+
+        rethrowSignalException(err);
       }
 
       const conversationLog: StoredConversation = Database.createPersistedObject({
