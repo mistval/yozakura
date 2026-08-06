@@ -11,7 +11,7 @@ class CharacterDescriptionGenerationSystemTemplate extends PromptTemplateBase<
 Rules:
 - Write three or four paragraphs that elucidate the personality, goals and motives, and internal life of the character.
 - Write it like a manual for how to role play as this character.
-- Write only the character description paragraph, nothing else.`;
+- Output only the character description, nothing else.`;
 
   public readonly contextSchema = characterEditorExecutionContextSchema;
 
@@ -35,7 +35,7 @@ Here is some core information about <%= it.focusedCharacter.firstName %> <%= it.
 ) %>
 </hint>
 
-Write three or four paragraphs that elucidate the personality, goals and motives, and internal life of the character. Write it like a manual for how to role play as this character. Write only the character description paragraph, nothing else.`;
+Write three or four paragraphs that elucidate the personality, goals and motives, and internal life of the character. Write it like a manual for how to role play as this character. Output only the character description, nothing else.`;
 
   public readonly contextSchema = characterEditorExecutionContextSchema;
 
