@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useMemo } from 'react';
-import { useMatch } from 'react-router-dom';
+import { useMatch } from 'react-router';
 import { StringParam, useQueryParams } from 'use-query-params';
 import { FlagParam } from '../../hooks/useModalQueryParam.js';
 

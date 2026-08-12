@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import CharacterCard from '../components/CharacterCard';
 import ChatPane from '../components/ChatPane';
 import LocationPanel, { type MoveSuggestion } from '../components/LocationPanel';

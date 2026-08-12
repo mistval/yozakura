@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { ReactRouter6Adapter } from 'use-query-params/adapters/react-router-6';
 import { ConversationLogProvider } from './components/conversation_log/ConversationLogContext.js';
 import { CharacterOverviewProvider } from './components/character_overview/CharacterOverviewContext.js';

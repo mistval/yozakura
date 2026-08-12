@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import AboutSettingsSection from './AboutSettingsSection.js';
 import ConfirmDialog from '../ui/ConfirmDialog.js';
 import RoutedModalFrame from '../ui/RoutedModalFrame.js';

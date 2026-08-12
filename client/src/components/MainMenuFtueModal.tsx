@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useStateRef } from '../hooks/useStateRef.js';
 import { useDraft } from '../hooks/useDraft.js';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { DEMO_CHARACTERS } from '../engine/demo_characters.js';
 import YozakuraLogo from '../theme/yozakura_logo.js';
 import { useSettingsStore, type Settings } from '../state/settings_store.js';
