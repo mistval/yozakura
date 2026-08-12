@@ -13,7 +13,7 @@ import ConversationSearchList from '../conversation_log/ConversationSearchList.j
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
-import { StringParam, useQueryParams } from 'use-query-params';
+import { useQueryParams } from '../../util/queryParams.js';
 import { getRequiredRandomChoice } from '../../util/array.js';
 
 function buildGroupQuery(groupId: string): string {
@@ -48,7 +48,7 @@ export default function CharacterOverviewSingleData({
   const activeChatParticipants = useTurnMachineStore((state) => state.participantIds);
   const { closeCharacterOverview, openCharacterOverviewEditor } = useCharacterOverview();
   const groups = useCharacterGroupStore((state) => state.groups);
-  const [, setOverviewParams] = useQueryParams({ cotab: StringParam, cogroup: StringParam });
+  const [, setOverviewParams] = useQueryParams();
   const [relationshipToUser, setRelationshipToUser] = useState<CharacterRelationship | undefined>(undefined);
 
   const memberGroups = useMemo(

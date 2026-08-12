@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { StringParam, useQueryParam } from 'use-query-params';
+import { useQueryParam } from '../../util/queryParams.js';
 import type { Character } from '../../engine/types.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
@@ -12,7 +12,7 @@ export default function CharacterGroupsTab() {
   const groups = useCharacterGroupStore((state) => state.groups);
   const characters = useScenarioCharacterStore((state) => state.scenarioCharacters);
 
-  const [selectedGroupId, setSelectedGroupId] = useQueryParam('cogroup', StringParam);
+  const [selectedGroupId, setSelectedGroupId] = useQueryParam('cogroup');
   const [subTab, setSubTab] = useState<'members' | 'schedule'>('members');
 
   const selectedGroup = findById(groups, selectedGroupId ?? '');

@@ -1,19 +1,14 @@
-import { useQueryParam, useQueryParams } from 'use-query-params';
 import { useLocation } from 'react-router';
-import type { QueryParamConfig } from 'use-query-params';
-
-export const FlagParam: QueryParamConfig<boolean, boolean> = {
-  encode: (value) => (value ? 'true' : undefined),
-  decode: (value) => value !== undefined && value !== null,
-};
+import { useQueryParams } from '../util/queryParams.js';
 
 export function useModalQueryParam(name: string) {
-  const [open, setOpen] = useQueryParam(name, FlagParam);
+  const [params, setParams] = useQueryParams();
 
-  const openModal = () => setOpen(true);
-  const closeModal = () => setOpen(undefined as unknown as boolean);
+  const open = params.has(name) && params.get(name) !== 'false';
+  const openModal = () => setParams({ [name]: true });
+  const closeModal = () => setParams({ [name]: undefined });
 
-  return { open: open ?? false, openModal, closeModal };
+  return { open, openModal, closeModal };
 }
 
 export function useModalStackZIndex(name: string): number {
@@ -24,5 +19,3 @@ export function useModalStackZIndex(name: string): number {
   const base = 50;
   return base + (index === -1 ? 0 : index + 1) * 100;
 }
-
-export { useQueryParams };
