@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { StringParam, useQueryParam } from 'use-query-params';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
 import DeleteButton from '../components/ui/DeleteButton.js';

@@ -1,5 +1,5 @@
 import { useQueryParam, useQueryParams } from 'use-query-params';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router';
 import type { QueryParamConfig } from 'use-query-params';
 
 export const FlagParam: QueryParamConfig<boolean, boolean> = {

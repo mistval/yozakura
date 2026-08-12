@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useMapStore } from '../state/map_store.js';
 import { useMemo } from 'react';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
