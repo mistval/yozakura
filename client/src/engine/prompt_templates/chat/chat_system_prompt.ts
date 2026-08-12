@@ -13,7 +13,7 @@ class ChatSystemPromptTemplate extends PromptTemplateBase<
 <% } else if (otherParticipants.length) { %>
 <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> is currently having a one-on-one chat with <%= otherParticipants[0].firstName + ' ' + otherParticipants[0].lastName %>.
 <% } %>
-  
+
 You are roleplaying as <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> in a <%= it.chatMedium === 'in_person' ? 'conversation' : 'text messaging chat (the participants are in different physical locations)' %>. <%= it.focusedCharacter.firstName %>'s persona description:
 <persona>
 <%= it.focusedCharacter.internalDescription %>
@@ -105,10 +105,10 @@ Your instructions:
 - Use quotes for speech and asterisks for actions and internal speech.
 - Be aware that other characters' internal speech is not directly known to your character.
 - Avoid repetition.
-<% if (it.chatInstructions) { %>
+<% if (it.chatInstructions && it.conversationMessages.length === 0) { %>
 - <%= it.chatInstructions %>
 <% } %>
-<% if (it.focusedCharacterChatInstructions) { %>
+<% if (it.focusedCharacterChatInstructions && it.conversationMessages.length === 0) { %>
 - <%= it.focusedCharacterChatInstructions %>
 <% } %>
 </instructions>`;
@@ -134,7 +134,7 @@ class FinalInstructionsPromptTemplate extends PromptTemplateBase<
 - <%= it.chatMedium === 'in_person'
   ? 'Be concise. Output no more than three sentences.'
   : 'Text messaging style (concise, casual, abbreviated, use emojis if consistent with ' + it.focusedCharacter.firstName + "'s persona). Be concise. Output no more than three sentences." %>
-  
+
 - Use quotes for speech and asterisks for actions and internal speech.
 - Be aware that other characters' internal speech is not directly known to your character.
 - Avoid repetition.
