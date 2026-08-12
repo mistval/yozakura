@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { StringParam, useQueryParam } from 'use-query-params';
+import { useQueryParam } from '../util/queryParams.js';
 import RoutedModalFrame from './ui/RoutedModalFrame.js';
 import type { Character } from '../engine/types.js';
 import { useScenarioStore } from '../state/scenario_store.js';
@@ -35,7 +35,7 @@ function MapModalInner() {
   const user = useUserCharacter();
   const { showCharacterOverview, open: characterOverviewIsOpen } = useCharacterOverview();
 
-  const [viewParam, setViewParam] = useQueryParam('mapview', StringParam);
+  const [viewParam, setViewParam] = useQueryParam('mapview');
   const view = viewParam === 'zones' ? 'zones' : viewParam === 'log' ? 'log' : 'characters';
   const setView = (next: 'characters' | 'zones' | 'log') =>
     setViewParam(next === 'characters' ? undefined : next);

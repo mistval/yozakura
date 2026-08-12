@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useMemo } from 'react';
 import { useMatch } from 'react-router';
-import { StringParam, useQueryParams } from 'use-query-params';
-import { FlagParam } from '../../hooks/useModalQueryParam.js';
+import { useQueryParams } from '../../util/queryParams.js';
 
 type SettingsModalContextType = {
   open: boolean;
@@ -16,23 +15,20 @@ type SettingsModalContextType = {
 const SettingsModalContext = createContext<SettingsModalContextType | undefined>(undefined);
 
 export function SettingsModalProvider({ children }: { children: ReactNode }) {
-  const [params, setParams] = useQueryParams({
-    settings: FlagParam,
-    settingspath: StringParam,
-  });
+  const [params, setParams] = useQueryParams();
 
   const scenarioMatch = useMatch('/scenario/*');
   const includeScenarioSettings = Boolean(scenarioMatch);
 
-  const open = params.settings ?? false;
-  const settingsPath = params.settingspath ?? '';
+  const open = params.has('settings') && params.get('settings') !== 'false';
+  const settingsPath = params.get('settingspath') ?? '';
 
   const openSettings = (path = '') => {
     setParams({ settings: true, settingspath: path || undefined });
   };
 
   const closeSettings = () => {
-    setParams({ settings: undefined as unknown as boolean, settingspath: undefined });
+    setParams({ settings: undefined, settingspath: undefined });
   };
 
   const setSettingsSection = (path: string) => {

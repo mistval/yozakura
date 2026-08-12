@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useMemo } from 'react';
-import { ArrayParam, StringParam, useQueryParams } from 'use-query-params';
-import { FlagParam } from '../../hooks/useModalQueryParam.js';
+import { useQueryParams } from '../../util/queryParams.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 
 type CharacterOverviewTarget = 'overview' | 'character' | 'add-characters' | 'groups';
@@ -29,25 +28,18 @@ const CharacterOverviewContext = createContext<CharacterOverviewContextType | un
 
 export function CharacterOverviewProvider({ children }: { children: ReactNode }) {
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
+  const [params, setParams] = useQueryParams();
 
-  const [params, setParams] = useQueryParams({
-    characteroverview: FlagParam,
-    co_character: StringParam,
-    co_add: FlagParam,
-    selected_ids: ArrayParam,
-    scrolldown: StringParam,
-  });
-
-  const open = params.characteroverview ?? false;
-  const rawCharacterId = params.co_character ?? undefined;
+  const open = params.has('characteroverview') && params.get('characteroverview') !== 'false';
+  const rawCharacterId = params.get('co_character') ?? undefined;
   const hasValidCharacterId = Boolean(rawCharacterId && rawCharacterId in charactersById);
   const routeEditingCharacterId = hasValidCharacterId ? rawCharacterId : undefined;
 
   const validSelectedIds = useMemo(() => {
-    return (Array.isArray(params.selected_ids) ? params.selected_ids : []).filter(
+    return params.getAll('selected_ids').filter(
       (id): id is string => typeof id === 'string' && id in charactersById
     );
-  }, [params.selected_ids, charactersById]);
+  }, [params, charactersById]);
 
   const setSelectedIds = (ids: string[]) => {
     const uniqueIds = [...new Set(ids)].filter(Boolean).slice(0, 2);
@@ -56,45 +48,36 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
 
   const showCharacterOverview = (incoming?: ShowCharacterOverviewParams) => {
     const target = incoming?.target || 'overview';
-    const next: Record<string, unknown> = { characteroverview: true };
-
-    next.cotab = undefined;
-
-    if (target === 'character' && incoming?.characterId) {
-      next.co_character = incoming.characterId;
-    }
-    if (target === 'add-characters') {
-      next.co_add = true;
-    }
-    if (incoming?.selectedIds) {
-      next.selected_ids = [...new Set(incoming.selectedIds)].filter(Boolean).slice(0, 2);
-    }
-    if (incoming?.scrolldown) {
-      next.scrolldown = 'true';
-    }
-    if (target === 'groups') {
-      next.cotab = 'groups';
-    }
+    const next: Record<string, unknown> = {
+      characteroverview: true,
+      cotab: target === 'groups' ? 'groups' : undefined,
+      co_character: target === 'character' && incoming?.characterId ? incoming.characterId : undefined,
+      co_add: target === 'add-characters' ? true : undefined,
+      selected_ids: incoming?.selectedIds
+        ? [...new Set(incoming.selectedIds)].filter(Boolean).slice(0, 2)
+        : undefined,
+      scrolldown: incoming?.scrolldown ? 'true' : undefined,
+    };
 
     setParams(next as Parameters<typeof setParams>[0]);
   };
 
   const closeCharacterOverview = () => {
     setParams({
-      characteroverview: undefined as unknown as boolean,
+      characteroverview: undefined,
       co_character: undefined,
-      co_add: undefined as unknown as boolean,
+      co_add: undefined,
       selected_ids: undefined,
       scrolldown: undefined,
     });
   };
 
   const backToCharacterOverview = () => {
-    setParams({ co_character: undefined, co_add: undefined as unknown as boolean });
+    setParams({ co_character: undefined, co_add: undefined });
   };
 
   const openCharacterOverviewEditor = (characterId: string) => {
-    setParams({ co_character: characterId, co_add: undefined as unknown as boolean });
+    setParams({ co_character: characterId, co_add: undefined });
   };
 
   const openCharacterOverviewAddCharacters = () => {

@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useMemo } from 'react';
-import { StringParam, useQueryParams } from 'use-query-params';
-import { FlagParam } from '../../hooks/useModalQueryParam.js';
+import { useQueryParams } from '../../util/queryParams.js';
 import CharacterEditorModal from './CharacterEditorModal.js';
 
 type GlobalCharacterEditorContextType = {
@@ -14,20 +13,17 @@ type GlobalCharacterEditorContextType = {
 const GlobalCharacterEditorContext = createContext<GlobalCharacterEditorContextType | undefined>(undefined);
 
 export function GlobalCharacterEditorProvider({ children }: { children: ReactNode }) {
-  const [params, setParams] = useQueryParams({
-    charactereditor: FlagParam,
-    ce_character: StringParam,
-  });
+  const [params, setParams] = useQueryParams();
 
-  const open = params.charactereditor ?? false;
-  const editingCharacterId = params.ce_character ?? undefined;
+  const open = params.has('charactereditor') && params.get('charactereditor') !== 'false';
+  const editingCharacterId = params.get('ce_character') ?? undefined;
 
   const showCharacterEditor = (id?: string) => {
     setParams({ charactereditor: true, ce_character: id ?? undefined });
   };
 
   const closeCharacterEditor = () => {
-    setParams({ charactereditor: undefined as unknown as boolean, ce_character: undefined });
+    setParams({ charactereditor: undefined, ce_character: undefined });
   };
 
   const value = useMemo(

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { StringParam, useQueryParam } from 'use-query-params';
+import { useQueryParam } from '../util/queryParams.js';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
 import DeleteButton from '../components/ui/DeleteButton.js';
 import Tabs from '../components/ui/Tabs.js';
@@ -18,7 +18,7 @@ export default function MapEditor() {
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
   const map = useMapStore((s) => (id ? s.mapsById[id] : undefined));
 
-  const [tabParam, setTabParam] = useQueryParam('tab', StringParam);
+  const [tabParam, setTabParam] = useQueryParam('tab');
   const tab = tabParam === 'zones' ? 'zones' : 'locations';
 
   const validationErrors = useMemo(() => (map ? validateWorldMap(map) : []), [map]);

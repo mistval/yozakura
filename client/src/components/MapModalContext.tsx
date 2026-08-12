@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useMemo } from 'react';
-import { StringParam, useQueryParams } from 'use-query-params';
-import { FlagParam } from '../hooks/useModalQueryParam.js';
+import { useQueryParams } from '../util/queryParams.js';
 
 type MapModalContextType = {
   open: boolean;
@@ -13,12 +12,12 @@ type MapModalContextType = {
 const MapModalContext = createContext<MapModalContextType | undefined>(undefined);
 
 export function MapModalProvider({ children }: { children: ReactNode }) {
-  const [params, setParams] = useQueryParams({ map: FlagParam, mapview: StringParam });
+  const [params, setParams] = useQueryParams();
 
-  const open = params.map ?? false;
+  const open = params.has('map') && params.get('map') !== 'false';
   const showMap = () => setParams({ map: true, mapview: undefined });
   const showMapZones = () => setParams({ map: true, mapview: 'zones' });
-  const closeMap = () => setParams({ map: undefined as unknown as boolean, mapview: undefined });
+  const closeMap = () => setParams({ map: undefined, mapview: undefined });
 
   const value = useMemo(() => ({ open, showMap, showMapZones, closeMap }), [open]);
 

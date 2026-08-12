@@ -12,11 +12,11 @@ import CharacterGroupsTab from './CharacterGroupsTab.js';
 import RoutedModalFrame from '../ui/RoutedModalFrame.js';
 import CharacterEditorModal from '../character_editor_modal/CharacterEditorModal.js';
 import { assertNonNullish } from '../../errors/application_error.js';
-import { StringParam, useQueryParam } from 'use-query-params';
+import { useQueryParam } from '../../util/queryParams.js';
 import { useConversationLog } from '../conversation_log/ConversationLogContext.js';
 
 function CharacterOverviewInner() {
-  const [scrollDown, setScrollDown] = useQueryParam('scrolldown', StringParam);
+  const [scrollDown, setScrollDown] = useQueryParam('scrolldown');
   const scenario = useScenarioStore((state) => state.activeScenario);
   const activeMap = useScenarioStore((state) => state.activeScenarioMap);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
@@ -35,8 +35,8 @@ function CharacterOverviewInner() {
   } = useCharacterOverview();
 
   const userId = scenario?.userCharacterId || '';
-  const [tabParam, setTabParam] = useQueryParam('cotab', StringParam);
-  const [, setGroupParam] = useQueryParam('cogroup', StringParam);
+  const [tabParam, setTabParam] = useQueryParam('cotab');
+  const [, setGroupParam] = useQueryParam('cogroup');
   const tab = tabParam === 'groups' ? 'groups' : 'overview';
   const setTab = (next: 'overview' | 'groups') => setTabParam(next === 'overview' ? undefined : next);
   const [relationships, setRelationships] = useState<CharacterRelationships>({});

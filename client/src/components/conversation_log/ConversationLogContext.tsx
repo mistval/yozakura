@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useMemo, useState } from 'react';
-import { NumberParam, StringParam, useQueryParams } from 'use-query-params';
-import { FlagParam } from '../../hooks/useModalQueryParam.js';
+import { useQueryParams } from '../../util/queryParams.js';
 
 type ShowConversationLogParams = {
   conversationId?: string;
@@ -31,17 +30,14 @@ function sanitizePage(page?: number | undefined) {
 }
 
 export function ConversationLogProvider({ children }: { children: ReactNode }) {
-  const [params, setParams] = useQueryParams({
-    conversationlog: FlagParam,
-    cl_conversation: StringParam,
-    cl_page: NumberParam,
-  });
+  const [params, setParams] = useQueryParams();
 
   const [launchParams, setLaunchParams] = useState<ShowConversationLogParams | undefined>(undefined);
 
-  const open = params.conversationlog ?? false;
-  const routeConversationId = params.cl_conversation ?? undefined;
-  const routePage = sanitizePage(params.cl_page ?? undefined);
+  const open = params.has('conversationlog') && params.get('conversationlog') !== 'false';
+  const routeConversationId = params.get('cl_conversation') ?? undefined;
+  const rawPage = params.get('cl_page');
+  const routePage = sanitizePage(rawPage ? Number(rawPage) : undefined);
   const showBackButton = Boolean(routeConversationId);
 
   const showConversationLog = (incoming?: ShowConversationLogParams) => {
@@ -61,7 +57,7 @@ export function ConversationLogProvider({ children }: { children: ReactNode }) {
   const closeConversationLog = () => {
     setLaunchParams(undefined);
     setParams({
-      conversationlog: undefined as unknown as boolean,
+      conversationlog: undefined,
       cl_conversation: undefined,
       cl_page: undefined,
     });
