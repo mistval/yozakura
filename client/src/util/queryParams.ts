@@ -45,9 +45,8 @@ export function useQueryParams() {
 
   const setQueryParams = (
     updates: QueryParamsMap,
-    navigateOptions?: { replace?: boolean }
   ) => {
-    setSearchParams((prev) => createParams(prev, updates), { replace: true, ...navigateOptions });
+    setSearchParams((prev) => createParams(prev, updates));
   };
 
   return [searchParams, setQueryParams] as const;
