@@ -17,6 +17,8 @@ export default function MapEditor() {
 
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
   const map = useMapStore((s) => (id ? s.mapsById[id] : undefined));
+  const updateMap = useMapStore((s) => s.updateMap);
+  const deleteMap = useMapStore((s) => s.deleteMap);
 
   const [tabParam, setTabParam] = useQueryParam('tab');
   const tab = tabParam === 'zones' ? 'zones' : 'locations';
@@ -43,7 +45,7 @@ export default function MapEditor() {
   }
 
   const updateThisMap = (mutator: (prev: WorldMap) => WorldMap) => {
-    useMapStore.getState().updateMap(map.id, mutator);
+    updateMap(map.id, mutator);
   };
 
   return (
@@ -60,7 +62,7 @@ export default function MapEditor() {
             confirmLabel="Delete Map"
             confirmMessage={`Delete map "${map.name}"? This will permanently remove the map.`}
             onConfirm={() => {
-              useMapStore.getState().deleteMap(map.id);
+              deleteMap(map.id);
               navigate('/maps');
             }}
           />
