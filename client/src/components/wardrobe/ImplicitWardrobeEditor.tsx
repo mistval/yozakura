@@ -1,5 +1,4 @@
 import { useMemo, type ChangeEvent, type ReactNode } from 'react';
-import { useDraft } from '../../hooks/useDraft.js';
 import type { Character, Wardrobe } from '../../engine/types.js';
 import { createWardrobe } from '../../engine/wardrobes.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
@@ -32,15 +31,13 @@ export default function ImplicitWardrobeEditor({
   showEnabledToggle = true,
 }: ImplicitWardrobeEditorProps) {
   const sanitizedSource = useMemo(() => sanitizeDraftRows(wardrobes), [wardrobes]);
-  const [sanitizedDraftRows, setSanitizedDraftRows] = useDraft(sanitizedSource);
 
   const displayRows = useMemo(() => {
-    return sanitizedDraftRows.concat(createWardrobe('', sanitizedDraftRows.length === 0 ? 'default' : ''));
-  }, [sanitizedDraftRows]);
+    return sanitizedSource.concat(createWardrobe('', sanitizedSource.length === 0 ? 'default' : ''));
+  }, [sanitizedSource]);
 
   const applyDraftRows = (nextDraftRows: Character['wardrobes']) => {
     const sanitized = sanitizeDraftRows(nextDraftRows);
-    setSanitizedDraftRows(sanitized);
     onChange(sanitized);
   };
 
@@ -49,7 +46,7 @@ export default function ImplicitWardrobeEditor({
       return;
     }
 
-    const updated = [...sanitizedDraftRows];
+    const updated = [...sanitizedSource];
     const updatedRow = updated[index];
 
     if (updatedRow) {
@@ -65,7 +62,7 @@ export default function ImplicitWardrobeEditor({
   };
 
   const handleToggleEnabled = (index: number, enabled: boolean) => {
-    const updated = [...sanitizedDraftRows];
+    const updated = [...sanitizedSource];
     const row = updated[index];
     assertNonNullish(row, `Row at index ${index} should exist when toggling enabled`);
 
@@ -78,7 +75,7 @@ export default function ImplicitWardrobeEditor({
   };
 
   const handleAutoSelectGroupChange = (index: number, value: string) => {
-    const updated = [...sanitizedDraftRows];
+    const updated = [...sanitizedSource];
     const row = updated[index];
     assertNonNullish(row, `Row at index ${index} should exist when changing auto select group`);
 
@@ -91,7 +88,7 @@ export default function ImplicitWardrobeEditor({
   };
 
   const handleToggleAutoRevert = (index: number, autoRevert: boolean) => {
-    const updated = [...sanitizedDraftRows];
+    const updated = [...sanitizedSource];
     const row = updated[index];
     assertNonNullish(row, `Row at index ${index} should exist when toggling auto revert`);
 

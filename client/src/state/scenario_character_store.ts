@@ -144,11 +144,6 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
             }
 
             await Database.storeScenarioCharacters(existingCharacters);
-            set(
-              getCharacterDataStructuresFromArray(
-                concatUniqueByIds(get().scenarioCharacters, existingCharacters)
-              )
-            );
           },
           `${DATABASE_OBJECT_NAME}.all`,
           { debouncerKey }
