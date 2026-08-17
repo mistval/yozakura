@@ -16,13 +16,6 @@ import { useCharacterGroupStore } from '../../state/character_group_store.js';
 import { useQueryParams } from '../../util/queryParams.js';
 import { getRequiredRandomChoice } from '../../util/array.js';
 
-function buildGroupQuery(groupId: string): string {
-  const params = new URLSearchParams(window.location.search);
-  params.set('cotab', 'groups');
-  params.set('cogroup', groupId);
-  return params.toString();
-}
-
 type CharacterOverviewSingleDataProps = {
   selectedSingleCharacter: Character;
   scenario: Scenario;
@@ -134,7 +127,7 @@ export default function CharacterOverviewSingleData({
             <span key={group.id}>
               {index > 0 && ', '}
               <a
-                href={`${window.location.pathname}?${buildGroupQuery(group.id)}`}
+                href={`#`}
                 onClick={(event) => {
                   event.preventDefault();
                   setOverviewParams({ cotab: 'groups', cogroup: group.id });

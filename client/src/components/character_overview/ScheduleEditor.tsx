@@ -15,7 +15,6 @@ import DeleteButton from '../ui/DeleteButton.js';
 import ConfirmDialog from '../ui/ConfirmDialog.js';
 import RangeNumberInput from '../settings/ui/RangeNumberInput.js';
 import { clamp, clampUnitRate, toPercent } from '../../util/numeric.js';
-import { useCharacterOverview } from './CharacterOverviewContext.js';
 
 const SEGMENT_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#14b8a6'];
 const LANE_HEIGHT_PX = 28;
@@ -55,12 +54,11 @@ function assignLanes(segments: ScheduleSegment[]): {
 }
 
 export default function ScheduleEditor({ groupId }: { groupId: string }) {
-  const { closeCharacterOverview } = useCharacterOverview();
   const storedSchedule = useCharacterGroupStore((state) => state.schedulesByGroupId[groupId]);
   const map = useScenarioStore((s) => s.activeScenarioMap);
   const scenario = useScenarioStore((state) => state.activeScenario);
 
-  const { showMapZones, open: mapModalOpen } = useMapModal();
+  const { showMapZones } = useMapModal();
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | undefined>(undefined);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | undefined>(undefined);
   const [pixelsPerTurn, setPixelsPerTurn] = useState(DEFAULT_PIXELS_PER_TURN);
@@ -457,10 +455,6 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
             <button
               type="button"
               onClick={() => {
-                if (mapModalOpen) {
-                  // TODO: Quick fix for inability to control query param ordering via useQuery
-                  closeCharacterOverview();
-                }
                 showMapZones();
               }}
             >

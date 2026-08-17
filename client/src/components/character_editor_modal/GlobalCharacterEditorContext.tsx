@@ -28,7 +28,7 @@ export function GlobalCharacterEditorProvider({ children }: { children: ReactNod
 
   const value = useMemo(
     () => ({ open, editingCharacterId, showCharacterEditor, closeCharacterEditor }),
-    [open, editingCharacterId]
+    [open, editingCharacterId, params]
   );
 
   return (

@@ -78,7 +78,7 @@ export function ConversationLogProvider({ children }: { children: ReactNode }) {
       setConversationLogPage,
       openConversationDetail,
     }),
-    [open, routeConversationId, routePage, showBackButton]
+    [open, routeConversationId, routePage, showBackButton, params]
   );
 
   return <ConversationLogContext.Provider value={value}>{children}</ConversationLogContext.Provider>;
