@@ -19,7 +19,7 @@ export function MapModalProvider({ children }: { children: ReactNode }) {
   const showMapZones = () => setParams({ map: true, mapview: 'zones' });
   const closeMap = () => setParams({ map: undefined, mapview: undefined });
 
-  const value = useMemo(() => ({ open, showMap, showMapZones, closeMap }), [open]);
+  const value = useMemo(() => ({ open, showMap, showMapZones, closeMap }), [open, params]);
 
   return <MapModalContext.Provider value={value}>{children}</MapModalContext.Provider>;
 }

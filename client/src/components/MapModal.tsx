@@ -33,7 +33,7 @@ function MapModalInner() {
   const scenario = useScenarioStore((state) => state.activeScenario);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const user = useUserCharacter();
-  const { showCharacterOverview, open: characterOverviewIsOpen } = useCharacterOverview();
+  const { showCharacterOverview } = useCharacterOverview();
 
   const [viewParam, setViewParam] = useQueryParam('mapview');
   const view = viewParam === 'zones' ? 'zones' : viewParam === 'log' ? 'log' : 'characters';
@@ -97,11 +97,6 @@ function MapModalInner() {
   );
 
   const showCharacter = (character: Character) => {
-    if (characterOverviewIsOpen) {
-      // TODO: Quick fix for inability to control query param ordering via useQuery
-      closeMap();
-    }
-
     showCharacterOverview({
       selectedIds: [character.id],
       scrolldown: true,

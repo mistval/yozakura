@@ -37,7 +37,7 @@ export function SettingsModalProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({ open, settingsPath, includeScenarioSettings, openSettings, closeSettings, setSettingsSection }),
-    [open, settingsPath, includeScenarioSettings]
+    [open, settingsPath, includeScenarioSettings, params]
   );
 
   return <SettingsModalContext.Provider value={value}>{children}</SettingsModalContext.Provider>;

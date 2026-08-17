@@ -46,7 +46,9 @@ export function useQueryParams() {
   const setQueryParams = (
     updates: QueryParamsMap,
   ) => {
-    setSearchParams((prev) => createParams(prev, updates));
+    setSearchParams((prev) => {
+      return createParams(prev, updates);
+    });
   };
 
   return [searchParams, setQueryParams] as const;

@@ -96,7 +96,7 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
       openCharacterOverviewEditor,
       openCharacterOverviewAddCharacters,
     }),
-    [open, routeEditingCharacterId, validSelectedIds]
+    [open, routeEditingCharacterId, validSelectedIds, params]
   );
 
   return <CharacterOverviewContext.Provider value={value}>{children}</CharacterOverviewContext.Provider>;
