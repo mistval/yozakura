@@ -36,9 +36,9 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
   const routeEditingCharacterId = hasValidCharacterId ? rawCharacterId : undefined;
 
   const validSelectedIds = useMemo(() => {
-    return params.getAll('selected_ids').filter(
-      (id): id is string => typeof id === 'string' && id in charactersById
-    );
+    return params
+      .getAll('selected_ids')
+      .filter((id): id is string => typeof id === 'string' && id in charactersById);
   }, [params, charactersById]);
 
   const setSelectedIds = (ids: string[]) => {

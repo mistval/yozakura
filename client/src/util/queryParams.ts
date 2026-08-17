@@ -5,10 +5,7 @@ export type QueryParamsMap = Record<
   string | number | boolean | (string | number)[] | undefined | null
 >;
 
-export function createParams(
-  prevParams: URLSearchParams | string,
-  updates: QueryParamsMap
-): URLSearchParams {
+export function createParams(prevParams: URLSearchParams | string, updates: QueryParamsMap): URLSearchParams {
   const oldSearchParams = typeof prevParams === 'string' ? new URLSearchParams(prevParams) : prevParams;
   const newSearchParams = new URLSearchParams();
 
@@ -43,9 +40,7 @@ export function createParams(
 export function useQueryParams() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const setQueryParams = (
-    updates: QueryParamsMap,
-  ) => {
+  const setQueryParams = (updates: QueryParamsMap) => {
     setSearchParams((prev) => {
       return createParams(prev, updates);
     });
