@@ -21,7 +21,7 @@ export default function WardrobesSection() {
         </div>
       </div>
       <ImplicitWardrobeEditor
-        wardrobes={character.wardrobes}
+        character={character}
         onChange={(wardrobes) => setCharacterField('wardrobes', wardrobes)}
         actionRowElements={({ index, disabled }) =>
           character.internalDescription.trim() && (

@@ -94,7 +94,7 @@ export default function CharacterChatSettings({
             )}
 
             <ImplicitWardrobeEditor
-              wardrobes={character.wardrobes}
+              character={character}
               onChange={persistWardrobes}
               showEnabledToggle
             />
