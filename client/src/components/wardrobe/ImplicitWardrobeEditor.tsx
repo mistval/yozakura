@@ -6,7 +6,7 @@ import InfoTooltip from '../ui/InfoTooltip.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 
 type ImplicitWardrobeEditorProps = {
-  character: Character;
+  wardrobes: Character['wardrobes'];
   onChange: (nextWardrobes: Character['wardrobes']) => void;
   actionRowElements?: (params: {
     index: number;
@@ -24,27 +24,24 @@ function sanitizeDraftRows(wardrobes: Wardrobe[]) {
 }
 
 export default function ImplicitWardrobeEditor({
-  character,
+  wardrobes,
   onChange,
   actionRowElements,
   disabled = false,
   className = 'space-y-3',
   showEnabledToggle = true,
 }: ImplicitWardrobeEditorProps) {
-  const sanitizedSource = useMemo(() => sanitizeDraftRows(character.wardrobes), [character.wardrobes]);
-  const [sanitizedDraftRows, setSanitizedDraftRows] = useDraft(sanitizedSource, { refreshFromSourceTrigger: character.id });
+  const sanitizedSource = useMemo(() => sanitizeDraftRows(wardrobes), [wardrobes]);
+  const [sanitizedDraftRows, setSanitizedDraftRows] = useDraft(sanitizedSource);
 
   const displayRows = useMemo(() => {
     return sanitizedDraftRows.concat(createWardrobe('', sanitizedDraftRows.length === 0 ? 'default' : ''));
   }, [sanitizedDraftRows]);
 
-  const applyDraftRows = (updater: (prev: Character['wardrobes']) => Character['wardrobes']) => {
-    setSanitizedDraftRows((prev) => {
-      const next = updater(prev);
-      const sanitized = sanitizeDraftRows(next);
-      onChange(sanitized);
-      return sanitized;
-    });
+  const applyDraftRows = (nextDraftRows: Character['wardrobes']) => {
+    const sanitized = sanitizeDraftRows(nextDraftRows);
+    setSanitizedDraftRows(sanitized);
+    onChange(sanitized);
   };
 
   const handleTextChange = (index: number, event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -52,66 +49,58 @@ export default function ImplicitWardrobeEditor({
       return;
     }
 
-    applyDraftRows((prev) => {
-      const updated = [...prev];
-      const updatedRow = updated[index];
+    const updated = [...sanitizedDraftRows];
+    const updatedRow = updated[index];
 
-      if (updatedRow) {
-        updated[index] = {
-          ...updatedRow,
-          text: event.target.value,
-        };
-      } else {
-        updated.push(createWardrobe(event.target.value, index === 0 ? 'default' : ''));
-      }
+    if (updatedRow) {
+      updated[index] = {
+        ...updatedRow,
+        text: event.target.value,
+      };
+    } else {
+      updated.push(createWardrobe(event.target.value, index === 0 ? 'default' : ''));
+    }
 
-      return updated;
-    });
+    applyDraftRows(updated);
   };
 
   const handleToggleEnabled = (index: number, enabled: boolean) => {
-    applyDraftRows((prev) => {
-      const updated = [...prev];
-      const row = updated[index];
-      assertNonNullish(row, `Row at index ${index} should exist when toggling enabled`);
+    const updated = [...sanitizedDraftRows];
+    const row = updated[index];
+    assertNonNullish(row, `Row at index ${index} should exist when toggling enabled`);
 
-      updated[index] = {
-        ...row,
-        enabled,
-      };
+    updated[index] = {
+      ...row,
+      enabled,
+    };
 
-      return updated;
-    });
+    applyDraftRows(updated);
   };
 
   const handleAutoSelectGroupChange = (index: number, value: string) => {
-    applyDraftRows((prev) => {
-      const updated = [...prev];
-      const row = updated[index];
-      assertNonNullish(row, `Row at index ${index} should exist when changing auto select group`);
+    const updated = [...sanitizedDraftRows];
+    const row = updated[index];
+    assertNonNullish(row, `Row at index ${index} should exist when changing auto select group`);
 
-      updated[index] = {
-        ...row,
-        autoSelectGroup: value,
-      };
+    updated[index] = {
+      ...row,
+      autoSelectGroup: value,
+    };
 
-      return updated;
-    });
+    applyDraftRows(updated);
   };
 
   const handleToggleAutoRevert = (index: number, autoRevert: boolean) => {
-    applyDraftRows((prev) => {
-      const updated = [...prev];
-      const row = updated[index];
-      assertNonNullish(row, `Row at index ${index} should exist when toggling auto revert`);
+    const updated = [...sanitizedDraftRows];
+    const row = updated[index];
+    assertNonNullish(row, `Row at index ${index} should exist when toggling auto revert`);
 
-      updated[index] = {
-        ...row,
-        autoRevert,
-      };
+    updated[index] = {
+      ...row,
+      autoRevert,
+    };
 
-      return updated;
-    });
+    applyDraftRows(updated);
   };
 
   return (
@@ -120,7 +109,7 @@ export default function ImplicitWardrobeEditor({
         const hasText = Boolean(wardrobe.text.trim());
 
         return (
-          <div key={`implicit-wardrobe-${wardrobe.id}`} className="block border rounded-sm p-3 text-sm space-y-2">
+          <div key={`implicit-wardrobe-${index}`} className="block border rounded-sm p-3 text-sm space-y-2">
             <div className="flex items-center justify-between gap-2">
               <label className="flex items-center gap-2">
                 {hasText && showEnabledToggle && (
