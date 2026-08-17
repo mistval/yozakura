@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 import { useQueryParams } from '../../util/queryParams.js';
 
 type ShowConversationLogParams = {
@@ -8,7 +8,6 @@ type ShowConversationLogParams = {
 };
 
 type ConversationLogContextType = {
-  launchParams: ShowConversationLogParams | undefined;
   open: boolean;
   routePage: number;
   routeConversationId: string | undefined;
@@ -19,7 +18,6 @@ type ConversationLogContextType = {
   setConversationLogPage: (page: number) => void;
   openConversationDetail: (entryId: string) => void;
   showConversationLog: (params?: ShowConversationLogParams) => void;
-  clearConversationLogParams: () => void;
 };
 
 const ConversationLogContext = createContext<ConversationLogContextType | undefined>(undefined);
@@ -32,8 +30,6 @@ function sanitizePage(page?: number | undefined) {
 export function ConversationLogProvider({ children }: { children: ReactNode }) {
   const [params, setParams] = useQueryParams();
 
-  const [launchParams, setLaunchParams] = useState<ShowConversationLogParams | undefined>(undefined);
-
   const open = params.has('conversationlog') && params.get('conversationlog') !== 'false';
   const routeConversationId = params.get('cl_conversation') ?? undefined;
   const rawPage = params.get('cl_page');
@@ -42,7 +38,6 @@ export function ConversationLogProvider({ children }: { children: ReactNode }) {
 
   const showConversationLog = (incoming?: ShowConversationLogParams) => {
     const next = incoming || {};
-    setLaunchParams(next);
     setParams({
       conversationlog: true,
       cl_conversation: next.conversationId ?? undefined,
@@ -50,12 +45,7 @@ export function ConversationLogProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const clearConversationLogParams = () => {
-    setLaunchParams(undefined);
-  };
-
   const closeConversationLog = () => {
-    setLaunchParams(undefined);
     setParams({
       conversationlog: undefined,
       cl_conversation: undefined,
@@ -77,9 +67,7 @@ export function ConversationLogProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      launchParams,
       showConversationLog,
-      clearConversationLogParams,
       open,
       routePage,
       routeConversationId,
@@ -90,7 +78,7 @@ export function ConversationLogProvider({ children }: { children: ReactNode }) {
       setConversationLogPage,
       openConversationDetail,
     }),
-    [launchParams, open, routeConversationId, routePage, showBackButton]
+    [open, routeConversationId, routePage, showBackButton]
   );
 
   return <ConversationLogContext.Provider value={value}>{children}</ConversationLogContext.Provider>;
