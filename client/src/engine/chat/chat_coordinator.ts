@@ -564,7 +564,7 @@ export class ChatCoordinator {
       const verb = getActiveChatMedium() === 'in_person' ? 'spoke to' : 'remote chatted with';
       return `${participants[0]!.firstName} ${verb} ${participants[1]!.firstName}`;
     } else {
-      const textPart = getActiveChatMedium() === 'in_person' ? '' : 'text ';
+      const textPart = getActiveChatMedium() === 'in_person' ? '' : 'remote ';
       return `Group ${textPart}chat: ${participants.map((entry) => entry.firstName).join(', ')}`;
     }
   }
