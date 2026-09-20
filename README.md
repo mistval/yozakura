@@ -36,6 +36,7 @@ Then go to http://localhost:3001/ in your browser.
 If you want to run Yozakura in dev mode, then after cloning, run:
 
 ```sh
+npm install
 npm install --prefix client
 npm install --prefix server
 npm run dev
