@@ -7,6 +7,9 @@ export const LLM_DEFAULTS: Record<string, unknown> = {
   xtc_threshold: 0.1,
   xtc_probability: 0.5,
   max_tokens: 1000,
+  reasoning: {
+    "enabled": false
+  }
 };
 
 // Higher temperature for chat messages to encourage more interesting responses
