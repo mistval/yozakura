@@ -9,6 +9,7 @@ import { validateWorldMap } from '../engine/map/world_map.js';
 import { useMapStore } from '../state/map_store.js';
 import MapGraphEditor from '../components/MapGraphEditor.js';
 import MapZoneEditor from '../components/map_zones/MapZoneEditor.js';
+import { newId } from '../util/id.js';
 
 export default function MapEditor() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function MapEditor() {
 
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
   const map = useMapStore((s) => (id ? s.mapsById[id] : undefined));
+  const saveMap = useMapStore((s) => s.saveMap);
   const updateMap = useMapStore((s) => s.updateMap);
   const deleteMap = useMapStore((s) => s.deleteMap);
 
@@ -55,6 +57,22 @@ export default function MapEditor() {
         <div className="flex gap-2">
           <button type="button" onClick={() => navigate('/maps')}>
             Back
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const duplicatedMap: WorldMap = {
+                ...map,
+                id: newId(),
+                name: `${map.name} (Copy)`,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+              saveMap(duplicatedMap);
+              navigate(`/maps/${duplicatedMap.id}`);
+            }}
+          >
+            Copy
           </button>
           <DeleteButton
             label="Delete map"
