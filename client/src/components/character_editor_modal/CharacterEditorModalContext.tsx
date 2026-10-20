@@ -6,6 +6,7 @@ import {
   buildYozakuraCardExportBytes,
   buildSillyTavernExtractionCharacter,
   createBlankCharacter,
+  ALL_EXTRACT_CHARACTER_CARD_FIELDS,
   extractCharacterCard,
   generateBaseAppearanceTags,
   generateCharacterInternalDescription,
@@ -13,6 +14,8 @@ import {
   generateExampleDialogue,
   generateWardrobe,
   mergeYozakuraCardIntoCharacter,
+  type ExtractCharacterCardField,
+  type ExtractCharacterCardOptions,
 } from '../../engine/character_gen';
 import { detectCharacterCardMetadata } from '../../engine/character_card_metadata';
 import { createWardrobe } from '../../engine/wardrobes.js';
@@ -42,11 +45,14 @@ type CharacterEditorModalContextValue = {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   selectedImageFile?: File | undefined;
   pendingCardImport?: PendingCardImport | undefined;
+  extractFields: ExtractCharacterCardField[];
+  setExtractFields: (fields: ExtractCharacterCardField[]) => void;
+  toggleExtractField: (field: ExtractCharacterCardField) => void;
   closeEditor: () => void;
   setCharacterField: <K extends keyof Character>(key: K, value: Character[K]) => void;
   generateInternalDescription: () => Promise<void>;
   generateExternalDescription: () => Promise<void>;
-  extractFromDescription: () => Promise<void>;
+  extractFromDescription: (options?: ExtractCharacterCardOptions) => Promise<void>;
   generateExampleDialogue: () => Promise<void>;
   generateBaseAppearance: () => Promise<void>;
   generateWardrobeAt: (index: number) => Promise<void>;
@@ -71,6 +77,8 @@ export function useCharacterEditorModal() {
   }
   return context;
 }
+
+let cachedExtractFields: ExtractCharacterCardField[] = ALL_EXTRACT_CHARACTER_CARD_FIELDS.concat();
 
 export function CharacterEditorModalProvider({
   open,
@@ -100,7 +108,23 @@ export function CharacterEditorModalProvider({
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(undefined);
   const [pendingCardImport, setPendingCardImport] = useState<PendingCardImport | undefined>(undefined);
   const [cardImportBusy, setCardImportBusy, cardImportBusyRef] = useStateRef(false);
+  const [extractFields, setExtractFieldsState] = useState<ExtractCharacterCardField[]>(() => [
+    ...cachedExtractFields,
+  ]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const setExtractFields = (fields: ExtractCharacterCardField[]) => {
+    cachedExtractFields = fields;
+    setExtractFieldsState(fields);
+  };
+
+  const toggleExtractField = (field: ExtractCharacterCardField) => {
+    setExtractFields(
+      extractFields.includes(field)
+        ? extractFields.filter((f) => f !== field)
+        : extractFields.concat(field)
+    );
+  };
 
   const isBusy = Boolean(loadingField) || cardImportBusy;
   const currentImagePath = character.imagePath?.trim();
@@ -231,11 +255,19 @@ export function CharacterEditorModalProvider({
     );
   };
 
-  const extractFromDescription = async () => {
+  const extractFromDescription = async (options?: ExtractCharacterCardOptions) => {
+    const fieldsToExtract = options?.fields ?? extractFields;
+    if (fieldsToExtract.length === 0) {
+      return;
+    }
+
     await runWithField(
       'internalDescription',
       async () => {
-        await extractCharacterCard(character, setCharacterField);
+        await extractCharacterCard(character, setCharacterField, {
+          ...options,
+          fields: fieldsToExtract,
+        });
       },
       'extractDescription'
     );
@@ -266,18 +298,31 @@ export function CharacterEditorModalProvider({
         const generated = await generateWardrobe(character);
         const newWardrobes = character.wardrobes.concat();
 
-        if (index < newWardrobes.length) {
-          assertNonNullish(newWardrobes[index], `Expected wardrobe at index ${index} to exist`);
+        setCharacter(
+          (prev) => {
+            if (index < prev.wardrobes.length) {
+              const wardrobeToEdit = newWardrobes[index];
+              assertNonNullish(wardrobeToEdit, `Expected wardrobe at index ${index} to exist`);
 
-          newWardrobes[index] = {
-            ...newWardrobes[index],
-            text: generated,
-          };
-        } else {
-          newWardrobes.push(createWardrobe(generated, index === 0 ? 'default' : ''));
-        }
-
-        setCharacterField('wardrobes', newWardrobes);
+              return {
+                ...prev,
+                wardrobes: [
+                  ...prev.wardrobes.slice(0,index),
+                  {
+                    ...wardrobeToEdit,
+                    text: generated,
+                  },
+                  ...prev.wardrobes.slice(index + 1)
+                ]
+              } satisfies Character
+            } else {
+              return {
+                ...prev,
+                wardrobes: 
+                 prev.wardrobes.concat(createWardrobe(generated, index === 0 ? 'default' : ''))
+              } satisfies Character
+            }
+          });
       },
       `generatingWardrobeTags-${index}`
     );
@@ -498,6 +543,9 @@ export function CharacterEditorModalProvider({
     currentImageSrc,
     fileInputRef,
     pendingCardImport,
+    extractFields,
+    setExtractFields,
+    toggleExtractField,
     closeEditor,
     setCharacterField,
     generateInternalDescription: generateInternalDescriptionField,

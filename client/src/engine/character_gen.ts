@@ -38,54 +38,73 @@ export async function generateCharacterExternalDescription(
   });
 }
 
-type ExtractCharacterCardOptions = {
+export type ExtractCharacterCardField =
+  | 'internalDescription'
+  | 'externalDescription'
+  | 'exampleDialogue'
+  | 'baseAppearanceTags'
+  | 'wardrobes';
+
+export const ALL_EXTRACT_CHARACTER_CARD_FIELDS: readonly ExtractCharacterCardField[] = [
+  'internalDescription',
+  'externalDescription',
+  'exampleDialogue',
+  'baseAppearanceTags',
+  'wardrobes',
+] as const;
+
+export type ExtractCharacterCardOptions = {
   abortSignal?: AbortSignal;
   onStep?: (step: string) => void;
+  fields?: ExtractCharacterCardField[];
 };
 
 export async function extractCharacterCard(
   character: Character,
   onFieldGenerated?: <K extends keyof Character>(key: K, value: Character[K]) => void,
   options?: ExtractCharacterCardOptions
-): Promise<{
-  description: string;
-  exampleDialogue: string;
-  baseAppearanceTags: string;
-  wardrobeTags: string;
-}> {
+): Promise<void> {
   if (!character.firstName || !character.internalDescription) {
     throw new Error('Character firstName and description must be non-empty');
   }
 
   const signal = options?.abortSignal;
   const onStep = options?.onStep;
+  const fields = options?.fields ?? ALL_EXTRACT_CHARACTER_CARD_FIELDS;
+  const shouldExtract = (field: ExtractCharacterCardField) => fields.includes(field);
 
-  onStep?.('Extracting description');
-  const description = await extractCharacterDescriptionTemplateGroup.renderAndExecute(
-    buildCharacterEditorContext(character),
-    { abortSignal: signal }
-  );
+  if (shouldExtract('internalDescription')) {
+    onStep?.('Extracting description');
+    const description = await extractCharacterDescriptionTemplateGroup.renderAndExecute(
+      buildCharacterEditorContext(character),
+      { abortSignal: signal }
+    );
+    onFieldGenerated?.('internalDescription', description);
+  }
 
-  onFieldGenerated?.('internalDescription', description);
-  onStep?.('Generating external description');
-  const externalDescription = await generateCharacterExternalDescription(character, signal);
-  onFieldGenerated?.('externalDescription', externalDescription);
-  onStep?.('Generating example dialogue');
-  const exampleDialogue = await generateExampleDialogue(character, signal);
-  onFieldGenerated?.('exampleDialogue', exampleDialogue);
-  onStep?.('Generating appearance');
-  const baseAppearanceTags = await generateBaseAppearanceTags(character, signal);
-  onFieldGenerated?.('baseAppearanceTags', baseAppearanceTags);
-  onStep?.('Generating wardrobe');
-  const wardrobeTags = await generateWardrobe(character, signal);
-  onFieldGenerated?.('wardrobes', [createWardrobe(wardrobeTags, 'default')]);
+  if (shouldExtract('externalDescription')) {
+    onStep?.('Generating external description');
+    const externalDescription = await generateCharacterExternalDescription(character, signal);
+    onFieldGenerated?.('externalDescription', externalDescription);
+  }
 
-  return {
-    description,
-    exampleDialogue,
-    baseAppearanceTags,
-    wardrobeTags,
-  };
+  if (shouldExtract('exampleDialogue')) {
+    onStep?.('Generating example dialogue');
+    const exampleDialogue = await generateExampleDialogue(character, signal);
+    onFieldGenerated?.('exampleDialogue', exampleDialogue);
+  }
+
+  if (shouldExtract('baseAppearanceTags')) {
+    onStep?.('Generating appearance');
+    const baseAppearanceTags = await generateBaseAppearanceTags(character, signal);
+    onFieldGenerated?.('baseAppearanceTags', baseAppearanceTags);
+  }
+
+  if (shouldExtract('wardrobes')) {
+    onStep?.('Generating wardrobe');
+    const wardrobeTags = await generateWardrobe(character, signal);
+    onFieldGenerated?.('wardrobes', [createWardrobe(wardrobeTags, 'default')]);
+  }
 }
 
 export async function generateExampleDialogue(

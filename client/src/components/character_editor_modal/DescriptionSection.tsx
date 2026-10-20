@@ -1,7 +1,20 @@
 import type { ChangeEvent } from 'react';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import InfoTooltip from '../ui/InfoTooltip';
+import ButtonOptions from '../ui/ButtonOptions';
 import { useCharacterEditorModal } from './CharacterEditorModalContext';
+import {
+  ALL_EXTRACT_CHARACTER_CARD_FIELDS,
+  type ExtractCharacterCardField,
+} from '../../engine/character_gen';
+
+const EXTRACT_FIELD_OPTIONS: { field: ExtractCharacterCardField; label: string }[] = [
+  { field: 'internalDescription', label: 'Internal Description' },
+  { field: 'externalDescription', label: 'External Description' },
+  { field: 'exampleDialogue', label: 'Example Dialogue' },
+  { field: 'baseAppearanceTags', label: 'Base Appearance' },
+  { field: 'wardrobes', label: 'Wardrobes' },
+];
 
 export default function DescriptionSection() {
   const {
@@ -13,6 +26,9 @@ export default function DescriptionSection() {
     generateInternalDescription,
     generateExternalDescription,
     extractFromDescription,
+    extractFields,
+    setExtractFields,
+    toggleExtractField,
   } = useCharacterEditorModal();
 
   return (
@@ -51,19 +67,69 @@ export default function DescriptionSection() {
           )}
           {character.firstName.trim() && character.internalDescription.trim() && (
             <>
-              <button
-                type="button"
-                onClick={() => {
-                  void extractFromDescription();
-                }}
+              <ButtonOptions
+                button={
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void extractFromDescription();
+                    }}
+                    disabled={isBusy || extractFields.length === 0}
+                    title={extractFields.length === 0 ? 'Select at least one field to extract' : undefined}
+                  >
+                    {loadingButton === 'extractDescription' ? (
+                      <LoadingSpinner label="Extracting..." />
+                    ) : (
+                      'Extract'
+                    )}
+                  </button>
+                }
                 disabled={isBusy}
+                ariaLabel="Extract options"
               >
-                {loadingButton === 'extractDescription' ? (
-                  <LoadingSpinner label="Extracting..." />
-                ) : (
-                  'Extract'
-                )}
-              </button>
+                <div className="w-56 space-y-2 select-none">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-border-default">
+                    <span className="text-xs font-semibold text-secondary-strong">Populate Fields</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setExtractFields([...ALL_EXTRACT_CHARACTER_CARD_FIELDS])}
+                        className="px-1.5 py-0.5 text-[11px] leading-tight"
+                      >
+                        All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExtractFields([])}
+                        className="px-1.5 py-0.5 text-[11px] leading-tight"
+                      >
+                        None
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 pt-0.5">
+                    {EXTRACT_FIELD_OPTIONS.map(({ field, label }) => (
+                      <label
+                        key={field}
+                        className="flex items-center gap-2 cursor-pointer text-xs text-primary hover:text-secondary-strong"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={extractFields.includes(field)}
+                          onChange={() => toggleExtractField(field)}
+                          className="h-4 w-4 rounded cursor-pointer"
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {!extractFields.includes('internalDescription') && (
+                    <p className="text-[11px] text-muted-soft pt-1 border-t border-border-default leading-normal">
+                      Existing internal description will be preserved and used as context.
+                    </p>
+                  )}
+                </div>
+              </ButtonOptions>
               <InfoTooltip
                 label="Extract"
                 html='Extract attempts to populate all fields from arbitrary text in the Internal Description. Try dumping a whole wiki article, chapter of a novel, etc into "Internal Description" and clicking Extract.'
