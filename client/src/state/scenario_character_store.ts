@@ -11,6 +11,7 @@ import {
 } from './scenario_store.js';
 import { addOrReplaceVersionQueryParam, newId } from '../util/id.js';
 import { ephemeralStateSlice, IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
+import { applyDailyWardrobeAutoselect } from '../engine/wardrobes.js';
 
 type UpdatedScenarioCharacter = Character & {
   imageFile?: File;
@@ -42,7 +43,7 @@ type ScenarioCharacterStoreState = {
       scenarioId: string;
       map: WorldMap;
     }
-  ) => Promise<Character>;
+  ) => Promise<void>;
   copyGlobalCharactersToInactiveScenarioImmediate: (
     characters: Character[],
     scenarioId: string,
@@ -242,18 +243,18 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     return filtered;
   },
 
-  async addGlobalCharacterToActiveScenario(character: Character): Promise<Character> {
+  async addGlobalCharacterToActiveScenario(character: Character): Promise<void> {
     const scenarioId = getRequiredActiveScenario().id;
     const map = getRequiredActiveScenarioMap();
 
-    let returnChar: Character;
     await Database.doAsDataWrite(async () => {
       const scenarioCharacter = await copyGlobalCharacterForScenario(character, scenarioId, map);
-      get().saveScenarioCharacter(scenarioCharacter, undefined, () => scenarioCharacter);
-      returnChar = scenarioCharacter;
+      const wardrobes = applyDailyWardrobeAutoselect(scenarioCharacter.wardrobes);
+      get().saveScenarioCharacter(scenarioCharacter, undefined, () => ({
+        ...scenarioCharacter,
+        wardrobes: wardrobes ?? character.wardrobes,
+      }));
     }, 'add_scenario_character');
-
-    return returnChar!;
   },
 
   saveScenarioCharacters(characters: Character[], syncOptions = IMMEDIATE_SYNC) {
