@@ -313,7 +313,7 @@ export default function ChatPane() {
 
   return (
     <div
-      className={`border rounded-sm bg-emphasized p-3 space-y-3 h-full max-h-[calc(100vh-9rem)] flex flex-col ${chatPaneWidthClass}`}
+      className={`border rounded-sm bg-emphasized p-3 space-y-3 h-full max-h-screen flex flex-col ${chatPaneWidthClass}`}
     >
       <div className="flex justify-between items-center">
         <h3 className="font-semibold">
