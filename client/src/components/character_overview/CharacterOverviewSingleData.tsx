@@ -155,7 +155,6 @@ export default function CharacterOverviewSingleData({
         {canRemoteChat && (
           <button
             type="button"
-            disabled={activeChatWithoutUser}
             onClick={() => {
               if (chatSessionIsActive) {
                 ChatCoordinator.addParticipant(selectedSingleCharacter.id);
