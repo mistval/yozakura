@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useCallback, useContext, useMemo } from 'react';
 import { useQueryParams } from '../../util/queryParams.js';
 import CharacterEditorModal from './CharacterEditorModal.js';
 
@@ -18,13 +18,13 @@ export function GlobalCharacterEditorProvider({ children }: { children: ReactNod
   const open = params.has('charactereditor') && params.get('charactereditor') !== 'false';
   const editingCharacterId = params.get('ce_character') ?? undefined;
 
-  const showCharacterEditor = (id?: string) => {
+  const showCharacterEditor =  useCallback((id?: string) => {
     setParams({ charactereditor: true, ce_character: id ?? undefined });
-  };
+  }, [setParams]);
 
-  const closeCharacterEditor = () => {
+  const closeCharacterEditor = useCallback(() => {
     setParams({ charactereditor: undefined, ce_character: undefined });
-  };
+  }, [setParams]);
 
   const value = useMemo(
     () => ({ open, editingCharacterId, showCharacterEditor, closeCharacterEditor }),

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useCallback, useContext, useMemo } from 'react';
 import { useMatch } from 'react-router';
 import { useQueryParams } from '../../util/queryParams.js';
 
@@ -23,21 +23,21 @@ export function SettingsModalProvider({ children }: { children: ReactNode }) {
   const open = params.has('settings') && params.get('settings') !== 'false';
   const settingsPath = params.get('settingspath') ?? '';
 
-  const openSettings = (path = '') => {
+  const openSettings = useCallback((path = '') => {
     setParams({ settings: true, settingspath: path || undefined });
-  };
+  }, [setParams]);
 
-  const closeSettings = () => {
+  const closeSettings = useCallback(() => {
     setParams({ settings: undefined, settingspath: undefined });
-  };
+  }, [setParams]);
 
-  const setSettingsSection = (path: string) => {
+  const setSettingsSection = useCallback((path: string) => {
     setParams({ settingspath: path || undefined });
-  };
+  }, [setParams]);
 
   const value = useMemo(
     () => ({ open, settingsPath, includeScenarioSettings, openSettings, closeSettings, setSettingsSection }),
-    [open, settingsPath, includeScenarioSettings, params]
+    [open, settingsPath, includeScenarioSettings, params, openSettings, closeSettings, setSettingsSection]
   );
 
   return <SettingsModalContext.Provider value={value}>{children}</SettingsModalContext.Provider>;

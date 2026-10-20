@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useSearchParams } from 'react-router';
 
 export type QueryParamsMap = Record<
@@ -40,11 +41,11 @@ export function createParams(prevParams: URLSearchParams | string, updates: Quer
 export function useQueryParams() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const setQueryParams = (updates: QueryParamsMap) => {
+  const setQueryParams = useCallback((updates: QueryParamsMap) => {
     setSearchParams((prev) => {
       return createParams(prev, updates);
     });
-  };
+  }, [setSearchParams]);
 
   return [searchParams, setQueryParams] as const;
 }

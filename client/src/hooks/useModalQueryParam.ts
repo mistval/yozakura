@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useLocation } from 'react-router';
 import { useQueryParams } from '../util/queryParams.js';
 
@@ -5,8 +6,8 @@ export function useModalQueryParam(name: string) {
   const [params, setParams] = useQueryParams();
 
   const open = params.has(name) && params.get(name) !== 'false';
-  const openModal = () => setParams({ [name]: true });
-  const closeModal = () => setParams({ [name]: undefined });
+  const openModal = useCallback(() => setParams({ [name]: true }), [name, setParams]);
+  const closeModal = useCallback(() => setParams({ [name]: undefined }), [name, setParams]);
 
   return { open, openModal, closeModal };
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useCallback, useContext, useMemo } from 'react';
 import { useQueryParams } from '../../util/queryParams.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 
@@ -41,12 +41,12 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
       .filter((id): id is string => typeof id === 'string' && id in charactersById);
   }, [params, charactersById]);
 
-  const setSelectedIds = (ids: string[]) => {
+  const setSelectedIds = useCallback((ids: string[]) => {
     const uniqueIds = [...new Set(ids)].filter(Boolean).slice(0, 2);
     setParams({ selected_ids: uniqueIds });
-  };
+  }, [setParams]);
 
-  const showCharacterOverview = (incoming?: ShowCharacterOverviewParams) => {
+  const showCharacterOverview = useCallback((incoming?: ShowCharacterOverviewParams) => {
     const target = incoming?.target || 'overview';
     const next: Record<string, unknown> = {
       characteroverview: true,
@@ -60,9 +60,9 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
     };
 
     setParams(next as Parameters<typeof setParams>[0]);
-  };
+  }, [setParams]);
 
-  const closeCharacterOverview = () => {
+  const closeCharacterOverview = useCallback(() => {
     setParams({
       characteroverview: undefined,
       co_character: undefined,
@@ -70,19 +70,19 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
       selected_ids: undefined,
       scrolldown: undefined,
     });
-  };
+  }, [setParams]);
 
-  const backToCharacterOverview = () => {
+  const backToCharacterOverview = useCallback(() => {
     setParams({ co_character: undefined, co_add: undefined });
-  };
+  }, [setParams]);
 
-  const openCharacterOverviewEditor = (characterId: string) => {
+  const openCharacterOverviewEditor = useCallback((characterId: string) => {
     setParams({ co_character: characterId, co_add: undefined });
-  };
+  }, [setParams]);
 
-  const openCharacterOverviewAddCharacters = () => {
+  const openCharacterOverviewAddCharacters = useCallback(() => {
     setParams({ co_add: true, co_character: undefined });
-  };
+  }, [setParams]);
 
   const value = useMemo(
     () => ({
@@ -96,7 +96,18 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
       openCharacterOverviewEditor,
       openCharacterOverviewAddCharacters,
     }),
-    [open, routeEditingCharacterId, validSelectedIds, params]
+    [
+      open,
+      routeEditingCharacterId,
+      validSelectedIds,
+      params,
+      setSelectedIds,
+      showCharacterOverview,
+      closeCharacterOverview,
+      backToCharacterOverview,
+      openCharacterOverviewEditor,
+      openCharacterOverviewAddCharacters,
+    ]
   );
 
   return <CharacterOverviewContext.Provider value={value}>{children}</CharacterOverviewContext.Provider>;
