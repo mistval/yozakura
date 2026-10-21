@@ -23,6 +23,7 @@ import { getRequiredActiveScenario, getRequiredUserCharacterId, useScenarioStore
 import { useScenarioCharacterStore, useUserCharacter } from './scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
 import { assert, assertNonNullish } from '../errors/application_error.js';
+import { applyWardrobeTriggers, selectZoneForWardrobeTriggers } from '../engine/wardrobes.js';
 
 export type ChatState =
   | 'inactive'
@@ -258,6 +259,33 @@ export async function getActiveChatGossipCharacter(fromCharacterId?: string, res
   };
 }
 
+export function applyMapZoneWardrobeTriggersForParticipants(participants: Character[]) {
+  const activeMap = useScenarioStore.getState().activeScenarioMap;
+  if (!activeMap || !activeMap.zones) {
+    return;
+  }
+
+  const updatedCharacters: Character[] = [];
+  for (const participant of participants) {
+    const zone = selectZoneForWardrobeTriggers(participant.locationId, activeMap.zones);
+    if (!zone || !zone.wardrobeTriggers || zone.wardrobeTriggers.length === 0) {
+      continue;
+    }
+
+    const nextWardrobes = applyWardrobeTriggers(participant.wardrobes, zone.wardrobeTriggers);
+    if (nextWardrobes) {
+      updatedCharacters.push({
+        ...participant,
+        wardrobes: nextWardrobes,
+      });
+    }
+  }
+
+  if (updatedCharacters.length > 0) {
+    useScenarioCharacterStore.getState().saveScenarioCharacters(updatedCharacters);
+  }
+}
+
 export function getAllActiveChatSpeakers(): Character[] {
   const transcript = useTurnMachineStore.getState().transcript;
   assertNonNullish(transcript, 'Expected transcript to be available when getting all speakers');
@@ -367,6 +395,8 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
         participants.map((p) => [p.id, p.wardrobes])
       ),
     } satisfies Partial<BaseTurnMachineStoreState>);
+
+    applyMapZoneWardrobeTriggersForParticipants(participants);
   },
 
   deactivateChat() {
@@ -477,9 +507,12 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       transcript: nextTranscript,
       preConversationWardrobeSnapshotByCharacterId: {
         ...activeState.preConversationWardrobeSnapshotByCharacterId,
-        [participantId]: participant.wardrobes,
+        [participantId]:
+          activeState.preConversationWardrobeSnapshotByCharacterId[participantId] ?? participant.wardrobes,
       },
     } satisfies Partial<BaseTurnMachineStoreState>);
+
+    applyMapZoneWardrobeTriggersForParticipants([participant]);
   },
 
   removeChatParticipant(participantId: string) {

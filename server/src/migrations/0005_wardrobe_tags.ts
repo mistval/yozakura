@@ -38,10 +38,40 @@ function migrateTable(db: Database.Database, tableName: string): void {
   }
 }
 
+function migrateMapData(parsed: Record<string, unknown>): boolean {
+  if (!Array.isArray(parsed.zones)) {
+    return false;
+  }
+
+  let changed = false;
+  for (const zone of parsed.zones) {
+    if (isRecord(zone) && !Array.isArray(zone.wardrobeTriggers)) {
+      zone.wardrobeTriggers = [];
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
+function migrateMapTable(db: Database.Database): void {
+  const selectStmt = db.prepare('SELECT id, data FROM map');
+  const updateStmt = db.prepare('UPDATE map SET data = ? WHERE id = ?');
+
+  const rows = selectStmt.all() as Array<{ id: string; data: string }>;
+  for (const row of rows) {
+    const parsed = JSON.parse(row.data);
+    if (isRecord(parsed) && migrateMapData(parsed)) {
+      updateStmt.run(JSON.stringify(parsed), row.id);
+    }
+  }
+}
+
 export const migration: Migration = {
   doMigration(db) {
     db.exec(`DELETE FROM key_value WHERE key LIKE 'scenario_%_turn';`);
     migrateTable(db, 'character');
     migrateTable(db, 'scenario_character');
+    migrateMapTable(db);
   },
 };

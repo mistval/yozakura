@@ -11,7 +11,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Core Systems',
-      items: ['chat', 'memory-system', 'schedules', 'temporal-context', 'template-system'],
+      items: ['chat', 'wardrobes', 'memory-system', 'schedules', 'temporal-context', 'template-system'],
     },
     {
       type: 'category',

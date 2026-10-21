@@ -189,9 +189,20 @@ export const ephemeralLocationSchema = worldMapLocationSchema.extend({
 
 export type EphemeralLocation = z.infer<typeof ephemeralLocationSchema>;
 
+export const wardrobeTriggerCommandSchema = z.enum(['disable', 'enable', 'enable_one']);
+export type WardrobeTriggerCommand = z.infer<typeof wardrobeTriggerCommandSchema>;
+
+export const wardrobeTriggerSchema = z.object({
+  command: wardrobeTriggerCommandSchema,
+  tag: z.string().min(1),
+});
+
+export type WardrobeTrigger = z.infer<typeof wardrobeTriggerSchema>;
+
 export const mapZoneSchema = basePersistedObjectSchema.extend({
   name: z.string(),
   locationIds: z.array(z.string()),
+  wardrobeTriggers: z.array(wardrobeTriggerSchema),
 });
 
 export type MapZone = z.infer<typeof mapZoneSchema>;
