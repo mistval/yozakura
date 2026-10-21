@@ -2,6 +2,7 @@ import { addMetadata, getMetadata } from 'meta-png';
 import { characterSchema, wardrobeSchema } from './types.js';
 import z from 'zod';
 import { safeParseJson } from '../util/json.js';
+import { CURRENT_CHARACTER_CARD_VERSION, runCharacterCardMigrations } from './character_card_migrator.js';
 
 const PNG_SIGNATURE = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
 const YOZAKURA_METADATA_KEY = 'yozakura_character';
@@ -30,7 +31,7 @@ const exportedCharacterSchema = characterSchema
   .extend({
     wardrobes: z.array(
       wardrobeSchema.pick({
-        autoSelectGroup: true,
+        tags: true,
         autoRevert: true,
         text: true,
         createdAt: true,
@@ -44,7 +45,7 @@ const YOZAKURA_CHARACTER_CARD_FORMAT = 'yozakura_character_card';
 
 export type YozakuraCardPayload = {
   format: typeof YOZAKURA_CHARACTER_CARD_FORMAT;
-  version: '1';
+  version: typeof CURRENT_CHARACTER_CARD_VERSION;
   exportedAt: string;
   character: YozakuraCardCharacterData;
 };
@@ -156,16 +157,21 @@ function toYozakuraCardPayload(value: unknown): YozakuraCardPayload | undefined 
     return undefined;
   }
 
-  const parsedCharacter = exportedCharacterSchema.safeParse(value.character);
+  const migrated = runCharacterCardMigrations(value);
+  if (migrated.version !== CURRENT_CHARACTER_CARD_VERSION) {
+    return undefined;
+  }
+
+  const parsedCharacter = exportedCharacterSchema.safeParse(migrated.character);
   if (!parsedCharacter.success) {
     return undefined;
   }
 
-  const exportedAt = typeof value.exportedAt === 'string' ? value.exportedAt : new Date().toISOString();
+  const exportedAt = typeof migrated.exportedAt === 'string' ? migrated.exportedAt : new Date().toISOString();
 
   return {
     format: YOZAKURA_CHARACTER_CARD_FORMAT,
-    version: '1',
+    version: CURRENT_CHARACTER_CARD_VERSION,
     exportedAt,
     character: parsedCharacter.data,
   };
@@ -243,7 +249,7 @@ export function embedYozakuraCharacterInPng(
 
   const embedData = {
     format: YOZAKURA_CHARACTER_CARD_FORMAT,
-    version: '1',
+    version: CURRENT_CHARACTER_CARD_VERSION,
     exportedAt: new Date().toISOString(),
     character: exportedCharacterSchema.parse(character),
   };

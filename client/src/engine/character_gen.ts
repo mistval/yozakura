@@ -9,7 +9,7 @@ import {
   type DetectedCardMetadata,
 } from './character_card_metadata.js';
 import { type Character } from './types.js';
-import { createWardrobe } from './wardrobes.js';
+import { createWardrobe, DAILY_AUTOSELECT_TAG_PREFIX, formatPrefixedTag } from './wardrobes.js';
 import { characterDescriptionGenerationTemplateGroup } from './prompt_templates/character_generation/character_description_generation.js';
 import { externalDescriptionGenerationTemplateGroup } from './prompt_templates/character_generation/external_description_generation.js';
 import { extractCharacterDescriptionTemplateGroup } from './prompt_templates/character_generation/extract_character_description.js';
@@ -103,7 +103,9 @@ export async function extractCharacterCard(
   if (shouldExtract('wardrobes')) {
     onStep?.('Generating wardrobe');
     const wardrobeTags = await generateWardrobe(character, signal);
-    onFieldGenerated?.('wardrobes', [createWardrobe(wardrobeTags, 'default')]);
+    onFieldGenerated?.('wardrobes', [
+      createWardrobe(wardrobeTags, [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')]),
+    ]);
   }
 }
 
@@ -163,7 +165,7 @@ export function mergeYozakuraCardIntoCharacter(
   const importedCharacter = payload.character;
   const wardrobes =
     importedCharacter.wardrobes.length > 0
-      ? importedCharacter.wardrobes.map((w) => createWardrobe(w.text, w.autoSelectGroup))
+      ? importedCharacter.wardrobes.map((w) => createWardrobe(w.text, w.tags))
       : character.wardrobes;
 
   return {

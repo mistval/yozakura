@@ -1,6 +1,12 @@
 import { useMemo, type ChangeEvent, type ReactNode } from 'react';
 import type { Character, Wardrobe } from '../../engine/types.js';
-import { createWardrobe } from '../../engine/wardrobes.js';
+import {
+  createWardrobe,
+  DAILY_AUTOSELECT_TAG_PREFIX,
+  formatPrefixedTag,
+  getWardrobeTagValuesWithPrefix,
+  setWardrobeTagWithPrefix,
+} from '../../engine/wardrobes.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 
@@ -33,7 +39,12 @@ export default function ImplicitWardrobeEditor({
   const sanitizedSource = useMemo(() => sanitizeDraftRows(wardrobes), [wardrobes]);
 
   const displayRows = useMemo(() => {
-    return sanitizedSource.concat(createWardrobe('', sanitizedSource.length === 0 ? 'default' : ''));
+    return sanitizedSource.concat(
+      createWardrobe(
+        '',
+        sanitizedSource.length === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : []
+      )
+    );
   }, [sanitizedSource]);
 
   const applyDraftRows = (nextDraftRows: Character['wardrobes']) => {
@@ -55,7 +66,12 @@ export default function ImplicitWardrobeEditor({
         text: event.target.value,
       };
     } else {
-      updated.push(createWardrobe(event.target.value, index === 0 ? 'default' : ''));
+      updated.push(
+        createWardrobe(
+          event.target.value,
+          index === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : []
+        )
+      );
     }
 
     applyDraftRows(updated);
@@ -79,10 +95,7 @@ export default function ImplicitWardrobeEditor({
     const row = updated[index];
     assertNonNullish(row, `Row at index ${index} should exist when changing auto select group`);
 
-    updated[index] = {
-      ...row,
-      autoSelectGroup: value,
-    };
+    updated[index] = setWardrobeTagWithPrefix(row, DAILY_AUTOSELECT_TAG_PREFIX, value);
 
     applyDraftRows(updated);
   };
@@ -152,7 +165,7 @@ export default function ImplicitWardrobeEditor({
                   </label>
                   <input
                     type="text"
-                    value={wardrobe.autoSelectGroup}
+                    value={getWardrobeTagValuesWithPrefix(wardrobe, DAILY_AUTOSELECT_TAG_PREFIX)[0] ?? ''}
                     onChange={(event) => handleAutoSelectGroupChange(index, event.target.value)}
                     placeholder="e.g. hat, shoes, expression…"
                     className="flex-1 border rounded-sm px-2 py-1 bg-inset text-xs"

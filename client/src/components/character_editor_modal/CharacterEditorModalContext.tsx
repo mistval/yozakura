@@ -18,7 +18,11 @@ import {
   type ExtractCharacterCardOptions,
 } from '../../engine/character_gen';
 import { detectCharacterCardMetadata } from '../../engine/character_card_metadata';
-import { createWardrobe } from '../../engine/wardrobes.js';
+import {
+  createWardrobe,
+  DAILY_AUTOSELECT_TAG_PREFIX,
+  formatPrefixedTag,
+} from '../../engine/wardrobes.js';
 import type { Character } from '../../engine/types';
 import { assertNonNullish } from '../../errors/application_error';
 import { getErrorMessage } from '../../errors/error_util';
@@ -319,7 +323,12 @@ export function CharacterEditorModalProvider({
               return {
                 ...prev,
                 wardrobes: 
-                 prev.wardrobes.concat(createWardrobe(generated, index === 0 ? 'default' : ''))
+                 prev.wardrobes.concat(
+                   createWardrobe(
+                     generated,
+                     index === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : []
+                   )
+                 )
               } satisfies Character
             }
           });

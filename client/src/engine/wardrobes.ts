@@ -2,30 +2,63 @@ import _ from 'lodash';
 import * as Database from '../backend_bridge/database.js';
 import type { Character, Wardrobe } from './types.js';
 
-export function createWardrobe(text = '', autoSelectGroup = ''): Wardrobe {
+export const DAILY_AUTOSELECT_TAG_PREFIX = 'daily_autoselect:';
+
+export function formatPrefixedTag(prefix: string, value: string): string {
+  return `${prefix}${value}`;
+}
+
+export function getWardrobeTagValuesWithPrefix(wardrobe: Pick<Wardrobe, 'tags'>, prefix: string): string[] {
+  return wardrobe.tags
+    .filter((tag) => tag.startsWith(prefix) && tag.length > prefix.length)
+    .map((tag) => tag.slice(prefix.length));
+}
+
+export function getWardrobesWithTagPrefix(
+  wardrobes: Wardrobe[],
+  prefix: string
+): Array<{ wardrobe: Wardrobe; tagValue: string }> {
+  const result: Array<{ wardrobe: Wardrobe; tagValue: string }> = [];
+  for (const wardrobe of wardrobes) {
+    const values = getWardrobeTagValuesWithPrefix(wardrobe, prefix);
+    if (values.length > 0 && values[0]) {
+      result.push({ wardrobe, tagValue: values[0] });
+    }
+  }
+  return result;
+}
+
+export function setWardrobeTagWithPrefix(wardrobe: Wardrobe, prefix: string, value: string): Wardrobe {
+  const remainingTags = wardrobe.tags.filter((tag) => !tag.startsWith(prefix));
+  const newTags = value.trim() !== '' ? remainingTags.concat(formatPrefixedTag(prefix, value)) : remainingTags;
+  return {
+    ...wardrobe,
+    tags: newTags,
+  };
+}
+
+export function createWardrobe(text = '', tags: string[] = []): Wardrobe {
   return Database.createPersistedObject({
     text,
     enabled: true,
-    autoSelectGroup,
+    tags,
     autoRevert: true,
   });
 }
 
 export function applyDailyWardrobeAutoselect(wardrobes: Character['wardrobes']): Wardrobe[] | undefined {
-  const groups = _.groupBy(
-    wardrobes.filter((w) => w?.autoSelectGroup),
-    (w) => w.autoSelectGroup
-  );
-
-  if (_.isEmpty(groups)) {
+  const tagged = getWardrobesWithTagPrefix(wardrobes, DAILY_AUTOSELECT_TAG_PREFIX);
+  if (tagged.length === 0) {
     return undefined;
   }
 
-  const selected = new Set(Object.values(groups).map((group) => _.sample(group)));
+  const groups = _.groupBy(tagged, (item) => item.tagValue);
+  const selected = new Set(Object.values(groups).map((group) => _.sample(group)?.wardrobe));
+  const participatingWardrobes = new Set(tagged.map((item) => item.wardrobe));
 
   let changed = false;
   const next = wardrobes.map((w) => {
-    if (!w?.autoSelectGroup) {
+    if (!participatingWardrobes.has(w)) {
       return w;
     }
 
