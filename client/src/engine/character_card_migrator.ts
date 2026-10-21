@@ -1,7 +1,7 @@
 import { migration as migration0001WardrobeTags } from './character_card_migrations/0001_wardrobe_tags.js';
 
 export type CharacterCardMigration = {
-  doMigration: (rawCard: Record<string, unknown>) => void;
+  doMigration: (rawCard: Record<string, unknown>) => Record<string, unknown>;
 };
 
 const migrations: CharacterCardMigration[] = [migration0001WardrobeTags];
@@ -9,10 +9,10 @@ const migrations: CharacterCardMigration[] = [migration0001WardrobeTags];
 export const CURRENT_CHARACTER_CARD_VERSION = String(migrations.length + 1);
 
 export function runCharacterCardMigrations(rawCard: Record<string, unknown>): Record<string, unknown> {
-  const cardCopy = structuredClone(rawCard);
+  let currentCard = rawCard;
   let version =
-    typeof cardCopy.version === 'string' || typeof cardCopy.version === 'number'
-      ? Number(cardCopy.version)
+    typeof currentCard.version === 'string' || typeof currentCard.version === 'number'
+      ? Number(currentCard.version)
       : 1;
 
   if (!Number.isInteger(version) || version < 1) {
@@ -24,10 +24,13 @@ export function runCharacterCardMigrations(rawCard: Record<string, unknown>): Re
     if (!migration) {
       break;
     }
-    migration.doMigration(cardCopy);
+    const migrated = migration.doMigration(currentCard);
     version += 1;
-    cardCopy.version = String(version);
+    currentCard = {
+      ...migrated,
+      version: String(version),
+    };
   }
 
-  return cardCopy;
+  return currentCard;
 }

@@ -48,6 +48,10 @@ describe('character card import migrations', () => {
     expect(character.wardrobes[1].tags).toEqual([]);
     // Retains autoSelectGroup on raw data if present
     expect(character.wardrobes[0].autoSelectGroup).toBe('outerwear');
+
+    // Asserts original input was not mutated
+    expect(rawV1Card.version).toBe('1');
+    expect((rawV1Card.character.wardrobes[0] as any).tags).toBeUndefined();
   });
 
   it('leaves v2 character cards intact', () => {

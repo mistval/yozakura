@@ -155,7 +155,7 @@ describe('applyDailyWardrobeAutoselect', () => {
       createdAt: '',
       updatedAt: '',
       text: 'w2',
-      enabled: true,
+      enabled: false,
       autoRevert: false,
       tags: ['daily_autoselect:primaryGroup'],
     };
@@ -164,7 +164,7 @@ describe('applyDailyWardrobeAutoselect', () => {
       createdAt: '',
       updatedAt: '',
       text: 'w3',
-      enabled: true,
+      enabled: false,
       autoRevert: false,
       tags: ['daily_autoselect:secondaryGroup'],
     };

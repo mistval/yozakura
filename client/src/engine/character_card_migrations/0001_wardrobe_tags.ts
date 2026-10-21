@@ -6,23 +6,38 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export const migration: CharacterCardMigration = {
-  doMigration(rawCard: Record<string, unknown>): void {
+  doMigration(rawCard: Record<string, unknown>): Record<string, unknown> {
     if (!isRecord(rawCard.character)) {
-      return;
+      return rawCard;
     }
 
     const rawCharacter = rawCard.character;
     if (!Array.isArray(rawCharacter.wardrobes)) {
-      return;
+      return rawCard;
     }
 
-    for (const wardrobe of rawCharacter.wardrobes) {
-      if (isRecord(wardrobe) && !('tags' in wardrobe)) {
-        const autoSelectGroup =
-          typeof wardrobe.autoSelectGroup === 'string' ? wardrobe.autoSelectGroup.trim() : '';
-        wardrobe.tags =
-          autoSelectGroup.length > 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, autoSelectGroup)] : [];
+    const nextWardrobes = rawCharacter.wardrobes.map((wardrobe) => {
+      if (!isRecord(wardrobe) || 'tags' in wardrobe) {
+        return wardrobe;
       }
-    }
+
+      const autoSelectGroup =
+        typeof wardrobe.autoSelectGroup === 'string' ? wardrobe.autoSelectGroup.trim() : '';
+      const tags =
+        autoSelectGroup.length > 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, autoSelectGroup)] : [];
+
+      return {
+        ...wardrobe,
+        tags,
+      };
+    });
+
+    return {
+      ...rawCard,
+      character: {
+        ...rawCharacter,
+        wardrobes: nextWardrobes,
+      },
+    };
   },
 };
