@@ -98,6 +98,7 @@ type BaseTurnMachineStoreState = {
   hydrate: (snapshot: SerializedTurn) => void;
   setEphemeralLocation: (setter: (prev: EphemeralLocation) => EphemeralLocation) => void;
   userIsParticipant: () => boolean;
+  userIsInitiator: () => boolean;
   addChatParticipant: (participantId: string) => void;
   setCurrentCharacter: (characterId: string) => void;
   removeChatParticipant: (participantId: string) => void;
@@ -308,13 +309,13 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     return get().chatState !== 'inactive';
   },
 
-  startNewTurn(_opts: { userMovesFirst?: boolean | undefined } = {}) {
+  startNewTurn(opts: { userMovesFirst?: boolean | undefined } = {}) {
     const allCharacterIds = useScenarioCharacterStore.getState().scenarioCharacters.map((c) => c.id);
     const userCharacterId = getRequiredUserCharacterId();
 
     const nonUserCharacterIds = () => allCharacterIds.filter((id) => id !== userCharacterId);
 
-    const ordered = true // opts.userMovesFirst TODO: Need to think more about whether user should always go first or not.
+    const ordered = opts.userMovesFirst
       ? [userCharacterId].concat(_.shuffle(nonUserCharacterIds()))
       : _.shuffle(allCharacterIds);
 
@@ -488,6 +489,11 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
   userIsParticipant() {
     const scenario = getRequiredActiveScenario();
     return get().participantIds.some((id) => id === scenario.userCharacterId);
+  },
+
+  userIsInitiator() {
+    const scenario = getRequiredActiveScenario();
+    return get().initiatorId === scenario.userCharacterId;
   },
 
   addChatParticipant(participantId: string) {
