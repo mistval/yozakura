@@ -72,7 +72,7 @@ Output the updated internal memory state for <%= it.focusedCharacter.firstName %
 const rollingPairwiseMemoryRewriteSystemTemplate = new RollingPairwiseMemoryRewriteSystemTemplate();
 const rollingPairwiseMemoryRewriteUserTemplate = new RollingPairwiseMemoryRewriteUserTemplate();
 
-export const rollingPairwiseMemoryRewriteChainGroup = new PromptTemplateChain({
+export const rollingPairwiseMemoryRewriteChain = new PromptTemplateChain({
   templateChainId: 'gen_pairwise_memory',
   templateChainTitle: 'Pairwise Memory Rewrite',
   templateChainDescription:

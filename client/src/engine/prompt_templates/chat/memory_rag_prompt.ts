@@ -20,7 +20,7 @@ class MemoryRagPromptTemplate extends PromptTemplateBase<z.infer<typeof memoryRa
 }
 
 const memoryRagPromptTemplate = new MemoryRagPromptTemplate();
-export const memoryRagPromptTemplatesGroup = new PromptTemplateChain({
+export const memoryRagPromptTemplatesChain = new PromptTemplateChain({
   templateChainId: 'gen_memory_rag_insert_template',
   templateChainTitle: 'Memory RAG Prompt Templates',
   templateChainDescription: 'Templates used for dynamic insertion of offscreen character memories.',

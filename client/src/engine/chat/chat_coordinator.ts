@@ -23,9 +23,9 @@ import {
   useTurnMachineStore,
   type StartChatSessionArgs,
 } from '../../state/turn_machine_store';
-import { chatSceneImageChainGroup } from '../prompt_templates/chat/chat_scene_image';
-import { moderationNextSpeakerTemplatesGroup } from '../prompt_templates/chat/moderation_next_speaker';
-import { conversationEndJudgeTemplatesGroup } from '../prompt_templates/chat/conversation_end_judge';
+import { chatSceneImageChain } from '../prompt_templates/chat/chat_scene_image';
+import { moderationNextSpeakerTemplatesChain } from '../prompt_templates/chat/moderation_next_speaker';
+import { conversationEndJudgeTemplatesChain } from '../prompt_templates/chat/conversation_end_judge';
 import { chatSystemPromptChain } from '../prompt_templates/chat/chat_system_prompt';
 import { newId } from '../../util/id';
 import {
@@ -114,7 +114,7 @@ export class ChatCoordinator {
     return this.turnMachineStore().doWithState('judging_conversation_end', () => {
       return withPhaseTransitionGate(
         async (abortSignal) => {
-          return conversationEndJudgeTemplatesGroup.renderAndExecute(
+          return conversationEndJudgeTemplatesChain.renderAndExecute(
             await buildConversationEndJudgeContext(fromPerspectiveId, lengthParameters),
             { abortSignal }
           );
@@ -220,7 +220,7 @@ export class ChatCoordinator {
       return withPhaseTransitionGate(
         async (abortSignal) => {
           const primaryCharacter = this.getCharacterById(primaryCharacterId);
-          const generatedScenePrompt = await chatSceneImageChainGroup.renderAndExecute(
+          const generatedScenePrompt = await chatSceneImageChain.renderAndExecute(
             await buildFocusedChatTemplateContext(primaryCharacter.id, undefined, opts),
             { abortSignal }
           );
@@ -481,7 +481,7 @@ export class ChatCoordinator {
         return useTurnMachineStore.getState().doWithState('selecting_speaker', async () => {
           return withPhaseTransitionGate(
             async (abortSignal) => {
-              const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesGroup.renderAndExecute(
+              const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesChain.renderAndExecute(
                 await buildChatModeratorContext(speakerCandidates),
                 { abortSignal }
               );

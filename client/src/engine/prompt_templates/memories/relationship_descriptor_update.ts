@@ -62,7 +62,7 @@ Output an updated relationship descriptor. Limit yourself to 1-3 words. Examples
 const relationshipDescriptorUpdateSystemTemplate = new RelationshipDescriptorUpdateSystemTemplate();
 const relationshipDescriptorUpdateUserTemplate = new RelationshipDescriptorUpdateUserTemplate();
 
-export const relationshipDescriptorUpdateChainGroup = new PromptTemplateChain({
+export const relationshipDescriptorUpdateChain = new PromptTemplateChain({
   templateChainId: 'gen_relationship_descriptor',
   templateChainTitle: 'Relationship Descriptor Update',
   templateChainDescription:

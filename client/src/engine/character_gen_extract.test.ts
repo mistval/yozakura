@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createBlankCharacter, extractCharacterCard } from './character_gen.js';
-import { extractCharacterDescriptionTemplateGroup } from './prompt_templates/character_generation/extract_character_description.js';
-import { externalDescriptionGenerationTemplateGroup } from './prompt_templates/character_generation/external_description_generation.js';
-import { exampleDialogueTemplateGroup } from './prompt_templates/character_generation/example_dialogue.js';
-import { baseAppearanceGenerationTemplateGroup } from './prompt_templates/character_generation/base_appearance_generation.js';
-import { wardrobeGenerationTemplateGroup } from './prompt_templates/character_generation/wardrobe_generation.js';
+import { extractCharacterDescriptionTemplateChain } from './prompt_templates/character_generation/extract_character_description.js';
+import { externalDescriptionGenerationTemplateChain } from './prompt_templates/character_generation/external_description_generation.js';
+import { exampleDialogueTemplateChain } from './prompt_templates/character_generation/example_dialogue.js';
+import { baseAppearanceGenerationTemplateChain } from './prompt_templates/character_generation/base_appearance_generation.js';
+import { wardrobeGenerationTemplateChain } from './prompt_templates/character_generation/wardrobe_generation.js';
 
 describe('extractCharacterCard field selection', () => {
   it('only generates requested fields and preserves internalDescription when omitted', async () => {
@@ -15,19 +15,19 @@ describe('extractCharacterCard field selection', () => {
     };
 
     const descriptionSpy = vi
-      .spyOn(extractCharacterDescriptionTemplateGroup, 'renderAndExecute')
+      .spyOn(extractCharacterDescriptionTemplateChain, 'renderAndExecute')
       .mockResolvedValue('Extracted description');
     const externalSpy = vi
-      .spyOn(externalDescriptionGenerationTemplateGroup, 'renderAndExecute')
+      .spyOn(externalDescriptionGenerationTemplateChain, 'renderAndExecute')
       .mockResolvedValue('External desc');
     const dialogueSpy = vi
-      .spyOn(exampleDialogueTemplateGroup, 'renderAndExecute')
+      .spyOn(exampleDialogueTemplateChain, 'renderAndExecute')
       .mockResolvedValue('Dialogue text');
     const appearanceSpy = vi
-      .spyOn(baseAppearanceGenerationTemplateGroup, 'renderAndExecute')
+      .spyOn(baseAppearanceGenerationTemplateChain, 'renderAndExecute')
       .mockResolvedValue('1girl, blue hair');
     const wardrobeSpy = vi
-      .spyOn(wardrobeGenerationTemplateGroup, 'renderAndExecute')
+      .spyOn(wardrobeGenerationTemplateChain, 'renderAndExecute')
       .mockResolvedValue('casual clothes');
 
     const generatedFields: Record<string, unknown> = {};
@@ -73,19 +73,19 @@ describe('extractCharacterCard field selection', () => {
     };
 
     const descriptionSpy = vi
-      .spyOn(extractCharacterDescriptionTemplateGroup, 'renderAndExecute')
+      .spyOn(extractCharacterDescriptionTemplateChain, 'renderAndExecute')
       .mockResolvedValue('Distilled internal persona');
     const externalSpy = vi
-      .spyOn(externalDescriptionGenerationTemplateGroup, 'renderAndExecute')
+      .spyOn(externalDescriptionGenerationTemplateChain, 'renderAndExecute')
       .mockResolvedValue('External desc');
     const dialogueSpy = vi
-      .spyOn(exampleDialogueTemplateGroup, 'renderAndExecute')
+      .spyOn(exampleDialogueTemplateChain, 'renderAndExecute')
       .mockResolvedValue('Dialogue text');
     const appearanceSpy = vi
-      .spyOn(baseAppearanceGenerationTemplateGroup, 'renderAndExecute')
+      .spyOn(baseAppearanceGenerationTemplateChain, 'renderAndExecute')
       .mockResolvedValue('1boy');
     const wardrobeSpy = vi
-      .spyOn(wardrobeGenerationTemplateGroup, 'renderAndExecute')
+      .spyOn(wardrobeGenerationTemplateChain, 'renderAndExecute')
       .mockResolvedValue('suit');
 
     const generatedFields: Record<string, unknown> = {};

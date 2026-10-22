@@ -1,8 +1,8 @@
 import { TemplateGroup } from '../template_group';
-import { moderationNextSpeakerTemplatesGroup } from './moderation_next_speaker';
-import { conversationEndJudgeTemplatesGroup } from './conversation_end_judge';
-import { memoryRagPromptTemplatesGroup } from './memory_rag_prompt';
-import { chatSceneImageChainGroup } from './chat_scene_image';
+import { moderationNextSpeakerTemplatesChain } from './moderation_next_speaker';
+import { conversationEndJudgeTemplatesChain } from './conversation_end_judge';
+import { memoryRagPromptTemplatesChain } from './memory_rag_prompt';
+import { chatSceneImageChain } from './chat_scene_image';
 import { chatSystemPromptChain } from './chat_system_prompt';
 
 export const runtimeChatTemplatesGroup = new TemplateGroup({
@@ -11,9 +11,9 @@ export const runtimeChatTemplatesGroup = new TemplateGroup({
   description: 'Templates used during conversations.',
   children: [
     chatSystemPromptChain,
-    moderationNextSpeakerTemplatesGroup,
-    conversationEndJudgeTemplatesGroup,
-    chatSceneImageChainGroup,
-    memoryRagPromptTemplatesGroup,
+    moderationNextSpeakerTemplatesChain,
+    conversationEndJudgeTemplatesChain,
+    chatSceneImageChain,
+    memoryRagPromptTemplatesChain,
   ],
 });

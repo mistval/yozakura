@@ -64,7 +64,7 @@ Generate clothing/accessory tags for this character now. Output ONLY the comma-s
 
 const wardrobeGenerationSystemTemplate = new WardrobeGenerationSystemTemplate();
 const wardrobeGenerationUserTemplate = new WardrobeGenerationUserTemplate();
-export const wardrobeGenerationTemplateGroup = new PromptTemplateChain({
+export const wardrobeGenerationTemplateChain = new PromptTemplateChain({
   templateChainId: 'gen_character_wardrobe',
   templateChainTitle: 'Wardrobe Generation',
   templateChainDescription: 'Templates for generating clothing and accessory tags for characters.',

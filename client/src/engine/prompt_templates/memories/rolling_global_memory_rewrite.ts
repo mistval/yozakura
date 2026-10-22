@@ -59,7 +59,7 @@ Output the updated memory now and nothing else.`;
 const rollingGlobalMemoryRewriteSystemTemplate = new RollingGlobalMemoryRewriteSystemTemplate();
 const rollingGlobalMemoryRewriteUserTemplate = new RollingGlobalMemoryRewriteUserTemplate();
 
-export const rollingGlobalMemoryRewriteChainGroup = new PromptTemplateChain({
+export const rollingGlobalMemoryRewriteChain = new PromptTemplateChain({
   templateChainId: 'gen_global_memory',
   templateChainTitle: 'Global Memory Rewrite',
   templateChainDescription:

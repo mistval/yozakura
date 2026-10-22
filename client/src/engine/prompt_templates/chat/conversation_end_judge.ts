@@ -74,7 +74,7 @@ Output whether the conversation should continue, as a one token judgement: eithe
 
 const conversationEndJudgeSystemTemplate = new ConversationEndJudgeSystemTemplate();
 const conversationEndJudgeUserTemplate = new ConversationEndJudgeUserTemplate();
-export const conversationEndJudgeTemplatesGroup = new PromptTemplateChain<
+export const conversationEndJudgeTemplatesChain = new PromptTemplateChain<
   ConversationEndJudgeExecutionContext,
   ChatEndDecision
 >({

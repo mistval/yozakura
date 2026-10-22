@@ -60,7 +60,7 @@ Describe only <%= it.focusedCharacter.firstName %> and their place in the curren
 const chatSceneImageSystemTemplate = new ChatSceneImageSystemTemplate();
 const chatSceneImageUserTemplate = new ChatSceneImageUserTemplate();
 
-export const chatSceneImageChainGroup = new PromptTemplateChain({
+export const chatSceneImageChain = new PromptTemplateChain({
   templateChainId: 'gen_chat_scene_image_prompt',
   templateChainTitle: 'Chat Scene Image Generation',
   templateChainDescription: 'Prompts used to generate scene image prompts.',

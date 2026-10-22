@@ -46,7 +46,7 @@ class ExtractCharacterDescriptionUserTemplate extends PromptTemplateBase<
 
 const extractCharacterDescriptionSystemTemplate = new ExtractCharacterDescriptionSystemTemplate();
 const extractCharacterDescriptionUserTemplate = new ExtractCharacterDescriptionUserTemplate();
-export const extractCharacterDescriptionTemplateGroup = new PromptTemplateChain({
+export const extractCharacterDescriptionTemplateChain = new PromptTemplateChain({
   templateChainId: 'gen_extract_character_description',
   templateChainTitle: 'Extract Character Description',
   templateChainDescription:

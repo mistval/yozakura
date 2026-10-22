@@ -13,13 +13,13 @@ import { DEFERRED_SYNC } from '../../state/ephemeral_state_helper';
 import { trimNewestByCreatedAt } from '../../util/array';
 import { newId } from '../../util/id';
 import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
-import { conversationRollingSummaryChainGroup } from '../prompt_templates/memories/conversation_rolling_summary';
-import { nextConversationGoalUpdatesChainGroup } from '../prompt_templates/memories/next_conversation_goal_updates';
-import { offscreenMemoryExtractionChainGroup } from '../prompt_templates/memories/offscreen_memory_extraction';
-import { offscreenMemoryUpdateConversationGoalChainGroup } from '../prompt_templates/memories/offscreen_memory_update_conversation_goal';
-import { relationshipDescriptorUpdateChainGroup } from '../prompt_templates/memories/relationship_descriptor_update';
-import { rollingGlobalMemoryRewriteChainGroup } from '../prompt_templates/memories/rolling_global_memory_rewrite';
-import { rollingPairwiseMemoryRewriteChainGroup } from '../prompt_templates/memories/rolling_pairwise_memory_rewrite';
+import { conversationRollingSummaryChain } from '../prompt_templates/memories/conversation_rolling_summary';
+import { nextConversationGoalUpdatesChain } from '../prompt_templates/memories/next_conversation_goal_updates';
+import { offscreenMemoryExtractionChain } from '../prompt_templates/memories/offscreen_memory_extraction';
+import { offscreenMemoryUpdateConversationGoalChain } from '../prompt_templates/memories/offscreen_memory_update_conversation_goal';
+import { relationshipDescriptorUpdateChain } from '../prompt_templates/memories/relationship_descriptor_update';
+import { rollingGlobalMemoryRewriteChain } from '../prompt_templates/memories/rolling_global_memory_rewrite';
+import { rollingPairwiseMemoryRewriteChain } from '../prompt_templates/memories/rolling_pairwise_memory_rewrite';
 import {
   buildFocusedChatTemplateContext,
   buildOffscreenMemoryUpdateConversationGoalContext,
@@ -57,15 +57,15 @@ function createGatedRenderFunction<
 }
 
 const gatedRenderFunctions = {
-  conversationRollingSummaryChainGroup: createGatedRenderFunction(conversationRollingSummaryChainGroup),
-  offscreenMemoryExtractionChainGroup: createGatedRenderFunction(offscreenMemoryExtractionChainGroup),
+  conversationRollingSummaryChainGroup: createGatedRenderFunction(conversationRollingSummaryChain),
+  offscreenMemoryExtractionChainGroup: createGatedRenderFunction(offscreenMemoryExtractionChain),
   offscreenMemoryUpdateConversationGoalChainGroup: createGatedRenderFunction(
-    offscreenMemoryUpdateConversationGoalChainGroup
+    offscreenMemoryUpdateConversationGoalChain
   ),
-  rollingPairwiseMemoryRewriteChainGroup: createGatedRenderFunction(rollingPairwiseMemoryRewriteChainGroup),
-  nextConversationGoalUpdatesChainGroup: createGatedRenderFunction(nextConversationGoalUpdatesChainGroup),
-  relationshipDescriptorUpdateChainGroup: createGatedRenderFunction(relationshipDescriptorUpdateChainGroup),
-  rollingGlobalMemoryRewriteChainGroup: createGatedRenderFunction(rollingGlobalMemoryRewriteChainGroup),
+  rollingPairwiseMemoryRewriteChainGroup: createGatedRenderFunction(rollingPairwiseMemoryRewriteChain),
+  nextConversationGoalUpdatesChainGroup: createGatedRenderFunction(nextConversationGoalUpdatesChain),
+  relationshipDescriptorUpdateChainGroup: createGatedRenderFunction(relationshipDescriptorUpdateChain),
+  rollingGlobalMemoryRewriteChainGroup: createGatedRenderFunction(rollingGlobalMemoryRewriteChain),
 };
 
 function getResolvedCharacter(characterId: string): Character {

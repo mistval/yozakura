@@ -68,7 +68,7 @@ Return the new piece of information you identified in the transcript. Alternativ
 const offscreenMemoryExtractionSystemTemplate = new OffscreenMemoryExtractionSystemTemplate();
 const offscreenMemoryExtractionUserTemplate = new OffscreenMemoryExtractionUserTemplate();
 
-export const offscreenMemoryExtractionChainGroup = new PromptTemplateChain({
+export const offscreenMemoryExtractionChain = new PromptTemplateChain({
   templateChainId: 'gen_offscreen_learned_information',
   templateChainTitle: 'Offscreen Memory Extraction',
   templateChainDescription:

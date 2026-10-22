@@ -68,7 +68,7 @@ Output a goal for <%= it.focusedCharacter.firstName %> in their next interaction
 const nextConversationGoalUpdatesSystemTemplate = new NextConversationGoalUpdatesSystemTemplate();
 const nextConversationGoalUpdatesUserTemplate = new NextConversationGoalUpdatesUserTemplate();
 
-export const nextConversationGoalUpdatesChainGroup = new PromptTemplateChain({
+export const nextConversationGoalUpdatesChain = new PromptTemplateChain({
   templateChainId: 'gen_convo_goal',
   templateChainTitle: 'Next Conversation Goal',
   templateChainDescription:

@@ -65,7 +65,7 @@ Analyze the flow of the conversation and decide who speaks next. Output the next
 
 const moderationNextSpeakerSystemTemplate = new ModerationNextSpeakerSystemTemplate();
 const moderationNextSpeakerUserTemplate = new ModerationNextSpeakerUserTemplate();
-export const moderationNextSpeakerTemplatesGroup = new PromptTemplateChain({
+export const moderationNextSpeakerTemplatesChain = new PromptTemplateChain({
   templateChainId: 'gen_intelligent_next_speaker_select',
   templateChainTitle: 'Next Speaker Selection',
   templateChainDescription:

@@ -59,7 +59,7 @@ Output the conversation summary now.`;
 const conversationRollingSummarySystemTemplate = new ConversationRollingSummarySystemTemplate();
 const conversationRollingSummaryUserTemplate = new ConversationRollingSummaryUserTemplate();
 
-export const conversationRollingSummaryChainGroup = new PromptTemplateChain({
+export const conversationRollingSummaryChain = new PromptTemplateChain({
   templateChainId: 'gen_convo_summary',
   templateChainTitle: 'Conversation Summarization',
   templateChainDescription: 'Prompts for generating conversation summaries.',

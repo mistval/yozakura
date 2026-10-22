@@ -43,7 +43,7 @@ Write five lines of example dialog spoken by this character. The example dialog 
 
 const exampleDialogueSystemTemplate = new ExampleDialogueSystemTemplate();
 const exampleDialogueUserTemplate = new ExampleDialogueUserTemplate();
-export const exampleDialogueTemplateGroup = new PromptTemplateChain({
+export const exampleDialogueTemplateChain = new PromptTemplateChain({
   templateChainId: 'gen_character_example_dialog',
   templateChainTitle: 'Example Dialogue Generation',
   templateChainDescription:

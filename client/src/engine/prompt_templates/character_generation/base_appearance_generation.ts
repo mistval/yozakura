@@ -44,7 +44,7 @@ Generate appearance tags for this character now. Output ONLY the comma-separated
 
 const baseAppearanceGenerationSystemTemplate = new BaseAppearanceGenerationSystemTemplate();
 const baseAppearanceGenerationUserTemplate = new BaseAppearanceGenerationUserTemplate();
-export const baseAppearanceGenerationTemplateGroup = new PromptTemplateChain({
+export const baseAppearanceGenerationTemplateChain = new PromptTemplateChain({
   templateChainId: 'gen_character_base_appearance',
   templateChainTitle: 'Base Appearance Generation',
   templateChainDescription:

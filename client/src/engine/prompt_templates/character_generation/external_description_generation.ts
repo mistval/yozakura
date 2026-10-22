@@ -48,7 +48,7 @@ Write two or three sentences describing how this character appears and comes acr
 
 const externalDescriptionGenerationSystemTemplate = new ExternalDescriptionGenerationSystemTemplate();
 const externalDescriptionGenerationUserTemplate = new ExternalDescriptionGenerationUserTemplate();
-export const externalDescriptionGenerationTemplateGroup = new PromptTemplateChain({
+export const externalDescriptionGenerationTemplateChain = new PromptTemplateChain({
   templateChainId: 'gen_character_external_description',
   templateChainTitle: 'External Description Generation',
   templateChainDescription:

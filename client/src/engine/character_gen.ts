@@ -10,12 +10,12 @@ import {
 } from './character_card_metadata.js';
 import { type Character } from './types.js';
 import { createWardrobe, DAILY_AUTOSELECT_TAG_PREFIX, formatPrefixedTag } from './wardrobes.js';
-import { characterDescriptionGenerationTemplateGroup } from './prompt_templates/character_generation/character_description_generation.js';
-import { externalDescriptionGenerationTemplateGroup } from './prompt_templates/character_generation/external_description_generation.js';
-import { extractCharacterDescriptionTemplateGroup } from './prompt_templates/character_generation/extract_character_description.js';
-import { exampleDialogueTemplateGroup } from './prompt_templates/character_generation/example_dialogue.js';
-import { baseAppearanceGenerationTemplateGroup } from './prompt_templates/character_generation/base_appearance_generation.js';
-import { wardrobeGenerationTemplateGroup } from './prompt_templates/character_generation/wardrobe_generation.js';
+import { characterDescriptionGenerationTemplateChain } from './prompt_templates/character_generation/character_description_generation.js';
+import { externalDescriptionGenerationTemplateChain } from './prompt_templates/character_generation/external_description_generation.js';
+import { extractCharacterDescriptionTemplateChain } from './prompt_templates/character_generation/extract_character_description.js';
+import { exampleDialogueTemplateChain } from './prompt_templates/character_generation/example_dialogue.js';
+import { baseAppearanceGenerationTemplateChain } from './prompt_templates/character_generation/base_appearance_generation.js';
+import { wardrobeGenerationTemplateChain } from './prompt_templates/character_generation/wardrobe_generation.js';
 import { newId } from '../util/id.js';
 import { buildCharacterEditorContext } from './prompt_templates/prompt_context_builder.js';
 
@@ -23,7 +23,7 @@ export async function generateCharacterInternalDescription(
   character: Character,
   abortSignal?: AbortSignal
 ): Promise<string> {
-  return characterDescriptionGenerationTemplateGroup.renderAndExecute(
+  return characterDescriptionGenerationTemplateChain.renderAndExecute(
     buildCharacterEditorContext(character),
     { abortSignal }
   );
@@ -33,7 +33,7 @@ export async function generateCharacterExternalDescription(
   character: Character,
   abortSignal?: AbortSignal
 ): Promise<string> {
-  return externalDescriptionGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character), {
+  return externalDescriptionGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
     abortSignal,
   });
 }
@@ -75,7 +75,7 @@ export async function extractCharacterCard(
 
   if (shouldExtract('internalDescription')) {
     onStep?.('Extracting description');
-    const description = await extractCharacterDescriptionTemplateGroup.renderAndExecute(
+    const description = await extractCharacterDescriptionTemplateChain.renderAndExecute(
       buildCharacterEditorContext(character),
       { abortSignal: signal }
     );
@@ -113,7 +113,7 @@ export async function generateExampleDialogue(
   character: Character,
   abortSignal?: AbortSignal
 ): Promise<string> {
-  return exampleDialogueTemplateGroup.renderAndExecute(buildCharacterEditorContext(character), {
+  return exampleDialogueTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
     abortSignal,
   });
 }
@@ -122,13 +122,13 @@ export async function generateBaseAppearanceTags(
   character: Character,
   abortSignal?: AbortSignal
 ): Promise<string> {
-  return baseAppearanceGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character), {
+  return baseAppearanceGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
     abortSignal,
   });
 }
 
 export async function generateWardrobe(character: Character, abortSignal?: AbortSignal): Promise<string> {
-  return wardrobeGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character), {
+  return wardrobeGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
     abortSignal,
   });
 }

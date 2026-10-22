@@ -67,7 +67,7 @@ const offscreenMemoryUpdateConversationGoalSystemTemplate =
 const offscreenMemoryUpdateConversationGoalUserTemplate =
   new OffscreenMemoryUpdateConversationGoalUserTemplate();
 
-export const offscreenMemoryUpdateConversationGoalChainGroup = new PromptTemplateChain({
+export const offscreenMemoryUpdateConversationGoalChain = new PromptTemplateChain({
   templateChainId: 'gen_offscreen_character_binary_update_next_convo_goal',
   templateChainTitle: 'Offscreen Conversation Goal Update',
   templateChainDescription:

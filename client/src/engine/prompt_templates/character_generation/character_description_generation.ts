@@ -49,7 +49,7 @@ Write three or four paragraphs that elucidate the personality, goals and motives
 
 const characterDescriptionGenerationSystemTemplate = new CharacterDescriptionGenerationSystemTemplate();
 const characterDescriptionGenerationUserTemplate = new CharacterDescriptionGenerationUserTemplate();
-export const characterDescriptionGenerationTemplateGroup = new PromptTemplateChain({
+export const characterDescriptionGenerationTemplateChain = new PromptTemplateChain({
   templateChainId: 'gen_character_internal_description',
   templateChainTitle: 'Character Description Generation',
   templateChainDescription:
