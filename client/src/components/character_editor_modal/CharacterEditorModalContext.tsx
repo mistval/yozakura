@@ -30,6 +30,7 @@ import { useScenarioCharacterStore } from '../../state/scenario_character_store.
 import type { CharacterEditorModalProps, PendingCardImport } from './types';
 import { generateCharacterCard } from '../../engine/image_gen';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
+import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
 
 type CharacterEditorModalContextValue = {
   open: boolean;
@@ -130,7 +131,8 @@ export function CharacterEditorModalProvider({
     );
   };
 
-  const isBusy = Boolean(loadingField) || cardImportBusy;
+  const isCharacterSyncing = useIsEntityInDeferredSync(!isGlobalMode ? character.id : undefined);
+  const isBusy = Boolean(loadingField) || cardImportBusy || isCharacterSyncing;
   const currentImagePath = character.imagePath?.trim();
   const currentImageSrc = previewUrl
     ? previewUrl

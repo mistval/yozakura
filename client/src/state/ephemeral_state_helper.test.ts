@@ -11,6 +11,7 @@ import {
   EphemeralStateHelper,
   IMMEDIATE_SYNC,
   ephemeralStateSlice,
+  isEntityInDeferredSync,
   type IEphemeralStateDelegate,
 } from './ephemeral_state_helper';
 import { useScenarioStore } from './scenario_store';
@@ -163,5 +164,81 @@ describe('EphemeralStateHelper', () => {
 
     expect(delegate.setDatabaseState).not.toHaveBeenCalled();
     expect(delegate.refreshStoreStateFromDatabase).not.toHaveBeenCalled();
+  });
+
+  it('tracks deferred sync entities in useDeferredSyncStore and releases them on commit', async () => {
+    const { helper } = createHelper();
+    const entity = { id: 'track-1', value: 'v1' };
+
+    expect(isEntityInDeferredSync(entity.id)).toBe(false);
+
+    await helper.stageUpdatedEntity(entity, DEFERRED_SYNC);
+    expect(isEntityInDeferredSync(entity.id)).toBe(true);
+
+    await helper.commitChanges();
+    expect(isEntityInDeferredSync(entity.id)).toBe(false);
+  });
+
+  it('releases deferred sync entities on discard or abandon', async () => {
+    const { helper } = createHelper();
+    const entity = { id: 'track-2', value: 'v1' };
+
+    await helper.stageUpdatedEntity(entity, DEFERRED_SYNC);
+    expect(isEntityInDeferredSync(entity.id)).toBe(true);
+    await helper.discardPendingChanges();
+    expect(isEntityInDeferredSync(entity.id)).toBe(false);
+
+    await helper.stageUpdatedEntity(entity, DEFERRED_SYNC);
+    expect(isEntityInDeferredSync(entity.id)).toBe(true);
+    helper.abandonPendingChanges();
+    expect(isEntityInDeferredSync(entity.id)).toBe(false);
+  });
+
+  it('supports upfront locking via lockEntitiesForDeferredSync and releases on commit', async () => {
+    const { helper } = createHelper();
+    const entity = { id: 'upfront-1', value: 'initial' };
+
+    expect(isEntityInDeferredSync(entity.id)).toBe(false);
+
+    helper.lockEntitiesForDeferredSync([entity]);
+    expect(isEntityInDeferredSync(entity.id)).toBe(true);
+
+    expect(() => helper.stageUpdatedEntity({ id: entity.id, value: 'immediate' }, IMMEDIATE_SYNC)).toThrow(
+      'Cannot immediately sync entity. Deferred sync is pending.'
+    );
+
+    await helper.commitChanges();
+    expect(isEntityInDeferredSync(entity.id)).toBe(false);
+  });
+
+  it('upgrades a locked operation when staged and does not clobber existing operations', async () => {
+    const { helper, delegate } = createHelper();
+    const entity = { id: 'lock-upgrade-1', value: 'initial' };
+
+    helper.lockEntitiesForDeferredSync([entity]);
+    expect(isEntityInDeferredSync(entity.id)).toBe(true);
+
+    // Staging deferred upsert upgrades the lock
+    await helper.stageUpdatedEntity({ id: entity.id, value: 'new-val' }, DEFERRED_SYNC);
+    expect(isEntityInDeferredSync(entity.id)).toBe(true);
+
+    // Calling lock again should not clobber the staged upsert
+    helper.lockEntitiesForDeferredSync([entity]);
+
+    await helper.commitChanges();
+    expect(delegate.setDatabaseState).toHaveBeenCalledWith([{ id: entity.id, value: 'new-val' }]);
+    expect(isEntityInDeferredSync(entity.id)).toBe(false);
+  });
+
+  it('discarding upfront locks without mutations releases sync status without database refresh', async () => {
+    const { helper, delegate } = createHelper();
+    const entity = { id: 'lock-discard-1', value: 'initial' };
+
+    helper.lockEntitiesForDeferredSync([entity]);
+    expect(isEntityInDeferredSync(entity.id)).toBe(true);
+
+    await helper.discardPendingChanges();
+    expect(delegate.refreshStoreStateFromDatabase).not.toHaveBeenCalled();
+    expect(isEntityInDeferredSync(entity.id)).toBe(false);
   });
 });

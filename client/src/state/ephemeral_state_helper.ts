@@ -1,14 +1,66 @@
+import { create } from 'zustand';
 import { assert } from '../errors/application_error';
 import { showNonRetriableErrorCardIfNeeded } from '../engine/interative_retry';
 import { useScenarioStore } from './scenario_store';
 
-type OperationType = 'upsert' | 'delete';
+type OperationType = 'upsert' | 'delete' | 'lock';
 
 export type SyncMode = 'defer' | 'immediate';
 export type SyncOptions = { syncMode: SyncMode };
 
 export const IMMEDIATE_SYNC = { syncMode: 'immediate' } as const satisfies SyncOptions;
 export const DEFERRED_SYNC = { syncMode: 'defer' } as const satisfies SyncOptions;
+
+type DeferredSyncStoreState = {
+  syncingEntityIds: Record<string, true>;
+  addSyncingEntityIds: (ids: string[]) => void;
+  removeSyncingEntityIds: (ids: string[]) => void;
+};
+
+export const useDeferredSyncStore = create<DeferredSyncStoreState>((set) => ({
+  syncingEntityIds: {},
+  addSyncingEntityIds: (ids) => {
+    set((state) => {
+      let hasNew = false;
+      const next = { ...state.syncingEntityIds };
+      for (const id of ids) {
+        if (!next[id]) {
+          next[id] = true;
+          hasNew = true;
+        }
+      }
+      return hasNew ? { syncingEntityIds: next } : state;
+    });
+  },
+  removeSyncingEntityIds: (ids) => {
+    set((state) => {
+      let hasRemoved = false;
+      const next = { ...state.syncingEntityIds };
+      for (const id of ids) {
+        if (next[id]) {
+          delete next[id];
+          hasRemoved = true;
+        }
+      }
+      return hasRemoved ? { syncingEntityIds: next } : state;
+    });
+  },
+}));
+
+export function useIsEntityInDeferredSync(entityId: string | undefined): boolean {
+  return useDeferredSyncStore((state) => (entityId ? Boolean(state.syncingEntityIds[entityId]) : false));
+}
+
+export function useAreAnyEntitiesInDeferredSync(entityIds: ReadonlyArray<string | undefined>): boolean {
+  return useDeferredSyncStore((state) =>
+    entityIds.some((id) => (id ? Boolean(state.syncingEntityIds[id]) : false))
+  );
+}
+
+export function isEntityInDeferredSync(entityId: string | undefined): boolean {
+  if (!entityId) return false;
+  return Boolean(useDeferredSyncStore.getState().syncingEntityIds[entityId]);
+}
 
 export interface IEphemeralStateDelegate<TEntityType> {
   // Upsert these entities into the store state
@@ -39,6 +91,22 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     private readonly delegate: IEphemeralStateDelegate<TEntityType>
   ) {}
 
+  public lockEntitiesForDeferredSync(entities: TEntityType[]) {
+    if (entities.length === 0) {
+      return;
+    }
+
+    for (const entity of entities) {
+      if (!this.pendingOperations.has(entity.id)) {
+        this.pendingOperations.set(entity.id, {
+          operationType: 'lock',
+          entity,
+        });
+      }
+    }
+    useDeferredSyncStore.getState().addSyncingEntityIds(entities.map((e) => e.id));
+  }
+
   public stageUpdatedEntity(entity: TEntityType, options: SyncOptions) {
     return this.stageUpdatedEntities([entity], options);
   }
@@ -60,21 +128,33 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
   }
 
   public async discardPendingChanges() {
-    const entities = [...this.pendingOperations.values()].map((operation) => operation.entity);
+    const flushedIds = Array.from(this.pendingOperations.keys());
+    const entitiesToRefresh = [...this.pendingOperations.values()]
+      .filter((operation) => operation.operationType !== 'lock')
+      .map((operation) => operation.entity);
     this.pendingOperations.clear();
 
-    if (entities.length > 0) {
+    if (entitiesToRefresh.length > 0) {
       this.databaseQueuePromise = this.databaseQueuePromise
         .catch(() => {})
         .then(async () => {
-          await this.delegate.refreshStoreStateFromDatabase(entities);
+          try {
+            await this.delegate.refreshStoreStateFromDatabase(entitiesToRefresh);
+          } finally {
+            const idsToRemove = flushedIds.filter((id) => !this.pendingOperations.has(id));
+            useDeferredSyncStore.getState().removeSyncingEntityIds(idsToRemove);
+          }
         });
 
       await this.databaseQueuePromise;
+    } else {
+      const idsToRemove = flushedIds.filter((id) => !this.pendingOperations.has(id));
+      useDeferredSyncStore.getState().removeSyncingEntityIds(idsToRemove);
     }
   }
 
   public async commitChanges() {
+    const flushedIds = Array.from(this.pendingOperations.keys());
     const uniqueOperations = [...this.pendingOperations.values()];
     this.pendingOperations.clear();
 
@@ -84,14 +164,21 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     this.databaseQueuePromise = this.databaseQueuePromise
       .catch(() => {})
       .then(async () => {
-        await Promise.all([this.doUpdates(updates), this.doDeletes(deletes)]);
+        try {
+          await Promise.all([this.doUpdates(updates), this.doDeletes(deletes)]);
+        } finally {
+          const idsToRemove = flushedIds.filter((id) => !this.pendingOperations.has(id));
+          useDeferredSyncStore.getState().removeSyncingEntityIds(idsToRemove);
+        }
       });
 
     await this.databaseQueuePromise;
   }
 
   public abandonPendingChanges() {
+    const flushedIds = Array.from(this.pendingOperations.keys());
     this.pendingOperations.clear();
+    useDeferredSyncStore.getState().removeSyncingEntityIds(flushedIds);
   }
 
   private assertCanSyncImmediately(entities: TEntityType[], options: SyncOptions) {
@@ -112,12 +199,14 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     options: SyncOptions
   ) {
     if (options.syncMode === 'defer') {
+      const ids = entities.map((e) => e.id);
       for (const entity of entities) {
         this.pendingOperations.set(entity.id, {
           operationType,
           entity,
         });
       }
+      useDeferredSyncStore.getState().addSyncingEntityIds(ids);
       return;
     }
 
@@ -181,5 +270,7 @@ export const ephemeralStateSlice = <TEntityType extends { id: string }>(
     ephemeralStateHelper: helper,
     commitAllChanges: () => helper.commitChanges(),
     discardPendingChanges: () => helper.discardPendingChanges(),
+    lockEntitiesForDeferredSync: (entities: TEntityType[]) =>
+      helper.lockEntitiesForDeferredSync(entities),
   };
 };

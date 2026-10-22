@@ -28,7 +28,11 @@ import { moderationNextSpeakerTemplatesGroup } from '../prompt_templates/chat/mo
 import { conversationEndJudgeTemplatesGroup } from '../prompt_templates/chat/conversation_end_judge';
 import { chatSystemPromptChain } from '../prompt_templates/chat/chat_system_prompt';
 import { newId } from '../../util/id';
-import { buildConversationStateUpdates, generateCharacterEndOfChatUpdates } from './post_chat_memories';
+import {
+  buildConversationStateUpdates,
+  generateCharacterEndOfChatUpdates,
+  lockEntitiesForEndOfChatUpdates,
+} from './post_chat_memories';
 import { wait } from '../../util/promise';
 import { getRequiredRandomChoice } from '../../util/array';
 import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
@@ -261,14 +265,17 @@ export class ChatCoordinator {
       const characterUpdates: Array<Awaited<ReturnType<typeof generateCharacterEndOfChatUpdates>>> = [];
 
       try {
-        for (const participant of getAllActiveChatSpeakers()) {
-          if (participant.id !== this.getUserCharacter().id) {
-            characterUpdates.push(
-              await generateCharacterEndOfChatUpdates(participant, (statusInfo) =>
-                this.setStateProcessingMemories(statusInfo)
-              )
-            );
-          }
+        const npcSpeakers = getAllActiveChatSpeakers().filter(
+          (participant) => participant.id !== this.getUserCharacter().id
+        );
+        await lockEntitiesForEndOfChatUpdates(npcSpeakers);
+
+        for (const participant of npcSpeakers) {
+          characterUpdates.push(
+            await generateCharacterEndOfChatUpdates(participant, (statusInfo) =>
+              this.setStateProcessingMemories(statusInfo)
+            )
+          );
         }
 
         await Promise.all([characterStore.commitAllChanges(), relationshipStore.commitAllChanges()]);

@@ -28,6 +28,7 @@ import {
 import { calculateInteractionUpdatedFamiliarity } from '../relationship';
 import type {
   Character,
+  CharacterPair,
   CharacterRelationship,
   ConversationPairwiseUpdate,
   ConversationStateUpdateNode,
@@ -112,6 +113,37 @@ async function stagePairwiseLearnedInformation(
       relationship.rollingOffscreenLearnedInformation.concat(information)
     ),
   });
+}
+
+export async function lockEntitiesForEndOfChatUpdates(npcSpeakers: Character[]) {
+  if (npcSpeakers.length === 0) {
+    return;
+  }
+
+  useScenarioCharacterStore.getState().lockEntitiesForDeferredSync(npcSpeakers);
+
+  const transcript = useTurnMachineStore.getState().transcript;
+  if (!transcript) {
+    return;
+  }
+
+  const pairs: CharacterPair[] = [];
+  for (const speaker of npcSpeakers) {
+    const coPresentSpeakerIds = transcript.getCoPresentSpeakerIds(speaker.id);
+    const offscreenOnlyIds = transcript
+      .getMentionedOffscreenCharacterIds(speaker.id)
+      .filter((id) => !coPresentSpeakerIds.includes(id));
+
+    for (const targetId of coPresentSpeakerIds.concat(offscreenOnlyIds)) {
+      pairs.push({ fromId: speaker.id, toId: targetId });
+    }
+  }
+
+  if (pairs.length > 0) {
+    const relationshipStore = useScenarioCharacterRelationshipStore.getState();
+    const relationships = await relationshipStore.getCharacterRelationships(pairs);
+    relationshipStore.lockEntitiesForDeferredSync(Object.values(relationships));
+  }
 }
 
 export async function generateCharacterEndOfChatUpdates(

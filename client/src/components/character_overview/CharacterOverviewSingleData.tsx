@@ -18,6 +18,7 @@ import { assertNonNullish } from '../../errors/application_error.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
 import { useQueryParams } from '../../util/queryParams.js';
 import { getRequiredRandomChoice } from '../../util/array.js';
+import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
 
 type CharacterOverviewSingleDataProps = {
   selectedSingleCharacter: Character;
@@ -49,6 +50,7 @@ export default function CharacterOverviewSingleData({
   assertNonNullish(activeMap, 'CharacterOverviewSingleData rendered without active map');
 
   const isUser = selectedSingleCharacter.id === scenario.userCharacterId;
+  const isCharacterSyncing = useIsEntityInDeferredSync(selectedSingleCharacter.id);
   const relationshipToUser = useCachedCharacterRelationship(
     isUser ? undefined : selectedSingleCharacter.id,
     scenario.userCharacterId
@@ -162,7 +164,7 @@ export default function CharacterOverviewSingleData({
           onClick={() => {
             openCharacterOverviewEditor(selectedSingleCharacter.id);
           }}
-          disabled={!selectedSingleCharacter}
+          disabled={!selectedSingleCharacter || isCharacterSyncing}
         >
           Edit {selectedSingleCharacter.firstName}
         </button>
@@ -170,6 +172,7 @@ export default function CharacterOverviewSingleData({
           <span>Location</span>
           <select
             value={charactersById[selectedSingleCharacter.id]?.locationId || ''}
+            disabled={isCharacterSyncing}
             onChange={(event) => {
               const locationId =
                 event.target.value === 'random'
@@ -206,6 +209,7 @@ export default function CharacterOverviewSingleData({
               </div>
               <select
                 value={selectedSingleCharacter.nextConversationWithCharacterId || ''}
+                disabled={isCharacterSyncing}
                 onChange={(event) => {
                   void saveScenarioCharacterFields(selectedSingleCharacter.id, {
                     nextConversationWithCharacterId: event.target.value.trim(),
@@ -233,6 +237,7 @@ export default function CharacterOverviewSingleData({
         <div className="space-y-2">
           <SpoilerSection
             title="Global Memory"
+            disabled={isCharacterSyncing}
             initialValue={selectedSingleCharacter.globalMemories || ''}
             onSave={(newValue: string) =>
               saveScenarioCharacterFields(selectedSingleCharacter.id, {
@@ -251,6 +256,7 @@ export default function CharacterOverviewSingleData({
                   <SpoilerSection
                     key={`${summary.conversationId}-${index}`}
                     title={`Summary ${index + 1} (Turn ${summary.turnNumber})`}
+                    disabled={isCharacterSyncing}
                     initialValue={summary.summary || ''}
                     onSave={(newValue: string) => {
                       const updatedSummaries = selectedSingleCharacter.rollingConversationSummaries.map(

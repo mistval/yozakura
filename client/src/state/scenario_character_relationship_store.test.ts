@@ -39,10 +39,7 @@ vi.mock('./scenario_store.js', () => {
 });
 
 import { DEFERRED_SYNC } from './ephemeral_state_helper';
-import {
-  useCachedCharacterRelationships,
-  useScenarioCharacterRelationshipStore,
-} from './scenario_character_relationship_store';
+import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store';
 
 describe('scenario character relationship ephemeral state integration', () => {
   beforeEach(() => {

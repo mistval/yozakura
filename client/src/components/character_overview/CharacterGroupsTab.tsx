@@ -7,15 +7,24 @@ import DeleteButton from '../ui/DeleteButton.js';
 import Tabs from '../ui/Tabs.js';
 import ScheduleEditor from './ScheduleEditor.js';
 import { findById } from '../../util/array.js';
+import { useDeferredSyncStore } from '../../state/ephemeral_state_helper.js';
 
 export default function CharacterGroupsTab() {
   const groups = useCharacterGroupStore((state) => state.groups);
   const characters = useScenarioCharacterStore((state) => state.scenarioCharacters);
+  const syncingEntityIds = useDeferredSyncStore((state) => state.syncingEntityIds);
 
   const [selectedGroupId, setSelectedGroupId] = useQueryParam('cogroup');
   const [subTab, setSubTab] = useState<'members' | 'schedule'>('members');
 
   const selectedGroup = findById(groups, selectedGroupId ?? '');
+
+  const hasSyncingMember = useMemo(() => {
+    if (!selectedGroup) return false;
+    return characters.some(
+      (c) => c.groupIds.includes(selectedGroup.id) && Boolean(syncingEntityIds[c.id])
+    );
+  }, [selectedGroup, characters, syncingEntityIds]);
 
   const toggleGroupSelection = (groupId: string) => {
     setSelectedGroupId(selectedGroupId === groupId ? undefined : groupId);
@@ -81,6 +90,7 @@ export default function CharacterGroupsTab() {
               label="Delete group"
               confirmTitle="Delete Group"
               confirmLabel="Delete Group"
+              disabled={hasSyncingMember}
               confirmMessage={`Delete group "${selectedGroup.name || 'Untitled Group'}"? Its schedule will be removed and members will be unassigned.`}
               onConfirm={() => {
                 useCharacterGroupStore.getState().deleteGroup(selectedGroup.id);
@@ -101,14 +111,16 @@ export default function CharacterGroupsTab() {
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {orderedCharacters.map((character) => {
                   const isMember = character.groupIds.includes(selectedGroup.id);
+                  const isSyncing = Boolean(syncingEntityIds[character.id]);
                   return (
                     <button
                       key={character.id}
                       type="button"
+                      disabled={isSyncing}
                       onClick={() => toggleMembership(character)}
                       className={`flex items-center gap-2 rounded-sm border p-2 text-left ${
                         isMember ? 'border-success-ring ring-2 ring-success-ring' : 'border-border-default'
-                      }`}
+                      } ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border-default bg-emphasized">
                         <img
