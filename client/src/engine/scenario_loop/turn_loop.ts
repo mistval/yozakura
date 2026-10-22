@@ -130,7 +130,8 @@ function advanceState(currentCharacterShouldMoveAgain: boolean) {
 async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Promise<{ noEffect: boolean }> {
   if (
     useSettingsStore.getState().pauseAtNpcChatStart &&
-    !useTurnMachineStore.getState().userIsInitiator()
+    !useTurnMachineStore.getState().userIsInitiator() &&
+    !opts?.userSpeaksFirst
   ) {
     useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
   }
