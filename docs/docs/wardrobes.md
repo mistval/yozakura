@@ -35,6 +35,7 @@ Open the Map Editor, navigate to the **Zones** tab, select a zone, and configure
 
 Wardrobe triggers are specified as a comma-separated list of commands:
 - `disable:<tag>`: Disables all wardrobes matching the specified tag.
+- `disable:*`: Wildcard disable command that disables all wardrobes regardless of their tags. Note that partial wildcards (such as `disable:tag*`) are not supported; the asterisk must stand alone.
 - `enable:<tag>`: Enables all wardrobes matching the specified tag.
 - `enable_one:<tag>`: Randomly enables one wardrobe matching the specified tag.
 - `<tag>` (shorthand without a command prefix): Automatically defaults to `enable:<tag>`.
