@@ -279,8 +279,8 @@ async function closeChatSession(forceNoEffect?: boolean): Promise<{ noEffect: bo
   const activeChatStore = useTurnMachineStore.getState();
   const noEffect = forceNoEffect || (activeChatStore.transcript?.countCharacterChatMessages() ?? 0) < 2;
 
-  doPostConversationWardrobeAutoRevert();
   await ChatCoordinator.endActiveChat(noEffect);
+  doPostConversationWardrobeAutoRevert();
 
   return { noEffect };
 }
