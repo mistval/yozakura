@@ -3,10 +3,12 @@ import type { Character, CharacterRelationship } from '../../engine/types.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
 import { getErrorMessage } from '../../errors/error_util.js';
 import ConversationSearchList from '../conversation_log/ConversationSearchList.js';
-import { relationshipKey } from '../../engine/relationship.js';
 import { useStateRef } from '../../hooks/useStateRef.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
-import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
+import {
+  useCachedCharacterRelationship,
+  useScenarioCharacterRelationshipStore,
+} from '../../state/scenario_character_relationship_store.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 
@@ -54,14 +56,11 @@ export default function CharacterOverviewPairData({
   const charA = charactersById[idA];
   const charB = charactersById[idB];
 
-  const keyAToB = relationshipKey(idA, idB);
-  const keyBToA = relationshipKey(idB, idA);
+  const relationshipAToB = useCachedCharacterRelationship(idA, idB);
+  const relationshipBToA = useCachedCharacterRelationship(idB, idA);
 
-  const [relationshipByKey, setRelationshipByKey] = useState<Record<string, CharacterRelationship>>({});
   const [relationshipLoadError, setRelationshipLoadError] = useState('');
 
-  const relationshipAToB = relationshipByKey[keyAToB];
-  const relationshipBToA = relationshipByKey[keyBToA];
   const familiarityBetween = Math.max(relationshipAToB?.familiarity || 0, relationshipBToA?.familiarity || 0);
 
   const [familiarityDraft, setFamiliarityDraft] = useState(() => Math.round(familiarityBetween));
@@ -73,26 +72,16 @@ export default function CharacterOverviewPairData({
     let cancelled = false;
 
     async function run() {
-      setRelationshipByKey({});
       setRelationshipLoadError('');
       setFamiliaritySaving(false);
       setFamiliaritySaved(false);
       setFamiliarityError('');
 
       try {
-        const [loadedAToB, loadedBToA] = await Promise.all([
+        await Promise.all([
           getCharacterRelationship(idA, idB),
           getCharacterRelationship(idB, idA),
         ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        setRelationshipByKey({
-          [relationshipKey(loadedAToB.fromId, loadedAToB.toId)]: loadedAToB,
-          [relationshipKey(loadedBToA.fromId, loadedBToA.toId)]: loadedBToA,
-        });
       } catch (error) {
         if (!cancelled) {
           setRelationshipLoadError(getErrorMessage(error));
@@ -112,13 +101,7 @@ export default function CharacterOverviewPairData({
   }, [idA, idB, familiarityBetween]);
 
   const saveRelationshipPatch = async (saveKey: RelationshipIds, update: Partial<CharacterRelationship>) => {
-    const updated = await saveRelationshipFields(saveKey, update);
-    const key = relationshipKey(updated.fromId, updated.toId);
-
-    setRelationshipByKey((prev) => ({
-      ...prev,
-      [key]: updated,
-    }));
+    await saveRelationshipFields(saveKey, update);
   };
 
   const savePairFamiliarity = async () => {
@@ -161,12 +144,15 @@ export default function CharacterOverviewPairData({
     const pastConversationSummarySections: SummarySection[] = [];
     const offscreenLearnedInformationSections: LearnedInformationSection[] = [];
 
-    const addDirectedSections = (from: Character, to: Character) => {
+    const addDirectedSections = (
+      from: Character,
+      to: Character,
+      relationship: CharacterRelationship | undefined
+    ) => {
       if (from.id === scenario.userCharacterId) {
         return;
       }
 
-      const relationship = relationshipByKey[relationshipKey(from.id, to.id)];
       if (!relationship) {
         return;
       }
@@ -203,8 +189,8 @@ export default function CharacterOverviewPairData({
       });
     };
 
-    addDirectedSections(charA, charB);
-    addDirectedSections(charB, charA);
+    addDirectedSections(charA, charB, relationshipAToB);
+    addDirectedSections(charB, charA, relationshipBToA);
 
     return {
       memories,
@@ -213,7 +199,7 @@ export default function CharacterOverviewPairData({
       pastConversationSummarySections,
       offscreenLearnedInformationSections: offscreenLearnedInformationSections,
     };
-  }, [charA, charB, relationshipByKey, scenario]);
+  }, [charA, charB, relationshipAToB, relationshipBToA, scenario]);
 
   if (!charA || !charB || !scenario) {
     return undefined;

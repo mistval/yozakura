@@ -54,11 +54,11 @@ Note that it's possible for the model to decide not to do any reasoning, and the
 
 To use DeepSeek V4 Flash via OpenRouter, first open [LLM Settings](yozakura://?settings=true&settingspath=llm) in Yozakura and edit the `Base Defaults`. Set the `Model` field to `deepseek/deepseek-v4-flash`. If you haven't already, make sure the `Completions API URL` is pointing to the correct URL for OpenRouter (`https://openrouter.ai/api/v1/chat/completions`). Don't forget to click `Save`.
 
-### Disabling Reasoning By Default
+### Enabling Reasoning For All Prompts
 
-When using reasoning models via OpenRouter (or at least this one), reasoning is enabled by _default for all requests_. Unless you actually want to use reasoning for all types of prompts, you should disable it by default. To do so, add a `reasoning` section to the bottom of `LLM Meta Options (JSON)` under `Base Defaults` in Yozakura's [LLM Settings](yozakura://?settings=true&settingspath=llm). Don't forget to click `Save`.
+If you want to use reasoning for all requests, change the `reasoning.enabled` value in `LLM Meta Options (JSON)` under `Base Defaults` in Yozakura's [LLM Settings](yozakura://?settings=true&settingspath=llm) to `true`.
 
-**Example:** Here's the default `LLM Meta Options (JSON)` settings, plus a `reasoning` section I added to disable reasoning:
+**Example:** Here's the default `LLM Meta Options (JSON)` settings:
 
 ```json
 {
@@ -77,9 +77,30 @@ When using reasoning models via OpenRouter (or at least this one), reasoning is 
 }
 ```
 
+To enable reasoning, just change the `false` near the bottom to `true`, like this:
+
+```json
+{
+  "temperature": 0.3,
+  "min_p": 0.035,
+  "dry_multiplier": 0.8,
+  "dry_base": 1.75,
+  "dry_allowed_length": 2,
+  "xtc_threshold": 0.1,
+  "xtc_probability": 0.5,
+  "max_tokens": 1000,
+  "model": "deepseek/deepseek-v4-flash",
+  "reasoning": {
+    "enabled": true
+  }
+}
+```
+
+Don't forget to click save.
+
 ### Enabling Reasoning For Specific Prompts
 
-Now update the prompt settings in Yozakura's [LLM Settings](yozakura://?settings=true&settingspath=llm) for all of the prompts that you _do_ want to use reasoning (probably at least all the ones starting with `Chat Memory:`, but it's up to you).
+If you want to enable reasoning only for specific prompts, then ignore the above step and leave it `false` there. Instead, update the prompt settings in Yozakura's [LLM Settings](yozakura://?settings=true&settingspath=llm) for all of the prompts that you _do_ want to use reasoning for (probably at least all the ones starting with `Chat Memory:`, but it's up to you).
 
 **Example:** Here's the updated `LLM Meta Options (JSON)` I used to enable reasoning for the `Chat Memory: Summarize Conversation` prompt:
 

@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useCharacterOverview } from './CharacterOverviewContext.js';
-import type { Character, CharacterRelationships } from '../../engine/types.js';
+import type { Character } from '../../engine/types.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
-import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
+import {
+  useCachedCharacterRelationships,
+  useScenarioCharacterRelationshipStore,
+} from '../../state/scenario_character_relationship_store.js';
 import CharacterOverviewAddCharactersModal from './CharacterOverviewAddCharactersModal.js';
 import CharacterOverviewPairData from './CharacterOverviewPairData.js';
 import CharacterOverviewSelectionStrip from './CharacterOverviewSelectionStrip.js';
@@ -39,7 +42,7 @@ function CharacterOverviewInner() {
   const [, setGroupParam] = useQueryParam('cogroup');
   const tab = tabParam === 'groups' ? 'groups' : 'overview';
   const setTab = (next: 'overview' | 'groups') => setTabParam(next === 'overview' ? undefined : next);
-  const [relationships, setRelationships] = useState<CharacterRelationships>({});
+  const relationships = useCachedCharacterRelationships();
   const contentRef = useRef<HTMLDivElement>(undefined);
 
   useEffect(() => {
@@ -54,15 +57,12 @@ function CharacterOverviewInner() {
   useEffect(() => {
     if (!open) {
       setSelectedIds([]);
-      setRelationships({});
       setTabParam(undefined);
       setGroupParam(undefined);
     }
   }, [open]);
 
   useEffect(() => {
-    let cancelled = false;
-
     async function run() {
       if (validSelectedIds.length === 1) {
         const selectedId = validSelectedIds[0];
@@ -79,18 +79,12 @@ function CharacterOverviewInner() {
               : []
           );
 
-        const loaded = await getCharacterRelationships(pairs);
-        if (!cancelled) {
-          setRelationships((prev) => ({ ...prev, ...loaded }));
-        }
+        await getCharacterRelationships(pairs);
       }
     }
 
     void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [validSelectedIds]);
+  }, [validSelectedIds, charactersById, userId, getCharacterRelationships]);
 
   const orderedCharacters = useMemo(() => {
     if (!scenario) return [];

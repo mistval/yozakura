@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useCharacterOverview } from './CharacterOverviewContext.js';
-import type { Character, CharacterRelationship, Scenario, WorldMap } from '../../engine/types.js';
+import type { Character, Scenario, WorldMap } from '../../engine/types.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
-import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
+import {
+  useCachedCharacterRelationship,
+  useScenarioCharacterRelationshipStore,
+} from '../../state/scenario_character_relationship_store.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
 import { useTurnMachineStore } from '../../state/turn_machine_store.js';
@@ -38,11 +41,18 @@ export default function CharacterOverviewSingleData({
   );
   const requestDirectNpcChat = useScenarioLoopStateStore((state) => state.submitUserChatAction);
   const chatSessionIsActive = useTurnMachineStore((state) => state.chatState !== 'inactive');
-  const activeChatParticipants = useTurnMachineStore((state) => state.participantIds);
   const { closeCharacterOverview, openCharacterOverviewEditor } = useCharacterOverview();
   const groups = useCharacterGroupStore((state) => state.groups);
   const [, setOverviewParams] = useQueryParams();
-  const [relationshipToUser, setRelationshipToUser] = useState<CharacterRelationship | undefined>(undefined);
+
+  assertNonNullish(scenario, 'CharacterOverviewSingleData rendered without active scenario');
+  assertNonNullish(activeMap, 'CharacterOverviewSingleData rendered without active map');
+
+  const isUser = selectedSingleCharacter.id === scenario.userCharacterId;
+  const relationshipToUser = useCachedCharacterRelationship(
+    isUser ? undefined : selectedSingleCharacter.id,
+    scenario.userCharacterId
+  );
 
   const memberGroups = useMemo(
     () =>
@@ -71,39 +81,18 @@ export default function CharacterOverviewSingleData({
     return relationshipToUser && relationshipToUser?.rollingPairwiseSummaries.length > 0;
   }, [relationshipToUser]);
 
-  assertNonNullish(scenario, 'CharacterOverviewSingleData rendered without active scenario');
-  assertNonNullish(activeMap, 'CharacterOverviewSingleData rendered without active map');
-
-  const isUser = selectedSingleCharacter.id === scenario.userCharacterId;
-  const activeChatWithoutUser =
-    chatSessionIsActive && !activeChatParticipants.some((p) => p === scenario.userCharacterId);
-
   useEffect(() => {
-    let cancelled = false;
-
     async function run() {
       assertNonNullish(scenario, 'CharacterOverviewSingleData rendered without active scenario');
       if (isUser) {
-        setRelationshipToUser(undefined);
         return;
       }
 
-      const relationship = await getCharacterRelationship(
-        selectedSingleCharacter.id,
-        scenario.userCharacterId
-      );
-
-      if (!cancelled) {
-        setRelationshipToUser(relationship);
-      }
+      await getCharacterRelationship(selectedSingleCharacter.id, scenario.userCharacterId);
     }
 
-    run();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedSingleCharacter?.id, scenario]);
+    void run();
+  }, [selectedSingleCharacter?.id, scenario, isUser, getCharacterRelationship]);
 
   if (!selectedSingleCharacter) {
     return undefined;

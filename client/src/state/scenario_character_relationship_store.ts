@@ -1,4 +1,3 @@
-import { LRUCache } from 'lru-cache';
 import { create } from 'zustand';
 import * as Database from '../backend_bridge/database.js';
 import {
@@ -10,6 +9,7 @@ import { applyLazyFamiliarityDecay, createRelationship, relationshipKey } from '
 import { assert } from '../errors/application_error.js';
 import { ephemeralStateSlice, IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
 import { getRequiredActiveScenario } from './scenario_store.js';
+import { ReactiveLRUCache } from '../util/reactive_lru_cache.js';
 
 type RelationshipSaveKey = Pick<CharacterRelationship, 'fromId' | 'toId'>;
 
@@ -24,7 +24,7 @@ type ScenarioCharacterRelationshipStoreState = {
 } & ReturnType<typeof ephemeralStateSlice<CharacterRelationship>>;
 
 const RELATIONSHIP_CACHE_MAX = 10_000;
-const relationshipCache = new LRUCache<string, CharacterRelationship>({
+const relationshipCache = new ReactiveLRUCache<string, CharacterRelationship>({
   max: RELATIONSHIP_CACHE_MAX,
 });
 
@@ -56,9 +56,9 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
     ...ephemeralStateSlice(
       {
         setStoreState(entities: CharacterRelationship[]) {
-          for (const entity of entities) {
-            relationshipCache.set(relationshipKey(entity.fromId, entity.toId), entity);
-          }
+          relationshipCache.setMany(
+            entities.map((entity) => [relationshipKey(entity.fromId, entity.toId), entity])
+          );
         },
 
         deleteStoreState(_entities: CharacterRelationship[]) {
@@ -105,9 +105,9 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
             'character_relationship'
           );
 
-          for (const entity of refreshed) {
-            relationshipCache.set(relationshipKey(entity.fromId, entity.toId), entity);
-          }
+          relationshipCache.setMany(
+            refreshed.map((entity) => [relationshipKey(entity.fromId, entity.toId), entity])
+          );
         },
       },
       { discardPendingChangesOnScenarioChange: true }
@@ -122,13 +122,16 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
       const scenario = getRequiredActiveScenario();
       const resolved: CharacterRelationships = {};
       const misses: CharacterPair[] = [];
+      const cacheUpdates: Array<[string, CharacterRelationship]> = [];
 
       for (const pair of uniquePairs) {
         const key = relationshipKey(pair.fromId, pair.toId);
         const cached = relationshipCache.get(key);
         if (cached) {
           const decayed = applyLazyFamiliarityDecay(cached, scenario.turnNumber);
-          relationshipCache.set(key, decayed);
+          if (decayed !== cached) {
+            cacheUpdates.push([key, decayed]);
+          }
           resolved[key] = decayed;
           continue;
         }
@@ -153,9 +156,13 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
           const loaded =
             fetchedByKey[key] || createDefaultRelationship(pair.fromId, pair.toId, scenario.turnNumber);
           const decayed = applyLazyFamiliarityDecay(loaded, scenario.turnNumber);
-          relationshipCache.set(key, decayed);
+          cacheUpdates.push([key, decayed]);
           resolved[key] = decayed;
         }
+      }
+
+      if (cacheUpdates.length > 0) {
+        relationshipCache.setMany(cacheUpdates);
       }
 
       return resolved;
@@ -186,3 +193,16 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
     },
   })
 );
+
+export function useCachedCharacterRelationships(): CharacterRelationships {
+  const snapshot = relationshipCache.useSnapshot();
+  return Object.fromEntries(snapshot.entries());
+}
+
+export function useCachedCharacterRelationship(
+  fromId: string | undefined,
+  toId: string | undefined
+): CharacterRelationship | undefined {
+  const key = fromId && toId ? relationshipKey(fromId, toId) : undefined;
+  return relationshipCache.useValue(key);
+}
