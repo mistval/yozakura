@@ -23,7 +23,7 @@ import { getRequiredActiveScenario, getRequiredUserCharacterId, useScenarioStore
 import { useScenarioCharacterStore, useUserCharacter } from './scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
 import { assert, assertNonNullish } from '../errors/application_error.js';
-import { applyWardrobeTriggers, selectZoneForWardrobeTriggers } from '../engine/wardrobes.js';
+import { applyPostConversationWardrobeAutoRevert, applyWardrobeTriggers, selectZoneForWardrobeTriggers } from '../engine/wardrobes.js';
 
 export type ChatState =
   | 'inactive'
@@ -64,6 +64,7 @@ export const serializedTurnSchema = z.object({
 });
 
 export type SerializedTurn = z.infer<typeof serializedTurnSchema>;
+
 
 type BaseTurnMachineStoreState = {
   turnMachineState: TurnMachineState | undefined;
@@ -401,6 +402,19 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
   },
 
   deactivateChat() {
+    const activeChatState = get();
+
+    const snapshot = activeChatState.preConversationWardrobeSnapshotByCharacterId;
+    const idsToAutoRevert = activeChatState.participantIds.concat(activeChatState.removedParticipantIds);
+    const charactersToAutoRevert = useScenarioCharacterStore.getState().getCharactersByIds(idsToAutoRevert);
+
+    const wardrobeAutoRevertedCharacters = applyPostConversationWardrobeAutoRevert(
+      charactersToAutoRevert,
+      snapshot
+    );
+
+    useScenarioCharacterStore.getState().saveScenarioCharacters(wardrobeAutoRevertedCharacters);
+
     set(inactiveChatTurnMachineState);
   },
 

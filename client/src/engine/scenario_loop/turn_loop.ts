@@ -10,7 +10,7 @@ import { useTemporalContextStore } from '../../state/temporal_context_store';
 import { ChatCoordinator } from '../chat/chat_coordinator';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry';
 import { buildSimpleInteractionRelationshipUpdates } from '../relationship';
-import { applyDailyWardrobeAutoselect, applyPostConversationWardrobeAutoRevert } from '../wardrobes';
+import { applyDailyWardrobeAutoselect } from '../wardrobes';
 import { CharacterInputInterface } from './character_input_interfaces/character_input_interface';
 import { NPCInputInterface } from './character_input_interfaces/npc_input_interface';
 import { UserInputInterface } from './character_input_interfaces/user_input_interface';
@@ -258,21 +258,6 @@ function makeInputInterface(characterId: string): CharacterInputInterface {
   return new NPCInputInterface(characterId);
 }
 
-function doPostConversationWardrobeAutoRevert() {
-  const activeChatState = useTurnMachineStore.getState();
-
-  const snapshot = activeChatState.preConversationWardrobeSnapshotByCharacterId;
-  const idsToAutoRevert = activeChatState.participantIds.concat(activeChatState.removedParticipantIds);
-  const charactersToAutoRevert = useScenarioCharacterStore.getState().getCharactersByIds(idsToAutoRevert);
-
-  const wardrobeAutoRevertedCharacters = applyPostConversationWardrobeAutoRevert(
-    charactersToAutoRevert,
-    snapshot
-  );
-
-  useScenarioCharacterStore.getState().saveScenarioCharacters(wardrobeAutoRevertedCharacters);
-}
-
 async function closeChatSession(forceNoEffect?: boolean): Promise<{ noEffect: boolean }> {
   useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('none');
 
@@ -280,7 +265,6 @@ async function closeChatSession(forceNoEffect?: boolean): Promise<{ noEffect: bo
   const noEffect = forceNoEffect || (activeChatStore.transcript?.countCharacterChatMessages() ?? 0) < 2;
 
   await ChatCoordinator.endActiveChat(noEffect);
-  doPostConversationWardrobeAutoRevert();
 
   return { noEffect };
 }
