@@ -68,7 +68,7 @@ export const settingsTooltips = {
   speakerSelectionMode:
     '<strong>Round Robin</strong> rotates speakers in a consistent order. <strong>Intelligent</strong> uses LLM-based moderation to choose who speaks next.',
   'behavior.pauseAtNpcChatStart':
-    'When enabled, every NPC-only chat begins paused with control handed to you, so you can steer it message-by-message (choose who speaks, edit, delete, or redo messages) before letting it run. Press <strong>Start Chat</strong> / <strong>Resume</strong> in the chat to let the NPCs continue on their own.',
+    'When enabled, every NPC-initiated chat begins paused with control handed to you, so you can control it fully (cancel the conversation, choose who speaks, edit, delete, or redo messages, etc). Press <strong>Start Chat</strong> / <strong>Resume</strong> in the chat to continue automatically.',
   'npc.freedomOfMovement':
     "When enabled, movement and conversation do not consume the user's turn. Your turn ends only when you press <strong>Wait</strong>.",
   'npc.onlyChatDelay':
