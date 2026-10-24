@@ -19,6 +19,7 @@ Click a character in chat to open their chat settings, or edit their character p
 ![wardrobe settings image](/img/wardrobe.png)
 
 Each wardrobe entry has:
+
 - **Tags description (Prompt text)**: The visual tags that will be concatenated into the image generation prompt when this wardrobe is enabled (e.g. `red dress, elegant, evening wear`).
 - **Enabled checkbox**: Controls whether this wardrobe is currently active for image generation prompts.
 - **Autoselect group**: An optional group identifier (e.g. `outfit`, `hat`, `expression`). At the start of each in-world day, the system randomly selects and enables one wardrobe from each group, disabling all others in that group. This allows characters to spontaneously vary their appearance between days.
@@ -34,6 +35,7 @@ Open the Map Editor, navigate to the **Zones** tab, select a zone, and configure
 ### Trigger Commands
 
 Wardrobe triggers are specified as a comma-separated list of commands:
+
 - `disable:<tag>`: Disables all wardrobes matching the specified tag.
 - `disable:*`: Wildcard disable command that disables all wardrobes regardless of their tags. Note that partial wildcards (such as `disable:tag*`) are not supported; the asterisk must stand alone.
 - `enable:<tag>`: Enables all wardrobes matching the specified tag.
@@ -47,6 +49,7 @@ disable:casual_clothes,enable:work_uniform,enable_one:work_tie
 ```
 
 When a chat begins in that zone, for each participant:
+
 1. All wardrobes tagged `casual_clothes` are disabled.
 2. All wardrobes tagged `work_uniform` are enabled.
 3. One wardrobe tagged `work_tie` is chosen at random and enabled.
@@ -54,6 +57,7 @@ When a chat begins in that zone, for each participant:
 ### Zone Specificity and Priority
 
 If a character is simultaneously inside multiple map zones that define wardrobe triggers:
+
 - Only the triggers from the **most specific (smallest)** zone containing the character's location are executed. Zone size is determined by how many locations belong to the zone (`locationIds.length`).
 - If two matching zones have the exact same size, ties are broken alphabetically by zone name.
 - Zones with empty wardrobe triggers are ignored during zone trigger selection.

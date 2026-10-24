@@ -119,4 +119,3 @@ describe('extractCharacterCard field selection', () => {
     wardrobeSpy.mockRestore();
   });
 });
-

@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  CURRENT_CHARACTER_CARD_VERSION,
-  runCharacterCardMigrations,
-} from './character_card_migrator.js';
+import { CURRENT_CHARACTER_CARD_VERSION, runCharacterCardMigrations } from './character_card_migrator.js';
 
 describe('character card import migrations', () => {
   it('migrates v1 character card wardrobes with autoSelectGroup to v2 with tags', () => {

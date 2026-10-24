@@ -89,10 +89,7 @@ export default function CharacterOverviewPairData({
       setFamiliarityError('');
 
       try {
-        await Promise.all([
-          getCharacterRelationship(idA, idB),
-          getCharacterRelationship(idB, idA),
-        ]);
+        await Promise.all([getCharacterRelationship(idA, idB), getCharacterRelationship(idB, idA)]);
       } catch (error) {
         if (!cancelled) {
           setRelationshipLoadError(getErrorMessage(error));
@@ -260,9 +257,7 @@ export default function CharacterOverviewPairData({
                 void savePairFamiliarity();
               }}
               disabled={
-                familiaritySaving ||
-                !Number.isFinite(Number(familiarityDraft)) ||
-                isPairFamiliaritySyncing
+                familiaritySaving || !Number.isFinite(Number(familiarityDraft)) || isPairFamiliaritySyncing
               }
             >
               {familiaritySaving ? 'Saving...' : 'Save'}

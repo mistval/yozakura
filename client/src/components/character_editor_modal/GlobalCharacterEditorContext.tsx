@@ -18,9 +18,12 @@ export function GlobalCharacterEditorProvider({ children }: { children: ReactNod
   const open = params.has('charactereditor') && params.get('charactereditor') !== 'false';
   const editingCharacterId = params.get('ce_character') ?? undefined;
 
-  const showCharacterEditor =  useCallback((id?: string) => {
-    setParams({ charactereditor: true, ce_character: id ?? undefined });
-  }, [setParams]);
+  const showCharacterEditor = useCallback(
+    (id?: string) => {
+      setParams({ charactereditor: true, ce_character: id ?? undefined });
+    },
+    [setParams]
+  );
 
   const closeCharacterEditor = useCallback(() => {
     setParams({ charactereditor: undefined, ce_character: undefined });

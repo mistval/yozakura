@@ -270,7 +270,6 @@ export const ephemeralStateSlice = <TEntityType extends { id: string }>(
     ephemeralStateHelper: helper,
     commitAllChanges: () => helper.commitChanges(),
     discardPendingChanges: () => helper.discardPendingChanges(),
-    lockEntitiesForDeferredSync: (entities: TEntityType[]) =>
-      helper.lockEntitiesForDeferredSync(entities),
+    lockEntitiesForDeferredSync: (entities: TEntityType[]) => helper.lockEntitiesForDeferredSync(entities),
   };
 };

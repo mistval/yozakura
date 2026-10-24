@@ -23,17 +23,23 @@ export function SettingsModalProvider({ children }: { children: ReactNode }) {
   const open = params.has('settings') && params.get('settings') !== 'false';
   const settingsPath = params.get('settingspath') ?? '';
 
-  const openSettings = useCallback((path = '') => {
-    setParams({ settings: true, settingspath: path || undefined });
-  }, [setParams]);
+  const openSettings = useCallback(
+    (path = '') => {
+      setParams({ settings: true, settingspath: path || undefined });
+    },
+    [setParams]
+  );
 
   const closeSettings = useCallback(() => {
     setParams({ settings: undefined, settingspath: undefined });
   }, [setParams]);
 
-  const setSettingsSection = useCallback((path: string) => {
-    setParams({ settingspath: path || undefined });
-  }, [setParams]);
+  const setSettingsSection = useCallback(
+    (path: string) => {
+      setParams({ settingspath: path || undefined });
+    },
+    [setParams]
+  );
 
   const value = useMemo(
     () => ({ open, settingsPath, includeScenarioSettings, openSettings, closeSettings, setSettingsSection }),

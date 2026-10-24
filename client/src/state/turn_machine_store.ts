@@ -23,7 +23,11 @@ import { getRequiredActiveScenario, getRequiredUserCharacterId, useScenarioStore
 import { useScenarioCharacterStore, useUserCharacter } from './scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
 import { assert, assertNonNullish } from '../errors/application_error.js';
-import { applyPostConversationWardrobeAutoRevert, applyWardrobeTriggers, selectZoneForWardrobeTriggers } from '../engine/wardrobes.js';
+import {
+  applyPostConversationWardrobeAutoRevert,
+  applyWardrobeTriggers,
+  selectZoneForWardrobeTriggers,
+} from '../engine/wardrobes.js';
 
 export type ChatState =
   | 'inactive'
@@ -64,7 +68,6 @@ export const serializedTurnSchema = z.object({
 });
 
 export type SerializedTurn = z.infer<typeof serializedTurnSchema>;
-
 
 type BaseTurnMachineStoreState = {
   turnMachineState: TurnMachineState | undefined;

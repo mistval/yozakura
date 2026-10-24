@@ -36,14 +36,17 @@ export function ConversationLogProvider({ children }: { children: ReactNode }) {
   const routePage = sanitizePage(rawPage ? Number(rawPage) : undefined);
   const showBackButton = Boolean(routeConversationId);
 
-  const showConversationLog = useCallback((incoming?: ShowConversationLogParams) => {
-    const next = incoming || {};
-    setParams({
-      conversationlog: true,
-      cl_conversation: next.conversationId ?? undefined,
-      cl_page: next.page ? sanitizePage(next.page) : sanitizePage(routePage),
-    });
-  }, [setParams, routePage]);
+  const showConversationLog = useCallback(
+    (incoming?: ShowConversationLogParams) => {
+      const next = incoming || {};
+      setParams({
+        conversationlog: true,
+        cl_conversation: next.conversationId ?? undefined,
+        cl_page: next.page ? sanitizePage(next.page) : sanitizePage(routePage),
+      });
+    },
+    [setParams, routePage]
+  );
 
   const closeConversationLog = useCallback(() => {
     setParams({
@@ -57,13 +60,19 @@ export function ConversationLogProvider({ children }: { children: ReactNode }) {
     setParams({ cl_conversation: undefined, cl_page: routePage });
   }, [setParams, routePage]);
 
-  const setConversationLogPage = useCallback((page: number) => {
-    setParams({ cl_page: sanitizePage(page) });
-  }, [setParams]);
+  const setConversationLogPage = useCallback(
+    (page: number) => {
+      setParams({ cl_page: sanitizePage(page) });
+    },
+    [setParams]
+  );
 
-  const openConversationDetail = useCallback((entryId: string) => {
-    setParams({ cl_conversation: entryId });
-  }, [setParams]);
+  const openConversationDetail = useCallback(
+    (entryId: string) => {
+      setParams({ cl_conversation: entryId });
+    },
+    [setParams]
+  );
 
   const value = useMemo(
     () => ({

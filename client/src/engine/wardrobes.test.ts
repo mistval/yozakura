@@ -50,12 +50,7 @@ describe('TagView', () => {
     expect(view.has('daily_autoselect:casual')).toBe(false);
 
     const replaced = view.replaceAll(['beachwear', 'summer_hat']);
-    expect(replaced).toEqual([
-      'daily_autoselect:casual',
-      'mood:happy',
-      'beachwear',
-      'summer_hat',
-    ]);
+    expect(replaced).toEqual(['daily_autoselect:casual', 'mood:happy', 'beachwear', 'summer_hat']);
   });
 });
 
@@ -120,12 +115,13 @@ describe('selectZoneForWardrobeTriggers', () => {
   });
 
   it('selects smaller (more specific) zone over larger zone', () => {
-    const largeZone = makeZone('large', 'Large Zone', ['locA', 'locB', 'locC'], [
-      { command: 'disable', tag: 'casual' },
-    ]);
-    const smallZone = makeZone('small', 'Small Zone', ['locA'], [
-      { command: 'enable', tag: 'work_uniform' },
-    ]);
+    const largeZone = makeZone(
+      'large',
+      'Large Zone',
+      ['locA', 'locB', 'locC'],
+      [{ command: 'disable', tag: 'casual' }]
+    );
+    const smallZone = makeZone('small', 'Small Zone', ['locA'], [{ command: 'enable', tag: 'work_uniform' }]);
 
     const selected = selectZoneForWardrobeTriggers('locA', [largeZone, smallZone]);
     expect(selected?.id).toBe('small');

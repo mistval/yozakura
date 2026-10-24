@@ -205,56 +205,56 @@ export default function ImplicitWardrobeEditor({
 
             {hasText && (
               <>
-              <div className="flex justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-1 text-xs text-secondary whitespace-nowrap">
-                      <span>Autoselect group</span>
-                      <InfoTooltip
-                        label="Autoselect group"
-                        html='If non-empty, this wardrobe will be included in the named group. At the start of each scenario day, one wardrobe from each group is randomly selected and enabled; all others in the group are disabled. Leave empty to opt out of daily autoselection. This feature allows characters to spontaneously change appearance multidimensionally between days. For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
+                <div className="flex justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-1 text-xs text-secondary whitespace-nowrap">
+                        <span>Autoselect group</span>
+                        <InfoTooltip
+                          label="Autoselect group"
+                          html='If non-empty, this wardrobe will be included in the named group. At the start of each scenario day, one wardrobe from each group is randomly selected and enabled; all others in the group are disabled. Leave empty to opt out of daily autoselection. This feature allows characters to spontaneously change appearance multidimensionally between days. For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
+                        />
+                      </label>
+                      <input
+                        type="text"
+                        value={new TagView(wardrobe.tags, DAILY_AUTOSELECT_TAG_PREFIX).getFirst() ?? ''}
+                        onChange={(event) => handleAutoSelectGroupChange(index, event.target.value)}
+                        placeholder="e.g. hat, shoes, expression…"
+                        className="flex-1 border rounded-sm px-2 py-1 bg-inset text-xs min-w-[120px]"
+                        disabled={disabled}
                       />
-                    </label>
-                    <input
-                      type="text"
-                      value={new TagView(wardrobe.tags, DAILY_AUTOSELECT_TAG_PREFIX).getFirst() ?? ''}
-                      onChange={(event) => handleAutoSelectGroupChange(index, event.target.value)}
-                      placeholder="e.g. hat, shoes, expression…"
-                      className="flex-1 border rounded-sm px-2 py-1 bg-inset text-xs min-w-[120px]"
-                      disabled={disabled}
-                    />
-                  </div>
+                    </div>
 
-                  <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-1 text-xs text-secondary whitespace-nowrap">
-                      <span>Tags</span>
-                      <InfoTooltip
-                        label="Wardrobe tags"
-                        html='Comma-separated tags for this wardrobe (e.g. casual_clothes, work_uniform). These can be targeted by Map Zone Wardrobe Triggers to automatically enable or disable outfits when entering zones. For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-1 text-xs text-secondary whitespace-nowrap">
+                        <span>Tags</span>
+                        <InfoTooltip
+                          label="Wardrobe tags"
+                          html='Comma-separated tags for this wardrobe (e.g. casual_clothes, work_uniform). These can be targeted by Map Zone Wardrobe Triggers to automatically enable or disable outfits when entering zones. For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
+                        />
+                      </label>
+                      <WardrobeTagsInput
+                        tags={wardrobe.tags}
+                        onChange={(nextTags) => handleWardrobeTagsChange(index, nextTags)}
+                        disabled={disabled}
                       />
-                    </label>
-                    <WardrobeTagsInput
-                      tags={wardrobe.tags}
-                      onChange={(nextTags) => handleWardrobeTagsChange(index, nextTags)}
-                      disabled={disabled}
-                    />
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex justify-end">
-                <label className="flex items-center gap-2 text-xs text-secondary">
-                  <input
-                    type="checkbox"
-                    checked={wardrobe.autoRevert}
-                    disabled={disabled}
-                    onChange={(event) => handleToggleAutoRevert(index, event.target.checked)}
-                  />
-                  <span>Auto revert</span>
-                  <InfoTooltip
-                    label="Auto revert"
-                    html='If auto revert is enabled, changes to the enabled state of this wardrobe during a chat will be reverted after the chat ends. This is useful for temporary states like "surprised expression" that should be turned off again after the conversation.'
-                  />
-                </label>
+                <div className="flex justify-end">
+                  <label className="flex items-center gap-2 text-xs text-secondary">
+                    <input
+                      type="checkbox"
+                      checked={wardrobe.autoRevert}
+                      disabled={disabled}
+                      onChange={(event) => handleToggleAutoRevert(index, event.target.checked)}
+                    />
+                    <span>Auto revert</span>
+                    <InfoTooltip
+                      label="Auto revert"
+                      html='If auto revert is enabled, changes to the enabled state of this wardrobe during a chat will be reverted after the chat ends. This is useful for temporary states like "surprised expression" that should be turned off again after the conversation.'
+                    />
+                  </label>
                 </div>
               </>
             )}

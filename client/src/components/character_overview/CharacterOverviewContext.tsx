@@ -41,26 +41,32 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
       .filter((id): id is string => typeof id === 'string' && id in charactersById);
   }, [params, charactersById]);
 
-  const setSelectedIds = useCallback((ids: string[]) => {
-    const uniqueIds = [...new Set(ids)].filter(Boolean).slice(0, 2);
-    setParams({ selected_ids: uniqueIds });
-  }, [setParams]);
+  const setSelectedIds = useCallback(
+    (ids: string[]) => {
+      const uniqueIds = [...new Set(ids)].filter(Boolean).slice(0, 2);
+      setParams({ selected_ids: uniqueIds });
+    },
+    [setParams]
+  );
 
-  const showCharacterOverview = useCallback((incoming?: ShowCharacterOverviewParams) => {
-    const target = incoming?.target || 'overview';
-    const next: Record<string, unknown> = {
-      characteroverview: true,
-      cotab: target === 'groups' ? 'groups' : undefined,
-      co_character: target === 'character' && incoming?.characterId ? incoming.characterId : undefined,
-      co_add: target === 'add-characters' ? true : undefined,
-      selected_ids: incoming?.selectedIds
-        ? [...new Set(incoming.selectedIds)].filter(Boolean).slice(0, 2)
-        : undefined,
-      scrolldown: incoming?.scrolldown ? 'true' : undefined,
-    };
+  const showCharacterOverview = useCallback(
+    (incoming?: ShowCharacterOverviewParams) => {
+      const target = incoming?.target || 'overview';
+      const next: Record<string, unknown> = {
+        characteroverview: true,
+        cotab: target === 'groups' ? 'groups' : undefined,
+        co_character: target === 'character' && incoming?.characterId ? incoming.characterId : undefined,
+        co_add: target === 'add-characters' ? true : undefined,
+        selected_ids: incoming?.selectedIds
+          ? [...new Set(incoming.selectedIds)].filter(Boolean).slice(0, 2)
+          : undefined,
+        scrolldown: incoming?.scrolldown ? 'true' : undefined,
+      };
 
-    setParams(next as Parameters<typeof setParams>[0]);
-  }, [setParams]);
+      setParams(next as Parameters<typeof setParams>[0]);
+    },
+    [setParams]
+  );
 
   const closeCharacterOverview = useCallback(() => {
     setParams({
@@ -76,9 +82,12 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
     setParams({ co_character: undefined, co_add: undefined });
   }, [setParams]);
 
-  const openCharacterOverviewEditor = useCallback((characterId: string) => {
-    setParams({ co_character: characterId, co_add: undefined });
-  }, [setParams]);
+  const openCharacterOverviewEditor = useCallback(
+    (characterId: string) => {
+      setParams({ co_character: characterId, co_add: undefined });
+    },
+    [setParams]
+  );
 
   const openCharacterOverviewAddCharacters = useCallback(() => {
     setParams({ co_add: true, co_character: undefined });

@@ -41,11 +41,14 @@ export function createParams(prevParams: URLSearchParams | string, updates: Quer
 export function useQueryParams() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const setQueryParams = useCallback((updates: QueryParamsMap) => {
-    setSearchParams((prev) => {
-      return createParams(prev, updates);
-    });
-  }, [setSearchParams]);
+  const setQueryParams = useCallback(
+    (updates: QueryParamsMap) => {
+      setSearchParams((prev) => {
+        return createParams(prev, updates);
+      });
+    },
+    [setSearchParams]
+  );
 
   return [searchParams, setQueryParams] as const;
 }

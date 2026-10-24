@@ -18,11 +18,7 @@ import {
   type ExtractCharacterCardOptions,
 } from '../../engine/character_gen';
 import { detectCharacterCardMetadata } from '../../engine/character_card_metadata';
-import {
-  createWardrobe,
-  DAILY_AUTOSELECT_TAG_PREFIX,
-  formatPrefixedTag,
-} from '../../engine/wardrobes.js';
+import { createWardrobe, DAILY_AUTOSELECT_TAG_PREFIX, formatPrefixedTag } from '../../engine/wardrobes.js';
 import type { Character } from '../../engine/types';
 import { assertNonNullish } from '../../errors/application_error';
 import { getErrorMessage } from '../../errors/error_util';
@@ -125,9 +121,7 @@ export function CharacterEditorModalProvider({
 
   const toggleExtractField = (field: ExtractCharacterCardField) => {
     setExtractFields(
-      extractFields.includes(field)
-        ? extractFields.filter((f) => f !== field)
-        : extractFields.concat(field)
+      extractFields.includes(field) ? extractFields.filter((f) => f !== field) : extractFields.concat(field)
     );
   };
 
@@ -304,36 +298,34 @@ export function CharacterEditorModalProvider({
         const generated = await generateWardrobe(character);
         const newWardrobes = character.wardrobes.concat();
 
-        setCharacter(
-          (prev) => {
-            if (index < prev.wardrobes.length) {
-              const wardrobeToEdit = newWardrobes[index];
-              assertNonNullish(wardrobeToEdit, `Expected wardrobe at index ${index} to exist`);
+        setCharacter((prev) => {
+          if (index < prev.wardrobes.length) {
+            const wardrobeToEdit = newWardrobes[index];
+            assertNonNullish(wardrobeToEdit, `Expected wardrobe at index ${index} to exist`);
 
-              return {
-                ...prev,
-                wardrobes: [
-                  ...prev.wardrobes.slice(0,index),
-                  {
-                    ...wardrobeToEdit,
-                    text: generated,
-                  },
-                  ...prev.wardrobes.slice(index + 1)
-                ]
-              } satisfies Character
-            } else {
-              return {
-                ...prev,
-                wardrobes: 
-                 prev.wardrobes.concat(
-                   createWardrobe(
-                     generated,
-                     index === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : []
-                   )
-                 )
-              } satisfies Character
-            }
-          });
+            return {
+              ...prev,
+              wardrobes: [
+                ...prev.wardrobes.slice(0, index),
+                {
+                  ...wardrobeToEdit,
+                  text: generated,
+                },
+                ...prev.wardrobes.slice(index + 1),
+              ],
+            } satisfies Character;
+          } else {
+            return {
+              ...prev,
+              wardrobes: prev.wardrobes.concat(
+                createWardrobe(
+                  generated,
+                  index === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : []
+                )
+              ),
+            } satisfies Character;
+          }
+        });
       },
       `generatingWardrobeTags-${index}`
     );

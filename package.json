@@ -12,6 +12,7 @@
     "build:web": "npm run build --prefix client",
     "build": "npm run build:server && npm run build:web",
     "format:check": "prettier --check .",
+    "format:fix": "prettier --write .",
     "install:server": "npm ci --prefix server",
     "install:web": "npm ci --prefix client",
     "electron:start": "electron-forge start",

@@ -75,12 +75,9 @@ describe('scenario character relationship ephemeral state integration', () => {
   it('updates the reactive cache snapshot when relationships are saved', async () => {
     const store = useScenarioCharacterRelationshipStore.getState();
 
-    await store.saveRelationshipFields(
-      { fromId: 'char-x', toId: 'char-y' },
-      { descriptor: 'Friend' }
-    );
+    await store.saveRelationshipFields({ fromId: 'char-x', toId: 'char-y' }, { descriptor: 'Friend' });
 
-    const rel = (await store.getCharacterRelationship('char-x', 'char-y'));
+    const rel = await store.getCharacterRelationship('char-x', 'char-y');
     expect(rel.descriptor).toBe('Friend');
   });
 });

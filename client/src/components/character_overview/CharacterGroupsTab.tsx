@@ -21,9 +21,7 @@ export default function CharacterGroupsTab() {
 
   const hasSyncingMember = useMemo(() => {
     if (!selectedGroup) return false;
-    return characters.some(
-      (c) => c.groupIds.includes(selectedGroup.id) && Boolean(syncingEntityIds[c.id])
-    );
+    return characters.some((c) => c.groupIds.includes(selectedGroup.id) && Boolean(syncingEntityIds[c.id]));
   }, [selectedGroup, characters, syncingEntityIds]);
 
   const toggleGroupSelection = (groupId: string) => {
