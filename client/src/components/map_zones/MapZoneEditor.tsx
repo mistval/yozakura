@@ -18,6 +18,7 @@ import { useCharacterOverview } from '../character_overview/CharacterOverviewCon
 import { useMapModal } from '../MapModalContext.js';
 import { useDraft } from '../../hooks/useDraft.js';
 import { formatWardrobeTriggers, parseWardrobeTriggers } from '../../engine/wardrobes.js';
+import { useMapStore } from '../../state/map_store.js';
 
 function ZoneWardrobeTriggersInput({
   triggers,
@@ -90,15 +91,18 @@ function editZone(zones: MapZone[], zoneUpdate: Partial<MapZone> & Pick<MapZone,
 
 export default function MapZoneEditor({
   isGlobalContext,
-  map,
+  mapId,
   updateMap,
   mapClasses = [],
 }: {
   isGlobalContext: boolean;
-  map: WorldMap;
+  mapId: string;
   updateMap: (mutator: (prev: WorldMap) => WorldMap) => void;
   mapClasses?: string[];
 }) {
+  const map = useMapStore((s) => s.mapsById[mapId]);
+  assertNonNullish(map);
+
   const graphTheme = useGraphTheme();
   const { closeMap } = useMapModal();
   const [selectedZoneId, setSelectedZoneId] = useState<string | undefined>(undefined);

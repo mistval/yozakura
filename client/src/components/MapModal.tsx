@@ -28,8 +28,9 @@ function movementVerb(policy: MovementPolicy | undefined): string {
 function MapModalInner() {
   const { closeMap, open } = useMapModal();
   const updateMap = useMapStore((s) => s.updateMap);
-  const maps = useMapStore((s) => s.maps);
-  const map = useScenarioStore((state) => state.activeScenarioMap);
+  const numMaps = useMapStore((s) => s.maps.length);
+  const mapId = useScenarioStore((state) => state.activeScenarioMap?.id);
+  const mapName = useScenarioStore((state) => state.activeScenarioMap?.name);
   const scenario = useScenarioStore((state) => state.activeScenario);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const user = useUserCharacter();
@@ -114,15 +115,15 @@ function MapModalInner() {
     >
       <div className="flex shrink-0 items-center justify-between border-b border-border-default px-4 py-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-xl font-semibold">{map?.name || 'Loading...'}</h2>
-          {map && (
+          <h2 className="text-xl font-semibold">{mapName || 'Loading...'}</h2>
+          {mapId && (
             <DeleteButton
               label="Delete map"
-              disabled={maps.length <= 1}
+              disabled={numMaps <= 1}
               confirmTitle="Delete Map"
               confirmLabel="Delete Map"
-              confirmMessage={`Delete map "${map.name}"? This will permanently remove the map, and this scenario will switch to another one.`}
-              onConfirm={() => useMapStore.getState().deleteMap(map.id)}
+              confirmMessage={`Delete map "${mapName}"? This will permanently remove the map, and this scenario will switch to another one.`}
+              onConfirm={() => useMapStore.getState().deleteMap(mapId)}
             />
           )}
         </div>
@@ -162,11 +163,11 @@ function MapModalInner() {
 
       {view === 'zones' && (
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {map && (
+          {mapId && (
             <MapZoneEditor
-              map={map}
+              mapId={mapId}
               isGlobalContext={false}
-              updateMap={(mutator) => updateMap(map.id, mutator)}
+              updateMap={(mutator) => updateMap(mapId, mutator)}
             />
           )}
         </div>
@@ -238,11 +239,11 @@ function MapModalInner() {
       )}
 
       {view === 'characters' &&
-        (map ? (
+        (mapId ? (
           <MapGraphEditor
             className="min-h-0 flex-1 p-4"
-            map={map}
-            updateMap={(mutator) => updateMap(map.id, mutator)}
+            mapId={mapId}
+            updateMap={(mutator) => updateMap(mapId, mutator)}
             charactersByLocationId={charactersByLocationId}
             onCharacterClick={showCharacter}
             highlightedLocationIds={highlightedLocationIds}
