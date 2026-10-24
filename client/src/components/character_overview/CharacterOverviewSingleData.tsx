@@ -156,7 +156,7 @@ export default function CharacterOverviewSingleData({
               closeCharacterOverview();
             }}
           >
-            Chat with {selectedSingleCharacter.firstName}
+            Add to Chat
           </button>
         )}
         <button
