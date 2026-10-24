@@ -228,18 +228,18 @@ export function useActiveChatMedium(): ChatMedium {
   );
 }
 
-export function useChatUserLocation() {
+export function useChatInitiatorLocation() {
+  const initiatorId = useTurnMachineStore(s => s.initiatorId);
   const getCharacterLocation = useTurnMachineStore((s) => s.getChatCharacterLocation);
   const getRequiredCharacterById = useScenarioCharacterStore((s) => s.getRequiredCharacterById);
   const ephemeralLocation = useTurnMachineStore((s) => s.ephemeralLocation);
-  const userCharacter = useUserCharacter();
   const map = useScenarioStore((s) => s.activeScenarioMap);
 
-  if (!userCharacter || !map) {
+  if (!initiatorId || !map) {
     return undefined;
   }
 
-  return getCharacterLocation(userCharacter.id, getRequiredCharacterById, map, ephemeralLocation);
+  return getCharacterLocation(initiatorId, getRequiredCharacterById, map, ephemeralLocation);
 }
 
 export async function getActiveChatGossipCharacter(fromCharacterId?: string, resolvers?: ContextResolvers) {

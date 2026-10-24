@@ -3,10 +3,11 @@ import SettingFieldLabel from '../settings/ui/SettingFieldLabel.js';
 import { settingsTooltips } from '../settings/settings_tooltips.js';
 import { useSettingsStore } from '../../state/settings_store.js';
 import type { ChatPaneWidth, SpeakerSelectionMode } from '../../state/settings_store.js';
-import { useTurnMachineStore, useChatUserLocation } from '../../state/turn_machine_store.js';
+import { useTurnMachineStore, useChatInitiatorLocation } from '../../state/turn_machine_store.js';
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
+import type { ChangeEvent } from 'react';
 
 interface ChatSettingsProps {
   open: boolean;
@@ -18,7 +19,7 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
   const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
   const setSettings = useSettingsStore((s) => s.setSettings);
   const chatInstructions = useTurnMachineStore((s) => s.chatInstructions);
-  const userLocation = useChatUserLocation();
+  const initiatorLocation = useChatInitiatorLocation();
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
   const canEndChat = useTurnMachineStore((state) => state.chatState === 'awaiting_character_input');
 
@@ -30,7 +31,7 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
     setSettings({ chatPaneWidth: nextWidth });
   };
 
-  if (!userLocation) {
+  if (!initiatorLocation) {
     return undefined;
   }
 
@@ -106,8 +107,8 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
             />
             <input
               id="chat-location-name"
-              value={userLocation.name}
-              onChange={(event) => {
+              value={initiatorLocation.name}
+              onChange={(event: ChangeEvent<HTMLInputElement, HTMLInputElement>) => {
                 ChatCoordinator.setEphemeralLocation((prevLocation) => ({
                   ...prevLocation,
                   name: event.target.value,
@@ -126,7 +127,7 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
             />
             <textarea
               id="chat-location-description"
-              value={userLocation.description}
+              value={initiatorLocation.description}
               onChange={(event) => {
                 ChatCoordinator.setEphemeralLocation((prevLocation) => ({
                   ...prevLocation,

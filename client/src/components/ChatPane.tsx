@@ -10,7 +10,6 @@ import {
   useActiveChatMedium,
   useActiveChatParticipants,
   useTurnMachineStore,
-  useChatUserLocation,
 } from '../state/turn_machine_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import ChatSettings from './chat/chat_settings.js';
@@ -42,7 +41,6 @@ export default function ChatPane() {
   const processingMemoryStatusInfo = useTurnMachineStore((state) => state.processingMemoryStatusInfo);
   const userCharacter = useUserCharacter();
   const scenario = useScenarioStore((state) => state.activeScenario);
-  const userLocation = useChatUserLocation();
 
   const [inputIsNonEmpty, setInputIsNonEmpty] = useState(false);
   const [showChatSettings, setShowChatSettings] = useState(false);
@@ -305,7 +303,7 @@ export default function ChatPane() {
     return () => observer.disconnect();
   }, [transcriptContainerInnerRef.current]);
 
-  if (!scenario || !userLocation) {
+  if (!scenario) {
     return undefined;
   }
 
