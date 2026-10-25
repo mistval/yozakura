@@ -18,6 +18,7 @@ const sidebars: SidebarsConfig = {
       label: 'How To Guides',
       items: [
         'image-providers',
+        'completions-providers',
         'suggested-models',
         'reasoning-models',
         'how-to-different-models-per-prompt',

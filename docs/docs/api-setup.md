@@ -46,6 +46,8 @@ If your machine can't comfortably run a local model, or you just want the better
 
 [OpenRouter](https://openrouter.ai) is an excellent provider that enables access to a huge number of models with pay-as-you-go pricing. But any other provider exposing an OpenAI compatible completions endpoint will work too.
 
+The instructions below are for OpenRouter since it's very popular, but other providers might serve certain needs better. See [Completions API Providers](completions-providers.md) for some other options.
+
 Setup:
 
 1. Create an account at [openrouter.ai](https://openrouter.ai).
