@@ -78,11 +78,6 @@ export default function CharacterOverviewSingleData({
     [selectedSingleCharacter]
   );
 
-  const canRemoteChat = useMemo(() => {
-    // Only allow texting if these characters have interacted
-    return relationshipToUser && relationshipToUser?.rollingPairwiseSummaries.length > 0;
-  }, [relationshipToUser]);
-
   useEffect(() => {
     async function run() {
       assertNonNullish(scenario, 'CharacterOverviewSingleData rendered without active scenario');
@@ -143,22 +138,21 @@ export default function CharacterOverviewSingleData({
             Make {selectedSingleCharacter.firstName} User Character
           </button>
         )}
-        {canRemoteChat && (
-          <button
-            type="button"
-            onClick={() => {
-              if (chatSessionIsActive) {
-                ChatCoordinator.addParticipant(selectedSingleCharacter.id);
-              } else {
-                requestDirectNpcChat(selectedSingleCharacter.id);
-              }
+        <button
+          type="button"
+          onClick={() => {
+            if (chatSessionIsActive) {
+              ChatCoordinator.addParticipant(selectedSingleCharacter.id);
+            } else {
+              requestDirectNpcChat(selectedSingleCharacter.id);
+            }
 
-              closeCharacterOverview();
-            }}
-          >
-            Add to Chat
-          </button>
-        )}
+            closeCharacterOverview();
+          }}
+        >
+          Add to Chat
+        </button>
+   
         <button
           type="button"
           onClick={() => {
