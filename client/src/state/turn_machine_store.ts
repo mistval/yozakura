@@ -20,7 +20,7 @@ import { buildTranscriptRagDeps } from '../engine/chat/transcript_rag_deps.js';
 import type { ContextResolvers } from '../engine/prompt_templates/prompt_template_context_fields.js';
 import type { OmitFunctions } from '../util/types.js';
 import { getRequiredActiveScenario, getRequiredUserCharacterId, useScenarioStore } from './scenario_store.js';
-import { useScenarioCharacterStore, useUserCharacter } from './scenario_character_store.js';
+import { useScenarioCharacterStore } from './scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
 import { assert, assertNonNullish } from '../errors/application_error.js';
 import {
@@ -100,7 +100,7 @@ type BaseTurnMachineStoreState = {
   reset: () => void;
   serialize: () => SerializedTurn | undefined;
   hydrate: (snapshot: SerializedTurn) => void;
-  setEphemeralLocation: (setter: (prev: EphemeralLocation) => EphemeralLocation) => void;
+  setEphemeralLocation: (setter: (prev: EphemeralLocation) => EphemeralLocation | undefined) => void;
   userIsParticipant: () => boolean;
   userIsInitiator: () => boolean;
   addChatParticipant: (participantId: string) => void;
@@ -580,7 +580,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
-  setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation) {
+  setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation | undefined) {
     const userId = useScenarioStore.getState().activeScenario?.userCharacterId;
     assertNonNullish(userId, 'no user for scenario');
 

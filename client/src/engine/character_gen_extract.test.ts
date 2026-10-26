@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createBlankCharacter, extractCharacterCard } from './character_gen.js';
-import { extractCharacterDescriptionTemplateChain } from './prompt_templates/character_generation/extract_character_description.js';
-import { externalDescriptionGenerationTemplateChain } from './prompt_templates/character_generation/external_description_generation.js';
-import { exampleDialogueTemplateChain } from './prompt_templates/character_generation/example_dialogue.js';
-import { baseAppearanceGenerationTemplateChain } from './prompt_templates/character_generation/base_appearance_generation.js';
-import { wardrobeGenerationTemplateChain } from './prompt_templates/character_generation/wardrobe_generation.js';
+import {
+  baseAppearanceGenerationTemplateChain,
+  exampleDialogueTemplateChain,
+  externalDescriptionGenerationTemplateChain,
+  extractCharacterDescriptionTemplateChain,
+  wardrobeGenerationTemplateChain,
+} from './prompt_templates/character_generation/group.js';
 
 describe('extractCharacterCard field selection', () => {
   it('only generates requested fields and preserves internalDescription when omitted', async () => {

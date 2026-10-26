@@ -23,10 +23,12 @@ import {
   useTurnMachineStore,
   type StartChatSessionArgs,
 } from '../../state/turn_machine_store';
-import { chatSceneImageChain } from '../prompt_templates/chat/chat_scene_image';
-import { moderationNextSpeakerTemplatesChain } from '../prompt_templates/chat/moderation_next_speaker';
-import { conversationEndJudgeTemplatesChain } from '../prompt_templates/chat/conversation_end_judge';
-import { chatSystemPromptChain } from '../prompt_templates/chat/chat_system_prompt';
+import {
+  chatSceneImageChain,
+  chatSystemPromptChain,
+  conversationEndJudgeTemplatesChain,
+  moderationNextSpeakerTemplatesChain,
+} from '../prompt_templates/chat/group.js';
 import { newId } from '../../util/id';
 import {
   buildConversationStateUpdates,
@@ -144,7 +146,7 @@ export class ChatCoordinator {
     this.turnMachineStore().setStateAwaitingCharacterInput();
   }
 
-  public static setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation) {
+  public static setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation | undefined) {
     this.turnMachineStore().setEphemeralLocation(setter);
   }
 

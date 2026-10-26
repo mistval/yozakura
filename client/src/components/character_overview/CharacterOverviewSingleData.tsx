@@ -4,7 +4,6 @@ import type { Character, Scenario, WorldMap } from '../../engine/types.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import {
-  useCachedCharacterRelationship,
   useScenarioCharacterRelationshipStore,
 } from '../../state/scenario_character_relationship_store.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
@@ -51,10 +50,6 @@ export default function CharacterOverviewSingleData({
 
   const isUser = selectedSingleCharacter.id === scenario.userCharacterId;
   const isCharacterSyncing = useIsEntityInDeferredSync(selectedSingleCharacter.id);
-  const relationshipToUser = useCachedCharacterRelationship(
-    isUser ? undefined : selectedSingleCharacter.id,
-    scenario.userCharacterId
-  );
 
   const memberGroups = useMemo(
     () =>

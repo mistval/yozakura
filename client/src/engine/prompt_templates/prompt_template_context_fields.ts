@@ -280,7 +280,7 @@ export const memoryRagExecutionContext = targetedConversationExecutionContextSch
   })
 );
 
-export type MemoryRagExectionContext = z.infer<typeof memoryRagExecutionContext>;
+export type MemoryRagExecutionContext = z.infer<typeof memoryRagExecutionContext>;
 
 export const offscreenMemoryUpdateConversationGoalContextSchema =
   targetedConversationExecutionContextSchema.and(
@@ -336,4 +336,4 @@ export type PromptExecutionContext =
   | OffscreenMemoryUpdateConversationGoalExecutionContext
   | ModerationNextSpeakerExecutionContext
   | ConversationEndJudgeExecutionContext
-  | MemoryRagExectionContext;
+  | MemoryRagExecutionContext;

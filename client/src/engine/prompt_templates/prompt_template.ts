@@ -1,29 +1,49 @@
-import { z } from 'zod';
+import type { z } from 'zod';
 import { runWithInteractiveRetry } from '../interative_retry';
-import { useSettingsStore } from '../../state/settings_store';
 import { etaRender } from '../../util/eta';
 import { useTemplateRenderLogStore } from '../../state/template_render_log_store';
+import type { SettingsBridge } from '../settings/settings_bridge';
+import type { PromptTemplateRole, TemplateSettingsData } from './template_types';
 
-type PromptTemplateRenderOptions = {
+export type PromptTemplateRenderOptions = {
   completionRequestId?: string | undefined;
 };
 
 const TEMPLATE_RENDER_RETRY_HINT = 'You may have to edit your template.';
 
-export abstract class PromptTemplateBase<TContextType extends object> {
-  public abstract readonly defaultTemplateString: string;
-  public abstract readonly contextSchema: z.ZodType<TContextType>;
-  public abstract readonly templateName: string;
-  public abstract readonly templateDescription: string;
-  public abstract readonly templateId: string;
-  public abstract readonly role: 'system' | 'user' | 'assistant';
+export class PromptTemplate<TContextType extends object> {
+  public readonly templateId: string;
+  public readonly contextSchema: z.ZodType<TContextType>;
+  public readonly settingsBridge: SettingsBridge<TemplateSettingsData>;
 
-  private getTemplateOverride() {
-    return useSettingsStore.getState().promptTemplateOverrides[this.templateId];
+  public constructor(params: {
+    templateId: string;
+    contextSchema: z.ZodType<TContextType>;
+    settingsBridge: SettingsBridge<TemplateSettingsData>;
+  }) {
+    this.templateId = params.templateId;
+    this.contextSchema = params.contextSchema;
+    this.settingsBridge = params.settingsBridge;
+  }
+
+  public get templateName(): string {
+    return this.settingsBridge.get().name;
+  }
+
+  public get templateDescription(): string {
+    return this.settingsBridge.get().description;
+  }
+
+  public get role(): PromptTemplateRole {
+    return this.settingsBridge.get().role;
+  }
+
+  public get defaultTemplateString(): string {
+    return this.settingsBridge.getDefault().templateString;
   }
 
   public getTemplateString(): string {
-    return this.getTemplateOverride()?.templateString ?? this.defaultTemplateString;
+    return this.settingsBridge.get().templateString;
   }
 
   public async render(context: TContextType, options?: PromptTemplateRenderOptions): Promise<string> {
@@ -53,3 +73,5 @@ export abstract class PromptTemplateBase<TContextType extends object> {
     });
   }
 }
+
+export { PromptTemplate as PromptTemplateBase };

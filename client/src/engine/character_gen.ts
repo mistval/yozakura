@@ -10,12 +10,14 @@ import {
 } from './character_card_metadata.js';
 import { type Character } from './types.js';
 import { createWardrobe, DAILY_AUTOSELECT_TAG_PREFIX, formatPrefixedTag } from './wardrobes.js';
-import { characterDescriptionGenerationTemplateChain } from './prompt_templates/character_generation/character_description_generation.js';
-import { externalDescriptionGenerationTemplateChain } from './prompt_templates/character_generation/external_description_generation.js';
-import { extractCharacterDescriptionTemplateChain } from './prompt_templates/character_generation/extract_character_description.js';
-import { exampleDialogueTemplateChain } from './prompt_templates/character_generation/example_dialogue.js';
-import { baseAppearanceGenerationTemplateChain } from './prompt_templates/character_generation/base_appearance_generation.js';
-import { wardrobeGenerationTemplateChain } from './prompt_templates/character_generation/wardrobe_generation.js';
+import {
+  baseAppearanceGenerationTemplateChain,
+  characterDescriptionGenerationTemplateChain,
+  exampleDialogueTemplateChain,
+  externalDescriptionGenerationTemplateChain,
+  extractCharacterDescriptionTemplateChain,
+  wardrobeGenerationTemplateChain,
+} from './prompt_templates/character_generation/group.js';
 import { newId } from '../util/id.js';
 import { buildCharacterEditorContext } from './prompt_templates/prompt_context_builder.js';
 

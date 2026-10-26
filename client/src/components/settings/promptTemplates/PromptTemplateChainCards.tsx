@@ -6,20 +6,37 @@ type PromptTemplateChainCardsProps = {
   onOpenChain: (chainId: string) => void;
 };
 
+function PromptTemplateChainCard({
+  chain,
+  onOpenChain,
+}: {
+  chain: PromptTemplateChain<PromptExecutionContext, unknown>;
+  onOpenChain: (chainId: string) => void;
+}) {
+  const chainData = chain.settingsBridge.use();
+
+  return (
+    <button
+      type="button"
+      className="card-button"
+      onClick={() => onOpenChain(chain.templateChainId)}
+    >
+      <p className="text-base font-semibold">{chainData.title}</p>
+      <p className="text-xs text-muted">ID: {chain.templateChainId}</p>
+      <p className="text-sm text-secondary">{chainData.description}</p>
+    </button>
+  );
+}
+
 export default function PromptTemplateChainCards({ chains, onOpenChain }: PromptTemplateChainCardsProps) {
   return (
     <div className="space-y-3">
       {chains.map((chain) => (
-        <button
+        <PromptTemplateChainCard
           key={chain.templateChainId}
-          type="button"
-          className="card-button"
-          onClick={() => onOpenChain(chain.templateChainId)}
-        >
-          <p className="text-base font-semibold">{chain.templateChainTitle}</p>
-          <p className="text-xs text-muted">ID: {chain.templateChainId}</p>
-          <p className="text-sm text-secondary">{chain.templateChainDescription}</p>
-        </button>
+          chain={chain}
+          onOpenChain={onOpenChain}
+        />
       ))}
     </div>
   );

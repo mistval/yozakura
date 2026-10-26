@@ -18,7 +18,7 @@ import type {
   ConversationExecutionContext,
   FocusedConversationExecutionContext,
   GlobalExecutionContext,
-  MemoryRagExectionContext,
+  MemoryRagExecutionContext,
   ModerationNextSpeakerExecutionContext,
   ScenarioExecutionContext,
   TargetedConversationExecutionContext,
@@ -304,7 +304,7 @@ export async function buildMemoryRagTemplateContext(
   focusedCharacter: Character,
   mentionedCharacter: Character,
   mentionedByCharacter: Character
-): Promise<MemoryRagExectionContext> {
+): Promise<MemoryRagExecutionContext> {
   return {
     ...(await buildTargetedChatTemplateContext(focusedCharacter.id, mentionedCharacter.id)),
     mentionedByCharacter: toContextCharacter(mentionedByCharacter),

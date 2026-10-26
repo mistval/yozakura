@@ -1,32 +1,36 @@
 import { z } from 'zod';
-import { PromptTemplateBase } from '../prompt_template';
-import { PromptOutputParser } from '../prompt_output_parser';
-import { PromptTemplateChain } from '../prompt_template_chain';
-import { focusedConversationExecutionContextSchema } from '../prompt_template_context_fields';
+import { focusedConversationExecutionContextSchema } from '../prompt_template_context_fields.js';
+import type { PromptTemplateChainSpec } from '../template_types.js';
 
-class ConversationRollingSummarySystemTemplate extends PromptTemplateBase<
-  z.infer<typeof focusedConversationExecutionContextSchema>
-> {
-  public readonly defaultTemplateString = `You must summarize a conversation and extract the key information from <%= it.focusedCharacter.firstName %>'s perspective.
+export const conversationRollingSummaryChainSpec: PromptTemplateChainSpec<
+  z.infer<typeof focusedConversationExecutionContextSchema>,
+  string
+> = {
+  templateChainId: 'gen_convo_summary',
+  defaultTitle: 'Conversation Summarization',
+  defaultDescription: 'Prompts for generating conversation summaries.',
+  contextSchema: focusedConversationExecutionContextSchema,
+  templates: [
+    {
+      templateId: 'conversation_rolling_summary_system',
+      name: 'Conversation Rolling Summary (System)',
+      description: 'System prompt for generating a compact summary of a conversation.',
+      role: 'system',
+      defaultTemplateString: `You must summarize a conversation and extract the key information from <%= it.focusedCharacter.firstName %>'s perspective.
 
 Rules:
 - Focus on durable facts, commitments, relationship shifts, emotional tone, and unresolved threads.
 - Prioritize actionable details useful for future interactions. Be specific and direct, leaving nothing to the imagination.
-- Filter the conversation through the lense of <%= it.focusedCharacter.firstName %>'s personality and values.
-- Output only the summary, nothing else.`;
-  public readonly contextSchema = focusedConversationExecutionContextSchema;
-
-  public readonly templateName = 'Conversation Rolling Summary (System)';
-  public readonly templateDescription = 'System prompt for generating a compact summary of a conversation.';
-  public readonly templateId = 'conversation_rolling_summary_system';
-  public readonly templateSettings = [];
-  public readonly role = 'system';
-}
-
-class ConversationRollingSummaryUserTemplate extends PromptTemplateBase<
-  z.infer<typeof focusedConversationExecutionContextSchema>
-> {
-  public readonly defaultTemplateString = `<%= it.focusedCharacter.firstName %>'s persona:
+- Filter the conversation through the lens of <%= it.focusedCharacter.firstName %>'s personality and values.
+- Output only the summary, nothing else.`,
+    },
+    {
+      templateId: 'conversation_rolling_summary_user',
+      name: 'Conversation Rolling Summary (User)',
+      description:
+        'User prompt carrying persona and transcript details for summary generation.',
+      role: 'user',
+      defaultTemplateString: `<%= it.focusedCharacter.firstName %>'s persona:
 <persona>
 <%= it.focusedCharacter.internalDescription %>
 
@@ -45,32 +49,11 @@ Conversation transcript:
 
 </transcript>
 
-Output the conversation summary now.`;
-  public readonly contextSchema = focusedConversationExecutionContextSchema;
-
-  public readonly templateName = 'Conversation Rolling Summary (User)';
-  public readonly templateDescription =
-    'User prompt carrying persona and transcript details for summary generation.';
-  public readonly templateId = 'conversation_rolling_summary_user';
-  public readonly templateSettings = [];
-  public readonly role = 'user';
-}
-
-const conversationRollingSummarySystemTemplate = new ConversationRollingSummarySystemTemplate();
-const conversationRollingSummaryUserTemplate = new ConversationRollingSummaryUserTemplate();
-
-export const conversationRollingSummaryChain = new PromptTemplateChain({
-  templateChainId: 'gen_convo_summary',
-  templateChainTitle: 'Conversation Summarization',
-  templateChainDescription: 'Prompts for generating conversation summaries.',
-  contextSchema: focusedConversationExecutionContextSchema,
-  templates: [
-    { template: conversationRollingSummarySystemTemplate },
-    { template: conversationRollingSummaryUserTemplate },
+Output the conversation summary now.`,
+    },
   ],
-  parser: new PromptOutputParser<z.infer<typeof focusedConversationExecutionContextSchema>, string>(
-    'async (response, it) => response',
-    'gen_convo_summary_parser',
-    z.string()
-  ),
-});
+  parser: {
+    defaultParserSource: 'async (response, it) => response',
+    parserOutputSchema: z.string(),
+  },
+};
