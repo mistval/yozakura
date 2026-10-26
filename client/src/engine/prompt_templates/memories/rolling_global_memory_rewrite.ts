@@ -15,8 +15,7 @@ export const rollingGlobalMemoryRewriteChainSpec: PromptTemplateChainSpec<
     {
       templateId: 'rolling_global_memory_rewrite_system',
       name: 'Rolling Global Memory Rewrite (System)',
-      description:
-        'System prompt for distilling long-term global memories from conversation summaries.',
+      description: 'System prompt for distilling long-term global memories from conversation summaries.',
       role: 'system',
       defaultTemplateString: `Your job is to read a list of conversation summaries and use it to distill a block of memories for <%= it.focusedCharacter.firstName %>. You will also have access to <%= it.focusedCharacter.firstName %>'s existing memory state and persona.
 
@@ -31,8 +30,7 @@ Rules:
     {
       templateId: 'rolling_global_memory_rewrite_user',
       name: 'Rolling Global Memory Rewrite (User)',
-      description:
-        'User prompt carrying persona, existing global memory, and conversation summaries.',
+      description: 'User prompt carrying persona, existing global memory, and conversation summaries.',
       role: 'user',
       defaultTemplateString: `<%= it.focusedCharacter.firstName %>'s persona:
 <persona>

@@ -16,9 +16,7 @@ export function createTemplateGroupSettingsBridge(
     get: () => useSettingsStore.getState().templateGroupData[groupId] ?? defaultData,
     getDefault: () => defaultData,
     use: (selector = (v) => v as any) => {
-      return useSettingsStore((state) =>
-        selector(state.templateGroupData[groupId] ?? defaultData)
-      );
+      return useSettingsStore((state) => selector(state.templateGroupData[groupId] ?? defaultData));
     },
     set: (groupPatch) => {
       useSettingsStore.getState().setSettings({

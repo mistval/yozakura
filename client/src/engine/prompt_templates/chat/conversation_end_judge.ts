@@ -11,15 +11,13 @@ export const conversationEndJudgeChainSpec: PromptTemplateChainSpec<
 > = {
   templateChainId: 'gen_conversation_end_judgement',
   defaultTitle: 'Conversation End Judgement',
-  defaultDescription:
-    'Templates used to judge whether an NPC-only conversation is at a good stopping point.',
+  defaultDescription: 'Templates used to judge whether an NPC-only conversation is at a good stopping point.',
   contextSchema: conversationEndJudgeExecutionContextSchema,
   templates: [
     {
       templateId: 'conversation_end_judge_system',
       name: 'Conversation End Judge (System)',
-      description:
-        'System prompt for judging whether an NPC-only conversation is at a good stopping point.',
+      description: 'System prompt for judging whether an NPC-only conversation is at a good stopping point.',
       role: 'system',
       defaultTemplateString: `You are a conversation moderator and your job is to determine whether a conversation is currently at a good stopping point. You will be given the most recent conversation messages and some constraints to consider. You must output your decision as a single token, either: "CONTINUE" or "STOP".
 

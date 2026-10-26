@@ -31,8 +31,7 @@ Rules:
     {
       templateId: 'next_conversation_goal_updates_user',
       name: 'Next Conversation Goal (User)',
-      description:
-        'User prompt carrying transcript for next conversation goal derivation.',
+      description: 'User prompt carrying transcript for next conversation goal derivation.',
       role: 'user',
       defaultTemplateString: `Here is <%= it.focusedCharacter.firstName %>'s character persona:
 <persona>

@@ -15,8 +15,7 @@ export const extractCharacterDescriptionChainSpec: PromptTemplateChainSpec<
     {
       templateId: 'extract_character_description_system',
       name: 'Extract Character Description (System)',
-      description:
-        'System prompt for distilling a reusable character description from source text.',
+      description: 'System prompt for distilling a reusable character description from source text.',
       role: 'system',
       defaultTemplateString: `You are a writing assistant tasked with extracting an internal character profile from unstructured text.
 Rules:
@@ -30,8 +29,7 @@ Rules:
     {
       templateId: 'extract_character_description_user',
       name: 'Extract Character Description (User)',
-      description:
-        'User prompt carrying source text to extract a clean character summary.',
+      description: 'User prompt carrying source text to extract a clean character summary.',
       role: 'user',
       defaultTemplateString: `Extract a clean internal character profile from this text:
 <text>

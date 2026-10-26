@@ -28,8 +28,7 @@ Rules:
     {
       templateId: 'external_description_generation_user',
       name: 'External Description Generation (User)',
-      description:
-        'User prompt for generating a public-facing description from internal character details.',
+      description: 'User prompt for generating a public-facing description from internal character details.',
       role: 'user',
       defaultTemplateString: `Write a short public-facing description for <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %>.
 

@@ -45,10 +45,7 @@ export type PromptOutputParserSpec<TOutputType> = {
   parserOutputSchema: z.ZodType<TOutputType>;
 };
 
-export type PromptTemplateChainSpec<
-  TContextType extends object = object,
-  TOutputType = undefined,
-> = {
+export type PromptTemplateChainSpec<TContextType extends object = object, TOutputType = undefined> = {
   templateChainId: string;
   defaultTitle: string;
   defaultDescription: string;

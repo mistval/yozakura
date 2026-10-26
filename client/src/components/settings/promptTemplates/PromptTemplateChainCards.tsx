@@ -16,11 +16,7 @@ function PromptTemplateChainCard({
   const chainData = chain.settingsBridge.use();
 
   return (
-    <button
-      type="button"
-      className="card-button"
-      onClick={() => onOpenChain(chain.templateChainId)}
-    >
+    <button type="button" className="card-button" onClick={() => onOpenChain(chain.templateChainId)}>
       <p className="text-base font-semibold">{chainData.title}</p>
       <p className="text-xs text-muted">ID: {chain.templateChainId}</p>
       <p className="text-sm text-secondary">{chainData.description}</p>
@@ -32,11 +28,7 @@ export default function PromptTemplateChainCards({ chains, onOpenChain }: Prompt
   return (
     <div className="space-y-3">
       {chains.map((chain) => (
-        <PromptTemplateChainCard
-          key={chain.templateChainId}
-          chain={chain}
-          onOpenChain={onOpenChain}
-        />
+        <PromptTemplateChainCard key={chain.templateChainId} chain={chain} onOpenChain={onOpenChain} />
       ))}
     </div>
   );

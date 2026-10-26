@@ -27,8 +27,7 @@ Rules:
     {
       templateId: 'conversation_rolling_summary_user',
       name: 'Conversation Rolling Summary (User)',
-      description:
-        'User prompt carrying persona and transcript details for summary generation.',
+      description: 'User prompt carrying persona and transcript details for summary generation.',
       role: 'user',
       defaultTemplateString: `<%= it.focusedCharacter.firstName %>'s persona:
 <persona>

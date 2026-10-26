@@ -15,8 +15,7 @@ export const relationshipDescriptorUpdateChainSpec: PromptTemplateChainSpec<
     {
       templateId: 'relationship_descriptor_update_system',
       name: 'Relationship Descriptor Update (System)',
-      description:
-        'System prompt for updating relationship labels from transcript context.',
+      description: 'System prompt for updating relationship labels from transcript context.',
       role: 'system',
       defaultTemplateString: `You will be given the following types of information:
 1. A list of summaries of recent conversations that have taken place between <%= it.focusedCharacter.firstName %> and <%= it.targetCharacter.firstName %> (if any).
@@ -34,8 +33,7 @@ Rules:
     {
       templateId: 'relationship_descriptor_update_user',
       name: 'Relationship Descriptor Update (User)',
-      description:
-        'User prompt carrying transcript and current relationship descriptor baseline.',
+      description: 'User prompt carrying transcript and current relationship descriptor baseline.',
       role: 'user',
       defaultTemplateString: `Here is <%= it.focusedCharacter.firstName %>'s consolidated memory about <%= it.targetCharacter.firstName %>:
 <existing_memory>

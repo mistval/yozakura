@@ -45,10 +45,7 @@ function createCompletionRequestId(): string {
   return completionRequestId;
 }
 
-export class PromptTemplateChain<
-  TContextType extends PromptExecutionContext,
-  TOutputType = undefined,
-> {
+export class PromptTemplateChain<TContextType extends PromptExecutionContext, TOutputType = undefined> {
   public readonly templateChainId: string;
   public readonly contextSchema: z.ZodType<TContextType>;
   public readonly defaultData: TemplateChainSettingsData;

@@ -229,7 +229,7 @@ export function useActiveChatMedium(): ChatMedium {
 }
 
 export function useChatInitiatorLocation() {
-  const initiatorId = useTurnMachineStore(s => s.initiatorId);
+  const initiatorId = useTurnMachineStore((s) => s.initiatorId);
   const getCharacterLocation = useTurnMachineStore((s) => s.getChatCharacterLocation);
   const getRequiredCharacterById = useScenarioCharacterStore((s) => s.getRequiredCharacterById);
   const ephemeralLocation = useTurnMachineStore((s) => s.ephemeralLocation);

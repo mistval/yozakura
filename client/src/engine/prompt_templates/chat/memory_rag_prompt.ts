@@ -1,10 +1,10 @@
-import { memoryRagExecutionContext, type MemoryRagExecutionContext } from '../prompt_template_context_fields.js';
+import {
+  memoryRagExecutionContext,
+  type MemoryRagExecutionContext,
+} from '../prompt_template_context_fields.js';
 import type { PromptTemplateChainSpec } from '../template_types.js';
 
-export const memoryRagPromptChainSpec: PromptTemplateChainSpec<
-  MemoryRagExecutionContext,
-  undefined
-> = {
+export const memoryRagPromptChainSpec: PromptTemplateChainSpec<MemoryRagExecutionContext, undefined> = {
   templateChainId: 'gen_memory_rag_insert_template',
   defaultTitle: 'Memory RAG Prompt Templates',
   defaultDescription: 'Templates used for dynamic insertion of offscreen character memories.',

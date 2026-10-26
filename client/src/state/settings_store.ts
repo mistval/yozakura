@@ -18,9 +18,7 @@ import {
 } from '../engine/settings/cascading_llm_configs.js';
 import _ from 'lodash';
 import * as Database from '../backend_bridge/database.js';
-import {
-  templateGroupDataSchema,
-} from '../engine/prompt_templates/template_types.js';
+import { templateGroupDataSchema } from '../engine/prompt_templates/template_types.js';
 import { DEFAULT_TEMPLATE_GROUP_DATA } from '../engine/prompt_templates/default_template_group_data.js';
 
 export type { LLMConfig as LLMOptionsGroup };

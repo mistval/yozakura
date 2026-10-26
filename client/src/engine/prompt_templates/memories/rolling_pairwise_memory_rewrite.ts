@@ -15,8 +15,7 @@ export const rollingPairwiseMemoryRewriteChainSpec: PromptTemplateChainSpec<
     {
       templateId: 'rolling_pairwise_memory_rewrite_system',
       name: 'Rolling Pairwise Memory Rewrite (System)',
-      description:
-        'System prompt for distilling pairwise relationship memory from summaries and hearsay.',
+      description: 'System prompt for distilling pairwise relationship memory from summaries and hearsay.',
       role: 'system',
       defaultTemplateString: `Your job is to read a list of past interaction summaries and use it to synthesize a consistent internal memory state for <%= it.focusedCharacter.firstName %> to bring into their future interactions with <%= it.targetCharacter.firstName %>. You will also have access to <%= it.focusedCharacter.firstName %>'s existing internal memory state, persona information, and immediate goal in their next interaction with <%= it.targetCharacter.firstName %>.
 
@@ -37,8 +36,7 @@ Rules:
     {
       templateId: 'rolling_pairwise_memory_rewrite_user',
       name: 'Rolling Pairwise Memory Rewrite (User)',
-      description:
-        'User prompt carrying existing memory and recent pairwise information stream.',
+      description: 'User prompt carrying existing memory and recent pairwise information stream.',
       role: 'user',
       defaultTemplateString: `<%= it.focusedCharacter.firstName %>'s persona:
 <persona>

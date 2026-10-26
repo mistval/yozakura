@@ -104,9 +104,7 @@ describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
     expect(group.getChains()[0]!.templateChainId).toBe(chain2.templateChainId);
 
     // Attempting to delete the last remaining chain must throw
-    expect(() => group.deleteChain(chain2.templateChainId)).toThrow(
-      /must retain at least one chain/
-    );
+    expect(() => group.deleteChain(chain2.templateChainId)).toThrow(/must retain at least one chain/);
   });
 
   it('throws when trying to add or delete chains without a chainInstantiator', () => {
@@ -158,9 +156,7 @@ describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
       },
     });
 
-    expect(await chain.render(bobContext)).toEqual([
-      { role: 'system', content: 'Greetings, Bob!' },
-    ]);
+    expect(await chain.render(bobContext)).toEqual([{ role: 'system', content: 'Greetings, Bob!' }]);
 
     // Reset to default
     chain.settingsBridge.resetToDefault();

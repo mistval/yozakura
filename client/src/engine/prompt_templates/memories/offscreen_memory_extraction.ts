@@ -15,8 +15,7 @@ export const offscreenMemoryExtractionChainSpec: PromptTemplateChainSpec<
     {
       templateId: 'offscreen_memory_extraction_system',
       name: 'Offscreen Memory Extraction (System)',
-      description:
-        'System prompt for extracting a single novel offscreen memory fact from a transcript.',
+      description: 'System prompt for extracting a single novel offscreen memory fact from a transcript.',
       role: 'system',
       defaultTemplateString: `You will be given a conversation transcript in which <%= it.targetCharacter.firstName %> <%= it.targetCharacter.lastName %> may have been mentioned. You will also be given memories and persona information about one of the participants in the conversation, named <%= it.focusedCharacter.firstName %>. Your job is to identify the most important new information in the conversation that is relevant to <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %>. This can be any of:
   - Plans or desires held by <%= it.focusedCharacter.firstName %> and relevant to <%= it.targetCharacter.firstName %>.
@@ -38,8 +37,7 @@ Output format:
     {
       templateId: 'offscreen_memory_extraction_user',
       name: 'Offscreen Memory Extraction (User)',
-      description:
-        'User prompt carrying persona, transcript, and current memory context.',
+      description: 'User prompt carrying persona, transcript, and current memory context.',
       role: 'user',
       defaultTemplateString: `Here is <%= it.focusedCharacter.firstName %>'s persona:
 <persona>

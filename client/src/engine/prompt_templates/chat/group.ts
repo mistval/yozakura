@@ -10,9 +10,7 @@ import { moderationNextSpeakerChainSpec } from './moderation_next_speaker.js';
 
 export { RUNTIME_CHAT_TEMPLATES_GROUP_ID };
 
-export const runtimeChatTemplatesBridge = createTemplateGroupSettingsBridge(
-  RUNTIME_CHAT_TEMPLATES_GROUP_ID
-);
+export const runtimeChatTemplatesBridge = createTemplateGroupSettingsBridge(RUNTIME_CHAT_TEMPLATES_GROUP_ID);
 
 export const chatSystemPromptChain = new PromptTemplateChain({
   ...chatSystemPromptChainSpec,

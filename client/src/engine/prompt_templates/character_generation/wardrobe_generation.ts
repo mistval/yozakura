@@ -14,8 +14,7 @@ export const wardrobeGenerationChainSpec: PromptTemplateChainSpec<
     {
       templateId: 'wardrobe_generation_system',
       name: 'Wardrobe Generation (System)',
-      description:
-        'System prompt for generating comma-separated clothing/accessory tags.',
+      description: 'System prompt for generating comma-separated clothing/accessory tags.',
       role: 'system',
       defaultTemplateString: `You are helping generate characters for a social simulation. You must generate comma-separated appearance tags suitable for use as a Stable Diffusion image generation prompt.
 Rules:

@@ -8,9 +8,7 @@ import { PROMPT_TEMPLATES_ROOT_GROUP_ID } from './template_types.js';
 
 export { PROMPT_TEMPLATES_ROOT_GROUP_ID, DEFAULT_TEMPLATE_GROUP_DATA };
 
-export const promptTemplatesRootBridge = createTemplateGroupSettingsBridge(
-  PROMPT_TEMPLATES_ROOT_GROUP_ID
-);
+export const promptTemplatesRootBridge = createTemplateGroupSettingsBridge(PROMPT_TEMPLATES_ROOT_GROUP_ID);
 
 export const promptTemplatesRootGroup = new TemplateGroup({
   groupId: PROMPT_TEMPLATES_ROOT_GROUP_ID,

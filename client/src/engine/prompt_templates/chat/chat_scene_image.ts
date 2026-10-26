@@ -22,8 +22,7 @@ export const chatSceneImageChainSpec: PromptTemplateChainSpec<
     {
       templateId: 'chat_scene_image_user',
       name: 'Chat Scene Image (User)',
-      description:
-        'User prompt for scene details, transcript, and focused character appearance.',
+      description: 'User prompt for scene details, transcript, and focused character appearance.',
       role: 'user',
       defaultTemplateString: `Current location:
 <location_description>

@@ -55,12 +55,8 @@ export class SettingsBridge<T> {
     return new SettingsBridge<TChild>({
       get: () => lens.select(this.get()) ?? lens.fallbackDefault,
       getDefault: () => lens.select(this.getDefault()) ?? lens.fallbackDefault,
-      use: <TSelected = TChild>(
-        selector: (value: TChild) => TSelected = identitySelector
-      ): TSelected => {
-        return this.use((parentValue) =>
-          selector(lens.select(parentValue) ?? lens.fallbackDefault)
-        );
+      use: <TSelected = TChild>(selector: (value: TChild) => TSelected = identitySelector): TSelected => {
+        return this.use((parentValue) => selector(lens.select(parentValue) ?? lens.fallbackDefault));
       },
       set: (childPatch) => {
         this.set(lens.toPatch(childPatch));
@@ -79,8 +75,7 @@ export class SettingsBridge<T> {
     return new SettingsBridge<T>({
       get: () => current,
       getDefault: () => defaultValue,
-      use: <TSelected = T>(selector: (value: T) => TSelected = identitySelector) =>
-        selector(current),
+      use: <TSelected = T>(selector: (value: T) => TSelected = identitySelector) => selector(current),
       set: (patch) => {
         current = applyPatch(current, patch);
       },

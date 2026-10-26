@@ -3,9 +3,7 @@ import { useCharacterOverview } from './CharacterOverviewContext.js';
 import type { Character, Scenario, WorldMap } from '../../engine/types.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
-import {
-  useScenarioCharacterRelationshipStore,
-} from '../../state/scenario_character_relationship_store.js';
+import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
 import { useTurnMachineStore } from '../../state/turn_machine_store.js';
@@ -147,7 +145,7 @@ export default function CharacterOverviewSingleData({
         >
           Add to Chat
         </button>
-   
+
         <button
           type="button"
           onClick={() => {

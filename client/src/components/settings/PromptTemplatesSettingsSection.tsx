@@ -27,11 +27,7 @@ function resolveTemplateGroup(groupPath: string[]): TemplateGroup | undefined {
   return currentGroup;
 }
 
-function PromptTemplateChainView({
-  chain,
-}: {
-  chain: PromptTemplateChain<PromptExecutionContext, unknown>;
-}) {
+function PromptTemplateChainView({ chain }: { chain: PromptTemplateChain<PromptExecutionContext, unknown> }) {
   const chainData = chain.settingsBridge.use();
 
   return (
@@ -77,11 +73,7 @@ function TemplateGroupView({
         <div className="space-y-3">
           <h2 className="text-2xl font-semibold">Prompt Templates</h2>
           <p className="text-sm text-danger-text">That prompt template group was not found.</p>
-          <button
-            type="button"
-            className="px-3 py-1 border rounded-sm"
-            onClick={onReturnToGroup}
-          >
+          <button type="button" className="px-3 py-1 border rounded-sm" onClick={onReturnToGroup}>
             Return to Prompt Templates Group
           </button>
         </div>
@@ -102,11 +94,7 @@ function TemplateGroupView({
       <PromptTemplateChainCards chains={childChains} onOpenChain={onOpenChain} />
 
       {isPromptTemplatesRoot && (
-        <button
-          type="button"
-          className="card-button"
-          onClick={onOpenRenderLog}
-        >
+        <button type="button" className="card-button" onClick={onOpenRenderLog}>
           <p className="text-base font-semibold">Template Render Log</p>
           <p className="text-sm text-secondary">Inspect rendered templates and responses.</p>
         </button>
@@ -151,11 +139,7 @@ export default function PromptTemplatesSettingsSection() {
       <div className="space-y-3">
         <h2 className="text-2xl font-semibold">Prompt Templates</h2>
         <p className="text-sm text-danger-text">The prompt templates route is invalid.</p>
-        <button
-          type="button"
-          className="px-3 py-1 border rounded-sm"
-          onClick={returnToRoot}
-        >
+        <button type="button" className="px-3 py-1 border rounded-sm" onClick={returnToRoot}>
           Return to Prompt Templates Root
         </button>
       </div>
@@ -167,11 +151,7 @@ export default function PromptTemplatesSettingsSection() {
       <div className="space-y-3">
         <h2 className="text-2xl font-semibold">Prompt Templates</h2>
         <p className="text-sm text-danger-text">That template group was not found.</p>
-        <button
-          type="button"
-          className="px-3 py-1 border rounded-sm"
-          onClick={returnToRoot}
-        >
+        <button type="button" className="px-3 py-1 border rounded-sm" onClick={returnToRoot}>
           Return to Prompt Templates Root
         </button>
       </div>

@@ -8,15 +8,13 @@ export const characterDescriptionGenerationChainSpec: PromptTemplateChainSpec<
 > = {
   templateChainId: 'gen_character_internal_description',
   defaultTitle: 'Character Description Generation',
-  defaultDescription:
-    'Templates for generating character descriptions from core traits and information.',
+  defaultDescription: 'Templates for generating character descriptions from core traits and information.',
   contextSchema: characterEditorExecutionContextSchema,
   templates: [
     {
       templateId: 'character_description_generation_system',
       name: 'Character Description Generation (System)',
-      description:
-        'System prompt for writing a complete character description from hints.',
+      description: 'System prompt for writing a complete character description from hints.',
       role: 'system',
       defaultTemplateString: `You are a writing assistant tasked with generating an internal profile of a character.
 Rules:

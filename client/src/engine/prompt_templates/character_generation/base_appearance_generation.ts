@@ -15,8 +15,7 @@ export const baseAppearanceGenerationChainSpec: PromptTemplateChainSpec<
     {
       templateId: 'base_appearance_generation_system',
       name: 'Base Appearance Generation (System)',
-      description:
-        'System prompt for generating comma-separated visual appearance tags (no clothing).',
+      description: 'System prompt for generating comma-separated visual appearance tags (no clothing).',
       role: 'system',
       defaultTemplateString: `You are helping generate characters for a social simulation. You must generate comma-separated appearance tags suitable for use as a Stable Diffusion image generation prompt.
 Rules:
@@ -28,8 +27,7 @@ Rules:
     {
       templateId: 'base_appearance_generation_user',
       name: 'Base Appearance Generation (User)',
-      description:
-        'User prompt carrying character details for appearance tag generation.',
+      description: 'User prompt carrying character details for appearance tag generation.',
       role: 'user',
       defaultTemplateString: `Character description:
 <description>

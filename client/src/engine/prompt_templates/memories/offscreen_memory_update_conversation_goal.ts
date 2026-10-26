@@ -15,8 +15,7 @@ export const offscreenMemoryUpdateConversationGoalChainSpec: PromptTemplateChain
     {
       templateId: 'offscreen_memory_update_conversation_goal_system',
       name: 'Offscreen Conversation Goal Update (System)',
-      description:
-        'System prompt for deciding whether to update next conversation topic.',
+      description: 'System prompt for deciding whether to update next conversation topic.',
       role: 'system',
       defaultTemplateString: `Your job is to decide whether newly learned information should change <%= it.focusedCharacter.firstName %>'s next conversation goal with <%= it.targetCharacter.firstName %>. You will be given <%= it.focusedCharacter.firstName %>'s current memories of <%= it.targetCharacter.firstName %>, their existing goal towards them (if any), and some new information that <%= it.focusedCharacter.firstName %> just learned regarding <%= it.targetCharacter.firstName %>.
 
@@ -35,8 +34,7 @@ If you decide to output a new (or revised) goal for <%= it.focusedCharacter.firs
     {
       templateId: 'offscreen_memory_update_conversation_goal_user',
       name: 'Offscreen Conversation Goal Update (User)',
-      description:
-        'User prompt carrying current memory, existing topic, and new topic candidate.',
+      description: 'User prompt carrying current memory, existing topic, and new topic candidate.',
       role: 'user',
       defaultTemplateString: `<%= it.focusedCharacter.firstName %>'s current aggregate memories about <%= it.targetCharacter.firstName %>:
 <current_aggregate_memories>
