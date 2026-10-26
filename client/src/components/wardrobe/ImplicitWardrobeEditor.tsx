@@ -54,8 +54,8 @@ type ImplicitWardrobeEditorProps = {
     disabled: boolean;
   }) => ReactNode;
   disabled?: boolean;
-  showEnabledToggle?: boolean;
   className?: string;
+  enableNewWardrobes?: boolean;
 };
 
 function sanitizeDraftRows(wardrobes: Wardrobe[]) {
@@ -68,16 +68,17 @@ export default function ImplicitWardrobeEditor({
   actionRowElements,
   disabled = false,
   className = 'space-y-3',
-  showEnabledToggle = true,
+  enableNewWardrobes = false,
 }: ImplicitWardrobeEditorProps) {
   const sanitizedSource = useMemo(() => sanitizeDraftRows(wardrobes), [wardrobes]);
 
   const displayRows = useMemo(() => {
     return sanitizedSource.concat(
-      createWardrobe(
-        '',
-        sanitizedSource.length === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : []
-      )
+      createWardrobe({
+        text: '',
+        tags: sanitizedSource.length === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : [],
+        enabled: enableNewWardrobes,
+      })
     );
   }, [sanitizedSource]);
 
@@ -101,10 +102,11 @@ export default function ImplicitWardrobeEditor({
       };
     } else {
       updated.push(
-        createWardrobe(
-          event.target.value,
-          index === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : []
-        )
+        createWardrobe({
+          text: event.target.value,
+          tags: index === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : [],
+          enabled: enableNewWardrobes || updated.length === 0,
+        })
       );
     }
 
@@ -172,7 +174,7 @@ export default function ImplicitWardrobeEditor({
           <div key={`implicit-wardrobe-${index}`} className="block border rounded-sm p-3 text-sm space-y-2">
             <div className="flex items-center justify-between gap-2">
               <label className="flex items-center gap-2">
-                {hasText && showEnabledToggle && (
+                {hasText && (
                   <input
                     type="checkbox"
                     checked={wardrobe.enabled}

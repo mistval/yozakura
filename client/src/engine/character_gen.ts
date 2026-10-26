@@ -104,9 +104,13 @@ export async function extractCharacterCard(
 
   if (shouldExtract('wardrobes')) {
     onStep?.('Generating wardrobe');
-    const wardrobeTags = await generateWardrobe(character, signal);
+    const wardrobeText = await generateWardrobe(character, signal);
     onFieldGenerated?.('wardrobes', [
-      createWardrobe(wardrobeTags, [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')]),
+      createWardrobe({
+        text: wardrobeText,
+        tags: [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')],
+        enabled: true,
+      }),
     ]);
   }
 }
@@ -167,7 +171,7 @@ export function mergeYozakuraCardIntoCharacter(
   const importedCharacter = payload.character;
   const wardrobes =
     importedCharacter.wardrobes.length > 0
-      ? importedCharacter.wardrobes.map((w) => createWardrobe(w.text, w.tags))
+      ? importedCharacter.wardrobes.map((w) => createWardrobe(w))
       : character.wardrobes;
 
   return {

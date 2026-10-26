@@ -214,12 +214,17 @@ export function applyWardrobeTriggers(
   return changed ? currentWardrobes : undefined;
 }
 
-export function createWardrobe(text = '', tags: string[] = []): Wardrobe {
+export function createWardrobe(opts: {
+  text?: string;
+  tags?: string[];
+  enabled?: boolean;
+  autoRevert?: boolean;
+} = {}): Wardrobe {
   return Database.createPersistedObject({
-    text,
-    enabled: true,
-    tags,
-    autoRevert: true,
+    text: opts.text ?? '',
+    enabled: opts.enabled ?? false,
+    tags: opts.tags ?? [],
+    autoRevert: opts.autoRevert ?? true,
   });
 }
 

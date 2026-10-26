@@ -143,12 +143,15 @@ export class PromptTemplateChain<TContextType extends PromptExecutionContext, TO
     });
 
     for (const entry of this.templates) {
-      results.push({
-        role: entry.template.role,
-        content: await entry.template.render(context, {
-          completionRequestId,
-        }),
+      const content = await entry.template.render(context, {
+        completionRequestId,
       });
+      if (content.trim()) {
+        results.push({
+          role: entry.template.role,
+          content,
+        });
+      }
     }
 
     return results;
@@ -180,12 +183,15 @@ export class PromptTemplateChain<TContextType extends PromptExecutionContext, TO
   ): Promise<TOutputType> {
     const completionRequestId = createCompletionRequestId();
     const messages = await this.render(promptContext, { completionRequestId });
-    const response = await chatCompletion(messages, {
-      promptTemplateGroup: this.templateChainId,
-      completionRequestId,
-      promptContext,
-      abortSignal: options.abortSignal,
-    });
+    const response =
+      messages.length > 0
+        ? await chatCompletion(messages, {
+            promptTemplateGroup: this.templateChainId,
+            completionRequestId,
+            promptContext,
+            abortSignal: options.abortSignal,
+          })
+        : '';
 
     return this.parse(response, promptContext, { completionRequestId });
   }

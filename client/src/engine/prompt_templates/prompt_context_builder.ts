@@ -262,6 +262,8 @@ export function buildCharacterEditorContext(focusedCharacter: Character): Charac
     ...buildGlobalTemplateContext(),
     randomPersonalityTraits: generatePersonalityTraits(),
     focusedCharacter: toContextCharacter(focusedCharacter),
+    focusedCharacterAppearance: buildAppearanceTags(focusedCharacter),
+    imagePromptPrefix: useSettingsStore.getState().imagePromptPrefix,
   };
 }
 

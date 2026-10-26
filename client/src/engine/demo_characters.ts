@@ -356,8 +356,8 @@ export const DEMO_CHARACTERS: Character[] = DEMO_CHARACTERS_RAW.map((character) 
     globalCharacterId: id,
     imagePath: `/images/character/${id}.png`,
     locationId: '',
-    wardrobes: character.clothing.map((outfit) =>
-      createWardrobe(outfit, [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')])
+    wardrobes: character.clothing.map((outfit, i) =>
+      createWardrobe({ text: outfit, tags: [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')], enabled: i === 0 }),
     ),
     createdAt: DEMO_CHARACTER_TIMESTAMP,
     updatedAt: DEMO_CHARACTER_TIMESTAMP,

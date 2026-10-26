@@ -3,7 +3,6 @@ import { createProxiedFetch } from '../backend_bridge/proxied_fetch.js';
 import { loadUserTextFileContent } from '../backend_bridge/database.js';
 import { assertNonNullish } from '../errors/application_error.js';
 import { runWithInteractiveRetry } from './interative_retry.js';
-import { useSettingsStore } from '../state/settings_store.js';
 import type { Character } from './types.js';
 import type { SettingsScriptHelpers } from './settings/settings_scripts/settings_script.js';
 import {
@@ -22,6 +21,8 @@ import {
   makeTextFileGroupKey,
 } from './settings/settings_scripts/settings_scripts_state.js';
 import type { ImagePromptType } from './settings/settings_scripts/image/image_script_types';
+import { characterCardImagePromptTemplateChain } from './prompt_templates/character_generation/group.js';
+import { buildCharacterEditorContext } from './prompt_templates/prompt_context_builder.js';
 
 const IMAGE_GENERATION_RETRY_HINT = 'The image provider might be unavailable or misconfigured.';
 
@@ -88,31 +89,23 @@ async function dispatchImageGeneration(
 function getCharacterWardrobeTags(character: Pick<Character, 'wardrobes'>): string {
   return character.wardrobes
     .filter((wardrobe) => wardrobe.enabled)
-    .map((wardrobe) => wardrobe.text.trim())
-    .filter(Boolean)
+    .map((wardrobe) => wardrobe.text)
     .join(', ');
 }
 
 export function buildAppearanceTags(character: Character): string {
-  return [character.baseAppearanceTags, getCharacterWardrobeTags(character)].filter(Boolean).join(',');
+  return [character.baseAppearanceTags, getCharacterWardrobeTags(character)].join(',');
 }
 
-export async function generateCharacterCard(character: Character): Promise<string> {
-  const characterWithFirstWardrobe = {
-    ...character,
-    wardrobes: character.wardrobes.map((wardrobe, index) => ({
-      ...wardrobe,
-      enabled: index === 0,
-    })),
-  };
-
-  const prompt = [
-    useSettingsStore.getState().imagePromptPrefix,
-    buildAppearanceTags(characterWithFirstWardrobe),
-  ]
-    .filter(Boolean)
-    .join(',');
-  const blob = await dispatchImageGeneration(prompt, 'character_card');
+export async function generateCharacterCard(
+  character: Character,
+  options: { abortSignal?: AbortSignal | undefined } = {}
+): Promise<string> {
+  const context = buildCharacterEditorContext(character);
+  const prompt = await characterCardImagePromptTemplateChain.renderAndExecute(context, {
+    abortSignal: options.abortSignal,
+  });
+  const blob = await dispatchImageGeneration(prompt, 'character_card', options);
 
   return blobToDataUrl(blob);
 }

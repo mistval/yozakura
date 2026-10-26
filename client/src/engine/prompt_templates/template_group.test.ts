@@ -7,10 +7,12 @@ import type { TemplateGroupSettingsData } from './template_types';
 import { characterEditorExecutionContextSchema } from './prompt_template_context_fields';
 import { buildCharacterEditorContext } from './prompt_context_builder';
 import { createBlankCharacter } from '../character_gen';
+import { createWardrobe } from '../wardrobes';
 import {
   chatSceneImageTemplatesGroup,
   runtimeChatTemplatesGroup,
 } from './chat/group';
+import { characterCardImagePromptTemplateChain } from './character_generation/group';
 
 describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
   const createTestInstantiator = () => {
@@ -265,5 +267,65 @@ describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
 
     const sceneryParsed = await chains[2]!.parse('a quiet park at sunset', dummyContext);
     expect(sceneryParsed).toBe('masterpiece, best quality, a quiet park at sunset');
+  });
+
+  it('filters out empty rendered messages and skips LLM call in renderAndExecute', async () => {
+    const bridge = SettingsBridge.createInMemory<TemplateGroupSettingsData>({
+      templateChains: {},
+    });
+
+    const emptyChain = new PromptTemplateChain({
+      templateChainId: 'test_empty_chain',
+      defaultTitle: 'Empty Chain',
+      defaultDescription: 'Chain with empty templates',
+      contextSchema: characterEditorExecutionContextSchema,
+      groupSettingsBridge: bridge,
+      templates: [
+        {
+          templateId: 'test_empty.system',
+          name: 'System',
+          description: 'Empty system prompt',
+          role: 'system',
+          defaultTemplateString: '   ',
+        },
+        {
+          templateId: 'test_empty.user',
+          name: 'User',
+          description: 'Empty user prompt',
+          role: 'user',
+          defaultTemplateString: '',
+        },
+      ],
+      parser: {
+        defaultParserSource: 'async (response, it) => `parsed:${response}:prefix=${it.imagePromptPrefix}`',
+        parserOutputSchema: z.string(),
+      },
+    });
+
+    const testContext = buildCharacterEditorContext({
+      ...createBlankCharacter(),
+      firstName: 'Alice',
+    });
+    const rendered = await emptyChain.render(testContext);
+    expect(rendered).toEqual([]);
+
+    const output = await emptyChain.renderAndExecute(testContext);
+    expect(output).toContain('parsed::prefix=');
+  });
+
+  it('characterCardImagePromptTemplateChain executes by default without LLM call and combines tags in parser', async () => {
+    const character = {
+      ...createBlankCharacter(),
+      firstName: 'Alice',
+      baseAppearanceTags: '1girl, silver hair, red eyes',
+      wardrobes: [createWardrobe({ text: 'kimono' })],
+    };
+    const context = buildCharacterEditorContext(character);
+
+    const rendered = await characterCardImagePromptTemplateChain.render(context);
+    expect(rendered).toEqual([]);
+
+    const prompt = await characterCardImagePromptTemplateChain.renderAndExecute(context);
+    expect(prompt).toContain('1girl, silver hair, red eyes,kimono');
   });
 });

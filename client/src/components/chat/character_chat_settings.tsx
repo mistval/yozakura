@@ -98,8 +98,8 @@ export default function CharacterChatSettings({
             <ImplicitWardrobeEditor
               wardrobes={character.wardrobes}
               onChange={persistWardrobes}
-              showEnabledToggle
               disabled={isCharacterSyncing}
+              enableNewWardrobes={true}
             />
 
             <button

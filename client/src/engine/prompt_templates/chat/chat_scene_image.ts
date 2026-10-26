@@ -10,30 +10,21 @@ export const SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID = 'gen_chat_scene_image_prompt.sc
 const DEFAULT_SPEAKER_PARSER_SOURCE = `async (response, it) => {
   const wardrobeTags = it.focusedCharacter.wardrobes
     .filter((wardrobe) => wardrobe.enabled)
-    .map((wardrobe) => wardrobe.text.trim())
-    .filter(Boolean)
+    .map((wardrobe) => wardrobe.text)
     .join(', ');
 
-  const appearanceTags = [it.focusedCharacter.baseAppearanceTags, wardrobeTags]
-    .filter(Boolean)
-    .join(',');
+  const appearanceTags = [it.focusedCharacter.baseAppearanceTags, wardrobeTags].join(',');
 
-  return [it.imagePromptPrefix, appearanceTags, response]
-    .filter(Boolean)
-    .join(',');
+  return [it.imagePromptPrefix, appearanceTags, response].join(',');
 }`;
 
 const DEFAULT_SPEAKER_CLOSE_UP_PARSER_SOURCE = `async (response, it) => {
   const closeUpTags = 'close-up, portrait, face focus, upper body, detailed face, detailed eyes';
-  return [it.imagePromptPrefix, response, closeUpTags]
-    .filter(Boolean)
-    .join(', ');
+  return [it.imagePromptPrefix, response, closeUpTags].join(', ');
 }`;
 
 const DEFAULT_SCENERY_PARSER_SOURCE = `async (response, it) => {
-  return [it.imagePromptPrefix, response]
-    .filter(Boolean)
-    .join(', ');
+  return [it.imagePromptPrefix, response].join(', ');
 }`;
 
 export function createChatSceneImageChainSpec(

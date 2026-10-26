@@ -319,8 +319,8 @@ export function CharacterEditorModalProvider({
               ...prev,
               wardrobes: prev.wardrobes.concat(
                 createWardrobe(
-                  generated,
-                  index === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : []
+                  { text: generated,
+                  tags: index === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : [], enabled: index === 0 }
                 )
               ),
             } satisfies Character;

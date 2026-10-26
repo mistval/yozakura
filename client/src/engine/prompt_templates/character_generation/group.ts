@@ -8,6 +8,7 @@ import { exampleDialogueChainSpec } from './example_dialogue.js';
 import { externalDescriptionGenerationChainSpec } from './external_description_generation.js';
 import { extractCharacterDescriptionChainSpec } from './extract_character_description.js';
 import { wardrobeGenerationChainSpec } from './wardrobe_generation.js';
+import { characterCardImagePromptChainSpec } from './character_card_image_prompt.js';
 
 export { CHARACTER_GENERATION_TEMPLATES_GROUP_ID };
 
@@ -45,6 +46,11 @@ export const wardrobeGenerationTemplateChain = new PromptTemplateChain({
   groupSettingsBridge: characterGenerationTemplatesBridge,
 });
 
+export const characterCardImagePromptTemplateChain = new PromptTemplateChain({
+  ...characterCardImagePromptChainSpec,
+  groupSettingsBridge: characterGenerationTemplatesBridge,
+});
+
 export const characterGenerationTemplatesGroup = new TemplateGroup({
   groupId: CHARACTER_GENERATION_TEMPLATES_GROUP_ID,
   title: 'Character Generation Templates',
@@ -57,5 +63,6 @@ export const characterGenerationTemplatesGroup = new TemplateGroup({
     externalDescriptionGenerationTemplateChain,
     baseAppearanceGenerationTemplateChain,
     wardrobeGenerationTemplateChain,
+    characterCardImagePromptTemplateChain,
   ],
 });

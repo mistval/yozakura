@@ -318,11 +318,18 @@ describe('wardrobe tag helpers', () => {
   });
 
   it('creates wardrobe with initial tags', () => {
-    const w = createWardrobe('red scarf', ['daily_autoselect:accessories']);
+    const w = createWardrobe({ text: 'red scarf', tags: ['daily_autoselect:accessories'] });
     expect(w.text).toBe('red scarf');
     expect(w.tags).toEqual(['daily_autoselect:accessories']);
-    expect(w.enabled).toBe(true);
+    expect(w.enabled).toBe(false);
     expect(w.autoRevert).toBe(true);
+  });
+
+  it('creates wardrobe with custom enabled and autoRevert', () => {
+    const w = createWardrobe({ text: 'blue dress', enabled: true, autoRevert: false });
+    expect(w.text).toBe('blue dress');
+    expect(w.enabled).toBe(true);
+    expect(w.autoRevert).toBe(false);
   });
 });
 

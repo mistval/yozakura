@@ -264,6 +264,8 @@ export type FocusedConversationExecutionContext = z.infer<typeof focusedConversa
 export const characterEditorExecutionContextSchema = globalExecutionContextSchema.and(
   contextSchemaFields.pick({
     focusedCharacter: true,
+    focusedCharacterAppearance: true,
+    imagePromptPrefix: true,
     randomPersonalityTraits: true,
   })
 );

@@ -13,6 +13,7 @@ import { exampleDialogueChainSpec } from './character_generation/example_dialogu
 import { externalDescriptionGenerationChainSpec } from './character_generation/external_description_generation.js';
 import { extractCharacterDescriptionChainSpec } from './character_generation/extract_character_description.js';
 import { wardrobeGenerationChainSpec } from './character_generation/wardrobe_generation.js';
+import { characterCardImagePromptChainSpec } from './character_generation/character_card_image_prompt.js';
 import {
   chatSceneImageChainSpec,
   chatSceneImageSpeakerCloseUpChainSpec,
@@ -37,6 +38,7 @@ export const characterGenerationChainSpecs = [
   externalDescriptionGenerationChainSpec,
   baseAppearanceGenerationChainSpec,
   wardrobeGenerationChainSpec,
+  characterCardImagePromptChainSpec,
 ];
 
 export const runtimeChatChainSpecs = [
