@@ -93,6 +93,10 @@ function getCharacterWardrobeTags(character: Pick<Character, 'wardrobes'>): stri
     .join(', ');
 }
 
+export function buildAppearanceTags(character: Character): string {
+  return [character.baseAppearanceTags, getCharacterWardrobeTags(character)].filter(Boolean).join(',');
+}
+
 export async function generateCharacterCard(character: Character): Promise<string> {
   const characterWithFirstWardrobe = {
     ...character,
@@ -102,20 +106,15 @@ export async function generateCharacterCard(character: Character): Promise<strin
     })),
   };
 
-  const prompt = buildFullPrompt(characterWithFirstWardrobe);
+  const prompt = [
+    useSettingsStore.getState().imagePromptPrefix,
+    buildAppearanceTags(characterWithFirstWardrobe),
+  ]
+    .filter(Boolean)
+    .join(',');
   const blob = await dispatchImageGeneration(prompt, 'character_card');
 
   return blobToDataUrl(blob);
-}
-
-export function buildAppearanceTags(character: Character): string {
-  return [character.baseAppearanceTags, getCharacterWardrobeTags(character)].filter(Boolean).join(',');
-}
-
-export function buildFullPrompt(character: Character, scenePrompt?: string): string {
-  return [useSettingsStore.getState().imagePromptPrefix, buildAppearanceTags(character), scenePrompt]
-    .filter(Boolean)
-    .join(',');
 }
 
 export async function generateChatImage({

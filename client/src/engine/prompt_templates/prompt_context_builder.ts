@@ -217,6 +217,7 @@ export async function buildFocusedChatTemplateContext(
     currentLocation,
     focusedCharacter: toContextCharacter(focusedCharacter),
     focusedCharacterAppearance: buildAppearanceTags(focusedCharacter),
+    imagePromptPrefix: useSettingsStore.getState().imagePromptPrefix,
     rollingConversationSummariesText: formatGlobalMemoriesForPrompt(
       toContextCharacter(focusedCharacter),
       chatTemplateContext.allCharacters

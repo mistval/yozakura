@@ -1,6 +1,7 @@
 import {
   chainSpecsToGroupDefaultData,
   CHARACTER_GENERATION_TEMPLATES_GROUP_ID,
+  CHAT_SCENE_IMAGE_TEMPLATES_GROUP_ID,
   MEMORIES_GROUP_ID,
   PROMPT_TEMPLATES_ROOT_GROUP_ID,
   RUNTIME_CHAT_TEMPLATES_GROUP_ID,
@@ -12,7 +13,11 @@ import { exampleDialogueChainSpec } from './character_generation/example_dialogu
 import { externalDescriptionGenerationChainSpec } from './character_generation/external_description_generation.js';
 import { extractCharacterDescriptionChainSpec } from './character_generation/extract_character_description.js';
 import { wardrobeGenerationChainSpec } from './character_generation/wardrobe_generation.js';
-import { chatSceneImageChainSpec } from './chat/chat_scene_image.js';
+import {
+  chatSceneImageChainSpec,
+  chatSceneImageSpeakerCloseUpChainSpec,
+  chatSceneImageSceneryChainSpec,
+} from './chat/chat_scene_image.js';
 import { chatSystemPromptChainSpec } from './chat/chat_system_prompt.js';
 import { conversationEndJudgeChainSpec } from './chat/conversation_end_judge.js';
 import { memoryRagPromptChainSpec } from './chat/memory_rag_prompt.js';
@@ -38,8 +43,13 @@ export const runtimeChatChainSpecs = [
   chatSystemPromptChainSpec,
   moderationNextSpeakerChainSpec,
   conversationEndJudgeChainSpec,
-  chatSceneImageChainSpec,
   memoryRagPromptChainSpec,
+];
+
+export const chatSceneImageChainSpecs = [
+  chatSceneImageChainSpec,
+  chatSceneImageSpeakerCloseUpChainSpec,
+  chatSceneImageSceneryChainSpec,
 ];
 
 export const memoriesChainSpecs = [
@@ -58,5 +68,6 @@ export const DEFAULT_TEMPLATE_GROUP_DATA: TemplateGroupData = {
   },
   [CHARACTER_GENERATION_TEMPLATES_GROUP_ID]: chainSpecsToGroupDefaultData(characterGenerationChainSpecs),
   [RUNTIME_CHAT_TEMPLATES_GROUP_ID]: chainSpecsToGroupDefaultData(runtimeChatChainSpecs),
+  [CHAT_SCENE_IMAGE_TEMPLATES_GROUP_ID]: chainSpecsToGroupDefaultData(chatSceneImageChainSpecs),
   [MEMORIES_GROUP_ID]: chainSpecsToGroupDefaultData(memoriesChainSpecs),
 };

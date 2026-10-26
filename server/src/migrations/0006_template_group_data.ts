@@ -6,7 +6,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-const TEMPLATE_ID_MAPPING: Record<string, { groupId: string; chainId: string }> = {
+const TEMPLATE_ID_MAPPING: Record<string, { groupId: string; chainId: string; targetTemplateId?: string }> = {
   // runtime_chat_templates
   chat_system_prompt: { groupId: 'runtime_chat_templates', chainId: 'gen_npc_response' },
   final_instructions_prompt: { groupId: 'runtime_chat_templates', chainId: 'gen_npc_response' },
@@ -27,17 +27,21 @@ const TEMPLATE_ID_MAPPING: Record<string, { groupId: string; chainId: string }> 
     groupId: 'runtime_chat_templates',
     chainId: 'gen_conversation_end_judgement',
   },
-  chat_scene_image_system: {
-    groupId: 'runtime_chat_templates',
-    chainId: 'gen_chat_scene_image_prompt',
-  },
-  chat_scene_image_user: {
-    groupId: 'runtime_chat_templates',
-    chainId: 'gen_chat_scene_image_prompt',
-  },
   memory_rag_prompt: {
     groupId: 'runtime_chat_templates',
     chainId: 'gen_memory_rag_insert_template',
+  },
+
+  // chat_scene_image_templates
+  chat_scene_image_system: {
+    groupId: 'chat_scene_image_templates',
+    chainId: 'gen_chat_scene_image_prompt',
+    targetTemplateId: 'gen_chat_scene_image_prompt.system',
+  },
+  chat_scene_image_user: {
+    groupId: 'chat_scene_image_templates',
+    chainId: 'gen_chat_scene_image_prompt',
+    targetTemplateId: 'gen_chat_scene_image_prompt.user',
   },
 
   // memories
@@ -130,7 +134,7 @@ const PARSER_ID_MAPPING: Record<string, { groupId: string; chainId: string }> = 
     chainId: 'gen_conversation_end_judgement',
   },
   chat_scene_image_parser: {
-    groupId: 'runtime_chat_templates',
+    groupId: 'chat_scene_image_templates',
     chainId: 'gen_chat_scene_image_prompt',
   },
   gen_convo_summary_parser: { groupId: 'memories', chainId: 'gen_convo_summary' },
@@ -211,7 +215,8 @@ export function migrateSettingsOverrides(overrides: Record<string, unknown>): Re
         continue;
       }
       const chainNode = ensureChainNode(mapping.groupId, mapping.chainId);
-      chainNode.templates[templateId] = {
+      const targetId = mapping.targetTemplateId ?? templateId;
+      chainNode.templates[targetId] = {
         templateString: override.templateString,
       };
     }

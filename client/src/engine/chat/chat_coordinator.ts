@@ -1,7 +1,7 @@
 import { assert, assertNonNullish } from '../../errors/application_error';
 import { chatCompletion } from '../llm.js';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry.js';
-import { buildFullPrompt, generateChatImage } from '../image_gen.js';
+import { generateChatImage } from '../image_gen.js';
 import {
   buildChatModeratorContext,
   buildConversationEndJudgeContext,
@@ -24,7 +24,7 @@ import {
   type StartChatSessionArgs,
 } from '../../state/turn_machine_store';
 import {
-  chatSceneImageChain,
+  chatSceneImageTemplatesGroup,
   chatSystemPromptChain,
   conversationEndJudgeTemplatesChain,
   moderationNextSpeakerTemplatesChain,
@@ -36,9 +36,12 @@ import {
   lockEntitiesForEndOfChatUpdates,
 } from './post_chat_memories';
 import { wait } from '../../util/promise';
-import { getRequiredRandomChoice } from '../../util/array';
+import { getRequiredRandomChoice, weightedRandomChoice } from '../../util/array';
+import { clamp } from '../../util/numeric.js';
 import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
 import { rethrowSignalException } from '../scenario_loop/flow_control';
+import type { PromptTemplateChain } from '../prompt_templates/prompt_template_chain.js';
+import type { PromptExecutionContext } from '../prompt_templates/prompt_template_context_fields.js';
 
 export class ChatCoordinator {
   public static async prepareChatStart(participantIds: string[]): Promise<StartChatSessionArgs> {
@@ -214,20 +217,34 @@ export class ChatCoordinator {
     return participant.id;
   }
 
+  private static getSelectedSceneImageChain(): PromptTemplateChain<PromptExecutionContext, string> {
+    const chains = chatSceneImageTemplatesGroup.getChains();
+    const selectedChainId = useSettingsStore.getState().selectedSceneImageTemplateChainId;
+    const found = chains.find((chain) => chain.templateChainId === selectedChainId);
+    const chosen = found ?? chains[0];
+    assertNonNullish(chosen, 'No scene image chain available');
+    return chosen;
+  }
+
   public static async buildSceneImageFullPrompt(
     primaryCharacterId: string,
-    opts?: { upToMessageId?: string | undefined }
+    opts?: {
+      upToMessageId?: string | undefined;
+      chain?: PromptTemplateChain<PromptExecutionContext, string> | undefined;
+    }
   ) {
     return this.turnMachineStore().doWithState('generating_image', async () => {
       return withPhaseTransitionGate(
         async (abortSignal) => {
           const primaryCharacter = this.getCharacterById(primaryCharacterId);
-          const generatedScenePrompt = await chatSceneImageChain.renderAndExecute(
-            await buildFocusedChatTemplateContext(primaryCharacter.id, undefined, opts),
+          const sceneImageChain = opts?.chain ?? this.getSelectedSceneImageChain();
+          assertNonNullish(sceneImageChain, 'No scene image chain available');
+          return sceneImageChain.renderAndExecute(
+            await buildFocusedChatTemplateContext(primaryCharacter.id, undefined, {
+              upToMessageId: opts?.upToMessageId,
+            }),
             { abortSignal }
           );
-
-          return buildFullPrompt(primaryCharacter, generatedScenePrompt);
         },
         { pauseBehavior: 'ignore' }
       );
@@ -603,7 +620,31 @@ export class ChatCoordinator {
         return;
       }
 
-      const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId);
+      const chains = chatSceneImageTemplatesGroup.getChains();
+      if (chains.length === 0) {
+        return;
+      }
+
+      let selectedChain: (typeof chains)[number];
+      if (chains.length === 1) {
+        selectedChain = chains[0]!;
+      } else {
+        const candidates = chains.map((chain) => ({
+          value: chain,
+          weight: clamp(settings.autoImageTemplateWeights[chain.templateChainId] ?? 50, 0, 100),
+        }));
+
+        const totalWeight = candidates.reduce((sum, el) => sum + el.weight, 0);
+        if (totalWeight <= 0) {
+          return;
+        }
+
+        selectedChain = weightedRandomChoice(candidates);
+      }
+
+      const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId, {
+        chain: selectedChain,
+      });
       await this.generateImageFromPrompt(fullPrompt);
     } catch (err) {
       rethrowSignalException(err);

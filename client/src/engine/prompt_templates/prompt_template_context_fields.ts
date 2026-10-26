@@ -107,6 +107,10 @@ const contextSchemaFields = z.object({
     description:
       "Free-form instructions entered by the user in the focused character's chat settings that apply only to the focused character during the current conversation. Empty if the user has not provided any.",
   }),
+  imagePromptPrefix: z.string().meta({
+    description:
+      'The global image prompt prefix configured in Image Generation settings (for example, quality tags prepended to image generation prompts).',
+  }),
   settings: z.record(z.string(), z.unknown()).meta({
     description: "The current user settings. This won't be documented in detail, but is available.",
   }),
@@ -248,6 +252,7 @@ export const focusedConversationExecutionContextSchema = conversationExecutionCo
     currentLocation: true,
     focusedCharacter: true,
     focusedCharacterAppearance: true,
+    imagePromptPrefix: true,
     rollingConversationSummariesText: true,
     focusedCharacterChatInstructions: true,
     characterMovementConstraint: true,

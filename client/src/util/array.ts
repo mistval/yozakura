@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { assertNonNullish } from '../errors/application_error';
 
-type WeightedElement<TValue> = {
+export type WeightedElement<TValue> = {
   value: TValue;
   weight: number;
 };
@@ -12,7 +12,7 @@ export function getRequiredRandomChoice<T>(arr: T[]): T {
   return sample;
 }
 
-function weightedRandomChoice<TValue>(weightMap: WeightedElement<TValue>[]): TValue {
+export function weightedRandomChoice<TValue>(weightMap: WeightedElement<TValue>[]): TValue {
   const total = weightMap.reduce((sum, el) => sum + el.weight, 0);
   if (total === 0) {
     throw new Error('Total weight is zero, cannot make a weighted random choice.');

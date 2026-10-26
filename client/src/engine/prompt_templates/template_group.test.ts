@@ -7,6 +7,10 @@ import type { TemplateGroupSettingsData } from './template_types';
 import { characterEditorExecutionContextSchema } from './prompt_template_context_fields';
 import { buildCharacterEditorContext } from './prompt_context_builder';
 import { createBlankCharacter } from '../character_gen';
+import {
+  chatSceneImageTemplatesGroup,
+  runtimeChatTemplatesGroup,
+} from './chat/group';
 
 describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
   const createTestInstantiator = () => {
@@ -193,5 +197,73 @@ describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
     expect(chains).toHaveLength(1);
     expect(chains[0]!.templateChainId).toBe('persisted_chain.42');
     expect(chains[0]!.templateChainTitle).toBe('Persisted Chain 42');
+  });
+
+  it('supports updating chain title and description via chain settingsBridge', () => {
+    const bridge = SettingsBridge.createInMemory<TemplateGroupSettingsData>({
+      templateChains: {},
+    });
+    const instantiator = createTestInstantiator();
+
+    const group = new TemplateGroup({
+      groupId: 'test_group',
+      title: 'Test Group',
+      description: 'Group Description',
+      settingsBridge: bridge,
+      chainInstantiator: instantiator,
+    });
+
+    const chain = group.addChain();
+    expect(chain.templateChainTitle).toMatch(/^Chain test_chain\.\d+$/);
+
+    chain.settingsBridge.set({
+      title: 'Updated Chain Title',
+      description: 'Updated Chain Description',
+    });
+
+    expect(chain.templateChainTitle).toBe('Updated Chain Title');
+    expect(chain.templateChainDescription).toBe('Updated Chain Description');
+
+    chain.settingsBridge.resetToDefault();
+    expect(chain.templateChainTitle).toMatch(/^Chain test_chain\.\d+$/);
+  });
+
+  it('configures chatSceneImageTemplatesGroup as a duplicative subgroup under runtimeChatTemplatesGroup', async () => {
+    expect(runtimeChatTemplatesGroup.childGroups).toContain(chatSceneImageTemplatesGroup);
+    expect(chatSceneImageTemplatesGroup.canModifyChains()).toBe(true);
+
+    const chains = chatSceneImageTemplatesGroup.getChains();
+    expect(chains).toHaveLength(3);
+    expect(chains.map((c) => c.templateChainId)).toEqual([
+      'gen_chat_scene_image_prompt',
+      'gen_chat_scene_image_prompt.speaker_close_up',
+      'gen_chat_scene_image_prompt.scenery',
+    ]);
+    expect(chains.map((c) => c.templateChainTitle)).toEqual([
+      'Speaker',
+      'Speaker Close-Up',
+      'Scenery',
+    ]);
+
+    const dummyContext: any = {
+      imagePromptPrefix: 'masterpiece, best quality',
+      focusedCharacter: {
+        firstName: 'Alice',
+        lastName: 'Smith',
+        baseAppearanceTags: 'blonde hair, blue eyes',
+        wardrobes: [{ name: 'Casual', text: 'blue dress', enabled: true }],
+      },
+    };
+
+    const speakerParsed = await chains[0]!.parse('standing in a park', dummyContext);
+    expect(speakerParsed).toBe('masterpiece, best quality,blonde hair, blue eyes,blue dress,standing in a park');
+
+    const closeUpParsed = await chains[1]!.parse('smiling gently', dummyContext);
+    expect(closeUpParsed).toBe(
+      'masterpiece, best quality, smiling gently, close-up, portrait, face focus, upper body, detailed face, detailed eyes'
+    );
+
+    const sceneryParsed = await chains[2]!.parse('a quiet park at sunset', dummyContext);
+    expect(sceneryParsed).toBe('masterpiece, best quality, a quiet park at sunset');
   });
 });

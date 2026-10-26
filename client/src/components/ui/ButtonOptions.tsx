@@ -17,17 +17,19 @@ import {
 export type ButtonOptionsProps = {
   button: ReactNode;
   children: ReactNode;
-  disabled?: boolean;
-  className?: string;
-  dropdownClassName?: string;
-  placement?: Placement;
-  ariaLabel?: string;
+  disabled?: boolean | undefined;
+  showDropdown?: boolean | undefined;
+  className?: string | undefined;
+  dropdownClassName?: string | undefined;
+  placement?: Placement | undefined;
+  ariaLabel?: string | undefined;
 };
 
 export default function ButtonOptions({
   button,
   children,
   disabled = false,
+  showDropdown = true,
   className = '',
   dropdownClassName = '',
   placement = 'bottom-start',
@@ -48,6 +50,10 @@ export default function ButtonOptions({
   const role = useRole(context, { role: 'menu' });
 
   const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role]);
+
+  if (!showDropdown) {
+    return <>{button}</>;
+  }
 
   let modifiedButton = button;
   if (isValidElement(button)) {

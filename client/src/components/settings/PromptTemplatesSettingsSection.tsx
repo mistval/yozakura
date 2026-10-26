@@ -27,7 +27,13 @@ function resolveTemplateGroup(groupPath: string[]): TemplateGroup | undefined {
   return currentGroup;
 }
 
-function PromptTemplateChainView({ chain }: { chain: PromptTemplateChain<PromptExecutionContext, unknown> }) {
+function PromptTemplateChainView({
+  chain,
+  canEditMetadata,
+}: {
+  chain: PromptTemplateChain<PromptExecutionContext, unknown>;
+  canEditMetadata?: boolean | undefined;
+}) {
   const chainData = chain.settingsBridge.use();
 
   return (
@@ -38,7 +44,7 @@ function PromptTemplateChainView({ chain }: { chain: PromptTemplateChain<PromptE
       </div>
 
       <div className="space-y-4">
-        <PromptTemplateChainEditor chain={chain} />
+        <PromptTemplateChainEditor chain={chain} canEditMetadata={canEditMetadata} />
       </div>
     </div>
   );
@@ -64,6 +70,7 @@ function TemplateGroupView({
   const childChains = activeGroup.useChains();
   const childGroups = activeGroup.childGroups;
   const isPromptTemplatesRoot = parsedGroupIds.length === 0 && chainId === undefined;
+  const canModifyChains = activeGroup.canModifyChains();
 
   if (chainId) {
     const activeChain = childChains.find((child) => child.templateChainId === chainId);
@@ -80,18 +87,35 @@ function TemplateGroupView({
       );
     }
 
-    return <PromptTemplateChainView chain={activeChain} />;
+    return <PromptTemplateChainView chain={activeChain} canEditMetadata={canModifyChains} />;
   }
 
   return (
     <div className="space-y-4 mt-7">
-      <div>
-        <h2 className="text-2xl font-semibold">{activeGroup.title}</h2>
-        <p className="text-sm text-secondary">{activeGroup.description}</p>
+      <div className="flex justify-between items-start gap-3">
+        <div>
+          <h2 className="text-2xl font-semibold">{activeGroup.title}</h2>
+          <p className="text-sm text-secondary">{activeGroup.description}</p>
+        </div>
       </div>
 
       <TemplateGroupCards groups={childGroups} onOpenGroup={onOpenGroup} />
-      <PromptTemplateChainCards chains={childChains} onOpenChain={onOpenChain} />
+      <PromptTemplateChainCards
+        chains={childChains}
+        onOpenChain={onOpenChain}
+        canDeleteChains={canModifyChains}
+        onDeleteChain={(deleteId) => activeGroup.deleteChain(deleteId)}
+      />
+
+      {canModifyChains && (
+          <button
+            type="button"
+            onClick={() => activeGroup.addChain()}
+            className="shrink-0 px-3 py-1 border rounded-sm"
+          >
+            Add New
+          </button>
+        )}
 
       {isPromptTemplatesRoot && (
         <button type="button" className="card-button" onClick={onOpenRenderLog}>
