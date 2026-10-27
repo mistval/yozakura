@@ -163,13 +163,11 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
         );
       },
 
-      async refreshStoreStateFromDatabase(entities: UpdatedScenarioCharacter[]) {
-        const refreshed = await Database.doAsDataRead(
+      getEntitiesFromDatabase(entities: UpdatedScenarioCharacter[]) {
+        return Database.doAsDataRead(
           () => Database.loadScenarioCharactersByIds(entities.map((entity) => entity.id)),
           `${DATABASE_OBJECT_NAME}.partial.refresh`
         );
-
-        set(getCharacterDataStructuresFromArray(concatUniqueByIds(get().scenarioCharacters, refreshed)));
       },
     },
     { discardPendingChangesOnScenarioChange: true }

@@ -61,8 +61,10 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
           );
         },
 
-        deleteStoreState(_entities: CharacterRelationship[]) {
-          assert(false, 'Character relationship deletion is not implemented.');
+        deleteStoreState(entities: CharacterRelationship[]) {
+          relationshipCache.deleteMany(
+            entities.map((entity) => relationshipKey(entity.fromId, entity.toId))
+          );
         },
 
         async setDatabaseState(entities: CharacterRelationship[]) {
@@ -93,8 +95,8 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
           assert(false, 'Character relationship deletion is not implemented.');
         },
 
-        async refreshStoreStateFromDatabase(entities: CharacterRelationship[]) {
-          const refreshed = await Database.doAsDataRead(
+        getEntitiesFromDatabase(entities: CharacterRelationship[]) {
+          return Database.doAsDataRead(
             () =>
               Database.loadCharacterRelationshipsByPairs(
                 entities.map((entity) => ({
@@ -103,10 +105,6 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
                 }))
               ),
             'character_relationship'
-          );
-
-          relationshipCache.setMany(
-            refreshed.map((entity) => [relationshipKey(entity.fromId, entity.toId), entity])
           );
         },
       },
