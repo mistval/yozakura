@@ -28,6 +28,7 @@ import {
   applyWardrobeTriggers,
   selectZoneForWardrobeTriggers,
 } from '../engine/wardrobes.js';
+import { removeByIdentity } from '../util/array.js';
 
 export type ChatState =
   | 'inactive'
@@ -527,6 +528,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
 
     set({
       participantIds: nextParticipantIds,
+      removedParticipantIds: activeState.removedParticipantIds.filter(id => id !== participantId),
       transcript: nextTranscript,
       preConversationWardrobeSnapshotByCharacterId: {
         ...activeState.preConversationWardrobeSnapshotByCharacterId,
