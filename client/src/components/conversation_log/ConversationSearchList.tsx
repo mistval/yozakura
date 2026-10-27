@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStateRef } from '../../hooks/useStateRef.js';
 import * as Database from '../../backend_bridge/database';
-import type { StoredConversation } from '../../engine/types.js';
+import type { Character, StoredConversation, TranscriptParticipant } from '../../engine/types.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
+import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { ConversationTranscript } from '../../engine/chat/transcript.js';
 
 type ConversationSearchListProps = {
@@ -22,6 +23,77 @@ function getUniqueParticipantIds(ids: string[]): string[] {
   return [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
 }
 
+function ParticipantAvatar({
+  participant,
+  character,
+}: {
+  participant: TranscriptParticipant;
+  character?: Character;
+}) {
+  const [imageError, setImageError] = useState(false);
+  const imagePath = !imageError ? character?.imagePath || participant.imagePath : '';
+  const name = character
+    ? `${character.firstName} ${character.lastName}`.trim()
+    : `${participant.firstName} ${participant.lastName}`.trim();
+
+  return (
+    <div
+      className="h-7 w-7 shrink-0 overflow-hidden rounded-full border border-border-default bg-emphasized"
+      title={name || 'Character'}
+    >
+      {imagePath ? (
+        <img
+          src={imagePath}
+          alt={name || 'Character'}
+          className="h-full w-full object-cover object-top"
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-muted select-none">
+          {name ? name[0]?.toUpperCase() : '?'}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ParticipantAvatarStack({
+  participants,
+  scenarioCharactersById,
+}: {
+  participants: TranscriptParticipant[];
+  scenarioCharactersById: Record<string, Character>;
+}) {
+  const uniqueParticipants = useMemo(() => {
+    const seen = new Set<string>();
+    return participants.filter((p) => {
+      if (!p.id || seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+  }, [participants]);
+
+  if (uniqueParticipants.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex -space-x-2 shrink-0 items-center">
+      {uniqueParticipants.map((p) => {
+        const character = scenarioCharactersById[p.id];
+
+        return character && (
+        <ParticipantAvatar
+          key={p.id}
+          participant={p}
+          character={character}
+        />
+      )
+      })}
+    </div>
+  );
+}
+
 export default function ConversationSearchList({
   scenarioId,
   participantIds,
@@ -34,6 +106,7 @@ export default function ConversationSearchList({
 }: ConversationSearchListProps) {
   const participantsKey = useMemo(() => getUniqueParticipantIds(participantIds).join('|'), [participantIds]);
   const userId = useScenarioStore((state) => state.activeScenario?.userCharacterId);
+  const scenarioCharactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const uniqueParticipantIds = useMemo(
     () => (participantsKey ? participantsKey.split('|') : []),
     [participantsKey]
@@ -145,15 +218,21 @@ export default function ConversationSearchList({
                     }}
                     className="w-full text-left px-3 py-2 flex justify-between items-center hover:bg-surface-hover"
                   >
-                    <span>
-                      {entry.label || 'Conversation'}
-                      {userId &&
-                        !entry.transcript.participantInfo.some((i) => i.id === userId) &&
-                        entry.transcript.hasMemoryRaggedCharacter(userId) && (
-                          <span className="text-xs text-muted ml-2">(might reference user)</span>
-                        )}
-                    </span>
-                    <span className="text-xs text-muted">{new Date(entry.createdAt).toLocaleString()}</span>
+                    <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                      <span className="truncate">
+                        {entry.label || 'Conversation'}
+                        {userId &&
+                          !entry.transcript.participantInfo.some((i) => i.id === userId) &&
+                          entry.transcript.hasMemoryRaggedCharacter(userId) && (
+                            <span className="text-xs text-muted ml-2">(might reference user)</span>
+                          )}
+                      </span>
+                      <ParticipantAvatarStack
+                        participants={entry.transcript.participantInfo}
+                        scenarioCharactersById={scenarioCharactersById}
+                      />
+                    </div>
+                    <span className="text-xs text-muted shrink-0 ml-2">{new Date(entry.createdAt).toLocaleString()}</span>
                   </button>
                 ))}
               </div>
@@ -170,10 +249,17 @@ export default function ConversationSearchList({
               onClick={() => onSelectConversation(entry.id)}
               className="w-full text-left px-3 py-2 flex justify-between items-center hover:bg-surface-hover"
             >
-              <span>
-                Turn {entry.turnNumber} · {entry.label}
-              </span>
-              <span className="text-xs text-muted">{new Date(entry.createdAt).toLocaleString()}</span>
+              <div className="flex items-center justify-between gap-2 min-w-0 w-full">
+                <div>
+                <span className="text-sm text-muted shrink-0">Turn {entry.turnNumber} ·</span>
+                <span className="truncate">{entry.label || 'Conversation'}</span>
+                </div>
+                <ParticipantAvatarStack
+                  participants={entry.transcript.participantInfo}
+                  scenarioCharactersById={scenarioCharactersById}
+                />
+              </div>
+              <span className="text-xs text-muted shrink-0 ml-2">{new Date(entry.createdAt).toLocaleString()}</span>
             </button>
           ))}
         </div>
