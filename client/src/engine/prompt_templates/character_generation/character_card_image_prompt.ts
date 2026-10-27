@@ -14,8 +14,7 @@ export const characterCardImagePromptChainSpec: PromptTemplateChainSpec<
 > = {
   templateChainId: CHARACTER_CARD_IMAGE_PROMPT_CHAIN_ID,
   defaultTitle: 'Character Card Image Prompt',
-  defaultDescription:
-    'Prompts and parser used to generate the image prompt for character cards.',
+  defaultDescription: 'Prompts and parser used to generate the image prompt for character cards.',
   contextSchema: characterEditorExecutionContextSchema,
   templates: [
     {

@@ -42,7 +42,7 @@ export default function DescriptionSection() {
           />
         </div>
         <textarea
-          className='w-full'
+          className="w-full"
           rows={4}
           disabled={loadingField === 'internalDescription'}
           value={character.internalDescription}
@@ -151,7 +151,7 @@ export default function DescriptionSection() {
           />
         </div>
         <textarea
-          className='w-full'
+          className="w-full"
           rows={3}
           disabled={loadingField === 'externalDescription'}
           value={character.externalDescription}

@@ -179,8 +179,10 @@ function sanitizedSettings(input: unknown): Settings {
     return parsed.data;
   }
 
-  console.log(`Settings blob: ${JSON.stringify(input, null, 2)}`)
-  alert(`Failed to load settings. This is likely a bug in Yozakura. Please report via one of the links here: https://mistval.github.io/yozakura/docs/links \n\nSettings parse error: ${JSON.stringify(parsed.error.message)}`);
+  console.log(`Settings blob: ${JSON.stringify(input, null, 2)}`);
+  alert(
+    `Failed to load settings. This is likely a bug in Yozakura. Please report via one of the links here: https://mistval.github.io/yozakura/docs/links \n\nSettings parse error: ${JSON.stringify(parsed.error.message)}`
+  );
 
   throw new Error('Failed to load settings');
 }

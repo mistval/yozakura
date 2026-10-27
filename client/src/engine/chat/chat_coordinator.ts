@@ -586,7 +586,7 @@ export class ChatCoordinator {
       includeRemoved: true,
     });
 
-    const speakers = participants.filter(p => this.transcript().hasMessagesFromCharacter(p.id));
+    const speakers = participants.filter((p) => this.transcript().hasMessagesFromCharacter(p.id));
 
     if (speakers.length === 2) {
       const verb = getActiveChatMedium() === 'in_person' ? 'spoke to' : 'remote chatted with';

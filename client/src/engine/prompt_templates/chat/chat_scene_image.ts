@@ -3,8 +3,7 @@ import { focusedConversationExecutionContextSchema } from '../prompt_template_co
 import type { PromptTemplateChainSpec } from '../template_types.js';
 
 export const DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID = 'gen_chat_scene_image_prompt';
-export const SPEAKER_CLOSE_UP_CHAT_SCENE_IMAGE_CHAIN_ID =
-  'gen_chat_scene_image_prompt.speaker_close_up';
+export const SPEAKER_CLOSE_UP_CHAT_SCENE_IMAGE_CHAIN_ID = 'gen_chat_scene_image_prompt.speaker_close_up';
 export const SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID = 'gen_chat_scene_image_prompt.scenery';
 
 const DEFAULT_SPEAKER_PARSER_SOURCE = `async (response, it) => {
@@ -22,10 +21,7 @@ const DEFAULT_SCENERY_PARSER_SOURCE = `async (response, it) => {
 
 export function createChatSceneImageChainSpec(
   chainId: string = DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID
-): PromptTemplateChainSpec<
-  z.infer<typeof focusedConversationExecutionContextSchema>,
-  string
-> {
+): PromptTemplateChainSpec<z.infer<typeof focusedConversationExecutionContextSchema>, string> {
   return {
     templateChainId: chainId,
     defaultTitle: 'Speaker',
@@ -83,15 +79,11 @@ Describe only <%= it.focusedCharacter.firstName %> and their place in the curren
 
 export function createChatSceneImageSpeakerCloseUpChainSpec(
   chainId: string = SPEAKER_CLOSE_UP_CHAT_SCENE_IMAGE_CHAIN_ID
-): PromptTemplateChainSpec<
-  z.infer<typeof focusedConversationExecutionContextSchema>,
-  string
-> {
+): PromptTemplateChainSpec<z.infer<typeof focusedConversationExecutionContextSchema>, string> {
   return {
     templateChainId: chainId,
     defaultTitle: 'Speaker Close-Up',
-    defaultDescription:
-      'Generates a close-up portrait image prompt of the speaking character.',
+    defaultDescription: 'Generates a close-up portrait image prompt of the speaking character.',
     contextSchema: focusedConversationExecutionContextSchema,
     templates: [
       {
@@ -144,15 +136,11 @@ Describe a close-up portrait of <%= it.focusedCharacter.firstName %>'s face and 
 
 export function createChatSceneImageSceneryChainSpec(
   chainId: string = SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID
-): PromptTemplateChainSpec<
-  z.infer<typeof focusedConversationExecutionContextSchema>,
-  string
-> {
+): PromptTemplateChainSpec<z.infer<typeof focusedConversationExecutionContextSchema>, string> {
   return {
     templateChainId: chainId,
     defaultTitle: 'Scenery',
-    defaultDescription:
-      'Generates an environmental scenery image prompt with no characters.',
+    defaultDescription: 'Generates an environmental scenery image prompt with no characters.',
     contextSchema: focusedConversationExecutionContextSchema,
     templates: [
       {
@@ -197,12 +185,12 @@ Describe only the physical environment, setting, atmosphere, background, and lig
   };
 }
 
-export const chatSceneImageChainSpec = createChatSceneImageChainSpec(
-  DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID
+export const chatSceneImageChainSpec = createChatSceneImageChainSpec(DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID);
+
+export const chatSceneImageSpeakerCloseUpChainSpec = createChatSceneImageSpeakerCloseUpChainSpec(
+  SPEAKER_CLOSE_UP_CHAT_SCENE_IMAGE_CHAIN_ID
 );
 
-export const chatSceneImageSpeakerCloseUpChainSpec =
-  createChatSceneImageSpeakerCloseUpChainSpec(SPEAKER_CLOSE_UP_CHAT_SCENE_IMAGE_CHAIN_ID);
-
-export const chatSceneImageSceneryChainSpec =
-  createChatSceneImageSceneryChainSpec(SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID);
+export const chatSceneImageSceneryChainSpec = createChatSceneImageSceneryChainSpec(
+  SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID
+);

@@ -82,13 +82,7 @@ function ParticipantAvatarStack({
       {uniqueParticipants.map((p) => {
         const character = scenarioCharactersById[p.id];
 
-        return character && (
-        <ParticipantAvatar
-          key={p.id}
-          participant={p}
-          character={character}
-        />
-      )
+        return character && <ParticipantAvatar key={p.id} participant={p} character={character} />;
       })}
     </div>
   );
@@ -232,7 +226,9 @@ export default function ConversationSearchList({
                         scenarioCharactersById={scenarioCharactersById}
                       />
                     </div>
-                    <span className="text-xs text-muted shrink-0 ml-2">{new Date(entry.createdAt).toLocaleString()}</span>
+                    <span className="text-xs text-muted shrink-0 ml-2">
+                      {new Date(entry.createdAt).toLocaleString()}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -251,15 +247,17 @@ export default function ConversationSearchList({
             >
               <div className="flex items-center justify-between gap-2 min-w-0 w-full">
                 <div>
-                <span className="text-sm text-muted shrink-0">Turn {entry.turnNumber} ·</span>
-                <span className="truncate">{entry.label || 'Conversation'}</span>
+                  <span className="text-sm text-muted shrink-0">Turn {entry.turnNumber} ·</span>
+                  <span className="truncate">{entry.label || 'Conversation'}</span>
                 </div>
                 <ParticipantAvatarStack
                   participants={entry.transcript.participantInfo}
                   scenarioCharactersById={scenarioCharactersById}
                 />
               </div>
-              <span className="text-xs text-muted shrink-0 ml-2">{new Date(entry.createdAt).toLocaleString()}</span>
+              <span className="text-xs text-muted shrink-0 ml-2">
+                {new Date(entry.createdAt).toLocaleString()}
+              </span>
             </button>
           ))}
         </div>

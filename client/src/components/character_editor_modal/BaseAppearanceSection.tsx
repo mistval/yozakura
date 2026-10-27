@@ -19,7 +19,7 @@ export default function BaseAppearanceSection() {
         />
       </div>
       <textarea
-        className='w-full'
+        className="w-full"
         rows={3}
         value={character.baseAppearanceTags}
         disabled={loadingField === 'baseAppearanceTags'}

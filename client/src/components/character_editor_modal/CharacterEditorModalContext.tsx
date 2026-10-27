@@ -318,10 +318,11 @@ export function CharacterEditorModalProvider({
             return {
               ...prev,
               wardrobes: prev.wardrobes.concat(
-                createWardrobe(
-                  { text: generated,
-                  tags: index === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : [], enabled: index === 0 }
-                )
+                createWardrobe({
+                  text: generated,
+                  tags: index === 0 ? [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')] : [],
+                  enabled: index === 0,
+                })
               ),
             } satisfies Character;
           }

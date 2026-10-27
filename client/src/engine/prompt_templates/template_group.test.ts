@@ -8,10 +8,7 @@ import { characterEditorExecutionContextSchema } from './prompt_template_context
 import { buildCharacterEditorContext } from './prompt_context_builder';
 import { createBlankCharacter } from '../character_gen';
 import { createWardrobe } from '../wardrobes';
-import {
-  chatSceneImageTemplatesGroup,
-  runtimeChatTemplatesGroup,
-} from './chat/group';
+import { chatSceneImageTemplatesGroup, runtimeChatTemplatesGroup } from './chat/group';
 import { characterCardImagePromptTemplateChain } from './character_generation/group';
 
 describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
@@ -241,11 +238,7 @@ describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
       'gen_chat_scene_image_prompt.speaker_close_up',
       'gen_chat_scene_image_prompt.scenery',
     ]);
-    expect(chains.map((c) => c.templateChainTitle)).toEqual([
-      'Speaker',
-      'Speaker Close-Up',
-      'Scenery',
-    ]);
+    expect(chains.map((c) => c.templateChainTitle)).toEqual(['Speaker', 'Speaker Close-Up', 'Scenery']);
 
     const dummyContext: any = {
       imagePromptPrefix: 'masterpiece, best quality',
@@ -258,7 +251,9 @@ describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
     };
 
     const speakerParsed = await chains[0]!.parse('standing in a park', dummyContext);
-    expect(speakerParsed).toBe('masterpiece, best quality,blonde hair, blue eyes,blue dress,standing in a park');
+    expect(speakerParsed).toBe(
+      'masterpiece, best quality,blonde hair, blue eyes,blue dress,standing in a park'
+    );
 
     const closeUpParsed = await chains[1]!.parse('smiling gently', dummyContext);
     expect(closeUpParsed).toBe(

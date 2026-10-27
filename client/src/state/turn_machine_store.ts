@@ -527,7 +527,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
 
     set({
       participantIds: nextParticipantIds,
-      removedParticipantIds: activeState.removedParticipantIds.filter(id => id !== participantId),
+      removedParticipantIds: activeState.removedParticipantIds.filter((id) => id !== participantId),
       transcript: nextTranscript,
       preConversationWardrobeSnapshotByCharacterId: {
         ...activeState.preConversationWardrobeSnapshotByCharacterId,

@@ -19,7 +19,7 @@ export default function IdentitySection() {
         </div>
         <div className="flex gap-2">
           <input
-            className='w-full'
+            className="w-full"
             value={character.firstName}
             onChange={(event: ChangeEvent<HTMLInputElement>) => setField('firstName', event.target.value)}
           />
@@ -32,7 +32,7 @@ export default function IdentitySection() {
         </div>
         <div className="flex gap-2">
           <input
-            className='w-full'
+            className="w-full"
             value={character.lastName}
             onChange={(event: ChangeEvent<HTMLInputElement>) => setField('lastName', event.target.value)}
           />

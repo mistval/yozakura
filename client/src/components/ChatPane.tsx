@@ -605,8 +605,7 @@ export default function ChatPane() {
               {sceneImageChains.map((chain) => {
                 const chainData = chain.settingsBridge.get();
                 const isSelected =
-                  chain.templateChainId ===
-                  (activeSceneImageChain?.templateChainId ?? chain.templateChainId);
+                  chain.templateChainId === (activeSceneImageChain?.templateChainId ?? chain.templateChainId);
                 return (
                   <label
                     key={chain.templateChainId}

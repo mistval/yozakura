@@ -108,14 +108,14 @@ function TemplateGroupView({
       />
 
       {canModifyChains && (
-          <button
-            type="button"
-            onClick={() => activeGroup.addChain()}
-            className="shrink-0 px-3 py-1 border rounded-sm"
-          >
-            Add New
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => activeGroup.addChain()}
+          className="shrink-0 px-3 py-1 border rounded-sm"
+        >
+          Add New
+        </button>
+      )}
 
       {isPromptTemplatesRoot && (
         <button type="button" className="card-button" onClick={onOpenRenderLog}>
