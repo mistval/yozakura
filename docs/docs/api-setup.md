@@ -42,13 +42,11 @@ In KoboldCpp, go to the Image Gen tab and browse to your model under `Image Gen.
 
 Click launch, then you can start Yozakura and you're good to go. When the initial setup popup appears, the `Image Generation Setup` section will already have the correct values for KoboldCpp, so you don't need to change anything there.
 
-## Cloud LLM (OpenRouter)
+## Cloud LLM
 
 If your machine can't comfortably run a local model, or you just want the better narrative coherence that stronger models can often provide, use a cloud provider instead.
 
-[OpenRouter](https://openrouter.ai) is an excellent provider that enables access to a huge number of models with pay-as-you-go pricing. But any other provider exposing an OpenAI compatible completions endpoint will work too.
-
-The instructions below are for OpenRouter since it's very popular, but other providers might serve certain needs better. See [Completions API Providers](completions-providers.md) for some other options.
+We will provide instructions below for using [OpenRouter](https://openrouter.ai), a very popular service provider that enables access to a huge number of models with pay-as-you-go pricing. But any other provider exposing an OpenAI compatible completions endpoint will work too, and other providers might serve certain needs better. See [Completions API Providers](completions-providers.md) for some other options.
 
 Setup:
 
