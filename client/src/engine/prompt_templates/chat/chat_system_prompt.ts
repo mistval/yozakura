@@ -155,9 +155,9 @@ Your instructions:
       templateId: 'chat_system_user_nudge_prompt',
       name: 'User Nudge Prompt',
       description:
-        'Some models (such as deepseek/deepseek-v4-flash) hate when a system prompt is the most recent message they receive. This will result in frequent "Empty LLM response" errors. If you see this happening (or otherwise suspect you\'re working with a model that behaves this way), try putting a short instruction message in here like: "Respond in character as <%= it.focusedCharacter.firstName %>". Anything you enter here will be appended as a user message after the system message. If you leave this empty, no user message wil be appended.',
+        'Some models (such as deepseek/deepseek-v4-flash) hate when a system prompt is the most recent message they receive. This will result in frequent "Empty LLM response" errors. If you see this happening (or otherwise suspect you\'re working with a model that behaves this way), try putting a short instruction message in here like: "[Instructions: Respond in character as <%= it.focusedCharacter.firstName %>]". Anything you enter here will be appended as a user message after the system message. If you leave this empty, no user message wil be appended.',
       role: 'user',
-      defaultTemplateString: '',
+      defaultTemplateString: '[Instructions: Respond in character as <%= it.focusedCharacter.firstName %>]',
     },
   ],
   parser: {
