@@ -9,13 +9,15 @@ import {
   type DetectedCardMetadata,
 } from './character_card_metadata.js';
 import { type Character } from './types.js';
-import { createWardrobe } from './wardrobes.js';
-import { characterDescriptionGenerationTemplateGroup } from './prompt_templates/character_generation/character_description_generation.js';
-import { externalDescriptionGenerationTemplateGroup } from './prompt_templates/character_generation/external_description_generation.js';
-import { extractCharacterDescriptionTemplateGroup } from './prompt_templates/character_generation/extract_character_description.js';
-import { exampleDialogueTemplateGroup } from './prompt_templates/character_generation/example_dialogue.js';
-import { baseAppearanceGenerationTemplateGroup } from './prompt_templates/character_generation/base_appearance_generation.js';
-import { wardrobeGenerationTemplateGroup } from './prompt_templates/character_generation/wardrobe_generation.js';
+import { createWardrobe, DAILY_AUTOSELECT_TAG_PREFIX, formatPrefixedTag } from './wardrobes.js';
+import {
+  baseAppearanceGenerationTemplateChain,
+  characterDescriptionGenerationTemplateChain,
+  exampleDialogueTemplateChain,
+  externalDescriptionGenerationTemplateChain,
+  extractCharacterDescriptionTemplateChain,
+  wardrobeGenerationTemplateChain,
+} from './prompt_templates/character_generation/group.js';
 import { newId } from '../util/id.js';
 import { buildCharacterEditorContext } from './prompt_templates/prompt_context_builder.js';
 
@@ -23,7 +25,7 @@ export async function generateCharacterInternalDescription(
   character: Character,
   abortSignal?: AbortSignal
 ): Promise<string> {
-  return characterDescriptionGenerationTemplateGroup.renderAndExecute(
+  return characterDescriptionGenerationTemplateChain.renderAndExecute(
     buildCharacterEditorContext(character),
     { abortSignal }
   );
@@ -33,66 +35,91 @@ export async function generateCharacterExternalDescription(
   character: Character,
   abortSignal?: AbortSignal
 ): Promise<string> {
-  return externalDescriptionGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character), {
+  return externalDescriptionGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
     abortSignal,
   });
 }
 
-type ExtractCharacterCardOptions = {
+export type ExtractCharacterCardField =
+  | 'internalDescription'
+  | 'externalDescription'
+  | 'exampleDialogue'
+  | 'baseAppearanceTags'
+  | 'wardrobes';
+
+export const ALL_EXTRACT_CHARACTER_CARD_FIELDS: readonly ExtractCharacterCardField[] = [
+  'internalDescription',
+  'externalDescription',
+  'exampleDialogue',
+  'baseAppearanceTags',
+  'wardrobes',
+] as const;
+
+export type ExtractCharacterCardOptions = {
   abortSignal?: AbortSignal;
   onStep?: (step: string) => void;
+  fields?: ExtractCharacterCardField[];
 };
 
 export async function extractCharacterCard(
   character: Character,
   onFieldGenerated?: <K extends keyof Character>(key: K, value: Character[K]) => void,
   options?: ExtractCharacterCardOptions
-): Promise<{
-  description: string;
-  exampleDialogue: string;
-  baseAppearanceTags: string;
-  wardrobeTags: string;
-}> {
+): Promise<void> {
   if (!character.firstName || !character.internalDescription) {
     throw new Error('Character firstName and description must be non-empty');
   }
 
   const signal = options?.abortSignal;
   const onStep = options?.onStep;
+  const fields = options?.fields ?? ALL_EXTRACT_CHARACTER_CARD_FIELDS;
+  const shouldExtract = (field: ExtractCharacterCardField) => fields.includes(field);
 
-  onStep?.('Extracting description');
-  const description = await extractCharacterDescriptionTemplateGroup.renderAndExecute(
-    buildCharacterEditorContext(character),
-    { abortSignal: signal }
-  );
+  if (shouldExtract('internalDescription')) {
+    onStep?.('Extracting description');
+    const description = await extractCharacterDescriptionTemplateChain.renderAndExecute(
+      buildCharacterEditorContext(character),
+      { abortSignal: signal }
+    );
+    onFieldGenerated?.('internalDescription', description);
+  }
 
-  onFieldGenerated?.('internalDescription', description);
-  onStep?.('Generating external description');
-  const externalDescription = await generateCharacterExternalDescription(character, signal);
-  onFieldGenerated?.('externalDescription', externalDescription);
-  onStep?.('Generating example dialogue');
-  const exampleDialogue = await generateExampleDialogue(character, signal);
-  onFieldGenerated?.('exampleDialogue', exampleDialogue);
-  onStep?.('Generating appearance');
-  const baseAppearanceTags = await generateBaseAppearanceTags(character, signal);
-  onFieldGenerated?.('baseAppearanceTags', baseAppearanceTags);
-  onStep?.('Generating wardrobe');
-  const wardrobeTags = await generateWardrobe(character, signal);
-  onFieldGenerated?.('wardrobes', [createWardrobe(wardrobeTags, 'default')]);
+  if (shouldExtract('externalDescription')) {
+    onStep?.('Generating external description');
+    const externalDescription = await generateCharacterExternalDescription(character, signal);
+    onFieldGenerated?.('externalDescription', externalDescription);
+  }
 
-  return {
-    description,
-    exampleDialogue,
-    baseAppearanceTags,
-    wardrobeTags,
-  };
+  if (shouldExtract('exampleDialogue')) {
+    onStep?.('Generating example dialogue');
+    const exampleDialogue = await generateExampleDialogue(character, signal);
+    onFieldGenerated?.('exampleDialogue', exampleDialogue);
+  }
+
+  if (shouldExtract('baseAppearanceTags')) {
+    onStep?.('Generating appearance');
+    const baseAppearanceTags = await generateBaseAppearanceTags(character, signal);
+    onFieldGenerated?.('baseAppearanceTags', baseAppearanceTags);
+  }
+
+  if (shouldExtract('wardrobes')) {
+    onStep?.('Generating wardrobe');
+    const wardrobeText = await generateWardrobe(character, signal);
+    onFieldGenerated?.('wardrobes', [
+      createWardrobe({
+        text: wardrobeText,
+        tags: [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')],
+        enabled: true,
+      }),
+    ]);
+  }
 }
 
 export async function generateExampleDialogue(
   character: Character,
   abortSignal?: AbortSignal
 ): Promise<string> {
-  return exampleDialogueTemplateGroup.renderAndExecute(buildCharacterEditorContext(character), {
+  return exampleDialogueTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
     abortSignal,
   });
 }
@@ -101,13 +128,13 @@ export async function generateBaseAppearanceTags(
   character: Character,
   abortSignal?: AbortSignal
 ): Promise<string> {
-  return baseAppearanceGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character), {
+  return baseAppearanceGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
     abortSignal,
   });
 }
 
 export async function generateWardrobe(character: Character, abortSignal?: AbortSignal): Promise<string> {
-  return wardrobeGenerationTemplateGroup.renderAndExecute(buildCharacterEditorContext(character), {
+  return wardrobeGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
     abortSignal,
   });
 }
@@ -144,7 +171,7 @@ export function mergeYozakuraCardIntoCharacter(
   const importedCharacter = payload.character;
   const wardrobes =
     importedCharacter.wardrobes.length > 0
-      ? importedCharacter.wardrobes.map((w) => createWardrobe(w.text, w.autoSelectGroup))
+      ? importedCharacter.wardrobes.map((w) => createWardrobe(w))
       : character.wardrobes;
 
   return {

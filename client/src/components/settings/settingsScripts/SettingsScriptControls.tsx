@@ -87,7 +87,7 @@ function ControlField({
             value={value}
             placeholder={control.placeholder}
             onChange={(event) => onChange(event.target.value)}
-            className="rounded-input"
+            className="w-full rounded-input"
           />
         </StackedField>
       );
@@ -102,7 +102,7 @@ function ControlField({
               value={value}
               placeholder={control.placeholder}
               onChange={(event) => onChange(event.target.value)}
-              className="rounded-input"
+              className="w-full rounded-input"
             />
             <button
               type="button"
@@ -145,7 +145,7 @@ function ControlField({
             value={value}
             placeholder={control.placeholder}
             onChange={(event) => onChange(event.target.value)}
-            className="w-28 border rounded-sm px-2 py-1"
+            className="w-full w-28 border rounded-sm px-2 py-1"
           />
         </InlineField>
       );

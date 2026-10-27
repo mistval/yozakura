@@ -50,7 +50,7 @@ You can also of course create new characters from scratch.
 
 ![character create dialogue](/img/char_create.png)
 
-The [wardrobe](chat.md#wardrobes) system can automatically enable different combinations of image model tags each day.
+The [wardrobe](wardrobes.md) system can automatically enable different combinations of image model tags each day and in different map zones.
 
 ## Create Your Own Worlds
 

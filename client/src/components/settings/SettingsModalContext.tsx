@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
-import { createContext, useContext, useMemo } from 'react';
-import { useMatch } from 'react-router-dom';
-import { StringParam, useQueryParams } from 'use-query-params';
-import { FlagParam } from '../../hooks/useModalQueryParam.js';
+import { createContext, useCallback, useContext, useMemo } from 'react';
+import { useMatch } from 'react-router';
+import { useQueryParams } from '../../util/queryParams.js';
 
 type SettingsModalContextType = {
   open: boolean;
@@ -16,32 +15,35 @@ type SettingsModalContextType = {
 const SettingsModalContext = createContext<SettingsModalContextType | undefined>(undefined);
 
 export function SettingsModalProvider({ children }: { children: ReactNode }) {
-  const [params, setParams] = useQueryParams({
-    settings: FlagParam,
-    settingspath: StringParam,
-  });
+  const [params, setParams] = useQueryParams();
 
   const scenarioMatch = useMatch('/scenario/*');
   const includeScenarioSettings = Boolean(scenarioMatch);
 
-  const open = params.settings ?? false;
-  const settingsPath = params.settingspath ?? '';
+  const open = params.has('settings') && params.get('settings') !== 'false';
+  const settingsPath = params.get('settingspath') ?? '';
 
-  const openSettings = (path = '') => {
-    setParams({ settings: true, settingspath: path || undefined });
-  };
+  const openSettings = useCallback(
+    (path = '') => {
+      setParams({ settings: true, settingspath: path || undefined });
+    },
+    [setParams]
+  );
 
-  const closeSettings = () => {
-    setParams({ settings: undefined as unknown as boolean, settingspath: undefined });
-  };
+  const closeSettings = useCallback(() => {
+    setParams({ settings: undefined, settingspath: undefined });
+  }, [setParams]);
 
-  const setSettingsSection = (path: string) => {
-    setParams({ settingspath: path || undefined });
-  };
+  const setSettingsSection = useCallback(
+    (path: string) => {
+      setParams({ settingspath: path || undefined });
+    },
+    [setParams]
+  );
 
   const value = useMemo(
     () => ({ open, settingsPath, includeScenarioSettings, openSettings, closeSettings, setSettingsSection }),
-    [open, settingsPath, includeScenarioSettings]
+    [open, settingsPath, includeScenarioSettings, params, openSettings, closeSettings, setSettingsSection]
   );
 
   return <SettingsModalContext.Provider value={value}>{children}</SettingsModalContext.Provider>;

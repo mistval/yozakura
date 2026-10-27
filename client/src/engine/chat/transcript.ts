@@ -764,8 +764,7 @@ export class ConversationTranscript {
     opts?: { upToMessageId?: string | undefined }
   ): string[] {
     const limit = Math.max(1, Math.round(this.getOffscreenMentionLimit()));
-    const seen = new Set<string>();
-    const result: string[] = [];
+    const result = new Set<string>();
 
     for (const message of this.aggregateMessagesWithinPresenceWindows(focusedCharacterId, opts)) {
       if (message.message.messageType !== 'chat_message') {
@@ -774,23 +773,22 @@ export class ConversationTranscript {
 
       for (const mentionedCharacterId of this.ragHelper.getMentionedCharacterIds(message.message.id)) {
         if (
-          seen.has(mentionedCharacterId) ||
+          result.has(mentionedCharacterId) ||
           this.isCurrentlyPresent(mentionedCharacterId) ||
           mentionedCharacterId === focusedCharacterId
         ) {
           continue;
         }
 
-        seen.add(mentionedCharacterId);
-        result.push(mentionedCharacterId);
+        result.add(mentionedCharacterId);
 
-        if (result.length >= limit) {
-          return result;
+        if (result.size >= limit) {
+          return Array.from(result);
         }
       }
     }
 
-    return result;
+    return Array.from(result);
   }
 
   public getAllSpeakerIds() {

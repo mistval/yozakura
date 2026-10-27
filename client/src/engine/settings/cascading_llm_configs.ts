@@ -91,7 +91,7 @@ export const DEFAULT_LLM_CONFIGS: LLMConfigById = {
   'chat-scene-image-prompt': {
     id: 'chat-scene-image-prompt',
     name: 'Chat: Generate Image Prompt',
-    rule: "context.promptTemplateGroup === 'gen_chat_scene_image_prompt'",
+    rule: "context.promptTemplateGroup.split('.')[0] === 'gen_chat_scene_image_prompt'",
     llmMetaOptions: JSON.stringify({ max_tokens: 200 }),
   },
   'intelligent-speaker-select': {

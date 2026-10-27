@@ -1,7 +1,7 @@
 import { useScenarioCharacterStore } from '../../state/scenario_character_store';
 import { useSettingsStore } from '../../state/settings_store';
 import { useTurnMachineStore } from '../../state/turn_machine_store';
-import { memoryRagPromptTemplatesGroup } from '../prompt_templates/chat/memory_rag_prompt';
+import { memoryRagPromptTemplatesChain } from '../prompt_templates/chat/group.js';
 import { buildMemoryRagTemplateContext } from '../prompt_templates/prompt_context_builder';
 import type { TranscriptRagDeps } from './transcript';
 
@@ -10,7 +10,7 @@ export function buildTranscriptRagDeps(): TranscriptRagDeps {
 
   return {
     getRagMessage: async (focusedCharacterId, mentionedCharacterId, mentionedByCharacterId) => {
-      const rendered = await memoryRagPromptTemplatesGroup.render(
+      const rendered = await memoryRagPromptTemplatesChain.render(
         await buildMemoryRagTemplateContext(
           getCharacter(focusedCharacterId),
           getCharacter(mentionedCharacterId),

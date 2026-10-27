@@ -45,6 +45,7 @@ function makeZone(id: string, locationIds: string[], extra: Partial<MapZone> = {
     id,
     name: id,
     locationIds,
+    wardrobeTriggers: [],
     createdAt: '',
     updatedAt: '',
     ...extra,

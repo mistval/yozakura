@@ -18,7 +18,7 @@ Below we will walk through two examples of using a reasoning model. The details 
 
 **Make sure you have the latest version of KoboldCpp**. Some of the features used below are very new at the time of this writing. I am using v1.117.1.
 
-Gemma 4 26B A4B is an excellent model that runs pretty well on many consumer GPUs and has reasoning capability. I find that using reasoning for memory generation in Yozakura does significantly improve memory quality with this model, at the cost of taking much longer when a conversation ends. It's a very verbose reasoner.
+Gemma 4 26B A4B is an excellent model that runs pretty well on many consumer GPUs and has reasoning capability. I find that using reasoning for memory generation in Yozakura does significantly improve memory quality with this model, at the cost of taking much longer when a conversation ends.
 
 When loading the model in KoboldCpp, just enable the `Use Jinja` checkbox on the `Quick Launch` tab. Other than that, launch KoboldCpp normally.
 
@@ -52,34 +52,11 @@ Note that it's possible for the model to decide not to do any reasoning, and the
 
 ## OpenRouter: DeepSeek V4 Flash
 
-To use DeepSeek V4 Flash via OpenRouter, first open [LLM Settings](yozakura://?settings=true&settingspath=llm) in Yozakura and edit the `Base Defaults`. Set the `Model` field to `deepseek/deepseek-v4-flash`. If you haven't already, make sure the `Completions API URL` is pointing to the correct URL for OpenRouter (`https://openrouter.ai/api/v1/chat/completions`). Don't forget to click `Save`.
+To use DeepSeek V4 Flash via OpenRouter, first open [LLM Settings](yozakura://?settings=true&settingspath=llm) in Yozakura and edit the `Base Defaults`. Set the `Model` field to `deepseek/deepseek-v4-flash`. If you haven't already, make sure the `Completions API URL` is pointing to the correct URL for OpenRouter (`https://openrouter.ai/api/v1/chat/completions`). Don't forget to click `Save`
 
-### Disabling Reasoning By Default
+### Enabling Reasoning
 
-When using reasoning models via OpenRouter (or at least this one), reasoning is enabled by _default for all requests_. Unless you actually want to use reasoning for all types of prompts, you should disable it by default. To do so, add a `reasoning` section to the bottom of `LLM Meta Options (JSON)` under `Base Defaults` in Yozakura's [LLM Settings](yozakura://?settings=true&settingspath=llm). Don't forget to click `Save`.
-
-**Example:** Here's the default `LLM Meta Options (JSON)` settings, plus a `reasoning` section I added to disable reasoning:
-
-```json
-{
-  "temperature": 0.3,
-  "min_p": 0.035,
-  "dry_multiplier": 0.8,
-  "dry_base": 1.75,
-  "dry_allowed_length": 2,
-  "xtc_threshold": 0.1,
-  "xtc_probability": 0.5,
-  "max_tokens": 1000,
-  "model": "deepseek/deepseek-v4-flash",
-  "reasoning": {
-    "enabled": false
-  }
-}
-```
-
-### Enabling Reasoning For Specific Prompts
-
-Now update the prompt settings in Yozakura's [LLM Settings](yozakura://?settings=true&settingspath=llm) for all of the prompts that you _do_ want to use reasoning (probably at least all the ones starting with `Chat Memory:`, but it's up to you).
+Now update the prompt settings in Yozakura's [LLM Settings](yozakura://?settings=true&settingspath=llm) for all of the prompts that you want to use reasoning for (probably at least all the ones starting with `Chat Memory:`, but it's up to you). You'll need to set reasoning to true and raise the token limits.
 
 **Example:** Here's the updated `LLM Meta Options (JSON)` I used to enable reasoning for the `Chat Memory: Summarize Conversation` prompt:
 

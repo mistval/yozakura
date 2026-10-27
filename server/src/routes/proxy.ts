@@ -1,6 +1,7 @@
 import express, { type Router } from 'express';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { Agent, fetch, type RequestInit, Headers } from 'undici';
 
 const EXCLUDED_REQUEST_HEADERS = new Set([
   'host',
@@ -52,10 +53,14 @@ export default function proxyRouter(): Router {
       const method = req.method.toUpperCase();
       const canHaveBody = method !== 'GET' && method !== 'HEAD';
 
-      const requestInit: RequestInit & { duplex?: string } = {
+      const requestInit: RequestInit = {
         method,
-        headers: requestHeaders,
+        headers: new Headers(requestHeaders),
         signal: upstreamAbortController.signal,
+        dispatcher: new Agent({
+          headersTimeout: Number.MAX_SAFE_INTEGER,
+          bodyTimeout: Number.MAX_SAFE_INTEGER,
+        }),
       };
 
       if (canHaveBody) {

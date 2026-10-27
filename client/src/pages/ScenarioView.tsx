@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router';
 import CharacterCard from '../components/CharacterCard';
 import ChatPane from '../components/ChatPane';
 import LocationPanel, { type MoveSuggestion } from '../components/LocationPanel';
@@ -8,7 +8,7 @@ import { useConversationLog } from '../components/conversation_log/ConversationL
 import { useMapModal } from '../components/MapModalContext';
 import { useSettingsModal } from '../components/settings/SettingsModalContext';
 import { getDirectedRelationship } from '../engine/relationship';
-import type { Character, CharacterPair, CharacterRelationships, WorldMapLocation } from '../engine/types';
+import type { Character, CharacterPair, WorldMapLocation } from '../engine/types';
 import { assertNonNullish } from '../errors/application_error';
 import {
   useActiveChatParticipants,
@@ -19,7 +19,10 @@ import { useScenarioStore } from '../state/scenario_store.js';
 import { useMapStore } from '../state/map_store.js';
 import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
-import { useScenarioCharacterRelationshipStore } from '../state/scenario_character_relationship_store.js';
+import {
+  useCachedCharacterRelationships,
+  useScenarioCharacterRelationshipStore,
+} from '../state/scenario_character_relationship_store.js';
 import { useCharacterGroupStore } from '../state/character_group_store.js';
 import { useTemporalContextStore } from '../state/temporal_context_store.js';
 import { getUserMovementSuggestion } from '../engine/character_schedule/get_scheduled_move';
@@ -64,7 +67,7 @@ export default function ScenarioView() {
     currentTurnCharacterId !== undefined && currentTurnCharacterId !== scenario?.userCharacterId;
   const canSubmitUserTurn = isUserTurn && !hasActiveChatSession;
   const previousUserIdRef = useRef<string | null>(null);
-  const [visibleRelationships, setVisibleRelationships] = useState<CharacterRelationships>({});
+  const visibleRelationships = useCachedCharacterRelationships();
 
   useEffect(() => {
     if (!scenarioId) {
@@ -156,7 +159,6 @@ export default function ScenarioView() {
 
   useEffect(() => {
     if (!perspectiveCharacter || charactersHere.length === 0) {
-      setVisibleRelationships({});
       return;
     }
 
@@ -165,21 +167,7 @@ export default function ScenarioView() {
       toId: perspectiveCharacter.id,
     }));
 
-    let cancelled = false;
-    const run = async () => {
-      const loaded = await getCharacterRelationships(pairs);
-      if (cancelled) {
-        return;
-      }
-
-      setVisibleRelationships(loaded);
-    };
-
-    void run();
-
-    return () => {
-      cancelled = true;
-    };
+    void getCharacterRelationships(pairs);
   }, [perspectiveCharacter?.id, charactersHere, getCharacterRelationships]);
 
   const adjacentLocations = useMemo(() => {
@@ -316,7 +304,9 @@ export default function ScenarioView() {
 
           {showNpcPhaseControls && (
             <div>
-              <div className="font-semibold mb-1">NPC turn</div>
+              <div className="font-semibold mb-1">
+                {(perspectiveCharacter.firstName + ' ' + perspectiveCharacter.lastName).trim()}'s turn
+              </div>
               <div className="flex gap-2 flex-wrap">
                 <button
                   type="button"

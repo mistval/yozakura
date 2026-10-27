@@ -4,6 +4,8 @@ function tokenizeString(value: string) {
   return value
     .toLowerCase()
     .replace(/'s/g, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();

@@ -1,8 +1,8 @@
 import * as Database from '../../backend_bridge/database.js';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { GraphCanvas } from 'reagraph';
 import { useGraphTheme } from '../../theme/graph_themes.js';
-import type { MapZone, WorldMap } from '../../engine/types.js';
+import type { MapZone, WardrobeTrigger, WorldMap } from '../../engine/types.js';
 import DeleteButton from '../ui/DeleteButton.js';
 import InfoTooltip from './../ui/InfoTooltip';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
@@ -16,6 +16,68 @@ import {
 import { assertNonNullish } from '../../errors/application_error.js';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
 import { useMapModal } from '../MapModalContext.js';
+import { useDraft } from '../../hooks/useDraft.js';
+import { formatWardrobeTriggers, parseWardrobeTriggers } from '../../engine/wardrobes.js';
+import { useMapStore } from '../../state/map_store.js';
+
+function ZoneWardrobeTriggersInput({
+  triggers,
+  onChange,
+}: {
+  triggers: WardrobeTrigger[];
+  onChange: (nextTriggers: WardrobeTrigger[]) => void;
+}) {
+  const sourceString = useMemo(() => formatWardrobeTriggers(triggers ?? []), [triggers]);
+  const [draft, setDraft] = useDraft(sourceString);
+  const [errors, setErrors] = useState<string[]>([]);
+
+  useEffect(() => {
+    setErrors([]);
+  }, [sourceString]);
+
+  const handleBlur = () => {
+    const { triggers: parsedTriggers, errors: parseErrors } = parseWardrobeTriggers(draft);
+    setErrors(parseErrors);
+    if (parseErrors.length === 0) {
+      onChange(parsedTriggers);
+      setDraft(formatWardrobeTriggers(parsedTriggers));
+    }
+  };
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        <label className="block text-sm font-medium" htmlFor="zone-wardrobe-triggers">
+          Wardrobe Triggers
+        </label>
+        <InfoTooltip
+          label="Wardrobe Triggers"
+          html='Comma-separated wardrobe triggers applied when a character in this zone begins a chat (e.g. <code>disable:*,enable:work_uniform,enable_one:work_tie</code>). Use <code>disable:*</code> to disable all wardrobes. Tokens without a command prefix default to <code>enable</code> (e.g. <code>work_uniform</code> becomes <code>enable:work_uniform</code>). For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
+        />
+      </div>
+      <input
+        id="zone-wardrobe-triggers"
+        className={`w-full border rounded-sm px-3 py-2 bg-inset ${errors.length > 0 ? 'border-red-500' : ''}`}
+        value={draft}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          if (errors.length > 0) {
+            setErrors([]);
+          }
+        }}
+        onBlur={handleBlur}
+        placeholder="e.g. disable:casual_clothes,enable:work_uniform,enable_one:work_tie"
+      />
+      {errors.length > 0 && (
+        <div className="text-xs text-red-500 space-y-0.5">
+          {errors.map((error, idx) => (
+            <div key={idx}>{error}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export type ZoneEdits = Partial<Pick<MapZone, 'name' | 'locationIds'>>;
 
@@ -29,15 +91,18 @@ function editZone(zones: MapZone[], zoneUpdate: Partial<MapZone> & Pick<MapZone,
 
 export default function MapZoneEditor({
   isGlobalContext,
-  map,
+  mapId,
   updateMap,
   mapClasses = [],
 }: {
   isGlobalContext: boolean;
-  map: WorldMap;
+  mapId: string;
   updateMap: (mutator: (prev: WorldMap) => WorldMap) => void;
   mapClasses?: string[];
 }) {
+  const map = useMapStore((s) => s.mapsById[mapId]);
+  assertNonNullish(map);
+
   const graphTheme = useGraphTheme();
   const { closeMap } = useMapModal();
   const [selectedZoneId, setSelectedZoneId] = useState<string | undefined>(undefined);
@@ -93,6 +158,7 @@ export default function MapZoneEditor({
     const newZone = Database.createPersistedObject({
       name: 'New Zone',
       locationIds: [],
+      wardrobeTriggers: [],
     });
 
     updateMap((prev) => {
@@ -118,6 +184,22 @@ export default function MapZoneEditor({
         zones: editZone(prev.zones, {
           id: editTarget.id,
           name: newName,
+        }),
+      };
+    });
+  };
+
+  const changeZoneWardrobeTriggers = (newTriggers: WardrobeTrigger[]) => {
+    assertNonNullish(selectedZone, 'No selected zone');
+
+    updateMap((prev) => {
+      const editTarget = findRequiredById(prev.zones, selectedZone.id);
+
+      return {
+        ...prev,
+        zones: editZone(prev.zones, {
+          id: editTarget.id,
+          wardrobeTriggers: newTriggers,
         }),
       };
     });
@@ -188,6 +270,11 @@ export default function MapZoneEditor({
               </div>
             </div>
 
+            <ZoneWardrobeTriggersInput
+              triggers={selectedZone.wardrobeTriggers ?? []}
+              onChange={changeZoneWardrobeTriggers}
+            />
+
             {!isGlobalContext && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -240,7 +327,7 @@ export default function MapZoneEditor({
       )}
 
       <div
-        className={`relative min-w-0 flex-1 overflow-hidden rounded-sm border border-border-default bg-inset ${mapClasses.join(' ')}`}
+        className={`relative min-w-0 flex-1 min-h-[600px] overflow-hidden rounded-sm border border-border-default bg-inset ${mapClasses.join(' ')}`}
       >
         {graph.nodes.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center text-sm text-muted">

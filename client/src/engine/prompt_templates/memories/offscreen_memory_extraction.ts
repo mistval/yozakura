@@ -1,13 +1,23 @@
 import { z } from 'zod';
-import { PromptTemplateBase } from '../prompt_template';
-import { PromptOutputParser } from '../prompt_output_parser';
-import { PromptTemplateChain } from '../prompt_template_chain';
-import { targetedConversationExecutionContextSchema } from '../prompt_template_context_fields';
+import { targetedConversationExecutionContextSchema } from '../prompt_template_context_fields.js';
+import type { PromptTemplateChainSpec } from '../template_types.js';
 
-class OffscreenMemoryExtractionSystemTemplate extends PromptTemplateBase<
-  z.infer<typeof targetedConversationExecutionContextSchema>
-> {
-  public readonly defaultTemplateString = `You will be given a conversation transcript in which <%= it.targetCharacter.firstName %> <%= it.targetCharacter.lastName %> may have been mentioned. You will also be given memories and persona information about one of the participants in the conversation, named <%= it.focusedCharacter.firstName %>. Your job is to identify the most important new information in the conversation that is relevant to <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %>. This can be any of:
+export const offscreenMemoryExtractionChainSpec: PromptTemplateChainSpec<
+  z.infer<typeof targetedConversationExecutionContextSchema>,
+  string | null
+> = {
+  templateChainId: 'gen_offscreen_learned_information',
+  defaultTitle: 'Offscreen Memory Extraction',
+  defaultDescription:
+    'Prompts for extracting information learned about a character not participating in the conversation. The parser can return null if nothing new was learned.',
+  contextSchema: targetedConversationExecutionContextSchema,
+  templates: [
+    {
+      templateId: 'offscreen_memory_extraction_system',
+      name: 'Offscreen Memory Extraction (System)',
+      description: 'System prompt for extracting a single novel offscreen memory fact from a transcript.',
+      role: 'system',
+      defaultTemplateString: `You will be given a conversation transcript in which <%= it.targetCharacter.firstName %> <%= it.targetCharacter.lastName %> may have been mentioned. You will also be given memories and persona information about one of the participants in the conversation, named <%= it.focusedCharacter.firstName %>. Your job is to identify the most important new information in the conversation that is relevant to <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %>. This can be any of:
   - Plans or desires held by <%= it.focusedCharacter.firstName %> and relevant to <%= it.targetCharacter.firstName %>.
   - Information pertaining to <%= it.targetCharacter.firstName %>'s relationship with other characters (including but not limited to <%= it.focusedCharacter.firstName %>).
   - General facts and hearsay about <%= it.targetCharacter.firstName %>.
@@ -18,25 +28,19 @@ Rules:
 - Prioritize information that provides narrative momentum, such as relationship details between <%= it.targetCharacter.firstName %> and other characters, actionable intentions between characters, plans, insights, or facts. Anything that would make for good "gossip" is valuable.
 - If the information is hearsay or inferred rather than explicit, include appropriate hedging and qualifications in the output.
 - Consider <%= it.focusedCharacter.firstName %>'s unique personality and what kind of information they might want to take into their next conversation with or about <%= it.targetCharacter.firstName %>.
-- The information must come from the conversation transcript, but you must provide sufficient context that the information can be understood without reference to the conversation transcript.
+- The information must come from the conversation transcript, but you must provide sufficient context that the information can be understood without reference to the conversation transcript. Be clear about how the information relates to <%= it.targetCharacter.firstName %>.
+- Write the information in first person from <%= it.focusedCharacter.firstName %>'s perspective.
 
 Output format:
 - Output a single plain string containing only the information.
-- If there is no relevant novel information, output exactly: NONE`;
-  public readonly contextSchema = targetedConversationExecutionContextSchema;
-
-  public readonly templateName = 'Offscreen Memory Extraction (System)';
-  public readonly templateDescription =
-    'System prompt for extracting a single novel offscreen memory fact from a transcript.';
-  public readonly templateId = 'offscreen_memory_extraction_system';
-  public readonly templateSettings = [];
-  public readonly role = 'system';
-}
-
-class OffscreenMemoryExtractionUserTemplate extends PromptTemplateBase<
-  z.infer<typeof targetedConversationExecutionContextSchema>
-> {
-  public readonly defaultTemplateString = `Here is <%= it.focusedCharacter.firstName %>'s persona:
+- If there is no relevant novel information, output exactly: NONE`,
+    },
+    {
+      templateId: 'offscreen_memory_extraction_user',
+      name: 'Offscreen Memory Extraction (User)',
+      description: 'User prompt carrying persona, transcript, and current memory context.',
+      role: 'user',
+      defaultTemplateString: `Here is <%= it.focusedCharacter.firstName %>'s persona:
 <persona>
 <%= it.focusedCharacter.internalDescription %>
 
@@ -54,39 +58,17 @@ Here is the conversation transcript:
 
 </transcript>
 
-Return the new piece of information you identified in the transcript. Alternatively, you may return "NONE" only if you could not identify any new information in the transcript.`;
-  public readonly contextSchema = targetedConversationExecutionContextSchema;
-
-  public readonly templateName = 'Offscreen Memory Extraction (User)';
-  public readonly templateDescription =
-    'User prompt carrying persona, transcript, and current memory context.';
-  public readonly templateId = 'offscreen_memory_extraction_user';
-  public readonly templateSettings = [];
-  public readonly role = 'user';
-}
-
-const offscreenMemoryExtractionSystemTemplate = new OffscreenMemoryExtractionSystemTemplate();
-const offscreenMemoryExtractionUserTemplate = new OffscreenMemoryExtractionUserTemplate();
-
-export const offscreenMemoryExtractionChainGroup = new PromptTemplateChain({
-  templateChainId: 'gen_offscreen_learned_information',
-  templateChainTitle: 'Offscreen Memory Extraction',
-  templateChainDescription:
-    'Prompts for extracting information learned about a character not participating in the conversation. The parser can return null if nothing new was learned.',
-  contextSchema: targetedConversationExecutionContextSchema,
-  templates: [
-    { template: offscreenMemoryExtractionSystemTemplate },
-    { template: offscreenMemoryExtractionUserTemplate },
+Return the new piece of information you identified in the transcript. Alternatively, you may return "NONE" only if you could not identify any new information in the transcript.`,
+    },
   ],
-  parser: new PromptOutputParser<z.infer<typeof targetedConversationExecutionContextSchema>, string | null>(
-    `async (response, it) => {
+  parser: {
+    defaultParserSource: `async (response, it) => {
   if (response.includes('NONE')) {
     return null;
   }
     
   return response;
 }`,
-    'offscreen_memory_extraction_parser',
-    z.union([z.string(), z.null()])
-  ),
-});
+    parserOutputSchema: z.union([z.string(), z.null()]),
+  },
+};

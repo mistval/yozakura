@@ -32,6 +32,10 @@ export function applyLazyFamiliarityDecay(
   relationship: CharacterRelationship,
   currentTurnNumber: number
 ): CharacterRelationship {
+  if (relationship.lastProcessedTurn === currentTurnNumber) {
+    return relationship;
+  }
+
   const lastProcessedTurn =
     relationship.lastProcessedTurn === -1 ? currentTurnNumber : relationship.lastProcessedTurn;
 

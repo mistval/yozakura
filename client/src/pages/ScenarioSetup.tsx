@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import CharacterSelectionGrid from '../components/CharacterSelectionGrid.js';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
 import * as Database from '../backend_bridge/database.js';

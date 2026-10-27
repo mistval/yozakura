@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
-import { createContext, useContext, useMemo, useState } from 'react';
-import { NumberParam, StringParam, useQueryParams } from 'use-query-params';
-import { FlagParam } from '../../hooks/useModalQueryParam.js';
+import { createContext, useCallback, useContext, useMemo } from 'react';
+import { useQueryParams } from '../../util/queryParams.js';
 
 type ShowConversationLogParams = {
   conversationId?: string;
@@ -9,7 +8,6 @@ type ShowConversationLogParams = {
 };
 
 type ConversationLogContextType = {
-  launchParams: ShowConversationLogParams | undefined;
   open: boolean;
   routePage: number;
   routeConversationId: string | undefined;
@@ -20,7 +18,6 @@ type ConversationLogContextType = {
   setConversationLogPage: (page: number) => void;
   openConversationDetail: (entryId: string) => void;
   showConversationLog: (params?: ShowConversationLogParams) => void;
-  clearConversationLogParams: () => void;
 };
 
 const ConversationLogContext = createContext<ConversationLogContextType | undefined>(undefined);
@@ -31,59 +28,55 @@ function sanitizePage(page?: number | undefined) {
 }
 
 export function ConversationLogProvider({ children }: { children: ReactNode }) {
-  const [params, setParams] = useQueryParams({
-    conversationlog: FlagParam,
-    cl_conversation: StringParam,
-    cl_page: NumberParam,
-  });
+  const [params, setParams] = useQueryParams();
 
-  const [launchParams, setLaunchParams] = useState<ShowConversationLogParams | undefined>(undefined);
-
-  const open = params.conversationlog ?? false;
-  const routeConversationId = params.cl_conversation ?? undefined;
-  const routePage = sanitizePage(params.cl_page ?? undefined);
+  const open = params.has('conversationlog') && params.get('conversationlog') !== 'false';
+  const routeConversationId = params.get('cl_conversation') ?? undefined;
+  const rawPage = params.get('cl_page');
+  const routePage = sanitizePage(rawPage ? Number(rawPage) : undefined);
   const showBackButton = Boolean(routeConversationId);
 
-  const showConversationLog = (incoming?: ShowConversationLogParams) => {
-    const next = incoming || {};
-    setLaunchParams(next);
-    setParams({
-      conversationlog: true,
-      cl_conversation: next.conversationId ?? undefined,
-      cl_page: next.page ? sanitizePage(next.page) : sanitizePage(routePage),
-    });
-  };
+  const showConversationLog = useCallback(
+    (incoming?: ShowConversationLogParams) => {
+      const next = incoming || {};
+      setParams({
+        conversationlog: true,
+        cl_conversation: next.conversationId ?? undefined,
+        cl_page: next.page ? sanitizePage(next.page) : sanitizePage(routePage),
+      });
+    },
+    [setParams, routePage]
+  );
 
-  const clearConversationLogParams = () => {
-    setLaunchParams(undefined);
-  };
-
-  const closeConversationLog = () => {
-    setLaunchParams(undefined);
+  const closeConversationLog = useCallback(() => {
     setParams({
-      conversationlog: undefined as unknown as boolean,
+      conversationlog: undefined,
       cl_conversation: undefined,
       cl_page: undefined,
     });
-  };
+  }, [setParams]);
 
-  const backToConversationLog = () => {
+  const backToConversationLog = useCallback(() => {
     setParams({ cl_conversation: undefined, cl_page: routePage });
-  };
+  }, [setParams, routePage]);
 
-  const setConversationLogPage = (page: number) => {
-    setParams({ cl_page: sanitizePage(page) });
-  };
+  const setConversationLogPage = useCallback(
+    (page: number) => {
+      setParams({ cl_page: sanitizePage(page) });
+    },
+    [setParams]
+  );
 
-  const openConversationDetail = (entryId: string) => {
-    setParams({ cl_conversation: entryId });
-  };
+  const openConversationDetail = useCallback(
+    (entryId: string) => {
+      setParams({ cl_conversation: entryId });
+    },
+    [setParams]
+  );
 
   const value = useMemo(
     () => ({
-      launchParams,
       showConversationLog,
-      clearConversationLogParams,
       open,
       routePage,
       routeConversationId,
@@ -94,7 +87,18 @@ export function ConversationLogProvider({ children }: { children: ReactNode }) {
       setConversationLogPage,
       openConversationDetail,
     }),
-    [launchParams, open, routeConversationId, routePage, showBackButton]
+    [
+      open,
+      routeConversationId,
+      routePage,
+      showBackButton,
+      params,
+      showConversationLog,
+      closeConversationLog,
+      backToConversationLog,
+      setConversationLogPage,
+      openConversationDetail,
+    ]
   );
 
   return <ConversationLogContext.Provider value={value}>{children}</ConversationLogContext.Provider>;

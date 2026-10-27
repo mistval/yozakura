@@ -7,6 +7,7 @@ import { useActiveChatParticipants, useTurnMachineStore } from '../../state/turn
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
+import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
 
 interface CharacterChatSettingsProps {
   open: boolean;
@@ -25,6 +26,7 @@ export default function CharacterChatSettings({
   const participants = useActiveChatParticipants();
   const chatInstructionsByCharacterId = useTurnMachineStore((state) => state.chatInstructionsByCharacterId);
   const { showCharacterOverview } = useCharacterOverview();
+  const isCharacterSyncing = useIsEntityInDeferredSync(settingsCharacterId);
 
   if (!settingsCharacterId || !scenario) {
     return undefined;
@@ -96,7 +98,8 @@ export default function CharacterChatSettings({
             <ImplicitWardrobeEditor
               wardrobes={character.wardrobes}
               onChange={persistWardrobes}
-              showEnabledToggle
+              disabled={isCharacterSyncing}
+              enableNewWardrobes={true}
             />
 
             <button

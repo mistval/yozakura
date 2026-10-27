@@ -1,20 +1,32 @@
 import { z } from 'zod';
-import { PromptTemplateBase } from '../prompt_template';
-import { PromptOutputParser } from '../prompt_output_parser';
-import { PromptTemplateChain } from '../prompt_template_chain';
-import { focusedConversationExecutionContextSchema } from '../prompt_template_context_fields';
+import { focusedConversationExecutionContextSchema } from '../prompt_template_context_fields.js';
+import type { PromptTemplateChainSpec } from '../template_types.js';
 
-class ChatSystemPromptTemplate extends PromptTemplateBase<
-  z.infer<typeof focusedConversationExecutionContextSchema>
-> {
-  public defaultTemplateString = `<% const otherParticipants = it.participants.filter((p) => p.id !== it.focusedCharacter.id); %>
+export const chatSystemPromptChainSpec: PromptTemplateChainSpec<
+  z.infer<typeof focusedConversationExecutionContextSchema>,
+  string
+> = {
+  templateChainId: 'gen_npc_response',
+  defaultTitle: 'Chat System Prompt',
+  defaultDescription:
+    'This template group controls the leading and trailing system prompts for NPC chat responses.',
+  contextSchema: focusedConversationExecutionContextSchema,
+  templates: [
+    {
+      templateId: 'chat_system_prompt',
+      name: 'Chat System Prompt',
+      description:
+        'This template controls the initial system prompt for the speaker. This prompt sits at the top of the completions prompt chain and is re-computed for every message, so it can change dynamically as the conversation evolves. ',
+      role: 'system',
+      defaultTemplateString: `<% const otherParticipants = it.participants.filter((p) => p.id !== it.focusedCharacter.id); %>
 <% if (otherParticipants.length > 1) { %>
-<%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> is currently having a group chat with several other characters: <%= otherParticipants.map((p) => p.firstName + ' ' + p.lastName).join(', ') %>.
+<%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> is currently having a group interaction with several other characters: <%= otherParticipants.map((p) => p.firstName + ' ' + p.lastName).join(', ') %>.
 <% } else if (otherParticipants.length) { %>
-<%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> is currently having a one-on-one chat with <%= otherParticipants[0].firstName + ' ' + otherParticipants[0].lastName %>.
+<%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> is currently having a one-on-one interaction with <%= otherParticipants[0].firstName + ' ' + otherParticipants[0].lastName %>.
 <% } %>
   
-You are roleplaying as <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> in a <%= it.chatMedium === 'in_person' ? 'conversation' : 'text messaging chat (the participants are in different physical locations)' %>. <%= it.focusedCharacter.firstName %>'s persona description:
+You are simulating <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> in a <%= it.chatMedium === 'in_person' ? 'face-to-face encounter' : 'text messaging exchange (the participants are in different physical locations)' %>.
+<%= it.focusedCharacter.firstName %>'s core identity and behavioral law:
 <persona>
 <%= it.focusedCharacter.internalDescription %>
 
@@ -48,14 +60,12 @@ What <%= it.focusedCharacter.firstName %> knows about <%= p.firstName %> <%= p.l
 <% } %>
 <% } %>
 
-<% if (otherParticipants.length === 1) { %>
 <% const relationship = await it.getRelationship(it.focusedCharacter.id, otherParticipants[0].id); %>
-Here is a goal that <%= it.focusedCharacter.firstName %> wants to discuss with <%= otherParticipants[0].firstName %> if the opportunity arises:
+Here is a goal that <%= it.focusedCharacter.firstName %> has towards <%= otherParticipants[0].firstName %>:
 <goal>
-<%= relationship?.nextConversationGoal || it.focusedCharacter.firstName + ' is interested in meeting ' + otherParticipants[0].firstName + '.' %>
+<%= relationship?.nextConversationGoal || it.focusedCharacter.firstName + ' is encountering ' + otherParticipants[0].firstName + ' for the first time due to shared proximity. ' + it.focusedCharacter.firstName + ' should try to form a first impression of ' + otherParticipants[0].firstName + '. React to ' + otherParticipants[0].firstName + ' strictly according to ' + it.focusedCharacter.firstName + "'s persona, current mood, and personal goals."  %>
 
 </goal>
-<% } %>
 
 The setting:
 <setting>
@@ -98,93 +108,63 @@ Your instructions:
 <instructions>
 - <%= isInitialMessage ? 'Write a proactive first message in the conversation as ' + it.focusedCharacter.firstName + ' in first person perspective' : 'Write the next response as ' + it.focusedCharacter.firstName + ' in first person perspective' %>
 
+- Stay in character as <%= it.focusedCharacter.firstName %> and make sure to behave as they would.
 - <%= it.chatMedium === 'in_person'
   ? 'Be concise. Output no more than three sentences.'
-  : 'Text messaging style (concise, casual, abbreviated, use emojis if consistent with ' + it.focusedCharacter.firstName + "'s persona). Be concise. Output no more than three sentences." %>
+  : 'Text messaging style. Be concise. Output no more than three sentences.' %>
 
 - Use quotes for speech and asterisks for actions and internal speech.
 - Be aware that other characters' internal speech is not directly known to your character.
-- Avoid repetition.
-<% if (it.chatInstructions) { %>
+- Be creative and move the conversation forward in a way that's aligned with <%= it.focusedCharacter.firstName %>'s personality and goals. Be willing to take initiative if doing so is in character.
+- Treat <persona> and <personal_memories_and_goals> as absolute law. You have your own agency, biases, and mood and your goal is to simulate <%= it.focusedCharacter.firstName %> faithfully.
+<% if (it.chatInstructions && it.conversationMessages.length === 0) { %>
 - <%= it.chatInstructions %>
 <% } %>
-<% if (it.focusedCharacterChatInstructions) { %>
+<% if (it.focusedCharacterChatInstructions && it.conversationMessages.length === 0) { %>
 - <%= it.focusedCharacterChatInstructions %>
 <% } %>
-</instructions>`;
-
-  public readonly contextSchema = focusedConversationExecutionContextSchema;
-  public readonly templateName = 'Chat System Prompt';
-  public readonly templateId = 'chat_system_prompt';
-  public readonly templateSettings = [];
-  public readonly templateDescription =
-    'This template controls the initial system prompt for the speaker. This prompt sits at the top of the completions prompt chain and is re-computed for every message, so it can change dynamically as the conversation evolves. ';
-  public readonly role = 'system';
-}
-
-class FinalInstructionsPromptTemplate extends PromptTemplateBase<
-  z.infer<typeof focusedConversationExecutionContextSchema>
-> {
-  public readonly defaultTemplateString = `Your instructions:
+</instructions>`,
+    },
+    {
+      templateId: 'final_instructions_prompt',
+      name: 'Final Instructions Prompt',
+      description:
+        'Final system instruction block appended at the end of the completions prompt chain before generating a character reply. If no message has been sent in the chat yet, this is NOT appended.',
+      role: 'system',
+      defaultTemplateString: `Your instructions:
 <instructions>
 - <%= it.conversationMessages.length === 0
   ? 'Write a proactive first message in the conversation as ' + it.focusedCharacter.firstName + ' in first person perspective.'
   : 'Write the next response as ' + it.focusedCharacter.firstName + ' in first person perspective.' %>
 
+- Stay in character as <%= it.focusedCharacter.firstName %> and make sure to behave as they would.
 - <%= it.chatMedium === 'in_person'
   ? 'Be concise. Output no more than three sentences.'
-  : 'Text messaging style (concise, casual, abbreviated, use emojis if consistent with ' + it.focusedCharacter.firstName + "'s persona). Be concise. Output no more than three sentences." %>
-  
+  : 'Text messaging style. Be concise. Output no more than three sentences.' %>
+
 - Use quotes for speech and asterisks for actions and internal speech.
 - Be aware that other characters' internal speech is not directly known to your character.
-- Avoid repetition.
+- Be creative and move the conversation forward in a way that's aligned with <%= it.focusedCharacter.firstName %>'s personality and goals. Be willing to take initiative if doing so is in character.
+- Treat <persona> and <personal_memories_and_goals> as absolute law. You have your own agency, biases, and mood and your goal is to simulate <%= it.focusedCharacter.firstName %> faithfully.
 <% if (it.chatInstructions) { %>
 - <%= it.chatInstructions %>
 <% } %>
 <% if (it.focusedCharacterChatInstructions) { %>
 - <%= it.focusedCharacterChatInstructions %>
 <% } %>
-</instructions>`;
-  public readonly contextSchema = focusedConversationExecutionContextSchema;
-  public readonly templateName = 'Final Instructions Prompt';
-  public readonly templateDescription =
-    'Final system instruction block appended at the end of the completions prompt chain before generating a character reply. If no message has been sent in the chat yet, this is NOT appended.';
-  public readonly templateId = 'final_instructions_prompt';
-  public readonly templateSettings = [];
-  public readonly role = 'system';
-}
-
-class ChatSystemUserNudgePrompt extends PromptTemplateBase<
-  z.infer<typeof focusedConversationExecutionContextSchema>
-> {
-  public readonly defaultTemplateString = '';
-  public readonly contextSchema = focusedConversationExecutionContextSchema;
-  public readonly templateName = 'User Nudge Prompt';
-  public readonly templateDescription =
-    'Some models (such as deepseek/deepseek-v4-flash) hate when a system prompt is the most recent message they receive. This will result in frequent "Empty LLM response" errors. If you see this happening (or otherwise suspect you\'re working with a model that behaves this way), try putting a short instruction message in here like: "Respond in character as <%= it.focusedCharacter.firstName %>". Anything you enter here will be appended as a user message after the system message. If you leave this empty, no user message wil be appended.';
-  public readonly templateId = 'chat_system_user_nudge_prompt';
-  public readonly templateSettings = [];
-  public readonly role = 'user';
-}
-
-const finalInstructionsPromptTemplate = new FinalInstructionsPromptTemplate();
-const chatSystemPromptTemplate = new ChatSystemPromptTemplate();
-const chatSystemUserNudgePrompt = new ChatSystemUserNudgePrompt();
-
-export const chatSystemPromptChain = new PromptTemplateChain({
-  templateChainId: 'gen_npc_response',
-  templateChainTitle: 'Chat System Prompt',
-  templateChainDescription:
-    'This template group controls the leading and trailing system prompts for NPC chat responses.',
-  contextSchema: focusedConversationExecutionContextSchema,
-  templates: [
-    { template: chatSystemPromptTemplate },
-    { template: finalInstructionsPromptTemplate },
-    { template: chatSystemUserNudgePrompt },
+</instructions>`,
+    },
+    {
+      templateId: 'chat_system_user_nudge_prompt',
+      name: 'User Nudge Prompt',
+      description:
+        'Some models (such as deepseek/deepseek-v4-flash) hate when a system prompt is the most recent message they receive. This will result in frequent "Empty LLM response" errors. If you see this happening (or otherwise suspect you\'re working with a model that behaves this way), try putting a short instruction message in here like: "[Instructions: Respond in character as <%= it.focusedCharacter.firstName %>]". Anything you enter here will be appended as a user message after the system message. If you leave this empty, no user message wil be appended.',
+      role: 'user',
+      defaultTemplateString: '[Instructions: Respond in character as <%= it.focusedCharacter.firstName %>]',
+    },
   ],
-  parser: new PromptOutputParser<z.infer<typeof focusedConversationExecutionContextSchema>, string>(
-    'async (response, it) => response',
-    'chat_system_prompt_parser',
-    z.string()
-  ),
-});
+  parser: {
+    defaultParserSource: 'async (response, it) => response',
+    parserOutputSchema: z.string(),
+  },
+};

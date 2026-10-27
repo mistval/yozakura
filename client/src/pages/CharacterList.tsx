@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import CharacterCard from '../components/CharacterCard';
 import BulkImportCharactersModal from '../components/BulkImportCharactersModal';
 import { useGlobalCharactersStore } from '../state/global_character_store';

@@ -21,6 +21,8 @@ export const settingsTooltips = {
     'When enabled, generated image prompts open in an editor before the request is sent to the image API. When disabled, prompts are dispatched immediately without an opportunity to edit. This setting does not apply to auto image, which is always fully automatic.',
   'image.autoRate':
     'Chance that each new chat message automatically generates an image. <strong>0</strong> disables auto image and <strong>100</strong> triggers on every message.',
+  'image.autoTemplateWeights':
+    'Relative weights (<strong>0</strong> to <strong>100</strong>) controlling how often each image prompt template is chosen when auto image triggers. Weights are proportional rather than percentages—if all templates are set to the same value, they have an equal chance of triggering.',
   'image.autoNpcOnly':
     'When enabled, auto image runs only for NPC-only chats. If the user is a chat participant, auto image will not trigger and images can only be generated via the Image button.',
   'image.width': 'Target width (in pixels) for generated chat images.',
@@ -68,7 +70,7 @@ export const settingsTooltips = {
   speakerSelectionMode:
     '<strong>Round Robin</strong> rotates speakers in a consistent order. <strong>Intelligent</strong> uses LLM-based moderation to choose who speaks next.',
   'behavior.pauseAtNpcChatStart':
-    'When enabled, every NPC-only chat begins paused with control handed to you, so you can steer it message-by-message (choose who speaks, edit, delete, or redo messages) before letting it run. Press <strong>Start Chat</strong> / <strong>Resume</strong> in the chat to let the NPCs continue on their own.',
+    'When enabled, every NPC-initiated chat begins paused with control handed to you, so you can control it fully (cancel the conversation, choose who speaks, edit, delete, or redo messages, etc). Press <strong>Start Chat</strong> / <strong>Resume</strong> in the chat to continue automatically.',
   'npc.freedomOfMovement':
     "When enabled, movement and conversation do not consume the user's turn. Your turn ends only when you press <strong>Wait</strong>.",
   'npc.onlyChatDelay':

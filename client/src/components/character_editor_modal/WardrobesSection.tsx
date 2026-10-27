@@ -4,7 +4,7 @@ import InfoTooltip from '../ui/InfoTooltip';
 import { useCharacterEditorModal } from './CharacterEditorModalContext';
 
 export default function WardrobesSection() {
-  const { character, loadingButton, isBusy, setCharacterField, generateWardrobeAt, isGlobalMode } =
+  const { character, loadingButton, isBusy, setCharacterField, generateWardrobeAt } =
     useCharacterEditorModal();
 
   return (
@@ -40,7 +40,6 @@ export default function WardrobesSection() {
             </button>
           )
         }
-        showEnabledToggle={!isGlobalMode}
       />
     </div>
   );

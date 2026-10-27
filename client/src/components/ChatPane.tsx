@@ -10,12 +10,13 @@ import {
   useActiveChatMedium,
   useActiveChatParticipants,
   useTurnMachineStore,
-  useChatUserLocation,
 } from '../state/turn_machine_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import ChatSettings from './chat/chat_settings.js';
 import CharacterChatSettings from './chat/character_chat_settings.js';
 import { useUserCharacter } from '../state/scenario_character_store.js';
+import ButtonOptions from './ui/ButtonOptions.js';
+import { chatSceneImageTemplatesGroup } from '../engine/prompt_templates/chat/group.js';
 
 const CHAT_PANE_WIDTH_CLASS_BY_SETTING: Record<ChatPaneWidth, string> = {
   narrow: 'w-full max-w-3xl mx-auto',
@@ -32,6 +33,9 @@ export default function ChatPane() {
   const npcChatEndMode = useSettingsStore((s) => s.npcChatEndMode);
   const intelligentChatEndMaxLength = useSettingsStore((s) => s.intelligentChatEndMaxLength);
   const intelligentChatEndGroupMaxLength = useSettingsStore((s) => s.intelligentChatEndGroupMaxLength);
+  const selectedSceneImageTemplateChainId = useSettingsStore((s) => s.selectedSceneImageTemplateChainId);
+  const setSettings = useSettingsStore((s) => s.setSettings);
+  const sceneImageChains = chatSceneImageTemplatesGroup.useChains();
   const transcript = useTurnMachineStore((state) => state.transcript);
   const chatMode = useActiveChatMedium();
   const participants = useActiveChatParticipants();
@@ -42,7 +46,6 @@ export default function ChatPane() {
   const processingMemoryStatusInfo = useTurnMachineStore((state) => state.processingMemoryStatusInfo);
   const userCharacter = useUserCharacter();
   const scenario = useScenarioStore((state) => state.activeScenario);
-  const userLocation = useChatUserLocation();
 
   const [inputIsNonEmpty, setInputIsNonEmpty] = useState(false);
   const [showChatSettings, setShowChatSettings] = useState(false);
@@ -115,6 +118,13 @@ export default function ChatPane() {
   const isPaused = userRequestedPhaseTransition === 'paused';
   const showSkipButton = participants.length > 2;
   const chatPaneWidthClass = CHAT_PANE_WIDTH_CLASS_BY_SETTING[chatPaneWidth];
+
+  const activeSceneImageChain = useMemo(() => {
+    return (
+      sceneImageChains.find((c) => c.templateChainId === selectedSceneImageTemplateChainId) ??
+      sceneImageChains[0]
+    );
+  }, [sceneImageChains, selectedSceneImageTemplateChainId]);
 
   const topBarStatus = (() => {
     let messageLimit: number | undefined;
@@ -305,7 +315,7 @@ export default function ChatPane() {
     return () => observer.disconnect();
   }, [transcriptContainerInnerRef.current]);
 
-  if (!scenario || !userLocation) {
+  if (!scenario) {
     return undefined;
   }
 
@@ -313,7 +323,7 @@ export default function ChatPane() {
 
   return (
     <div
-      className={`border rounded-sm bg-emphasized p-3 space-y-3 h-full max-h-[calc(100vh-9rem)] flex flex-col ${chatPaneWidthClass}`}
+      className={`border rounded-sm bg-emphasized p-3 space-y-3 h-full max-h-screen flex flex-col ${chatPaneWidthClass}`}
     >
       <div className="flex justify-between items-center">
         <h3 className="font-semibold">
@@ -476,8 +486,8 @@ export default function ChatPane() {
                           submitChatRequestImage(id);
                         }}
                         disabled={!isAwaitingCharacterInput}
-                        title="Retry message"
-                        aria-label="Retry message"
+                        title="Generate image"
+                        aria-label="Generate image"
                         className="px-1 h-5 w-5 flex items-center justify-center"
                       >
                         🖼️
@@ -565,13 +575,59 @@ export default function ChatPane() {
             Skip
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => submitChatRequestImage(undefined)}
+        <ButtonOptions
+          showDropdown={sceneImageChains.length > 1}
           disabled={!isAwaitingCharacterInput}
+          placement="top-end"
+          ariaLabel="Select image template"
+          button={
+            <button
+              type="button"
+              onClick={() => submitChatRequestImage(undefined)}
+              disabled={!isAwaitingCharacterInput}
+              title={
+                activeSceneImageChain
+                  ? `Generate image (${activeSceneImageChain.settingsBridge.get().title})`
+                  : 'Generate image'
+              }
+              aria-label="Generate image"
+              className="px-2"
+            >
+              🖼️
+            </button>
+          }
         >
-          Image
-        </button>
+          <div className="w-56 space-y-2 select-none">
+            <div className="pb-1.5 border-b border-border-default">
+              <span className="text-xs font-semibold text-secondary-strong">Image Template</span>
+            </div>
+            <div className="space-y-1.5 pt-0.5">
+              {sceneImageChains.map((chain) => {
+                const chainData = chain.settingsBridge.get();
+                const isSelected =
+                  chain.templateChainId === (activeSceneImageChain?.templateChainId ?? chain.templateChainId);
+                return (
+                  <label
+                    key={chain.templateChainId}
+                    title={chainData.description || undefined}
+                    className="flex gap-2 cursor-pointer text-xs text-primary hover:text-secondary-strong"
+                  >
+                    <input
+                      type="radio"
+                      name="selected-scene-image-template"
+                      checked={isSelected}
+                      onChange={() => {
+                        setSettings({ selectedSceneImageTemplateChainId: chain.templateChainId });
+                      }}
+                      className="cursor-pointer"
+                    />
+                    <span className="truncate">{chainData.title}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        </ButtonOptions>
       </div>
 
       <ImagePromptModal

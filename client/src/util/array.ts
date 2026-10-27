@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { assertNonNullish } from '../errors/application_error';
 
-type WeightedElement<TValue> = {
+export type WeightedElement<TValue> = {
   value: TValue;
   weight: number;
 };
@@ -12,7 +12,7 @@ export function getRequiredRandomChoice<T>(arr: T[]): T {
   return sample;
 }
 
-function weightedRandomChoice<TValue>(weightMap: WeightedElement<TValue>[]): TValue {
+export function weightedRandomChoice<TValue>(weightMap: WeightedElement<TValue>[]): TValue {
   const total = weightMap.reduce((sum, el) => sum + el.weight, 0);
   if (total === 0) {
     throw new Error('Total weight is zero, cannot make a weighted random choice.');
@@ -47,6 +47,25 @@ export function trimNewestByCreatedAt<T extends { createdAt: string }>(items: T[
   return [...items]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, max);
+}
+
+export function concatUniqueByIds<TElementType extends { id: string }>(
+  arr: TElementType[],
+  newElements: TElementType[]
+) {
+  const newElementsById = new Map(newElements.map((e) => [e.id, e]));
+
+  return arr
+    .map((el) => {
+      const replacement = newElementsById.get(el.id);
+      if (replacement) {
+        newElementsById.delete(el.id);
+        return replacement;
+      }
+
+      return el;
+    })
+    .concat([...newElementsById.values()]);
 }
 
 export function concatUniqueById<TElementType extends { id: string }>(

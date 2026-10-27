@@ -50,7 +50,7 @@ export default function DeleteButton({
         title={confirmTitle}
         message={confirmMessage}
         confirmLabel={confirmLabel}
-        confirmDisabled={busy}
+        confirmDisabled={busy || disabled}
         onConfirm={() => void handleConfirm()}
         onClose={() => setOpen(false)}
       />

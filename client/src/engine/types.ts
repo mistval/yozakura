@@ -71,8 +71,9 @@ export const wardrobeSchema = basePersistedObjectSchema
       description:
         "Whether this wardrobe entry is currently enabled for the character. Enabled wardrobes are included in the character description for image generation and can influence the character's appearance in generated content. ",
     }),
-    autoSelectGroup: z.string().meta({
-      description: `An optional identifier for grouping wardrobe entries. If multiple wardrobe entries share the same non-empty autoSelectGroup value, only one of them will be enabled at a time by the system (though the user can still enable multiple if they wish to). This is useful for mutually exclusive options like different outfits or facial expressions.`,
+    tags: z.array(z.string()).meta({
+      description:
+        'An array of tags associated with this wardrobe entry. Can include namespaced tags like "daily_autoselect:<group>" for grouping wardrobes where only one wardrobe from each group is randomly selected per day.',
     }),
     autoRevert: z.boolean().meta({
       description: `If true, changes to the enabled state of this wardrobe during a chat will be reverted after the chat ends. This is useful for temporary states like "surprised expression" that should be turned off again after the conversation.`,
@@ -188,9 +189,20 @@ export const ephemeralLocationSchema = worldMapLocationSchema.extend({
 
 export type EphemeralLocation = z.infer<typeof ephemeralLocationSchema>;
 
+export const wardrobeTriggerCommandSchema = z.enum(['disable', 'enable', 'enable_one']);
+export type WardrobeTriggerCommand = z.infer<typeof wardrobeTriggerCommandSchema>;
+
+export const wardrobeTriggerSchema = z.object({
+  command: wardrobeTriggerCommandSchema,
+  tag: z.string().min(1),
+});
+
+export type WardrobeTrigger = z.infer<typeof wardrobeTriggerSchema>;
+
 export const mapZoneSchema = basePersistedObjectSchema.extend({
   name: z.string(),
   locationIds: z.array(z.string()),
+  wardrobeTriggers: z.array(wardrobeTriggerSchema),
 });
 
 export type MapZone = z.infer<typeof mapZoneSchema>;

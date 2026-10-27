@@ -1,7 +1,7 @@
 import { assert, assertNonNullish } from '../../errors/application_error';
 import { chatCompletion } from '../llm.js';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry.js';
-import { buildFullPrompt, generateChatImage } from '../image_gen.js';
+import { generateChatImage } from '../image_gen.js';
 import {
   buildChatModeratorContext,
   buildConversationEndJudgeContext,
@@ -12,6 +12,7 @@ import { useSettingsStore, type SpeakerSelectionMode } from '../../state/setting
 import * as Database from '../../backend_bridge/database.js';
 import type { Character, ChatMessage, EphemeralLocation, StoredConversation } from '../types';
 import { getRequiredActiveScenario } from '../../state/scenario_store.js';
+import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { ConversationTranscript } from './transcript';
@@ -22,17 +23,25 @@ import {
   useTurnMachineStore,
   type StartChatSessionArgs,
 } from '../../state/turn_machine_store';
-import { chatSceneImageChainGroup } from '../prompt_templates/chat/chat_scene_image';
-import { moderationNextSpeakerTemplatesGroup } from '../prompt_templates/chat/moderation_next_speaker';
-import { conversationEndJudgeTemplatesGroup } from '../prompt_templates/chat/conversation_end_judge';
-import { chatSystemPromptChain } from '../prompt_templates/chat/chat_system_prompt';
+import {
+  chatSceneImageTemplatesGroup,
+  chatSystemPromptChain,
+  conversationEndJudgeTemplatesChain,
+  moderationNextSpeakerTemplatesChain,
+} from '../prompt_templates/chat/group.js';
 import { newId } from '../../util/id';
-import { EndOfChatUpdateAccumulator } from './end_of_chat_update_accumulator';
-import { buildConversationStateUpdates, generateCharacterEndOfChatUpdates } from './post_chat_memories';
+import {
+  buildConversationStateUpdates,
+  generateCharacterEndOfChatUpdates,
+  lockEntitiesForEndOfChatUpdates,
+} from './post_chat_memories';
 import { wait } from '../../util/promise';
-import { getRequiredRandomChoice } from '../../util/array';
+import { getRequiredRandomChoice, weightedRandomChoice } from '../../util/array';
+import { clamp } from '../../util/numeric.js';
 import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
 import { rethrowSignalException } from '../scenario_loop/flow_control';
+import type { PromptTemplateChain } from '../prompt_templates/prompt_template_chain.js';
+import type { PromptExecutionContext } from '../prompt_templates/prompt_template_context_fields.js';
 
 export class ChatCoordinator {
   public static async prepareChatStart(participantIds: string[]): Promise<StartChatSessionArgs> {
@@ -110,7 +119,7 @@ export class ChatCoordinator {
     return this.turnMachineStore().doWithState('judging_conversation_end', () => {
       return withPhaseTransitionGate(
         async (abortSignal) => {
-          return conversationEndJudgeTemplatesGroup.renderAndExecute(
+          return conversationEndJudgeTemplatesChain.renderAndExecute(
             await buildConversationEndJudgeContext(fromPerspectiveId, lengthParameters),
             { abortSignal }
           );
@@ -140,7 +149,7 @@ export class ChatCoordinator {
     this.turnMachineStore().setStateAwaitingCharacterInput();
   }
 
-  public static setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation) {
+  public static setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation | undefined) {
     this.turnMachineStore().setEphemeralLocation(setter);
   }
 
@@ -208,20 +217,34 @@ export class ChatCoordinator {
     return participant.id;
   }
 
+  private static getSelectedSceneImageChain(): PromptTemplateChain<PromptExecutionContext, string> {
+    const chains = chatSceneImageTemplatesGroup.getChains();
+    const selectedChainId = useSettingsStore.getState().selectedSceneImageTemplateChainId;
+    const found = chains.find((chain) => chain.templateChainId === selectedChainId);
+    const chosen = found ?? chains[0];
+    assertNonNullish(chosen, 'No scene image chain available');
+    return chosen;
+  }
+
   public static async buildSceneImageFullPrompt(
     primaryCharacterId: string,
-    opts?: { upToMessageId?: string | undefined }
+    opts?: {
+      upToMessageId?: string | undefined;
+      chain?: PromptTemplateChain<PromptExecutionContext, string> | undefined;
+    }
   ) {
     return this.turnMachineStore().doWithState('generating_image', async () => {
       return withPhaseTransitionGate(
         async (abortSignal) => {
           const primaryCharacter = this.getCharacterById(primaryCharacterId);
-          const generatedScenePrompt = await chatSceneImageChainGroup.renderAndExecute(
-            await buildFocusedChatTemplateContext(primaryCharacter.id, undefined, opts),
+          const sceneImageChain = opts?.chain ?? this.getSelectedSceneImageChain();
+          assertNonNullish(sceneImageChain, 'No scene image chain available');
+          return sceneImageChain.renderAndExecute(
+            await buildFocusedChatTemplateContext(primaryCharacter.id, undefined, {
+              upToMessageId: opts?.upToMessageId,
+            }),
             { abortSignal }
           );
-
-          return buildFullPrompt(primaryCharacter, generatedScenePrompt);
         },
         { pauseBehavior: 'ignore' }
       );
@@ -256,24 +279,33 @@ export class ChatCoordinator {
     const scenario = getRequiredActiveScenario();
 
     if (!noEffect) {
-      // One shared accumulator stages every character's updates as a single source of truth;
-      // nothing is persisted until commit() runs after all characters are processed, so
-      // cancelling/crashing partway through leaves all characters and relationships untouched.
-      const accumulator = new EndOfChatUpdateAccumulator();
+      const characterStore = useScenarioCharacterStore.getState();
+      const relationshipStore = useScenarioCharacterRelationshipStore.getState();
       const characterUpdates: Array<Awaited<ReturnType<typeof generateCharacterEndOfChatUpdates>>> = [];
 
-      for (const participant of getAllActiveChatSpeakers()) {
-        if (participant.id !== this.getUserCharacter().id) {
+      try {
+        const npcSpeakers = getAllActiveChatSpeakers().filter(
+          (participant) => participant.id !== this.getUserCharacter().id
+        );
+        await lockEntitiesForEndOfChatUpdates(npcSpeakers);
+
+        for (const participant of npcSpeakers) {
           characterUpdates.push(
-            await generateCharacterEndOfChatUpdates(participant, accumulator, (statusInfo) =>
+            await generateCharacterEndOfChatUpdates(participant, (statusInfo) =>
               this.setStateProcessingMemories(statusInfo)
             )
           );
         }
-      }
 
-      // Past the cancellation point: flush all staged updates, then record the conversation.
-      await accumulator.commit();
+        await Promise.all([characterStore.commitAllChanges(), relationshipStore.commitAllChanges()]);
+      } catch (err) {
+        await Promise.all([
+          characterStore.discardPendingChanges(),
+          relationshipStore.discardPendingChanges(),
+        ]);
+
+        rethrowSignalException(err);
+      }
 
       const conversationLog: StoredConversation = Database.createPersistedObject({
         serializedTranscript: this.transcript().serialize(),
@@ -468,7 +500,7 @@ export class ChatCoordinator {
         return useTurnMachineStore.getState().doWithState('selecting_speaker', async () => {
           return withPhaseTransitionGate(
             async (abortSignal) => {
-              const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesGroup.renderAndExecute(
+              const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesChain.renderAndExecute(
                 await buildChatModeratorContext(speakerCandidates),
                 { abortSignal }
               );
@@ -554,12 +586,14 @@ export class ChatCoordinator {
       includeRemoved: true,
     });
 
-    if (participants.length === 2) {
+    const speakers = participants.filter((p) => this.transcript().hasMessagesFromCharacter(p.id));
+
+    if (speakers.length === 2) {
       const verb = getActiveChatMedium() === 'in_person' ? 'spoke to' : 'remote chatted with';
-      return `${participants[0]!.firstName} ${verb} ${participants[1]!.firstName}`;
+      return `${speakers[0]!.firstName} ${verb} ${speakers[1]!.firstName}`;
     } else {
-      const textPart = getActiveChatMedium() === 'in_person' ? '' : 'text ';
-      return `Group ${textPart}chat: ${participants.map((entry) => entry.firstName).join(', ')}`;
+      const textPart = getActiveChatMedium() === 'in_person' ? '' : 'remote ';
+      return `Group ${textPart}chat: ${speakers.map((entry) => entry.firstName).join(', ')}`;
     }
   }
 
@@ -588,7 +622,31 @@ export class ChatCoordinator {
         return;
       }
 
-      const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId);
+      const chains = chatSceneImageTemplatesGroup.getChains();
+      if (chains.length === 0) {
+        return;
+      }
+
+      let selectedChain: (typeof chains)[number];
+      if (chains.length === 1) {
+        selectedChain = chains[0]!;
+      } else {
+        const candidates = chains.map((chain) => ({
+          value: chain,
+          weight: clamp(settings.autoImageTemplateWeights[chain.templateChainId] ?? 50, 0, 100),
+        }));
+
+        const totalWeight = candidates.reduce((sum, el) => sum + el.weight, 0);
+        if (totalWeight <= 0) {
+          return;
+        }
+
+        selectedChain = weightedRandomChoice(candidates);
+      }
+
+      const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId, {
+        chain: selectedChain,
+      });
       await this.generateImageFromPrompt(fullPrompt);
     } catch (err) {
       rethrowSignalException(err);

@@ -43,7 +43,7 @@ function MoveButtons({ suggestion, adjacentLocationIds, onMove, onWait }: Locati
       .concat(adjacentLocationIds.filter((entry) => forbiddenIds.has(entry.id)));
 
     return { orderedLocations, forbiddenIds };
-  }, [suggestion]);
+  }, [suggestion, adjacentLocationIds]);
 
   return (
     <div>

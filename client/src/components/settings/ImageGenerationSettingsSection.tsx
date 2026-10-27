@@ -1,10 +1,12 @@
 import { useSettingsStore } from '../../state/settings_store.js';
 import CheckboxSettingRow from './ui/CheckboxSettingRow.js';
 import RangeNumberInput from './ui/RangeNumberInput.js';
+import ProportionalWeightSliders from './ui/ProportionalWeightSliders.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
 import { settingsTooltips } from './settings_tooltips.js';
 import CustomScriptSettings from './settingsScripts/CustomScriptSettings.js';
 import { IMAGE_SCRIPT_DESCRIPTOR, useImageScriptSelection } from './settingsScripts/imageScriptSection.js';
+import { chatSceneImageTemplatesGroup } from '../../engine/prompt_templates/chat/group.js';
 
 import { clampUnitRate, toPercent } from '../../util/numeric.js';
 
@@ -13,8 +15,10 @@ export default function ImageGenerationSettingsSection() {
   const editImagePromptsBeforeDispatch = useSettingsStore((s) => s.editImagePromptsBeforeDispatch);
   const autoImageRate = useSettingsStore((s) => s.autoImageRate);
   const autoImageNpcOnly = useSettingsStore((s) => s.autoImageNpcOnly);
+  const autoImageTemplateWeights = useSettingsStore((s) => s.autoImageTemplateWeights);
   const setSettings = useSettingsStore((s) => s.setSettings);
 
+  const sceneImageChains = chatSceneImageTemplatesGroup.useChains();
   const imageSelection = useImageScriptSelection();
 
   return (
@@ -71,6 +75,20 @@ export default function ImageGenerationSettingsSection() {
             }}
           />
         </div>
+
+        {sceneImageChains.length > 1 && autoImageRate > 0 && (
+          <ProportionalWeightSliders
+            idPrefix="image-auto-template-weight"
+            label="Auto image template weights"
+            tooltipHtml={settingsTooltips['image.autoTemplateWeights']}
+            items={sceneImageChains.map((chain) => ({
+              id: chain.templateChainId,
+              label: chain.settingsBridge.get().title,
+            }))}
+            weights={autoImageTemplateWeights}
+            onChange={(weightsPatch) => setSettings({ autoImageTemplateWeights: weightsPatch })}
+          />
+        )}
 
         <CheckboxSettingRow
           id="image-auto-npc-only"

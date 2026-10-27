@@ -3,12 +3,18 @@ import type { Character, CharacterRelationship } from '../../engine/types.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
 import { getErrorMessage } from '../../errors/error_util.js';
 import ConversationSearchList from '../conversation_log/ConversationSearchList.js';
-import { relationshipKey } from '../../engine/relationship.js';
 import { useStateRef } from '../../hooks/useStateRef.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
-import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
+import {
+  useCachedCharacterRelationship,
+  useScenarioCharacterRelationshipStore,
+} from '../../state/scenario_character_relationship_store.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { assertNonNullish } from '../../errors/application_error.js';
+import {
+  useAreAnyEntitiesInDeferredSync,
+  isEntityInDeferredSync,
+} from '../../state/ephemeral_state_helper.js';
 
 type RelationshipIds = Pick<CharacterRelationship, 'fromId' | 'toId'>;
 
@@ -16,12 +22,14 @@ type EditableRelationshipSection = {
   title: string;
   value: string;
   saveKey: RelationshipIds;
+  relationshipId: string | undefined;
 };
 
 type SummarySection = {
   title: string;
   fromId: string;
   toId: string;
+  relationshipId: string | undefined;
   summaries: CharacterRelationship['rollingPairwiseSummaries'];
 };
 
@@ -29,6 +37,7 @@ type LearnedInformationSection = {
   title: string;
   fromId: string;
   toId: string;
+  relationshipId: string | undefined;
   learnedInformations: CharacterRelationship['rollingOffscreenLearnedInformation'];
 };
 
@@ -54,14 +63,15 @@ export default function CharacterOverviewPairData({
   const charA = charactersById[idA];
   const charB = charactersById[idB];
 
-  const keyAToB = relationshipKey(idA, idB);
-  const keyBToA = relationshipKey(idB, idA);
+  const relationshipAToB = useCachedCharacterRelationship(idA, idB);
+  const relationshipBToA = useCachedCharacterRelationship(idB, idA);
+  const isPairFamiliaritySyncing = useAreAnyEntitiesInDeferredSync([
+    relationshipAToB?.id,
+    relationshipBToA?.id,
+  ]);
 
-  const [relationshipByKey, setRelationshipByKey] = useState<Record<string, CharacterRelationship>>({});
   const [relationshipLoadError, setRelationshipLoadError] = useState('');
 
-  const relationshipAToB = relationshipByKey[keyAToB];
-  const relationshipBToA = relationshipByKey[keyBToA];
   const familiarityBetween = Math.max(relationshipAToB?.familiarity || 0, relationshipBToA?.familiarity || 0);
 
   const [familiarityDraft, setFamiliarityDraft] = useState(() => Math.round(familiarityBetween));
@@ -73,26 +83,13 @@ export default function CharacterOverviewPairData({
     let cancelled = false;
 
     async function run() {
-      setRelationshipByKey({});
       setRelationshipLoadError('');
       setFamiliaritySaving(false);
       setFamiliaritySaved(false);
       setFamiliarityError('');
 
       try {
-        const [loadedAToB, loadedBToA] = await Promise.all([
-          getCharacterRelationship(idA, idB),
-          getCharacterRelationship(idB, idA),
-        ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        setRelationshipByKey({
-          [relationshipKey(loadedAToB.fromId, loadedAToB.toId)]: loadedAToB,
-          [relationshipKey(loadedBToA.fromId, loadedBToA.toId)]: loadedBToA,
-        });
+        await Promise.all([getCharacterRelationship(idA, idB), getCharacterRelationship(idB, idA)]);
       } catch (error) {
         if (!cancelled) {
           setRelationshipLoadError(getErrorMessage(error));
@@ -112,13 +109,7 @@ export default function CharacterOverviewPairData({
   }, [idA, idB, familiarityBetween]);
 
   const saveRelationshipPatch = async (saveKey: RelationshipIds, update: Partial<CharacterRelationship>) => {
-    const updated = await saveRelationshipFields(saveKey, update);
-    const key = relationshipKey(updated.fromId, updated.toId);
-
-    setRelationshipByKey((prev) => ({
-      ...prev,
-      [key]: updated,
-    }));
+    await saveRelationshipFields(saveKey, update);
   };
 
   const savePairFamiliarity = async () => {
@@ -161,12 +152,15 @@ export default function CharacterOverviewPairData({
     const pastConversationSummarySections: SummarySection[] = [];
     const offscreenLearnedInformationSections: LearnedInformationSection[] = [];
 
-    const addDirectedSections = (from: Character, to: Character) => {
+    const addDirectedSections = (
+      from: Character,
+      to: Character,
+      relationship: CharacterRelationship | undefined
+    ) => {
       if (from.id === scenario.userCharacterId) {
         return;
       }
 
-      const relationship = relationshipByKey[relationshipKey(from.id, to.id)];
       if (!relationship) {
         return;
       }
@@ -175,6 +169,7 @@ export default function CharacterOverviewPairData({
         title: `${from.firstName}'s memory of ${to.firstName}`,
         value: relationship.memory || '',
         saveKey: { fromId: from.id, toId: to.id },
+        relationshipId: relationship.id,
       });
       nextGoals.push({
         title: `${from.firstName}'s goal in next conversation with ${to.firstName}`,
@@ -183,28 +178,32 @@ export default function CharacterOverviewPairData({
           fromId: from.id,
           toId: to.id,
         },
+        relationshipId: relationship.id,
       });
       relationshipDescriptors.push({
         title: `${from.firstName} considers ${to.firstName}`,
         value: relationship.descriptor || '',
         saveKey: { fromId: from.id, toId: to.id },
+        relationshipId: relationship.id,
       });
       pastConversationSummarySections.push({
         title: `${from.firstName}'s past conversation summaries with ${to.firstName}`,
         fromId: from.id,
         toId: to.id,
+        relationshipId: relationship.id,
         summaries: relationship.rollingPairwiseSummaries || [],
       });
       offscreenLearnedInformationSections.push({
         title: `${from.firstName}'s offscreen learned information about ${to.firstName}`,
         fromId: from.id,
         toId: to.id,
+        relationshipId: relationship.id,
         learnedInformations: relationship.rollingOffscreenLearnedInformation || [],
       });
     };
 
-    addDirectedSections(charA, charB);
-    addDirectedSections(charB, charA);
+    addDirectedSections(charA, charB, relationshipAToB);
+    addDirectedSections(charB, charA, relationshipBToA);
 
     return {
       memories,
@@ -213,7 +212,7 @@ export default function CharacterOverviewPairData({
       pastConversationSummarySections,
       offscreenLearnedInformationSections: offscreenLearnedInformationSections,
     };
-  }, [charA, charB, relationshipByKey, scenario]);
+  }, [charA, charB, relationshipAToB, relationshipBToA, scenario]);
 
   if (!charA || !charB || !scenario) {
     return undefined;
@@ -237,13 +236,14 @@ export default function CharacterOverviewPairData({
               min={0}
               step={0.01}
               value={familiarityDraft}
+              disabled={familiaritySaving || isPairFamiliaritySyncing}
               onChange={(event) => {
                 setFamiliarityDraft(Math.round(Number(event.target.value)));
                 setFamiliaritySaved(false);
                 setFamiliarityError('');
               }}
               onKeyDown={(event) => {
-                if (event.key !== 'Enter' || familiaritySaving) {
+                if (event.key !== 'Enter' || familiaritySaving || isPairFamiliaritySyncing) {
                   return;
                 }
                 event.preventDefault();
@@ -256,7 +256,9 @@ export default function CharacterOverviewPairData({
               onClick={() => {
                 void savePairFamiliarity();
               }}
-              disabled={familiaritySaving || !Number.isFinite(Number(familiarityDraft))}
+              disabled={
+                familiaritySaving || !Number.isFinite(Number(familiarityDraft)) || isPairFamiliaritySyncing
+              }
             >
               {familiaritySaving ? 'Saving...' : 'Save'}
             </button>
@@ -269,6 +271,7 @@ export default function CharacterOverviewPairData({
             defaultRevealed={true}
             key={relationshipDescriptor.title}
             title={relationshipDescriptor.title}
+            disabled={isEntityInDeferredSync(relationshipDescriptor.relationshipId)}
             initialValue={relationshipDescriptor.value || ''}
             onSave={(newValue: string) =>
               saveRelationshipPatch(relationshipDescriptor.saveKey, { descriptor: newValue })
@@ -281,6 +284,7 @@ export default function CharacterOverviewPairData({
           <SpoilerSection
             key={memory.title}
             title={memory.title}
+            disabled={isEntityInDeferredSync(memory.relationshipId)}
             initialValue={memory.value || ''}
             onSave={(newValue: string) => saveRelationshipPatch(memory.saveKey, { memory: newValue })}
           >
@@ -291,6 +295,7 @@ export default function CharacterOverviewPairData({
           <SpoilerSection
             key={reason.title}
             title={reason.title}
+            disabled={isEntityInDeferredSync(reason.relationshipId)}
             initialValue={reason.value || ''}
             onSave={(newValue: string) =>
               saveRelationshipPatch(reason.saveKey, { nextConversationGoal: newValue })
@@ -315,6 +320,7 @@ export default function CharacterOverviewPairData({
                         <SpoilerSection
                           key={`${section.fromId}-${section.toId}-${summary.conversationId}-${index}`}
                           title={`Summary ${index + 1} (Turn ${summary.turnNumber})`}
+                          disabled={isEntityInDeferredSync(section.relationshipId)}
                           initialValue={summary.summary || ''}
                           onSave={(newValue: string) => {
                             const updatedSummaries = section.summaries.map((entry, entryIndex) =>
@@ -378,6 +384,7 @@ export default function CharacterOverviewPairData({
                         <SpoilerSection
                           key={learnedInformation.createdAt.toString() + index}
                           title={`Information ${index + 1} (Turn ${learnedInformation.turnNumber})`}
+                          disabled={isEntityInDeferredSync(section.relationshipId)}
                           initialValue={learnedInformation.information || ''}
                           onSave={(newValue: string) => {
                             const updatedInformations = section.learnedInformations.map(

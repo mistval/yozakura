@@ -1,16 +1,24 @@
 import { useMemo, useState } from 'react';
 import type { PromptTemplateChain } from '../../../engine/prompt_templates/prompt_template_chain.js';
-import type { PromptTemplateOverride } from '../../../state/settings_store.js';
-import { useSettingsStore } from '../../../state/settings_store.js';
 import RevertableTextSettingsGroup from '../ui/RevertableTextSettingsGroup.js';
 import TextSettingEditor from '../ui/TextSettingEditor.js';
+import SettingFieldLabel from '../ui/SettingFieldLabel.js';
 import { settingsTooltips } from '../settings_tooltips.js';
 import type { PromptExecutionContext } from '../../../engine/prompt_templates/prompt_template_context_fields.js';
 import AIAssistantInstructionsButton from '../../ui/AIAssistantInstructionsButton.js';
 
 type PromptTemplateChainEditorProps = {
   chain: PromptTemplateChain<PromptExecutionContext, unknown>;
+  canEditMetadata?: boolean | undefined;
 };
+
+function getChainTitleKey(): string {
+  return 'chainTitle';
+}
+
+function getChainDescriptionKey(): string {
+  return 'chainDescription';
+}
 
 function getTemplateBodyKey(templateId: string): string {
   return `templateBody:${templateId}`;
@@ -20,39 +28,49 @@ function getParserSourceKey(): string {
   return 'parserSource';
 }
 
-export default function PromptTemplateChainEditor({ chain }: PromptTemplateChainEditorProps) {
-  const promptParserOverrides = useSettingsStore((s) => s.promptParserOverrides);
-  const promptTemplateOverrides = useSettingsStore((s) => s.promptTemplateOverrides);
-  const setSettings = useSettingsStore((s) => s.setSettings);
+export default function PromptTemplateChainEditor({
+  chain,
+  canEditMetadata = false,
+}: PromptTemplateChainEditorProps) {
   const [isDirty, setIsDirty] = useState(false);
-
-  const parserSource = promptParserOverrides[chain.parser?.parserOverrideSettingId ?? '']?.source;
-  const resolvedParserSource = parserSource ?? chain.parser?.defaultParserSource ?? '';
+  const chainData = chain.settingsBridge.use();
+  const defaultChainData = chain.settingsBridge.getDefault();
 
   const savedValues = useMemo(() => {
     const next: Record<string, string> = {
-      [getParserSourceKey()]: resolvedParserSource,
+      [getParserSourceKey()]: chainData.parserSource ?? '',
     };
+
+    if (canEditMetadata) {
+      next[getChainTitleKey()] = chainData.title ?? '';
+      next[getChainDescriptionKey()] = chainData.description ?? '';
+    }
 
     for (const { template } of chain.templates) {
       next[getTemplateBodyKey(template.templateId)] =
-        promptTemplateOverrides[template.templateId]?.templateString ?? template.defaultTemplateString;
+        chainData.templates[template.templateId]?.templateString ?? template.defaultTemplateString;
     }
 
     return next;
-  }, [chain, resolvedParserSource, promptTemplateOverrides]);
+  }, [chain, chainData, canEditMetadata]);
 
   const defaultValues = useMemo(() => {
     const next: Record<string, string> = {
-      [getParserSourceKey()]: chain.parser?.defaultParserSource ?? '',
+      [getParserSourceKey()]: defaultChainData.parserSource ?? '',
     };
 
+    if (canEditMetadata) {
+      next[getChainTitleKey()] = defaultChainData.title ?? '';
+      next[getChainDescriptionKey()] = defaultChainData.description ?? '';
+    }
+
     for (const { template } of chain.templates) {
-      next[getTemplateBodyKey(template.templateId)] = template.defaultTemplateString;
+      next[getTemplateBodyKey(template.templateId)] =
+        defaultChainData.templates[template.templateId]?.templateString ?? template.defaultTemplateString;
     }
 
     return next;
-  }, [chain]);
+  }, [chain, defaultChainData, canEditMetadata]);
 
   const validations = useMemo(() => {
     const next: Record<string, 'eta-template' | 'js-function'> = {};
@@ -69,78 +87,44 @@ export default function PromptTemplateChainEditor({ chain }: PromptTemplateChain
   }, [chain]);
 
   const handleSave = (draftValues: Record<string, string>) => {
-    setSettings((previous) => {
-      const nextTemplateOverrides = {
-        ...previous.promptTemplateOverrides,
-      };
-      const nextParserOverrides = {
-        ...previous.promptParserOverrides,
-      };
+    let title = chainData.title;
+    let description = chainData.description;
 
-      for (const { template } of chain.templates) {
-        const nextOverride: PromptTemplateOverride = {};
-        const templateBody =
-          draftValues[getTemplateBodyKey(template.templateId)] ?? template.defaultTemplateString;
-
-        if (templateBody !== template.defaultTemplateString) {
-          nextOverride.templateString = templateBody;
-        }
-
-        if (nextOverride.templateString === undefined) {
-          nextTemplateOverrides[template.templateId] = null;
-        } else {
-          nextTemplateOverrides[template.templateId] = nextOverride;
-        }
+    if (canEditMetadata) {
+      const trimmedTitle = (draftValues[getChainTitleKey()] ?? '').trim();
+      if (!trimmedTitle) {
+        return 'Name cannot be empty.';
       }
+      title = trimmedTitle;
+      description = (draftValues[getChainDescriptionKey()] ?? '').trim();
+    }
 
-      if (chain.parser) {
-        const nextParserSource = draftValues[getParserSourceKey()] ?? chain.parser.defaultParserSource;
-        if (nextParserSource === chain.parser.defaultParserSource) {
-          nextParserOverrides[chain.parser.parserOverrideSettingId] = null;
-        } else {
-          nextParserOverrides[chain.parser.parserOverrideSettingId] = {
-            source: nextParserSource,
-          };
-        }
-      }
-
-      return {
-        promptTemplateOverrides: nextTemplateOverrides,
-        promptParserOverrides: nextParserOverrides,
-      };
+    chain.settingsBridge.set({
+      title,
+      description,
+      parserSource: draftValues[getParserSourceKey()],
+      templates: Object.fromEntries(
+        chain.templates.map(({ template }) => [
+          template.templateId,
+          {
+            templateString:
+              draftValues[getTemplateBodyKey(template.templateId)] ?? template.defaultTemplateString,
+          },
+        ])
+      ),
     });
 
     return undefined;
   };
 
   const handleRevertToDefault = () => {
-    setSettings((previous) => {
-      const nextTemplateOverrides = {
-        ...previous.promptTemplateOverrides,
-      };
-      const nextParserOverrides = {
-        ...previous.promptParserOverrides,
-      };
-
-      for (const { template } of chain.templates) {
-        nextTemplateOverrides[template.templateId] = null;
-      }
-
-      if (chain.parser) {
-        nextParserOverrides[chain.parser.parserOverrideSettingId] = null;
-      }
-
-      return {
-        promptTemplateOverrides: nextTemplateOverrides,
-        promptParserOverrides: nextParserOverrides,
-      };
-    });
+    chain.settingsBridge.resetToDefault();
   };
 
   return (
     <>
       <AIAssistantInstructionsButton
-        title={`${chain.templateChainTitle} Template Group Documentation`}
+        title={`${chainData.title} Template Group Documentation`}
         getDocumentation={() => chain.getDocumentation()}
         fileNameBase={chain.templateChainId}
         isDirty={isDirty}
@@ -157,6 +141,44 @@ export default function PromptTemplateChainEditor({ chain }: PromptTemplateChain
       >
         {({ getDraftValue, setDraftValue }) => (
           <div className="space-y-4">
+            {canEditMetadata && (
+              <section className="rounded-lg border p-4 space-y-3 bg-surface-soft">
+                <header className="space-y-1">
+                  <h4 className="text-sm font-semibold">Metadata</h4>
+                  <p className="text-sm text-secondary">
+                    Configure the display name and description for this template chain.
+                  </p>
+                </header>
+
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <SettingFieldLabel text="Name" htmlFor={`chain-title-${chain.templateChainId}`} />
+                    <input
+                      id={`chain-title-${chain.templateChainId}`}
+                      value={getDraftValue(getChainTitleKey())}
+                      onChange={(event) => setDraftValue(getChainTitleKey(), event.target.value)}
+                      placeholder="Template Chain Name"
+                      className="rounded-input"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <SettingFieldLabel
+                      text="Description"
+                      htmlFor={`chain-description-${chain.templateChainId}`}
+                    />
+                    <input
+                      id={`chain-description-${chain.templateChainId}`}
+                      value={getDraftValue(getChainDescriptionKey())}
+                      onChange={(event) => setDraftValue(getChainDescriptionKey(), event.target.value)}
+                      placeholder="Template Chain Description"
+                      className="rounded-input"
+                    />
+                  </div>
+                </div>
+              </section>
+            )}
+
             {chain.templates.map(({ template }) => (
               <section key={template.templateId} className="rounded-lg border p-4 space-y-3 bg-surface-soft">
                 <header className="space-y-1">

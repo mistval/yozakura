@@ -1,5 +1,5 @@
 import type { Character } from './types.js';
-import { createWardrobe } from './wardrobes.js';
+import { createWardrobe, DAILY_AUTOSELECT_TAG_PREFIX, formatPrefixedTag } from './wardrobes.js';
 
 const DEMO_CHARACTER_TIMESTAMP = '2026-01-01T00:00:00.000Z';
 
@@ -356,7 +356,13 @@ export const DEMO_CHARACTERS: Character[] = DEMO_CHARACTERS_RAW.map((character) 
     globalCharacterId: id,
     imagePath: `/images/character/${id}.png`,
     locationId: '',
-    wardrobes: character.clothing.map((outfit) => createWardrobe(outfit, 'default')),
+    wardrobes: character.clothing.map((outfit, i) =>
+      createWardrobe({
+        text: outfit,
+        tags: [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')],
+        enabled: i === 0,
+      })
+    ),
     createdAt: DEMO_CHARACTER_TIMESTAMP,
     updatedAt: DEMO_CHARACTER_TIMESTAMP,
     globalMemories: '',

@@ -18,7 +18,7 @@ import type {
   ConversationExecutionContext,
   FocusedConversationExecutionContext,
   GlobalExecutionContext,
-  MemoryRagExectionContext,
+  MemoryRagExecutionContext,
   ModerationNextSpeakerExecutionContext,
   ScenarioExecutionContext,
   TargetedConversationExecutionContext,
@@ -217,6 +217,7 @@ export async function buildFocusedChatTemplateContext(
     currentLocation,
     focusedCharacter: toContextCharacter(focusedCharacter),
     focusedCharacterAppearance: buildAppearanceTags(focusedCharacter),
+    imagePromptPrefix: useSettingsStore.getState().imagePromptPrefix,
     rollingConversationSummariesText: formatGlobalMemoriesForPrompt(
       toContextCharacter(focusedCharacter),
       chatTemplateContext.allCharacters
@@ -261,6 +262,8 @@ export function buildCharacterEditorContext(focusedCharacter: Character): Charac
     ...buildGlobalTemplateContext(),
     randomPersonalityTraits: generatePersonalityTraits(),
     focusedCharacter: toContextCharacter(focusedCharacter),
+    focusedCharacterAppearance: buildAppearanceTags(focusedCharacter),
+    imagePromptPrefix: useSettingsStore.getState().imagePromptPrefix,
   };
 }
 
@@ -304,7 +307,7 @@ export async function buildMemoryRagTemplateContext(
   focusedCharacter: Character,
   mentionedCharacter: Character,
   mentionedByCharacter: Character
-): Promise<MemoryRagExectionContext> {
+): Promise<MemoryRagExecutionContext> {
   return {
     ...(await buildTargetedChatTemplateContext(focusedCharacter.id, mentionedCharacter.id)),
     mentionedByCharacter: toContextCharacter(mentionedByCharacter),

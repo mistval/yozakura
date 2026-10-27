@@ -25,6 +25,7 @@ function makeMap(locations: WorldMapLocation[], zoneLocationIds: string[] = []):
         id: 'zone',
         name: 'Zone',
         locationIds: zoneLocationIds,
+        wardrobeTriggers: [],
         createdAt: '',
         updatedAt: '',
       },

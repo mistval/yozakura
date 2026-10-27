@@ -18,12 +18,15 @@ import {
 } from '../engine/settings/cascading_llm_configs.js';
 import _ from 'lodash';
 import * as Database from '../backend_bridge/database.js';
+import { templateGroupDataSchema } from '../engine/prompt_templates/template_types.js';
+import { DEFAULT_TEMPLATE_GROUP_DATA } from '../engine/prompt_templates/default_template_group_data.js';
+import {
+  DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID,
+  SPEAKER_CLOSE_UP_CHAT_SCENE_IMAGE_CHAIN_ID,
+  SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID,
+} from '../engine/prompt_templates/chat/chat_scene_image.js';
 
 export type { LLMConfig as LLMOptionsGroup };
-
-export type PromptTemplateOverride = {
-  templateString?: string | undefined;
-};
 
 const speakerSelectionModeSchema = z.enum(['round_robin', 'intelligent']);
 export type SpeakerSelectionMode = z.infer<typeof speakerSelectionModeSchema>;
@@ -31,14 +34,6 @@ const npcChatEndModeSchema = z.enum(['fixed', 'intelligent']);
 export type NpcChatEndMode = z.infer<typeof npcChatEndModeSchema>;
 const chatPaneWidthSchema = z.enum(['narrow', 'medium', 'wide', 'extra_wide', 'unconstrained']);
 export type ChatPaneWidth = z.infer<typeof chatPaneWidthSchema>;
-
-const promptTemplateOverrideSchema = z.object({
-  templateString: z.string().optional(),
-});
-
-const promptParserOverrideSchema = z.object({
-  source: z.string(),
-});
 
 const settingsSchema = z.object({
   llmConfigs: z.record(z.string(), llmConfigSchema),
@@ -61,10 +56,12 @@ const settingsSchema = z.object({
   freedomOfMovement: z.boolean(),
   npcOnlyChatDelay: z.number(),
   imagePromptPrefix: z.string(),
+  selectedSceneImageTemplateChainId: z.string(),
   settingsScripts: settingsScriptsStateSchema,
   editImagePromptsBeforeDispatch: z.boolean(),
   autoImageRate: z.number(),
   autoImageNpcOnly: z.boolean(),
+  autoImageTemplateWeights: z.record(z.string(), z.number()),
   groupChatMessageLimit: z.number(),
   npcChatEndMode: npcChatEndModeSchema,
   intelligentChatEndMinLength: z.number(),
@@ -101,8 +98,7 @@ const settingsSchema = z.object({
     'mercurial',
   ]),
   mainMenuFtueSeen: z.boolean(),
-  promptTemplateOverrides: z.record(z.string(), promptTemplateOverrideSchema.or(z.null())),
-  promptParserOverrides: z.record(z.string(), promptParserOverrideSchema.or(z.null())),
+  templateGroupData: templateGroupDataSchema,
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -139,10 +135,16 @@ const DEFAULT_SETTINGS: Settings = {
   freedomOfMovement: false,
   npcOnlyChatDelay: 0,
   imagePromptPrefix: 'masterpiece, best quality, amazing quality, absurdres',
+  selectedSceneImageTemplateChainId: DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID,
   settingsScripts: DEFAULT_SETTINGS_SCRIPTS_STATE,
   editImagePromptsBeforeDispatch: false,
   autoImageRate: 0,
   autoImageNpcOnly: false,
+  autoImageTemplateWeights: {
+    [DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID]: 25,
+    [SPEAKER_CLOSE_UP_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,
+    [SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,
+  },
   groupChatMessageLimit: 20,
   npcChatEndMode: 'fixed',
   intelligentChatEndMinLength: 6,
@@ -152,7 +154,7 @@ const DEFAULT_SETTINGS: Settings = {
   intelligentChatEndTargetLength: 12,
   intelligentChatEndGroupTargetLength: 20,
   intelligentChatEndJudgementInterval: 1,
-  intelligentChatEndJudgeHistoryLength: 20,
+  intelligentChatEndJudgeHistoryLength: 999,
   offscreenMentionLimit: 2,
   rollingConversationSummaryLimit: 10,
   offscreenLearnedInformationLimit: 10,
@@ -160,8 +162,7 @@ const DEFAULT_SETTINGS: Settings = {
   showTemplatePasteSafetyWarning: true,
   theme: 'yozakura',
   mainMenuFtueSeen: false,
-  promptTemplateOverrides: {},
-  promptParserOverrides: {},
+  templateGroupData: DEFAULT_TEMPLATE_GROUP_DATA,
 };
 
 function computeSettingsOverrides(settings: Settings): SettingsOverrides {
@@ -172,13 +173,18 @@ function applySettingsOverrides(overrides: SettingsOverrides): Settings {
   return applyOverrides(DEFAULT_SETTINGS, overrides);
 }
 
-function sanitizedSettings(input: unknown, fallback: Settings = DEFAULT_SETTINGS): Settings {
+function sanitizedSettings(input: unknown): Settings {
   const parsed = settingsSchema.safeParse(input);
   if (parsed.success) {
     return parsed.data;
   }
 
-  return fallback;
+  console.log(`Settings blob: ${JSON.stringify(input, null, 2)}`);
+  alert(
+    `Failed to load settings. This is likely a bug in Yozakura. Please report via one of the links here: https://mistval.github.io/yozakura/docs/links \n\nSettings parse error: ${JSON.stringify(parsed.error.message)}`
+  );
+
+  throw new Error('Failed to load settings');
 }
 
 const SETTINGS_KV_KEY = 'settings';
@@ -206,7 +212,7 @@ export const useSettingsStore = create<SettingsStoreState>((set, get) => ({
     const nextValue = typeof update === 'function' ? update(get()) : update;
     const safePatch = isRecord(nextValue) ? (nextValue as SettingsPatch) : {};
     const mergedSettings = applyPatch(get(), safePatch);
-    const nextSettings = sanitizedSettings(mergedSettings, get());
+    const nextSettings = sanitizedSettings(mergedSettings);
     const nextOverrides = computeSettingsOverrides(nextSettings);
     const stateApply = _.pickBy(nextSettings, (_, key) => key in safePatch);
 

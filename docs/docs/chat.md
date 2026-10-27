@@ -30,7 +30,9 @@ Click a character in chat to open their chat settings, including their wardrobes
 
 The wardrobe system allows mixing and matching different sets of image generation tags. Any enabled wardrobes will be added to the image generation prompt. Despite the name, you can also use this to inject information about scenery, mood, lighting, facial expression, etc.
 
-Each day, the system automatically enables one wardrobe from each autoselect group, causing characters to dynamically change appearance on however many axes you want to configure.
+Each day, the system automatically enables one wardrobe from each autoselect group, causing characters to dynamically change appearance on however many axes you want to configure. Wardrobes can also have tags targeted by map zone triggers to automatically change clothing when entering different areas.
+
+For full details on autoselect groups, wardrobe tags, and map zone triggers, see the [Wardrobe System](wardrobes.md) documentation.
 
 ![wardrobe settings image](/img/wardrobe.png)
 

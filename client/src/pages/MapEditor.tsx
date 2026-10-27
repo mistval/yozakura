@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { StringParam, useQueryParam } from 'use-query-params';
+import { useNavigate, useParams } from 'react-router';
+import { useQueryParam } from '../util/queryParams.js';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
 import DeleteButton from '../components/ui/DeleteButton.js';
 import Tabs from '../components/ui/Tabs.js';
@@ -9,6 +9,24 @@ import { validateWorldMap } from '../engine/map/world_map.js';
 import { useMapStore } from '../state/map_store.js';
 import MapGraphEditor from '../components/MapGraphEditor.js';
 import MapZoneEditor from '../components/map_zones/MapZoneEditor.js';
+import { newId } from '../util/id.js';
+import { assertNonNullish } from '../errors/application_error.js';
+
+function MapValidationErrors({ mapId }: { mapId: string }) {
+  const map = useMapStore((s) => s.mapsById[mapId]);
+  const validationErrors = useMemo(() => (map ? validateWorldMap(map) : []), [map]);
+
+  return (
+    validationErrors.length > 0 && (
+      <div className="rounded-sm border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning-text space-y-1">
+        <div className="font-medium">This map is incomplete:</div>
+        {validationErrors.map((error) => (
+          <div key={error}>{error}</div>
+        ))}
+      </div>
+    )
+  );
+}
 
 export default function MapEditor() {
   const navigate = useNavigate();
@@ -16,12 +34,15 @@ export default function MapEditor() {
   const { openSettings } = useSettingsModal();
 
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
-  const map = useMapStore((s) => (id ? s.mapsById[id] : undefined));
+  const mapExists = useMapStore((s) => Boolean(id && s.mapsById[id]));
+  const mapName = useMapStore((s) => s.mapsById[id ?? '']?.name);
+  const mapDescription = useMapStore((s) => s.mapsById[id ?? '']?.description);
+  const saveMap = useMapStore((s) => s.saveMap);
+  const updateMap = useMapStore((s) => s.updateMap);
+  const deleteMap = useMapStore((s) => s.deleteMap);
 
-  const [tabParam, setTabParam] = useQueryParam('tab', StringParam);
+  const [tabParam, setTabParam] = useQueryParam('tab');
   const tab = tabParam === 'zones' ? 'zones' : 'locations';
-
-  const validationErrors = useMemo(() => (map ? validateWorldMap(map) : []), [map]);
 
   if (!mapsAreLoaded) {
     return (
@@ -31,7 +52,7 @@ export default function MapEditor() {
     );
   }
 
-  if (!map) {
+  if (!id || !mapExists) {
     return (
       <div className="max-w-6xl mx-auto p-6 space-y-3">
         <div className="text-sm text-secondary">Map not found.</div>
@@ -43,7 +64,7 @@ export default function MapEditor() {
   }
 
   const updateThisMap = (mutator: (prev: WorldMap) => WorldMap) => {
-    useMapStore.getState().updateMap(map.id, mutator);
+    updateMap(id, mutator);
   };
 
   return (
@@ -54,13 +75,31 @@ export default function MapEditor() {
           <button type="button" onClick={() => navigate('/maps')}>
             Back
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              const map = useMapStore.getState().mapsById[id];
+              assertNonNullish(map);
+              const duplicatedMap: WorldMap = {
+                ...map,
+                id: newId(),
+                name: `${mapName} (Copy)`,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+              saveMap(duplicatedMap);
+              navigate(`/maps/${duplicatedMap.id}`);
+            }}
+          >
+            Copy
+          </button>
           <DeleteButton
             label="Delete map"
             confirmTitle="Delete Map"
             confirmLabel="Delete Map"
-            confirmMessage={`Delete map "${map.name}"? This will permanently remove the map.`}
+            confirmMessage={`Delete map "${mapName}"? This will permanently remove the map.`}
             onConfirm={() => {
-              useMapStore.getState().deleteMap(map.id);
+              deleteMap(id);
               navigate('/maps');
             }}
           />
@@ -77,7 +116,7 @@ export default function MapEditor() {
         <input
           id="map-name"
           className="w-full border rounded-sm px-3 py-2 bg-inset"
-          value={map.name}
+          value={mapName ?? ''}
           onChange={(event) => updateThisMap((prev) => ({ ...prev, name: event.target.value }))}
           placeholder="Map name"
         />
@@ -90,7 +129,7 @@ export default function MapEditor() {
         <textarea
           id="map-description"
           className="w-full min-h-24 border rounded-sm px-3 py-2 bg-inset"
-          value={map.description}
+          value={mapDescription ?? ''}
           onChange={(event) => updateThisMap((prev) => ({ ...prev, description: event.target.value }))}
           placeholder="Describe the world setting..."
         />
@@ -105,12 +144,12 @@ export default function MapEditor() {
         onChange={(id) => setTabParam(id === 'zones' ? 'zones' : undefined)}
       >
         {tab === 'locations' ? (
-          <MapGraphEditor map={map} updateMap={updateThisMap} className="h-[80vh]" />
+          <MapGraphEditor mapId={id} updateMap={updateThisMap} className="h-[80vh]" />
         ) : (
           <div className="space-y-3">
             <p>Group map locations into zones for use in the schedule system</p>
             <MapZoneEditor
-              map={map}
+              mapId={id}
               updateMap={updateThisMap}
               isGlobalContext={true}
               mapClasses={['min-h-200']}
@@ -119,14 +158,8 @@ export default function MapEditor() {
         )}
       </Tabs>
 
-      {validationErrors.length > 0 && (
-        <div className="rounded-sm border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning-text space-y-1">
-          <div className="font-medium">This map is incomplete:</div>
-          {validationErrors.map((error) => (
-            <div key={error}>{error}</div>
-          ))}
-        </div>
-      )}
+      <MapValidationErrors mapId={id} />
+
       <p>Map changes are saved automatically.</p>
     </div>
   );

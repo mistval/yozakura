@@ -4,6 +4,8 @@ import { migration as migration0001ImageSettingsScripts } from './migrations/000
 import { migration as migration0002UserTextFiles } from './migrations/0002_user_text_files.js';
 import { migration as migration0003GroupsZonesSchedulesTemporal } from './migrations/0003_groups_zones_schedules_temporal.js';
 import { migration as migration0004RagHelperState } from './migrations/0004_rag_helper_state.js';
+import { migration as migration0005WardrobeTags } from './migrations/0005_wardrobe_tags.js';
+import { migration as migration0006TemplateGroupData } from './migrations/0006_template_group_data.js';
 import type { Migration } from './types.js';
 
 /**
@@ -19,6 +21,8 @@ const migrations: Migration[] = [
   migration0002UserTextFiles,
   migration0003GroupsZonesSchedulesTemporal,
   migration0004RagHelperState,
+  migration0005WardrobeTags,
+  migration0006TemplateGroupData,
 ];
 
 function getUserVersion(db: Database.Database): number {

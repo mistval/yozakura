@@ -16,6 +16,7 @@ export default defineConfig({
   publicDir: './src/public',
   test: {
     environment: 'node',
+    include: ['src/**/*.test.ts'],
   },
   server: {
     port: 5173,

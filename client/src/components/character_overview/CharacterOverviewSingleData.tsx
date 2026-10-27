@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useCharacterOverview } from './CharacterOverviewContext.js';
-import type { Character, CharacterRelationship, Scenario, WorldMap } from '../../engine/types.js';
+import type { Character, Scenario, WorldMap } from '../../engine/types.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
@@ -13,15 +13,9 @@ import ConversationSearchList from '../conversation_log/ConversationSearchList.j
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
-import { StringParam, useQueryParams } from 'use-query-params';
+import { useQueryParams } from '../../util/queryParams.js';
 import { getRequiredRandomChoice } from '../../util/array.js';
-
-function buildGroupQuery(groupId: string): string {
-  const params = new URLSearchParams(window.location.search);
-  params.set('cotab', 'groups');
-  params.set('cogroup', groupId);
-  return params.toString();
-}
+import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
 
 type CharacterOverviewSingleDataProps = {
   selectedSingleCharacter: Character;
@@ -45,11 +39,15 @@ export default function CharacterOverviewSingleData({
   );
   const requestDirectNpcChat = useScenarioLoopStateStore((state) => state.submitUserChatAction);
   const chatSessionIsActive = useTurnMachineStore((state) => state.chatState !== 'inactive');
-  const activeChatParticipants = useTurnMachineStore((state) => state.participantIds);
   const { closeCharacterOverview, openCharacterOverviewEditor } = useCharacterOverview();
   const groups = useCharacterGroupStore((state) => state.groups);
-  const [, setOverviewParams] = useQueryParams({ cotab: StringParam, cogroup: StringParam });
-  const [relationshipToUser, setRelationshipToUser] = useState<CharacterRelationship | undefined>(undefined);
+  const [, setOverviewParams] = useQueryParams();
+
+  assertNonNullish(scenario, 'CharacterOverviewSingleData rendered without active scenario');
+  assertNonNullish(activeMap, 'CharacterOverviewSingleData rendered without active map');
+
+  const isUser = selectedSingleCharacter.id === scenario.userCharacterId;
+  const isCharacterSyncing = useIsEntityInDeferredSync(selectedSingleCharacter.id);
 
   const memberGroups = useMemo(
     () =>
@@ -73,44 +71,18 @@ export default function CharacterOverviewSingleData({
     [selectedSingleCharacter]
   );
 
-  const canRemoteChat = useMemo(() => {
-    // Only allow texting if these characters have interacted
-    return relationshipToUser && relationshipToUser?.rollingPairwiseSummaries.length > 0;
-  }, [relationshipToUser]);
-
-  assertNonNullish(scenario, 'CharacterOverviewSingleData rendered without active scenario');
-  assertNonNullish(activeMap, 'CharacterOverviewSingleData rendered without active map');
-
-  const isUser = selectedSingleCharacter.id === scenario.userCharacterId;
-  const activeChatWithoutUser =
-    chatSessionIsActive && !activeChatParticipants.some((p) => p === scenario.userCharacterId);
-
   useEffect(() => {
-    let cancelled = false;
-
     async function run() {
       assertNonNullish(scenario, 'CharacterOverviewSingleData rendered without active scenario');
       if (isUser) {
-        setRelationshipToUser(undefined);
         return;
       }
 
-      const relationship = await getCharacterRelationship(
-        selectedSingleCharacter.id,
-        scenario.userCharacterId
-      );
-
-      if (!cancelled) {
-        setRelationshipToUser(relationship);
-      }
+      await getCharacterRelationship(selectedSingleCharacter.id, scenario.userCharacterId);
     }
 
-    run();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedSingleCharacter?.id, scenario]);
+    void run();
+  }, [selectedSingleCharacter?.id, scenario, isUser, getCharacterRelationship]);
 
   if (!selectedSingleCharacter) {
     return undefined;
@@ -134,7 +106,7 @@ export default function CharacterOverviewSingleData({
             <span key={group.id}>
               {index > 0 && ', '}
               <a
-                href={`${window.location.pathname}?${buildGroupQuery(group.id)}`}
+                href={`#`}
                 onClick={(event) => {
                   event.preventDefault();
                   setOverviewParams({ cotab: 'groups', cogroup: group.id });
@@ -159,29 +131,27 @@ export default function CharacterOverviewSingleData({
             Make {selectedSingleCharacter.firstName} User Character
           </button>
         )}
-        {canRemoteChat && (
-          <button
-            type="button"
-            disabled={activeChatWithoutUser}
-            onClick={() => {
-              if (chatSessionIsActive) {
-                ChatCoordinator.addParticipant(selectedSingleCharacter.id);
-              } else {
-                requestDirectNpcChat(selectedSingleCharacter.id);
-              }
+        <button
+          type="button"
+          onClick={() => {
+            if (chatSessionIsActive) {
+              ChatCoordinator.addParticipant(selectedSingleCharacter.id);
+            } else {
+              requestDirectNpcChat(selectedSingleCharacter.id);
+            }
 
-              closeCharacterOverview();
-            }}
-          >
-            Chat with {selectedSingleCharacter.firstName}
-          </button>
-        )}
+            closeCharacterOverview();
+          }}
+        >
+          Add to Chat
+        </button>
+
         <button
           type="button"
           onClick={() => {
             openCharacterOverviewEditor(selectedSingleCharacter.id);
           }}
-          disabled={!selectedSingleCharacter}
+          disabled={!selectedSingleCharacter || isCharacterSyncing}
         >
           Edit {selectedSingleCharacter.firstName}
         </button>
@@ -189,6 +159,7 @@ export default function CharacterOverviewSingleData({
           <span>Location</span>
           <select
             value={charactersById[selectedSingleCharacter.id]?.locationId || ''}
+            disabled={isCharacterSyncing}
             onChange={(event) => {
               const locationId =
                 event.target.value === 'random'
@@ -225,6 +196,7 @@ export default function CharacterOverviewSingleData({
               </div>
               <select
                 value={selectedSingleCharacter.nextConversationWithCharacterId || ''}
+                disabled={isCharacterSyncing}
                 onChange={(event) => {
                   void saveScenarioCharacterFields(selectedSingleCharacter.id, {
                     nextConversationWithCharacterId: event.target.value.trim(),
@@ -252,6 +224,7 @@ export default function CharacterOverviewSingleData({
         <div className="space-y-2">
           <SpoilerSection
             title="Global Memory"
+            disabled={isCharacterSyncing}
             initialValue={selectedSingleCharacter.globalMemories || ''}
             onSave={(newValue: string) =>
               saveScenarioCharacterFields(selectedSingleCharacter.id, {
@@ -270,6 +243,7 @@ export default function CharacterOverviewSingleData({
                   <SpoilerSection
                     key={`${summary.conversationId}-${index}`}
                     title={`Summary ${index + 1} (Turn ${summary.turnNumber})`}
+                    disabled={isCharacterSyncing}
                     initialValue={summary.summary || ''}
                     onSave={(newValue: string) => {
                       const updatedSummaries = selectedSingleCharacter.rollingConversationSummaries.map(

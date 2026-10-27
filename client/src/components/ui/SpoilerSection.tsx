@@ -8,6 +8,7 @@ export function SpoilerSection({
   initialValue,
   defaultRevealed,
   className = '',
+  disabled = false,
   onSave,
   onDelete,
 }: {
@@ -16,6 +17,7 @@ export function SpoilerSection({
   initialValue?: string;
   defaultRevealed?: boolean;
   className?: string;
+  disabled?: boolean;
   onSave?: (value: string) => Promise<void> | void;
   onDelete?: () => Promise<void> | void;
 }) {
@@ -50,7 +52,7 @@ export function SpoilerSection({
   );
 
   const handleSave = async () => {
-    if (!editable || !dirty || savingRef.current) return;
+    if (!editable || !dirty || savingRef.current || disabled) return;
     setSaving(true);
     try {
       await onSave(draft);
@@ -65,7 +67,7 @@ export function SpoilerSection({
   };
 
   const handleDelete = async () => {
-    if (!onDelete || savingRef.current) return;
+    if (!onDelete || savingRef.current || disabled) return;
     setSaving(true);
     try {
       await onDelete();
@@ -89,9 +91,10 @@ export function SpoilerSection({
         <div className="mt-2 space-y-2">
           <textarea
             ref={textareaRef}
-            className="w-full border rounded-sm p-2 text-sm resize-none overflow-hidden"
+            className="w-full border rounded-sm p-2 text-sm resize-none overflow-hidden disabled:bg-muted disabled:text-muted-foreground"
             rows={3}
             value={draft}
+            disabled={disabled || saving}
             onChange={(event) => setDraft(event.target.value)}
           />
           <div className="flex items-center justify-end gap-2">
@@ -100,7 +103,7 @@ export function SpoilerSection({
                 type="button"
                 className="border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover"
                 onClick={handleDelete}
-                disabled={saving}
+                disabled={saving || disabled}
               >
                 Delete
               </button>
@@ -108,7 +111,7 @@ export function SpoilerSection({
             {saved ? (
               <span className="text-sm text-success-text">Saved ✓</span>
             ) : (
-              <button type="button" onClick={handleSave} disabled={!dirty || saving}>
+              <button type="button" onClick={handleSave} disabled={!dirty || saving || disabled}>
                 Save
               </button>
             )}

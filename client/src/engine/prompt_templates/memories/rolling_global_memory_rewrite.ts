@@ -1,77 +1,64 @@
 import { z } from 'zod';
-import { PromptTemplateBase } from '../prompt_template';
-import { PromptOutputParser } from '../prompt_output_parser';
-import { PromptTemplateChain } from '../prompt_template_chain';
-import { focusedConversationExecutionContextSchema } from '../prompt_template_context_fields';
+import { focusedConversationExecutionContextSchema } from '../prompt_template_context_fields.js';
+import type { PromptTemplateChainSpec } from '../template_types.js';
 
-class RollingGlobalMemoryRewriteSystemTemplate extends PromptTemplateBase<
-  z.infer<typeof focusedConversationExecutionContextSchema>
-> {
-  public readonly defaultTemplateString = `Your job is to read a list of conversation summaries and use it to distill a block of memories for <%= it.focusedCharacter.firstName %>. You will also have access to <%= it.focusedCharacter.firstName %>'s existing memory state and persona.
+export const rollingGlobalMemoryRewriteChainSpec: PromptTemplateChainSpec<
+  z.infer<typeof focusedConversationExecutionContextSchema>,
+  string
+> = {
+  templateChainId: 'gen_global_memory',
+  defaultTitle: 'Global Memory Rewrite',
+  defaultDescription:
+    "Prompts for re-writing a character's global memory after each conversation, based on summaries of previous conversations.",
+  contextSchema: focusedConversationExecutionContextSchema,
+  templates: [
+    {
+      templateId: 'rolling_global_memory_rewrite_system',
+      name: 'Rolling Global Memory Rewrite (System)',
+      description: 'System prompt for distilling long-term global memories from conversation summaries.',
+      role: 'system',
+      defaultTemplateString: `Your job is to read a list of conversation summaries and use it to synthesize a consistent internal memory state for <%= it.focusedCharacter.firstName %>. You will also have access to <%= it.focusedCharacter.firstName %>'s existing internal memory state and persona information.
+
+Consider not only what happened, but the order it happened in, and how it shows evolution or insights into <%= it.focusedCharacter.firstName %>, their relationships with other characters, and their goals and trajectory.
+
+The purpose of the new internal memory state will be to inform the behavior of a roleplayer who will roleplay as <%= it.focusedCharacter.firstName %> going forward. Consider what information the roleplayer should know in order to accurately roleplay <%= it.focusedCharacter.firstName %> in their next interactions.
+
+The existing internal memory state that will be provided was previously generated based on an older version of the same rolling list of recent conversation summaries.
 
 Rules:
-- Prioritize recurring and actionable information that can be used to guide <%= it.focusedCharacter.firstName %>'s future actions and decisions.
-- Preserve still-important facts from existing memory state even if they are not in recent conversation summaries.
-- Avoid repeating information from the character persona, as that would be redundant.
-- Remove stale, redundant, or contradicted information. Newer memories should take precedence over older ones.
-- Write in third person. Be specific and direct, leaving nothing to the imagination.
-- Output only the rewritten global memory.`;
-  public readonly contextSchema = focusedConversationExecutionContextSchema;
-
-  public readonly templateName = 'Rolling Global Memory Rewrite (System)';
-  public readonly templateDescription =
-    'System prompt for distilling long-term global memories from conversation summaries.';
-  public readonly templateId = 'rolling_global_memory_rewrite_system';
-  public readonly templateSettings = [];
-  public readonly role = 'system';
-}
-
-class RollingGlobalMemoryRewriteUserTemplate extends PromptTemplateBase<
-  z.infer<typeof focusedConversationExecutionContextSchema>
-> {
-  public readonly defaultTemplateString = `<%= it.focusedCharacter.firstName %>'s persona:
+- Prioritize actionable information that can be used to guide <%= it.focusedCharacter.firstName %>'s future actions and decisions.
+- Only include experientially earned information that is distinct from <%= it.focusedCharacter.firstName %>'s persona information (the roleplayer will be provided the static persona information separately).
+- Include brief information about the most salient interpersonal developments/relationships, but avoid going into depth since pairwise interpersonal memories will be generated and included separately.
+- Provide sufficient context and reasoning for any goals or intentions.
+- Newer (bottom-most) conversation summaries should be weighted more heavily.
+- Output only the updated global memory (no more than 1000 words), nothing else.`,
+    },
+    {
+      templateId: 'rolling_global_memory_rewrite_user',
+      name: 'Rolling Global Memory Rewrite (User)',
+      description: 'User prompt carrying persona, existing global memory, and conversation summaries.',
+      role: 'user',
+      defaultTemplateString: `<%= it.focusedCharacter.firstName %>'s persona:
 <persona>
 <%= it.focusedCharacter.internalDescription %>
 
 </persona>
 
-Current global memory:
-<old_global_memory>
+Current internal memory state:
+<old_internal_memory>
 <%= it.focusedCharacter.globalMemories || (it.focusedCharacter.firstName + ' does not have any memories yet.') %>
 
-</old_global_memory>
+</old_internal_memory>
 
 Rolling conversation summary history (oldest first):
 <%= it.rollingConversationSummariesText %>
 
 
-Output the updated memory now and nothing else.`;
-  public readonly contextSchema = focusedConversationExecutionContextSchema;
-
-  public readonly templateName = 'Rolling Global Memory Rewrite (User)';
-  public readonly templateDescription =
-    'User prompt carrying persona, existing global memory, and conversation summaries.';
-  public readonly templateId = 'rolling_global_memory_rewrite_user';
-  public readonly templateSettings = [];
-  public readonly role = 'user';
-}
-
-const rollingGlobalMemoryRewriteSystemTemplate = new RollingGlobalMemoryRewriteSystemTemplate();
-const rollingGlobalMemoryRewriteUserTemplate = new RollingGlobalMemoryRewriteUserTemplate();
-
-export const rollingGlobalMemoryRewriteChainGroup = new PromptTemplateChain({
-  templateChainId: 'gen_global_memory',
-  templateChainTitle: 'Global Memory Rewrite',
-  templateChainDescription:
-    "Prompts for re-writing a character's global memory after each conversation, based on summaries of previous conversations.",
-  contextSchema: focusedConversationExecutionContextSchema,
-  templates: [
-    { template: rollingGlobalMemoryRewriteSystemTemplate },
-    { template: rollingGlobalMemoryRewriteUserTemplate },
+Output the updated internal memory state now and nothing else.`,
+    },
   ],
-  parser: new PromptOutputParser<z.infer<typeof focusedConversationExecutionContextSchema>, string>(
-    'async (response, it) => response',
-    'gen_global_memory',
-    z.string()
-  ),
-});
+  parser: {
+    defaultParserSource: 'async (response, it) => response',
+    parserOutputSchema: z.string(),
+  },
+};

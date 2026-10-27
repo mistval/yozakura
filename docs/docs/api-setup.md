@@ -28,7 +28,9 @@ In KoboldCpp select the "Browse" button and choose your model file, then click L
 
 Then you can start Yozakura and you're good to go. When the initial setup popup appears, the `Completions API Setup` section will already have the correct values for KoboldCpp, so you don't need to change anything there, if you launched KoboldCpp as described above.
 
-In KoboldCpp, you may want to consider increasing Context Size if you want to have longer chats. The default of 8192 is generally enough, but doubling that adds headroom for longer chats. I expect very few people would need higher than 16384, as the nature of Yozakura tends to keep chats shorter than those you might have in SillyTavern or similar. If, during a longer chat, the quality of responses suddenly degrades severely, you may be exceeding the limits of your context size. At the time of this writing, Yozakura won't detect that for you.
+The recommended context size for Yozakura is 16384, which is also the default in KoboldCpp at the time of this writing. Because a scenario in Yozakura is a series of short conversations, the context rarely gets nearly as large as, say, a long SillyTavern chat might require. If you find you prefer having very long chats, consider increasing context size further, there's no harm in doing so if you have extra VRAM.
+
+You should also strongly consider enabling SmartCache unless you're starved for system RAM. This will speed up NPC chats and group chats, especially longer ones. For CacheSlots, a good rule of thumb is the max number of NPCs you expect to have in a group chat, multiplied by 4. By default, there can be up to 3 NPCs in a group chat (unless you manually add more) so you'd want 12 CacheSlots. If you don't have enough system RAM for that, you can do less and still get partial benefit. (note: this feature requires system RAM, not VRAM).
 
 ## Local Image Model
 
@@ -40,13 +42,11 @@ In KoboldCpp, go to the Image Gen tab and browse to your model under `Image Gen.
 
 Click launch, then you can start Yozakura and you're good to go. When the initial setup popup appears, the `Image Generation Setup` section will already have the correct values for KoboldCpp, so you don't need to change anything there.
 
-## Cloud LLM (OpenRouter)
+## Cloud LLM
 
 If your machine can't comfortably run a local model, or you just want the better narrative coherence that stronger models can often provide, use a cloud provider instead.
 
-[OpenRouter](https://openrouter.ai) is an excellent provider that enables access to a huge number of models with pay-as-you-go pricing. But any other provider exposing an OpenAI compatible completions endpoint will work too.
-
-The instructions below are for OpenRouter since it's very popular, but other providers might serve certain needs better. See [Completions API Providers](completions-providers.md) for some other options.
+We will provide instructions below for using [OpenRouter](https://openrouter.ai), a very popular service provider that enables access to a huge number of models with pay-as-you-go pricing. But any other provider exposing an OpenAI compatible completions endpoint will work too, and other providers might serve certain needs better. See [Completions API Providers](completions-providers.md) for some other options.
 
 Setup:
 
