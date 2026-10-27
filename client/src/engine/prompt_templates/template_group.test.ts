@@ -242,11 +242,10 @@ describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
 
     const dummyContext: any = {
       imagePromptPrefix: 'masterpiece, best quality',
+      focusedCharacterAppearance: 'blonde hair, blue eyes,blue dress',
       focusedCharacter: {
         firstName: 'Alice',
         lastName: 'Smith',
-        baseAppearanceTags: 'blonde hair, blue eyes',
-        wardrobes: [{ name: 'Casual', text: 'blue dress', enabled: true }],
       },
     };
 
@@ -257,7 +256,7 @@ describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
 
     const closeUpParsed = await chains[1]!.parse('smiling gently', dummyContext);
     expect(closeUpParsed).toBe(
-      'masterpiece, best quality, smiling gently, close-up, portrait, face focus, upper body, detailed face, detailed eyes'
+      'masterpiece, best quality, close-up, portrait, face focus, upper body, detailed face, detailed eyes, , smiling gently'
     );
 
     const sceneryParsed = await chains[2]!.parse('a quiet park at sunset', dummyContext);
@@ -313,7 +312,7 @@ describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
       ...createBlankCharacter(),
       firstName: 'Alice',
       baseAppearanceTags: '1girl, silver hair, red eyes',
-      wardrobes: [createWardrobe({ text: 'kimono' })],
+      wardrobes: [createWardrobe({ text: 'kimono', enabled: true })],
     };
     const context = buildCharacterEditorContext(character);
 
