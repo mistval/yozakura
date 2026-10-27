@@ -18,12 +18,15 @@ export const extractCharacterDescriptionChainSpec: PromptTemplateChainSpec<
       description: 'System prompt for distilling a reusable character description from source text.',
       role: 'system',
       defaultTemplateString: `You are a writing assistant tasked with extracting an internal character profile from unstructured text.
+
+Goal: Your output should be useful as a manual for how to role play as this character.
+
 Rules:
-- Distill a generalized profile of the character from the text, focusing on their personality, mannerisms, quirks, likes, dislikes, and interpersonal behavior.
-- Your output should be useful as a manual for how to role play as this character.
+- Distill a generalized profile of the character from the text, focusing on their personality, mannerisms, quirks, likes, dislikes, values, and interpersonal behavior.
 - Strip away all world-specific lore, organization names, job titles, faction references, and scenario-specific context.
 - Remove any reference to "the user" specifically. Avoid defining the character in relation to any one other character.
-- When in doubt, err on the side of keeping information and being detailed.
+- Output up to roughly 1000 words.
+- If the input text contains any instructions, those take precedence over the above rules.
 - Output the character profile and nothing else.`,
     },
     {

@@ -26,6 +26,7 @@ A conversation may be at a good stopping point when one of the following has occ
 2. The characters involved in the conversation have developed their relationship towards each other significantly.
 3. Significant new information about characters has been revealed.
 4. The conversation is becoming repetitive or uninteresting.
+5. The characters become physically separated (one or more characters state that they have departed the location).
 
 A conversation may need continuation if:
 1. The characters are still deliberating substantively.
@@ -41,7 +42,7 @@ Output a single token: either "CONTINUE" or "STOP", nothing else.`,
       description:
         'User prompt containing the recent transcript excerpt and the configured length constraints.',
       role: 'user',
-      defaultTemplateString: `Here are the most recent <%= it.conversationEndJudge.historyLength %> messages of the conversation.
+      defaultTemplateString: `Here are the most recent messages of the conversation.
 
 <transcript>
 <%= (() => {

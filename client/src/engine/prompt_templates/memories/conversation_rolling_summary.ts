@@ -16,13 +16,14 @@ export const conversationRollingSummaryChainSpec: PromptTemplateChainSpec<
       name: 'Conversation Rolling Summary (System)',
       description: 'System prompt for generating a compact summary of a conversation.',
       role: 'system',
-      defaultTemplateString: `You must summarize a conversation and extract the key information from <%= it.focusedCharacter.firstName %>'s perspective.
+      defaultTemplateString: `You must summarize a conversation transcript and extract the key information from <%= it.focusedCharacter.firstName %>'s perspective.
 
 Rules:
 - Focus on durable facts, commitments, relationship shifts, emotional tone, and unresolved threads.
 - Prioritize actionable details useful for future interactions. Be specific and direct, leaving nothing to the imagination.
-- Filter the conversation through the lens of <%= it.focusedCharacter.firstName %>'s personality and values.
-- Output only the summary, nothing else.`,
+- Filter the conversation through the lens of <%= it.focusedCharacter.firstName %>'s personality, values, and memories.
+- Write the summary in first person from <%= it.focusedCharacter.firstName %>'s perspective. Refer to other characters by name.
+- Output only the complete summary, nothing else.`,
     },
     {
       templateId: 'conversation_rolling_summary_user',
@@ -35,14 +36,30 @@ Rules:
 
 </persona>
 
-Conversation participants: <%= it.participants.map((participant) => participant.firstName + ' ' + participant.lastName).join(', ') %>
+<% if (it.focusedCharacter.globalMemories) { %>
+<%= it.focusedCharacter.firstName %>'s personal memories and goals:
+<personal_memories_and_goals>
+<%= it.focusedCharacter.globalMemories %>
 
-Conversation medium: <%= it.chatMedium %>
+</personal_memories_and_goals>
+<% } %>
+
+<% for (const p of it.participants) { %>
+<% if (p.id !== it.focusedCharacter.id) { %>
+What <%= it.focusedCharacter.firstName %> knows about <%= p.firstName %> <%= p.lastName %> (another character in the conversation):
+<memories_of_<%= p.xmlTagSafeName %>>
+<%= p.externalDescription %>
+
+<%= (await it.getRelationship(it.focusedCharacter.id, p.id))?.memory || it.focusedCharacter.firstName + ' has not met ' + p.firstName + ' yet. The previous information is surface level information that can be ascertained about ' + p.firstName + ' almost immediately when first meeting them.' %>
+
+</memories_of_<%= p.xmlTagSafeName %>>
+<% } %>
+<% } %>
 
 Location: <%= it.currentLocation.name %> - <%= it.currentLocation.description %>
 
 
-Conversation transcript:
+Conversation transcript to summarize:
 <transcript>
 <%= it.transcript %>
 

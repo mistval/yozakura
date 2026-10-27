@@ -20,13 +20,12 @@ export const nextConversationGoalUpdatesChainSpec: PromptTemplateChainSpec<
       defaultTemplateString: `Given <%= it.focusedCharacter.firstName %>'s character persona, their memory about <%= it.targetCharacter.firstName %>, and the transcript of a conversation that just happened involving both of them, you must output a goal for <%= it.focusedCharacter.firstName %> in their next interaction with <%= it.targetCharacter.firstName %>.
 
 Rules:
-- Prioritize specific goals that were discussed in the conversation.
 - Prioritize taking decisive action rather than just planning.
-- Write in the third person perspective.
-- Choose a goal that provides strong narrative momentum.
+- Write in the first person perspective from <%= it.focusedCharacter.firstName %>'s point of view.
+- Choose a goal that provides strong narrative momentum. Be creative in inventing strong momentum.
 - Be specific and provide sufficient context.
-- Be specific and creative about how <%= it.focusedCharacter.firstName %> might pursue this goal exactly. Specificity helps keep things moving along, creativity keeps it interesting.
-- Output the goal and necessary context, nothing else`,
+- Be specific and creative about how <%= it.focusedCharacter.firstName %> might pursue this goal exactly. Keep it interesting.
+- Output the goal and necessary associated context, nothing else`,
     },
     {
       templateId: 'next_conversation_goal_updates_user',

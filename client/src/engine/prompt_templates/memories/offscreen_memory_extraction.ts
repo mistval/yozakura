@@ -28,7 +28,8 @@ Rules:
 - Prioritize information that provides narrative momentum, such as relationship details between <%= it.targetCharacter.firstName %> and other characters, actionable intentions between characters, plans, insights, or facts. Anything that would make for good "gossip" is valuable.
 - If the information is hearsay or inferred rather than explicit, include appropriate hedging and qualifications in the output.
 - Consider <%= it.focusedCharacter.firstName %>'s unique personality and what kind of information they might want to take into their next conversation with or about <%= it.targetCharacter.firstName %>.
-- The information must come from the conversation transcript, but you must provide sufficient context that the information can be understood without reference to the conversation transcript.
+- The information must come from the conversation transcript, but you must provide sufficient context that the information can be understood without reference to the conversation transcript. Be clear about how the information relates to <%= it.targetCharacter.firstName %>.
+- Write the information in first person from <%= it.focusedCharacter.firstName %>'s perspective.
 
 Output format:
 - Output a single plain string containing only the information.

@@ -17,7 +17,7 @@ export const offscreenMemoryUpdateConversationGoalChainSpec: PromptTemplateChain
       name: 'Offscreen Conversation Goal Update (System)',
       description: 'System prompt for deciding whether to update next conversation topic.',
       role: 'system',
-      defaultTemplateString: `Your job is to decide whether newly learned information should change <%= it.focusedCharacter.firstName %>'s next conversation goal with <%= it.targetCharacter.firstName %>. You will be given <%= it.focusedCharacter.firstName %>'s current memories of <%= it.targetCharacter.firstName %>, their existing goal towards them (if any), and some new information that <%= it.focusedCharacter.firstName %> just learned regarding <%= it.targetCharacter.firstName %>.
+      defaultTemplateString: `Your job is to decide whether newly learned information should change <%= it.focusedCharacter.firstName %>'s next conversation goal with <%= it.targetCharacter.firstName %>. You will be given <%= it.focusedCharacter.firstName %>'s current memories of <%= it.targetCharacter.firstName %>, <%= it.focusedCharacter.firstName %>'s existing goal towards <%= it.targetCharacter.firstName %> (if any), and some new information that <%= it.focusedCharacter.firstName %> just learned that may be relevant to <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %>.
 
 If the new information suggests a more important goal for <%= it.focusedCharacter.firstName %> to pursue with <%= it.targetCharacter.firstName %>, you should output a new goal.
 
@@ -27,6 +27,7 @@ If the old goal should remain as-is, you should output the sentinel value KEEP_O
 
 If you decide to output a new (or revised) goal for <%= it.focusedCharacter.firstName %> to pursue with <%= it.targetCharacter.firstName %>:
 - Output a goal that provides strong narrative momentum.
+- Output a goal that <%= it.focusedCharacter.firstName %> can pursue in their next interaction with <%= it.targetCharacter.firstName %>.
 - Prioritize taking decisive action rather than just planning.
 - Be specific and provide sufficient context.
 - Output only the goal and nothing else`,

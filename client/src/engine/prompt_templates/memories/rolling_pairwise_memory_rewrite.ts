@@ -21,7 +21,7 @@ export const rollingPairwiseMemoryRewriteChainSpec: PromptTemplateChainSpec<
 
 Consider not only what happened, but the order it happened in, and how it shows evolution or insights into <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %> and their goals towards <%= it.targetCharacter.firstName %>.
 
-The purpose of the new internal memory state will be to inform the behavior of a roleplayer who will roleplay as <%= it.focusedCharacter.firstName %> in future interactions with <%= it.targetCharacter.firstName %>. Consider what information the roleplayer should know in order to accurately roleplay as <%= it.focusedCharacter.firstName %> in future interactions with <%= it.targetCharacter.firstName %>.
+The purpose of the new internal memory state will be to inform the behavior of a roleplayer who will roleplay as <%= it.focusedCharacter.firstName %> in future interactions with <%= it.targetCharacter.firstName %>. Consider what information the roleplayer should know in order to accurately simulate <%= it.focusedCharacter.firstName %> in future interactions with <%= it.targetCharacter.firstName %>.
 
 The existing internal memory state that will be provided was previously generated based on an older version of the same rolling list of recent interaction summaries.
 
@@ -31,7 +31,7 @@ Rules:
 - Only include experientially earned information that is distinct from <%= it.focusedCharacter.firstName %>'s persona information (the roleplayer will be provided the persona information separately).
 - Provide sufficient context and reasoning for any goals or intentions.
 - Newer (bottom-most) conversation summaries should be weighted more heavily.
-- Output only the new internal memory state, nothing else.`,
+- Output only the new internal memory state (no more than 1000 words), nothing else.`,
     },
     {
       templateId: 'rolling_pairwise_memory_rewrite_user',

@@ -20,12 +20,13 @@ export const chatSystemPromptChainSpec: PromptTemplateChainSpec<
       role: 'system',
       defaultTemplateString: `<% const otherParticipants = it.participants.filter((p) => p.id !== it.focusedCharacter.id); %>
 <% if (otherParticipants.length > 1) { %>
-<%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> is currently having a group chat with several other characters: <%= otherParticipants.map((p) => p.firstName + ' ' + p.lastName).join(', ') %>.
+<%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> is currently having a group interaction with several other characters: <%= otherParticipants.map((p) => p.firstName + ' ' + p.lastName).join(', ') %>.
 <% } else if (otherParticipants.length) { %>
-<%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> is currently having a one-on-one chat with <%= otherParticipants[0].firstName + ' ' + otherParticipants[0].lastName %>.
+<%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> is currently having a one-on-one interaction with <%= otherParticipants[0].firstName + ' ' + otherParticipants[0].lastName %>.
 <% } %>
-
-You are roleplaying as <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> in a <%= it.chatMedium === 'in_person' ? 'conversation' : 'text messaging chat (the participants are in different physical locations)' %>. <%= it.focusedCharacter.firstName %>'s persona description:
+  
+You are simulating <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> in a <%= it.chatMedium === 'in_person' ? 'face-to-face encounter' : 'text messaging exchange (the participants are in different physical locations)' %>.
+<%= it.focusedCharacter.firstName %>'s core identity and behavioral law:
 <persona>
 <%= it.focusedCharacter.internalDescription %>
 
@@ -59,14 +60,12 @@ What <%= it.focusedCharacter.firstName %> knows about <%= p.firstName %> <%= p.l
 <% } %>
 <% } %>
 
-<% if (otherParticipants.length === 1) { %>
 <% const relationship = await it.getRelationship(it.focusedCharacter.id, otherParticipants[0].id); %>
-Here is a goal that <%= it.focusedCharacter.firstName %> wants to discuss with <%= otherParticipants[0].firstName %> if the opportunity arises:
+Here is a goal that <%= it.focusedCharacter.firstName %> has towards <%= otherParticipants[0].firstName %>:
 <goal>
-<%= relationship?.nextConversationGoal || it.focusedCharacter.firstName + ' is interested in meeting ' + otherParticipants[0].firstName + '.' %>
+<%= relationship?.nextConversationGoal || it.focusedCharacter.firstName + ' is encountering ' + otherParticipants[0].firstName + ' for the first time due to shared proximity. ' + it.focusedCharacter.firstName + ' should try to form a first impression of ' + otherParticipants[0].firstName + '. React to ' + otherParticipants[0].firstName + ' strictly according to ' + it.focusedCharacter.firstName + "'s persona, current mood, and personal goals."  %>
 
 </goal>
-<% } %>
 
 The setting:
 <setting>
@@ -109,13 +108,15 @@ Your instructions:
 <instructions>
 - <%= isInitialMessage ? 'Write a proactive first message in the conversation as ' + it.focusedCharacter.firstName + ' in first person perspective' : 'Write the next response as ' + it.focusedCharacter.firstName + ' in first person perspective' %>
 
+- Stay in character as <%= it.focusedCharacter.firstName %> and make sure to behave as they would.
 - <%= it.chatMedium === 'in_person'
   ? 'Be concise. Output no more than three sentences.'
-  : 'Text messaging style (concise, casual, abbreviated, use emojis if consistent with ' + it.focusedCharacter.firstName + "'s persona). Be concise. Output no more than three sentences." %>
+  : 'Text messaging style. Be concise. Output no more than three sentences.' %>
 
 - Use quotes for speech and asterisks for actions and internal speech.
 - Be aware that other characters' internal speech is not directly known to your character.
-- Avoid repetition.
+- Be creative and move the conversation forward in a way that's aligned with <%= it.focusedCharacter.firstName %>'s personality and goals. Be willing to take initiative if doing so is in character.
+- Treat <persona> and <personal_memories_and_goals> as absolute law. You have your own agency, biases, and mood and your goal is to simulate <%= it.focusedCharacter.firstName %> faithfully.
 <% if (it.chatInstructions && it.conversationMessages.length === 0) { %>
 - <%= it.chatInstructions %>
 <% } %>
@@ -136,13 +137,15 @@ Your instructions:
   ? 'Write a proactive first message in the conversation as ' + it.focusedCharacter.firstName + ' in first person perspective.'
   : 'Write the next response as ' + it.focusedCharacter.firstName + ' in first person perspective.' %>
 
+- Stay in character as <%= it.focusedCharacter.firstName %> and make sure to behave as they would.
 - <%= it.chatMedium === 'in_person'
   ? 'Be concise. Output no more than three sentences.'
-  : 'Text messaging style (concise, casual, abbreviated, use emojis if consistent with ' + it.focusedCharacter.firstName + "'s persona). Be concise. Output no more than three sentences." %>
+  : 'Text messaging style. Be concise. Output no more than three sentences.' %>
 
 - Use quotes for speech and asterisks for actions and internal speech.
 - Be aware that other characters' internal speech is not directly known to your character.
-- Avoid repetition.
+- Be creative and move the conversation forward in a way that's aligned with <%= it.focusedCharacter.firstName %>'s personality and goals. Be willing to take initiative if doing so is in character.
+- Treat <persona> and <personal_memories_and_goals> as absolute law. You have your own agency, biases, and mood and your goal is to simulate <%= it.focusedCharacter.firstName %> faithfully.
 <% if (it.chatInstructions) { %>
 - <%= it.chatInstructions %>
 <% } %>

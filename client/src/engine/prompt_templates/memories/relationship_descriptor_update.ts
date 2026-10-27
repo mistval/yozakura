@@ -51,7 +51,7 @@ Recent specific interactions with and information about <%= it.targetCharacter.f
 
 </relationship>
 
-Output an updated relationship descriptor. Limit yourself to 1-3 words. Examples: "Friend", "Rival", "Hated Enemy", "Boyfriend", "Mentor". If the provided information does not warrant any changes to the existing descriptor, you may output the existing descriptor as is. Output only the new descriptor and nothing else.`,
+Output an updated relationship descriptor. Limit yourself to 1-5 words. Examples: "Friend", "Rival", "Hated Enemy", "Boyfriend", "Mentor". If the provided information does not warrant any changes to the existing descriptor, you may output the existing descriptor as is. Output only the new descriptor and nothing else.`,
     },
   ],
   parser: {
