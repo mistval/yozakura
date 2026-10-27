@@ -223,7 +223,7 @@ export default function CustomScriptSettings({
               onChange={(event) => {
                 void customScripts.save(selectedCustom.id, event.target.value, customSource);
               }}
-              className="rounded-input"
+              className="w-full rounded-input"
             />
             <DeleteButton
               onConfirm={handleDeleteCustom}

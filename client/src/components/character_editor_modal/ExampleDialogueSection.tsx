@@ -19,6 +19,7 @@ export default function ExampleDialogueSection() {
         />
       </div>
       <textarea
+        className='w-full'
         disabled={loadingField === 'exampleDialogue'}
         rows={6}
         value={character.exampleDialogue || ''}

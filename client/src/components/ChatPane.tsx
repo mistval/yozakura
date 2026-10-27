@@ -611,7 +611,7 @@ export default function ChatPane() {
                   <label
                     key={chain.templateChainId}
                     title={chainData.description || undefined}
-                    className="flex items-center gap-2 cursor-pointer text-xs text-primary hover:text-secondary-strong"
+                    className="flex gap-2 cursor-pointer text-xs text-primary hover:text-secondary-strong"
                   >
                     <input
                       type="radio"
