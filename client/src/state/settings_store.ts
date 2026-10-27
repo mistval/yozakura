@@ -141,7 +141,7 @@ const DEFAULT_SETTINGS: Settings = {
   autoImageRate: 0,
   autoImageNpcOnly: false,
   autoImageTemplateWeights: {
-    [DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,
+    [DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID]: 25,
     [SPEAKER_CLOSE_UP_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,
     [SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,
   },
@@ -154,7 +154,7 @@ const DEFAULT_SETTINGS: Settings = {
   intelligentChatEndTargetLength: 12,
   intelligentChatEndGroupTargetLength: 20,
   intelligentChatEndJudgementInterval: 1,
-  intelligentChatEndJudgeHistoryLength: 20,
+  intelligentChatEndJudgeHistoryLength: 999,
   offscreenMentionLimit: 2,
   rollingConversationSummaryLimit: 10,
   offscreenLearnedInformationLimit: 10,
