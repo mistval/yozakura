@@ -20,9 +20,9 @@ Click a character in chat to open their chat settings, or edit their character p
 
 Each wardrobe entry has:
 
-- **Tags description (Prompt text)**: The visual tags that will be concatenated into the image generation prompt when this wardrobe is enabled (e.g. `red dress, elegant, evening wear`).
+- **Prompt text**: The visual tags that will be concatenated into the image generation prompt when this wardrobe is enabled (e.g. `red dress, elegant, evening wear`).
 - **Enabled checkbox**: Controls whether this wardrobe is currently active for image generation prompts.
-- **Autoselect group**: An optional group identifier (e.g. `outfit`, `hat`, `expression`). At the start of each in-world day, the system randomly selects and enables one wardrobe from each group, disabling all others in that group. This allows characters to spontaneously vary their appearance between days.
+- **Autoselect group**: An optional group identifier (e.g. `default`, `hat`, `expression`). At the start of each in-world day, the system randomly selects and enables one wardrobe from each group, disabling all others in that group. This allows characters to spontaneously vary their appearance between days.
 - **Tags**: Comma-separated metadata tags (e.g. `casual_clothes, work_uniform, work_tie`) that categorize the wardrobe entry. These tags are targeted by **Map Zone Wardrobe Triggers** to automatically enable or disable outfits when character move to specific map locations.
 - **Auto revert**: If enabled, any changes made to this wardrobe's enabled state during a chat will be reverted back to their pre-chat state once the conversation ends. This is useful for temporary states like facial expressions or location-specific attire.
 

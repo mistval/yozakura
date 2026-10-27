@@ -30,7 +30,7 @@ Then you can start Yozakura and you're good to go. When the initial setup popup 
 
 The recommended context size for Yozakura is 16384, which is also the default in KoboldCpp at the time of this writing. Because a scenario in Yozakura is a series of short conversations, the context rarely gets nearly as large as, say, a long SillyTavern chat might require. If you find you prefer having very long chats, consider increasing context size further, there's no harm in doing so if you have extra VRAM.
 
-You should also strongly consider enabling SmartCache unless you're starved for system RAM. This will speed up NPC chats and group chats, especially longer ones. For CacheSlots, a good rule of thumb is the max number of NPCs you expect to have in a group chat, multiplied by 4. By default, there can be up to 3 NPCs in a group chat (unless you manually add more) so you'd want 12 CacheSlots. If you don't have enough system RAM for that, you can do less and still get partial benefit.(note: this feature requires system RAM, not VRAM).
+You should also strongly consider enabling SmartCache unless you're starved for system RAM. This will speed up NPC chats and group chats, especially longer ones. For CacheSlots, a good rule of thumb is the max number of NPCs you expect to have in a group chat, multiplied by 4. By default, there can be up to 3 NPCs in a group chat (unless you manually add more) so you'd want 12 CacheSlots. If you don't have enough system RAM for that, you can do less and still get partial benefit. (note: this feature requires system RAM, not VRAM).
 
 ## Local Image Model
 
