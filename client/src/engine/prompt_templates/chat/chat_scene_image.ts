@@ -8,12 +8,7 @@ export const SPEAKER_CLOSE_UP_CHAT_SCENE_IMAGE_CHAIN_ID =
 export const SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID = 'gen_chat_scene_image_prompt.scenery';
 
 const DEFAULT_SPEAKER_PARSER_SOURCE = `async (response, it) => {
-  const wardrobeTags = it.focusedCharacter.wardrobes
-    .filter((wardrobe) => wardrobe.enabled)
-    .map((wardrobe) => wardrobe.text)
-    .join(', ');
-
-  return [it.imagePromptPrefix, it.focusedCharacter.baseAppearanceTags, wardrobeTags, response].join(',');
+  return [it.imagePromptPrefix, it.focusedCharacterAppearance, response].join(',');
 }`;
 
 const DEFAULT_SPEAKER_CLOSE_UP_PARSER_SOURCE = `async (response, it) => {
