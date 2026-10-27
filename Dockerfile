@@ -11,6 +11,8 @@ RUN npm run build --prefix client
 FROM node:24-bookworm-slim AS runtime
 WORKDIR /app
 
+COPY package*.json ./
+RUN npm ci
 COPY server/package*.json ./server/
 RUN npm ci --prefix server
 
