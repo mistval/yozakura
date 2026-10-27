@@ -28,7 +28,6 @@ import {
   applyWardrobeTriggers,
   selectZoneForWardrobeTriggers,
 } from '../engine/wardrobes.js';
-import { removeByIdentity } from '../util/array.js';
 
 export type ChatState =
   | 'inactive'
