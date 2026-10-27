@@ -13,14 +13,12 @@ const DEFAULT_SPEAKER_PARSER_SOURCE = `async (response, it) => {
     .map((wardrobe) => wardrobe.text)
     .join(', ');
 
-  const appearanceTags = [it.focusedCharacter.baseAppearanceTags, wardrobeTags].join(',');
-
-  return [it.imagePromptPrefix, appearanceTags, response].join(',');
+  return [it.imagePromptPrefix, it.focusedCharacter.baseAppearanceTags, wardrobeTags, response].join(',');
 }`;
 
 const DEFAULT_SPEAKER_CLOSE_UP_PARSER_SOURCE = `async (response, it) => {
   const closeUpTags = 'close-up, portrait, face focus, upper body, detailed face, detailed eyes';
-  return [it.imagePromptPrefix, response, closeUpTags].join(', ');
+  return [it.imagePromptPrefix, closeUpTags, it.focusedCharacter.baseAppearanceTags, response].join(', ');
 }`;
 
 const DEFAULT_SCENERY_PARSER_SOURCE = `async (response, it) => {
