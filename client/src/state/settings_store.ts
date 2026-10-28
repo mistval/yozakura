@@ -141,9 +141,9 @@ const DEFAULT_SETTINGS: Settings = {
   autoImageRate: 0,
   autoImageNpcOnly: false,
   autoImageTemplateWeights: {
-    [DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID]: 25,
+    [DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,
     [SPEAKER_CLOSE_UP_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,
-    [SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,
+    [SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID]: 25,
   },
   groupChatMessageLimit: 20,
   npcChatEndMode: 'fixed',
