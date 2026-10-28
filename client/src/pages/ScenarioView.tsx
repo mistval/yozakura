@@ -339,7 +339,7 @@ export default function ScenarioView() {
                   <CharacterCard
                     key={char.id}
                     character={char}
-                    subtitle={rel.descriptor}
+                    subtitle2={rel.descriptor}
                     onClick={() => {
                       if (hasActiveChatSession) {
                         addCharacterToActiveChat(char.id);

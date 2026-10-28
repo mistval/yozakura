@@ -27,14 +27,14 @@ export default function CharacterCard({
           alt={`${character.firstName} ${character.lastName}`}
           className="w-full h-52 object-cover rounded-sm"
         />
-        <div className="font-semibold mt-2">
+        <div className="font-semibold mt-2 text-center">
           {character.firstName} {character.lastName}
         </div>
-        <div className="text-sm text-muted">{subtitle}</div>
-        <div className="text-sm text-muted">{subtitle2}</div>
+        <div className="text-sm text-muted text-center underline">{subtitle}</div>
+        <div className="text-sm text-muted text-center">{subtitle2}</div>
+      {children && <div className="flex justify-center">{children}</div>}
       </button>
 
-      {children && <div className="flex justify-center">{children}</div>}
     </div>
   );
 }
