@@ -9,7 +9,7 @@ import dbRouter from './routes/db.js';
 import filesRouter from './routes/files.js';
 import proxyRouter from './routes/proxy.js';
 import exportRouter from './routes/export.js';
-import importRouter from './routes/import.js';
+import importRouter, { detachImportStagingIfAttached } from './routes/import.js';
 
 type CreateAppOptions = {
   dataDir?: string;
@@ -54,6 +54,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   app.use('/api', filesRouter(dataDir));
   app.use('/api', dbRouter(db));
   app.use('/api', exportRouter(dataDir, db));
+  detachImportStagingIfAttached(db, path.resolve(dataDir, 'import_staging'));
   app.use('/api', importRouter(dataDir, db));
 
   app.get('/health', (_req: Request, res: Response) => {

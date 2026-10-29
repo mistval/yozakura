@@ -84,32 +84,31 @@ function extractZip(zipPath: string, targetDir: string): Promise<void> {
   });
 }
 
-export function detachImportStagingIfAttached(db: Database.Database, tempImportDir?: string): void {
+export function detachImportStagingIfAttached(db: Database.Database, stagingDir?: string): void {
   const attached = db.pragma('database_list') as { seq: number; name: string; file: string }[];
   if (attached.some((d) => d.name === 'import_staging')) {
     clearPreparedStatementCache();
     db.exec('DETACH DATABASE import_staging');
   }
 
-  if (tempImportDir && fs.existsSync(tempImportDir)) {
+  if (stagingDir && fs.existsSync(stagingDir)) {
     try {
-      fs.rmSync(tempImportDir, { recursive: true, force: true });
+      fs.rmSync(stagingDir, { recursive: true, force: true });
     } catch (cleanupErr) {
-      console.warn('Failed to clean up temp import directory:', tempImportDir, cleanupErr);
+      console.warn('Failed to clean up staging directory:', stagingDir, cleanupErr);
     }
   }
 }
 
 export default function importRouter(dataDir: string, db: Database.Database): Router {
   const router = Router();
-  const tempImportBaseDir = path.resolve(dataDir, 'temp_import');
+  const stagingDir = path.resolve(dataDir, 'import_staging');
 
   router.post('/import/stage', async (req: Request, res: Response): Promise<void> => {
-    // 1. Detach prior staging DB and clean up prior temp import folder
-    detachImportStagingIfAttached(db, tempImportBaseDir);
+    // 1. Detach prior staging DB and clean up prior staging folder
+    detachImportStagingIfAttached(db, stagingDir);
 
     const sessionId = crypto.randomUUID();
-    const stagingDir = path.join(tempImportBaseDir, sessionId);
     fs.mkdirSync(stagingDir, { recursive: true });
 
     const zipFilePath = path.join(stagingDir, 'upload.zip');
@@ -237,7 +236,7 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
           stagingDb.close();
         } catch {}
       }
-      detachImportStagingIfAttached(db, tempImportBaseDir);
+      detachImportStagingIfAttached(db, stagingDir);
       res
         .status(400)
         .json({ error: error instanceof Error ? error.message : 'Failed to stage import archive' });
@@ -247,14 +246,8 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
   router.post('/import/commit', async (req: Request, res: Response): Promise<void> => {
     const { sessionId, sqlStatements, imageCopies } = req.body ?? {};
 
-    if (typeof sessionId !== 'string' || !sessionId.trim()) {
-      res.status(400).json({ error: 'Missing sessionId' });
-      return;
-    }
-
-    const stagingDir = path.join(tempImportBaseDir, sessionId);
     if (!fs.existsSync(stagingDir)) {
-      res.status(400).json({ error: 'Invalid or expired import staging session' });
+      res.status(400).json({ error: 'No active import staging session found' });
       return;
     }
 
@@ -275,10 +268,10 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
     }
 
     try {
-      // 1. Pre-import backup of main database
+      // 1. Pre-import backup of main database (single overwritten backup file)
       const backupDir = path.resolve(dataDir, 'backups');
       fs.mkdirSync(backupDir, { recursive: true });
-      const backupFilename = `app_pre_import_${new Date().toISOString().replace(/[:.]/g, '-')}.sqlite`;
+      const backupFilename = 'app_pre_import.sqlite';
       const backupPath = path.join(backupDir, backupFilename);
       await db.backup(backupPath);
 
@@ -325,9 +318,7 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
       }
 
       // 5. Clean up & Detach
-      clearPreparedStatementCache();
-      db.exec('DETACH DATABASE import_staging');
-      fs.rmSync(stagingDir, { recursive: true, force: true });
+      detachImportStagingIfAttached(db, stagingDir);
 
       res.json({ ok: true, backupFilename });
     } catch (error) {
@@ -339,7 +330,7 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
   });
 
   router.post('/import/cancel', (_req: Request, res: Response) => {
-    detachImportStagingIfAttached(db, tempImportBaseDir);
+    detachImportStagingIfAttached(db, stagingDir);
     res.json({ ok: true });
   });
 

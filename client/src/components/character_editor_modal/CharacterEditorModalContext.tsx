@@ -60,6 +60,7 @@ type CharacterEditorModalContextValue = {
   generateImage: () => Promise<void>;
   exportCard: () => Promise<void>;
   save: () => Promise<void>;
+  saveToGlobal: () => Promise<void>;
   remove: () => Promise<void>;
   handleUploadedCardFile: (file: File) => Promise<void>;
   closePendingImport: () => void;
@@ -401,6 +402,21 @@ export function CharacterEditorModalProvider({
     });
   };
 
+  const saveToGlobal = async () => {
+    const sanitizedCharacter = {
+      ...character,
+      firstName: character.firstName.trim(),
+      lastName: character.lastName.trim(),
+    };
+
+    await runWithField('saveToGlobal', async () => {
+      const savedGlobal = await useGlobalCharactersStore
+        .getState()
+        .saveScenarioCharacterAsGlobal(sanitizedCharacter, selectedImageFile);
+      setCharacterField('globalCharacterId', savedGlobal.id);
+    });
+  };
+
   const remove = async () => {
     await runWithField('delete', async () => {
       if (isGlobalMode) {
@@ -561,6 +577,7 @@ export function CharacterEditorModalProvider({
     generateImage: generateImageField,
     exportCard,
     save,
+    saveToGlobal,
     remove,
     handleUploadedCardFile,
     closePendingImport,

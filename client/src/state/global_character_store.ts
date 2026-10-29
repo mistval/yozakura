@@ -16,6 +16,7 @@ export const useGlobalCharactersStore = create<{
   installDemoCharactersGlobally: () => void;
   refresh: () => Promise<void>;
   saveGlobalCharacter: (character: Character, imageFile?: File) => void;
+  saveScenarioCharacterAsGlobal: (scenarioChar: Character, imageFile?: File) => Promise<Character>;
   deleteGlobalCharacter: (character: Character) => void;
 }>((set, get) => ({
   globalCharacters: [],
@@ -83,6 +84,47 @@ export const useGlobalCharactersStore = create<{
     );
 
     return withUpdatedFields;
+  },
+
+  async saveScenarioCharacterAsGlobal(scenarioChar: Character, imageFile?: File): Promise<Character> {
+    assert(get().globalCharactersAreLoaded, 'Global characters not yet loaded');
+    const targetId = scenarioChar.globalCharacterId?.trim() || scenarioChar.id;
+
+    let imagePath: string;
+    if (imageFile) {
+      imagePath = Files.getGlobalCharacterImagePath(targetId);
+      await Files.upload(imagePath, imageFile, imageFile.type || 'application/octet-stream');
+    } else {
+      imagePath = await Files.copyCharacterImageToGlobal(scenarioChar, targetId);
+    }
+
+    const cleanGlobalChar: Character = {
+      ...scenarioChar,
+      id: targetId,
+      globalCharacterId: targetId,
+      scenarioId: '',
+      locationId: '',
+      groupIds: [],
+      globalMemories: '',
+      rollingConversationSummaries: [],
+      nextConversationWithCharacterId: '',
+      imagePath: imagePath.startsWith('/images/') ? imagePath : addOrReplaceVersionQueryParam(imagePath),
+      updatedAt: new Date().toISOString(),
+    };
+
+    get().setGlobalCharacters(concatUniqueById(get().globalCharacters, cleanGlobalChar));
+
+    await doAsDataWrite(
+      async () => {
+        await mainDatabase.storeGlobalCharacters([cleanGlobalChar]);
+      },
+      'global_character',
+      {
+        debouncerKey: targetId,
+      }
+    );
+
+    return cleanGlobalChar;
   },
 
   deleteGlobalCharacter(character: Pick<Character, 'id' | 'imagePath'>) {

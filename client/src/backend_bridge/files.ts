@@ -62,6 +62,21 @@ export async function copyCharacterImageForScenario(scenarioId: string, characte
   return getPath;
 }
 
+export async function copyCharacterImageToGlobal(
+  character: Character,
+  globalCharacterId: string
+): Promise<string> {
+  if (character.imagePath.startsWith('/images/')) {
+    return character.imagePath;
+  }
+
+  const globalImagePath = getGlobalCharacterImagePath(globalCharacterId);
+  const sourceBlob = await resolveCharacterImageSourceBlob(character);
+
+  await Api.putFile(globalImagePath, sourceBlob, sourceBlob.type || DEFAULT_IMAGE_MIME_TYPE);
+  return globalImagePath;
+}
+
 export async function upload(path: string, file: Blob, contentType?: string) {
   return Api.putFile(path, file, contentType);
 }
