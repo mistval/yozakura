@@ -347,4 +347,3 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     imageDescriptors,
   };
 }
-

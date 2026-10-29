@@ -139,7 +139,7 @@ export default function ChatPane() {
         messageLimit = groupChatMessageLimit;
       }
     }
-    
+
     if (chatState === 'generating_image_prompt') {
       return 'Generating image prompt...';
     } else if (chatState === 'generating_image') {

@@ -32,9 +32,8 @@ export default function CharacterCard({
         </div>
         <div className="text-sm text-muted text-center underline">{subtitle}</div>
         <div className="text-sm text-muted text-center">{subtitle2}</div>
-      {children && <div className="flex justify-center">{children}</div>}
+        {children && <div className="flex justify-center">{children}</div>}
       </button>
-
     </div>
   );
 }

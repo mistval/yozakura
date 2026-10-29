@@ -65,4 +65,3 @@ describe('static IDs normalization invariant', () => {
     expect(allIds.size).toBe(71);
   });
 });
-

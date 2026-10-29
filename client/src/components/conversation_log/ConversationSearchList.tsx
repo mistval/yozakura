@@ -187,11 +187,7 @@ export default function ConversationSearchList({
 
   return (
     <div className="space-y-2">
-      {shouldShowHeading && (
-        <h4 className="font-medium">
-          {heading}
-        </h4>
-      )}
+      {shouldShowHeading && <h4 className="font-medium">{heading}</h4>}
       {loading && entries.length === 0 && (
         <div className="text-sm text-secondary">Loading conversations...</div>
       )}

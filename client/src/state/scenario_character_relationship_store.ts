@@ -62,9 +62,7 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
         },
 
         deleteStoreState(entities: CharacterRelationship[]) {
-          relationshipCache.deleteMany(
-            entities.map((entity) => relationshipKey(entity.fromId, entity.toId))
-          );
+          relationshipCache.deleteMany(entities.map((entity) => relationshipKey(entity.fromId, entity.toId)));
         },
 
         async setDatabaseState(entities: CharacterRelationship[]) {

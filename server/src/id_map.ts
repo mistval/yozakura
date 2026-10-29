@@ -27,4 +27,3 @@ export function applyIdMap(text: string, idMap: ReadonlyMap<string, string>): st
     return idMap.get(match) ?? match;
   });
 }
-
