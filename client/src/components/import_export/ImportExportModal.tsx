@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Modal from '../ui/Modal.js';
 import Tabs, { type TabDefinition } from '../ui/Tabs.js';
 import DataExportComponent from './DataExportComponent.js';
+import DataImportComponent from './DataImportComponent.js';
 
 type ImportExportModalProps = {
   open: boolean;
@@ -12,6 +13,9 @@ type ImportExportModalProps = {
 export default function ImportExportModal({ open, onClose, defaultTab = 'export' }: ImportExportModalProps) {
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [isImporting, setIsImporting] = useState<boolean>(false);
+
+  const isBusy = isExporting || isImporting;
 
   const tabs: TabDefinition[] = [
     { id: 'export', label: 'Export Data' },
@@ -19,7 +23,7 @@ export default function ImportExportModal({ open, onClose, defaultTab = 'export'
   ];
 
   const handleClose = () => {
-    if (!isExporting) {
+    if (!isBusy) {
       onClose();
     }
   };
@@ -28,7 +32,7 @@ export default function ImportExportModal({ open, onClose, defaultTab = 'export'
     <Modal
       open={open}
       onClose={handleClose}
-      closeOnBackdropClick={!isExporting}
+      closeOnBackdropClick={!isBusy}
       className="flex items-center justify-center p-4"
       zIndex={60}
     >
@@ -38,9 +42,9 @@ export default function ImportExportModal({ open, onClose, defaultTab = 'export'
           <button
             type="button"
             onClick={handleClose}
-            disabled={isExporting}
+            disabled={isBusy}
             className={`text-lg px-2 transition-colors ${
-              isExporting
+              isBusy
                 ? 'opacity-30 cursor-not-allowed text-muted'
                 : 'text-secondary hover:text-primary cursor-pointer'
             }`}
@@ -54,17 +58,12 @@ export default function ImportExportModal({ open, onClose, defaultTab = 'export'
           tabs={tabs}
           activeId={activeTab}
           onChange={(id) => {
-            if (!isExporting) setActiveTab(id);
+            if (!isBusy) setActiveTab(id);
           }}
           className="flex-1 overflow-y-auto"
         >
           {activeTab === 'export' && <DataExportComponent onExportStateChange={setIsExporting} />}
-          {activeTab === 'import' && (
-            <div className="p-8 text-center text-secondary space-y-2">
-              <div className="text-base font-medium text-primary">Import Archive</div>
-              <p className="text-sm">Import staging and archive inspection will be enabled in Phase 2.</p>
-            </div>
-          )}
+          {activeTab === 'import' && <DataImportComponent onImportStateChange={setIsImporting} />}
         </Tabs>
       </div>
     </Modal>

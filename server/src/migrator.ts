@@ -31,9 +31,16 @@ function getUserVersion(db: Database.Database): number {
   return Number(db.pragma('user_version', { simple: true }));
 }
 
-export function runMigrations(db: Database.Database, context?: MigrationContext): void {
+export function runMigrations(
+  db: Database.Database,
+  context?: MigrationContext,
+  targetVersion?: number
+): void {
   while (true) {
     const version = getUserVersion(db);
+    if (targetVersion !== undefined && version >= targetVersion) {
+      return;
+    }
     const migration = migrations[version];
 
     if (!migration) {
