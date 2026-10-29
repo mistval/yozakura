@@ -44,7 +44,7 @@ const contextSchemaFields = z.object({
     description: `The character who is in focus for this prompt (maybe they are the speaker, maybe they are having memories generated, etc. The exact meaning of "in focus" depends on the specific prompt template.).`,
   }),
   focusedCharacterAppearance: z.string().meta({
-    description: `The concatenation of the focused character's baseAppearanceTags with all of their enabled wardrobes. This is a convenience field and doesn't encode any information beyond what is already available in focusedCharacter.wardrobes.`,
+    description: `The concatenation of the focused character's baseAppearanceTags with all of their enabled wardrobes. This is a convenience field and doesn't encode any information beyond what is already available in focusedCharacter.`,
   }),
   targetCharacter: characterSchema.meta({
     description:
