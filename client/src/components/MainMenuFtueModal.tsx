@@ -25,8 +25,9 @@ import {
   IMAGE_SCRIPT_DESCRIPTOR,
   useImageScriptSelection,
 } from './settings/settingsScripts/imageScriptSection.js';
+import { PARADISE_ISLAND_MAP_ID } from '../engine/map/default_maps.js';
 
-const DEMO_MAP_ID = 'paradise_island';
+const DEMO_MAP_ID = PARADISE_ISLAND_MAP_ID;
 
 const FTUE_API_URL_TOOLTIP_HTML =
   'Use an OpenAI-compatible completions API endpoint (usually an endpoint that ends in <code>/v1/chat/completions</code>).';

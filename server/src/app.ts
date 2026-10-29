@@ -38,7 +38,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   fs.mkdirSync(staticDir, { recursive: true });
 
   const db = openDatabase(dataDir);
-  runMigrations(db);
+  runMigrations(db, { dataDir });
 
   const app = express();
   app.use('/api', proxyRouter());

@@ -1,4 +1,5 @@
 import { uid } from 'uid';
+import z from 'zod';
 
 export function newId() {
   return uid(18);
@@ -13,3 +14,5 @@ export function addOrReplaceVersionQueryParam(path: string) {
 
   return `${pathname}?${query}`;
 }
+
+export const idSchema = z.string().regex(/^[a-f0-9]{18}$/);

@@ -45,7 +45,7 @@ function createHelper() {
         db.delete(entity.id);
       }
     }),
-    getEntitiesFromDatabase: vi.fn(async (entities) => {
+    getEntitiesFromDatabase: vi.fn(async (entities: TestEntity[]) => {
       return entities
         .map((entity) => db.get(entity.id))
         .filter((entity): entity is TestEntity => Boolean(entity));

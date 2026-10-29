@@ -5,6 +5,7 @@ const DEMO_CHARACTER_TIMESTAMP = '2026-01-01T00:00:00.000Z';
 
 const DEMO_CHARACTERS_RAW = [
   {
+    id: '1bc07a1064b2b7aead',
     firstName: 'Delphine',
     lastName: 'Acquaviva',
     internalDescription:
@@ -22,6 +23,7 @@ const DEMO_CHARACTERS_RAW = [
       "Delphine: Okay, do NOT move, the light is doing something unreal on your face right now. One photo. Two, maybe.\nDelphine: I've been to twelve countries this year and I swear this sunset is top three. You're so lucky you came this week.",
   },
   {
+    id: '35ecc55d6169c250c2',
     firstName: 'Conrad',
     lastName: 'Voss',
     internalDescription:
@@ -39,6 +41,7 @@ const DEMO_CHARACTERS_RAW = [
       "Conrad: Whatever you're drinking, put the next one on my tab. Consider it a thank-you for being the only interesting person at this bar.\nConrad: People always ask if I miss the office. I tell them I built the office so I'd never have to be in it.",
   },
   {
+    id: '95afdb3d72d295732f',
     firstName: 'Marisol',
     lastName: 'Esperanza',
     internalDescription:
@@ -56,6 +59,7 @@ const DEMO_CHARACTERS_RAW = [
       "Marisol: My husband loved this beach. He always said the water here was a different kind of blue.\nMarisol: You've worked here a long while, then? You might have known him. Tall man, gentle, loved to dive.",
   },
   {
+    id: 'd941f2a2860355473a',
     firstName: 'Theo',
     lastName: 'Brandt',
     internalDescription:
@@ -73,6 +77,7 @@ const DEMO_CHARACTERS_RAW = [
       "Theo: Sorry, is it weird that I took a picture of the breakfast? My mom is not going to believe they put little flowers on the yogurt.\nTheo: I won this trip on the radio. The radio! I still kind of think someone's gonna tap me on the shoulder and say there's been a mistake.",
   },
   {
+    id: '58ae8c1299b1c9e11f',
     firstName: 'Yelena',
     lastName: 'Sorokin',
     internalDescription:
@@ -90,6 +95,7 @@ const DEMO_CHARACTERS_RAW = [
       "Yelena: No, I'm just snorkeling for fun. The reef is beautiful, isn't it? Mostly I just float around.\nYelena: I wouldn't touch that section of coral, if I were you. Some things down there don't like to be disturbed.",
   },
   {
+    id: '37fb130c3599067a7a',
     firstName: 'Emeka',
     lastName: 'Okafor',
     internalDescription:
@@ -107,6 +113,7 @@ const DEMO_CHARACTERS_RAW = [
       "Emeka: One mai tai, light on the regret, heavy on the rum. And don't worry, whatever you tell me at this bar stays at this bar.\nEmeka: I've been here ten years. You learn to read people fast. You, for instance, you've got the look of someone hiding from a phone call.",
   },
   {
+    id: '74626f4a570160969c',
     firstName: 'Birdie',
     lastName: 'Calloway',
     internalDescription:
@@ -124,6 +131,7 @@ const DEMO_CHARACTERS_RAW = [
       "Birdie: That necklace your friend is wearing is exquisite. Burmese rubies, if I'm not mistaken. I do have an eye for these things.\nBirdie: Oh, I had a marvelous career, darling. I'll tell you all about it. Most of it's even true.",
   },
   {
+    id: '87c72a60520ac2d995',
     firstName: 'Rajesh',
     lastName: 'Malhotra',
     internalDescription:
@@ -141,6 +149,7 @@ const DEMO_CHARACTERS_RAW = [
       "Rajesh: Another bottle for the table, no, no, I insist, your money's no good when I'm around. Tonight we live like the world ends Monday.\nRajesh: My family owns hotels. Real ones. So trust me, I know exactly how much the house always wins.",
   },
   {
+    id: '02d8092f87ad7660ab',
     firstName: 'Margaret',
     lastName: 'Lindqvist',
     internalDescription:
@@ -158,6 +167,7 @@ const DEMO_CHARACTERS_RAW = [
       "Margaret: So what's your story? Everyone here has one, I find. The interesting ones never tell it the first time you ask.\nMargaret: There was a disappearance here, you know. Years ago. Funny how no one at the front desk likes to talk about it.",
   },
   {
+    id: '6b573a2aaeb9d45500',
     firstName: 'Kai',
     lastName: 'Nakamura',
     internalDescription:
@@ -175,6 +185,7 @@ const DEMO_CHARACTERS_RAW = [
       "Kai: Breathe slow, trust the gear, and the reef does the rest. I've got you the whole way down, promise.\nKai: Where am I from? Ah, everywhere, nowhere. I came out here to dive and just never found a reason to leave.",
   },
   {
+    id: '6339c164e67289d6ba',
     firstName: 'Vivian',
     lastName: 'Asghari',
     internalDescription:
@@ -192,6 +203,7 @@ const DEMO_CHARACTERS_RAW = [
       "Vivian: I'm just fascinated by how a place like this runs. The occupancy, the margins, forgive me, I find the business side romantic.\nVivian: You'd be amazed what people tell you over a second glass of wine. I never even have to ask.",
   },
   {
+    id: '15ae0f6ed007ff6712',
     firstName: 'Gus',
     lastName: 'Pelletier',
     internalDescription:
@@ -209,6 +221,7 @@ const DEMO_CHARACTERS_RAW = [
       "Gus: SHOTS. No arguments. I just met you but I can already tell you're good people, and good people drink with Gus.\nGus: Ah, my ex would've loved it here. She, anyway. Anyway! We're not doing that tonight. Bartender!",
   },
   {
+    id: 'e49bee44b1291736fb',
     firstName: 'Noor',
     lastName: 'Rahimi',
     internalDescription:
@@ -226,6 +239,7 @@ const DEMO_CHARACTERS_RAW = [
       "Noor: Have you worked here long? Like, a long time? Twenty, thirty years, maybe? Sorry, that's a strange question.\nNoor: It's silly. I just have this feeling that I was supposed to come to this exact place. Like something's waiting for me here.",
   },
   {
+    id: '4669e0abdd8aee846d',
     firstName: 'Lyle',
     lastName: 'Sullivan',
     internalDescription:
@@ -243,6 +257,7 @@ const DEMO_CHARACTERS_RAW = [
       "Lyle: Gin and tonic. Heavy on the tonic. ...Doc's orders, don't tell anyone.\nLyle: Nah, I just like to sit and watch the water. Old habit. You see a lot if you just sit still long enough.",
   },
   {
+    id: 'fe185fc2b3733603ce',
     firstName: 'Celeste',
     lastName: 'Moreau',
     internalDescription:
@@ -260,6 +275,7 @@ const DEMO_CHARACTERS_RAW = [
       "Celeste: I'm treating myself, that's the theme of this trip. Treating. Myself. Doesn't that sound healthy and not at all unhinged?\nCeleste: God, sorry, I overshared. I do that now, apparently. New me. The old me would never.",
   },
   {
+    id: '4130395ddc5642f602',
     firstName: 'Idris',
     lastName: 'Mwangi',
     internalDescription:
@@ -277,6 +293,7 @@ const DEMO_CHARACTERS_RAW = [
       "Idris: I'd just take it easy in this heat, drink water, stay in the shade. ...Sorry. Force of habit.\nIdris: What do I do? Oh, nothing interesting. I'm taking some time off. Long overdue, that's all.",
   },
   {
+    id: 'e533dac1b22756edba',
     firstName: 'Anneliese',
     lastName: 'Brauer',
     internalDescription:
@@ -294,6 +311,7 @@ const DEMO_CHARACTERS_RAW = [
       'Anneliese: Your energy is so blocked right now, I can feel it from here, and that is completely okay. We can work with that.\nAnneliese: I have these little drops, all natural, life-changing, I only share them with people I sense are ready. You feel ready to me.',
   },
   {
+    id: '671b9edb74a7484b09',
     firstName: 'Hank',
     lastName: 'Yoshida',
     internalDescription:
@@ -311,6 +329,7 @@ const DEMO_CHARACTERS_RAW = [
       "Hank: Best week of my life, honestly. Married the love of my life, came straight here, what could be better, right? Right.\nHank: Hey, random question, if you found something on someone's phone, hypothetically, would you ask them about it? Hypothetically.",
   },
   {
+    id: '01879324022e8a104e',
     firstName: 'Beatrix',
     lastName: 'Lindgren',
     internalDescription:
@@ -328,6 +347,7 @@ const DEMO_CHARACTERS_RAW = [
       "Beatrix: Oh, don't mind me, I'm just a confused old woman enjoying the sunshine. ...That's what they all think, anyway. Useful.\nBeatrix: My children believe I've gone senile. So I came four thousand miles to change my will. Surprise.",
   },
   {
+    id: 'e878ec6972a7c9f6e5',
     firstName: 'Marcus',
     lastName: 'Cole',
     internalDescription:
@@ -347,14 +367,13 @@ const DEMO_CHARACTERS_RAW = [
 ];
 
 export const DEMO_CHARACTERS: Character[] = DEMO_CHARACTERS_RAW.map((character) => {
-  const id = `demo-${character.firstName.toLowerCase()}-${character.lastName.toLowerCase()}`;
+  const imageSlug = `demo-${character.firstName.toLowerCase()}-${character.lastName.toLowerCase()}`;
 
   return {
     ...character,
-    id,
     scenarioId: '',
-    globalCharacterId: id,
-    imagePath: `/images/character/${id}.png`,
+    globalCharacterId: character.id,
+    imagePath: `/images/character/${imageSlug}.png`,
     locationId: '',
     wardrobes: character.clothing.map((outfit, i) =>
       createWardrobe({

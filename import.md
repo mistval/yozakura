@@ -3,11 +3,13 @@
 ## 0. Prerequisite: Universal 18-Char Hex ID Invariant (`0007` Migration & Shared ID Rewriter)
 
 Current generated IDs in Yozakura use [`newId()`](file:///c:/Users/Randall/code/yozakura/client/src/util/id.ts) (`uid(18)` $\to$ `[0-9a-f]{18}`), but three legacy ID sources exist in code and existing user databases:
+
 - **Older `newId()` implementation:** Earlier versions of `newId()` used `crypto.randomUUID().replaceAll('-', '')`, so older user databases (and on-disk image folders/files under `<dataDir>/character_cards/` and `<dataDir>/scenario/`) contain user-created entities with 32-character lowercase hex IDs (`[0-9a-f]{32}`).
 - [`default_maps.ts`](file:///c:/Users/Randall/code/yozakura/client/src/engine/map/default_maps.ts) uses 32-character hex UUIDs for the 4 default maps and their 47 locations.
 - [`demo_characters.ts`](file:///c:/Users/Randall/code/yozakura/client/src/engine/demo_characters.ts) uses hyphenated `demo-<first>-<last>` IDs for the 20 demo global characters.
 
 Before building import/export, Phase 0 introduces the shared server-side token ID rewriter (`applyIdMap` in `server/src/id_map.ts`), updates `DEFAULT_WORLD_MAPS` and `DEMO_CHARACTERS` to use static, hardcoded 18-character lowercase hex IDs (`[0-9a-f]{18}`)—keeping `imagePath: "/images/character/demo-*.png"` unchanged on demo characters so the 20 static PNG files in `client/src/public/images/character/` don't need renaming—and runs migration `0007` across all entities:
+
 - **Build `idMap` safely:** Seeds `idMap` with the 71 static mappings (4 default maps, 47 default locations, 20 demo characters), then scans all entity tables (`character`, `scenario`, `scenario_character`, `character_relationship`, `conversation`, `conversation_participant`, `map`, `scenario_character_group`, `scenario_character_group_schedule`, `scenario_event_log`), `key_value` (`scenario_%_turn`), and `settings.llmConfigs` profile keys for any remaining `[0-9a-f]{32}` IDs—minting a fresh `[0-9a-f]{18}` ID for each one while intentionally never scanning non-ID `settings` values (protecting 32-char hex secrets like Cloudflare Account IDs) or `user_text_files` (which was introduced after `newId()` switched to 18-char hex).
 - **Rewrite all SQLite tables & on-disk `<dataDir>` image paths:** Applies `applyIdMap` across all primary keys, foreign key columns, `scenario_%_turn` keys, and JSON `data` blobs (preserving `rowid`, `created_at`, `updated_at`, and static `/images/character/demo-*.png` paths, with `PRAGMA defer_foreign_keys = ON` + `PRAGMA foreign_key_check`), then renames matching files and scenario directories under `<dataDir>/character_cards/` and `<dataDir>/scenario/`.
 
@@ -18,7 +20,9 @@ Once `0007` is in place, **every entity ID in the system is guaranteed to match 
 ## 1. Archive Format & Security Model
 
 ### Zip Contents
+
 An exported `.yozakura_export.zip` archive contains four items:
+
 1. **`manifest.json`**: Metadata about the export:
    - `exportName`: User-chosen name of the export.
    - `dbUserVersion`: The SQLite `PRAGMA user_version` at the time of export.
@@ -36,7 +40,9 @@ An exported `.yozakura_export.zip` archive contains four items:
 4. **`images/`**: Directory containing the raw image files referenced by `images.jsonl`.
 
 ### Security Model & Blast Radius
+
 The goal is to limit the blast radius if a user pastes malicious JS into a prompt template or script that runs in the client:
+
 - **Exports restricted to `<dataDir>/data_exports/` + `.yozakura_export.zip` suffix:** Exports are always saved inside `<dataDir>/data_exports/` (resolved via `resolveDiskPath` in [`pathGuard.ts`](file:///c:/Users/Randall/code/yozakura/server/src/routes/pathGuard.ts) with no ability to write outside that folder). The frontend appends `.yozakura_export.zip` to the filename, and the backend validates and rejects if the suffix is missing. After exporting, the UI shows the full path on disk so the user knows where to find the file.
 - **Import only exposes data from valid Yozakura export zips:** The user can select any `.zip` file on their machine via `<input type="file">`. Before returning any file contents to the frontend, the backend verifies that the archive is a properly structured Yozakura export (`manifest.json`, `db_rows.jsonl` that passes migration). If not, the backend returns a generic error message rather than leaking file contents.
 - **Server-controlled `ATTACH` only:** During import commit, the backend attaches only its own server-managed `import_staging.sqlite` path (never accepting arbitrary filesystem paths to `ATTACH` from the client).
@@ -48,9 +54,11 @@ The goal is to limit the blast radius if a user pastes malicious JS into a promp
 ## 2. UI Components & Related Features
 
 ### 2.0 Entry Point Modal (`MainMenu.tsx`)
+
 Export and Import live inside a modal launched from an **Import / Export** button at the bottom of the main action button column in [`MainMenu.tsx`](file:///c:/Users/Randall/code/yozakura/client/src/pages/MainMenu.tsx#L94-L105) (keeping import/export out of active mid-turn scenario sessions).
 
 ### 2.1 `TreeDataViewer` (Generic Lazy Tree Component)
+
 A reusable React component that renders a hierarchical checkbox tree with tri-state checkboxes (`none`, `some`, `all`).
 
 - **Node Interface:**
@@ -73,7 +81,9 @@ A reusable React component that renders a hierarchical checkbox tree with tri-st
   - Accepts a render prop (e.g. `renderControls: (selection: TreeSelectionState) => ReactNode`) so the wrapping component can render its action buttons ("Export" / "Next") with access to the selection state.
 
 ### 2.2 Scenario Subtree Granularity & Dependencies
+
 Under each Scenario in the tree, children are exposed at the **category level** (all optional, and on import only shown if present in the archive):
+
 - **Map (`<Map Name>`)** (aliased to the corresponding Map under the root **Maps** node)
 - **Characters** (`scenario_character`)
 - **Character Groups** (`scenario_character_group`)
@@ -84,23 +94,29 @@ Under each Scenario in the tree, children are exposed at the **category level** 
 - **Event Logs** (`scenario_event_log`)
 
 **Resilience to Missing Linked Data:**
-- **Missing Characters at Scenario Load Time:** Resolved *before* `startScenarioLoop()` begins:
+
+- **Missing Characters at Scenario Load Time:** Resolved _before_ `startScenarioLoop()` begins:
   - If the user loads into a scenario that has no characters (e.g. exported or imported without its `Characters`), we automatically pick a random character from `useGlobalCharactersStore`, add it to the scenario, and set it as `userCharacterId`. If there are no global characters either, [`ScenarioView.tsx`](file:///c:/Users/Randall/code/yozakura/client/src/pages/ScenarioView.tsx) renders an error screen explaining what is wrong (similar to the existing `if (noMapsExist)` guard) and renders nothing else.
-  - If the scenario *does* have characters (`scenarioCharacters.length > 0`) but `scenario.userCharacterId` does not match any of them, `userCharacterId` falls back to one of the existing scenario characters before starting the turn loop.
+  - If the scenario _does_ have characters (`scenarioCharacters.length > 0`) but `scenario.userCharacterId` does not match any of them, `userCharacterId` falls back to one of the existing scenario characters before starting the turn loop.
 - **Active Conversation State with Missing Characters:** We will update the turn/chat engine to be resilient when loading `scenario_<id>_turn`: if it references characters that aren't present in the scenario, it skips loading the saved turn state and starts a new turn cleanly. (The onus is on the exporter to include the relevant characters; no warning needed in v1.)
 
 ### 2.3 Character Editor Modal: "Overwrite Global Character" Option
+
 Instead of prompting during import whether to install scenario characters globally, we will add an action in the Character Editor Modal (when editing a scenario character) to **save/overwrite the Global Character with the Scenario Character's data**:
+
 - Creates the global character if its `globalCharacterId` doesn't exist locally yet, or overwrites it if it does.
 - Resets scenario-specific runtime fields (`globalMemories: ''`, `rollingConversationSummaries: []`, `nextConversationWithCharacterId: ''`, `groupIds: []`, `locationId: ''`, `scenarioId: ''`) so the Global Character stays a clean template for new scenarios.
 - Copies its portrait image to `character_cards/<globalCharacterId>.png` (if not using a built-in `/images/...` static asset).
 
 ### 2.4 `DatabaseClient` Class & Early `ATTACH` Namespacing
+
 In [`database.ts`](file:///c:/Users/Randall/code/yozakura/client/src/backend_bridge/database.ts), we will wrap the database functions into a class that accepts an optional `targetSchema` constructor parameter (defaulting to `'main'`) and prefixes every table reference with `${this.targetSchema}.<table>`. We export two instances:
+
 - `mainDatabase` (`targetSchema = 'main'`)
 - `importStagingDatabase` (`targetSchema = 'import_staging'`)
 
 On the backend, once `import_staging.sqlite` has finished migrating in Stage 1, the backend immediately attaches it to the main `app.sqlite` connection as `import_staging` (`ATTACH DATABASE <stagingPath> AS import_staging`).
+
 - No custom HTTP headers or separate server DB wrappers are needed: `mainDatabase` and `importStagingDatabase` share the exact same `/api/db/*` endpoints and hierarchy-building queries, while explicit `mainDatabase` vs. `importStagingDatabase` naming prevents accidental writes to `main`.
 - Whenever `import_staging` is detached (on commit completion, import cancellation, or before staging a new import), the backend clears `preparedStatementCache` first so no cached statement handles reference `import_staging`.
 
@@ -109,6 +125,7 @@ On the backend, once `import_staging.sqlite` has finished migrating in Stage 1, 
 ## 3. Export Flow (Frontend & Backend)
 
 ### 3.1 `DataExportComponent`
+
 1. User enters an export name (frontend constructs `<exportName>.yozakura_export.zip`) and selects items in `TreeDataViewer`.
 2. The frontend builds the export payload:
    - **SQL Table Export Queries:** Because the frontend owns the SQL schema knowledge in [`database.ts`](file:///c:/Users/Randall/code/yozakura/client/src/backend_bridge/database.ts), it sends an array of table export queries:
@@ -158,6 +175,7 @@ On the backend, once `import_staging.sqlite` has finished migrating in Stage 1, 
      ```
 
 ### 3.2 Data Export Backend
+
 1. Validates that the filename ends with `.yozakura_export.zip` and resolves its destination inside `<dataDir>/data_exports/` via `resolveDiskPath`. If the destination file already exists and `overwrite` is not `true`, returns `409` (`{ alreadyExists: true }`) without writing anything.
 2. Creates a single temporary working directory inside `<dataDir>`.
 3. Writes `manifest.json` (`exportName` and current `PRAGMA user_version`).
@@ -175,6 +193,7 @@ On the backend, once `import_staging.sqlite` has finished migrating in Stage 1, 
 ## 4. Import Flow (Frontend-Driven Staging + `ATTACH` Atomic Commit)
 
 ### Stage 1: Unpack, Migrate & Early `ATTACH` (`POST /api/import/stage`)
+
 1. Frontend streams the user-selected `File` directly as the raw binary request body (`fetch('/api/import/stage', { method: 'POST', body: file })`), and backend pipes `req` to disk via `pipeline(req, createWriteStream(...))` (same pattern as `PUT /api/files/*` in [`files.ts`](file:///c:/Users/Randall/code/yozakura/server/src/routes/files.ts#L16-L27)).
 2. If a previous `import_staging` database is still attached, clears `preparedStatementCache`, runs `DETACH DATABASE import_staging`, and deletes the old staging folder.
 3. Unpacks the `.zip` into `<dataDir>/temp_import/<sessionId>/` and verifies `manifest.json` exists with `dbUserVersion <= CURRENT_DB_VERSION`.
@@ -188,8 +207,10 @@ On the backend, once `import_staging.sqlite` has finished migrating in Stage 1, 
 11. Frontend queries `importStagingDatabase` (`import_staging.*`) to display `TreeDataViewer` (omitting empty categories, selecting all present items by default, and badging any `templateGroupData` prompt template chains with executable-code warnings).
 
 ### Stage 2: Frontend Validation, Conflict Resolution & Staging DB Preparation
+
 All domain logic stays in the frontend via `importStagingDatabase`:
-1. **Conflict Detection via Authoritative Zustand Stores:** Frontend ensures `useMapStore` and `useGlobalCharactersStore` are loaded, checks which selected **Global Entities** (`map`, `character`) already exist by `id` in those stores, and prompts the user for collisions (**Skip**, **Overwrite**, or **Make a Copy**). *(Scenarios and scenario-scoped child rows never collide because their IDs are always rewritten; selected Prompt Template Chains overwrite any existing chain with the same ID without a separate conflict prompt.)*
+
+1. **Conflict Detection via Authoritative Zustand Stores:** Frontend ensures `useMapStore` and `useGlobalCharactersStore` are loaded, checks which selected **Global Entities** (`map`, `character`) already exist by `id` in those stores, and prompts the user for collisions (**Skip**, **Overwrite**, or **Make a Copy**). _(Scenarios and scenario-scoped child rows never collide because their IDs are always rewritten; selected Prompt Template Chains overwrite any existing chain with the same ID without a separate conflict prompt.)_
 2. **Paged Zod Validation:** Frontend pages through all selected tables via `importStagingDatabase` and Zod-parses every row to ensure 100% of data to be imported is valid before touching `main` (validating `key_value` `key = 'settings'` by merging onto `DEFAULT_SETTINGS` via `applyPatch` and parsing with `settingsSchema`).
 3. **Prepare `import_staging` In-Place (via `importStagingDatabase`):**
    - **Build `import_staging._id_map` in SQLite:** Creates `CREATE TABLE import_staging._id_map (old_id TEXT PRIMARY KEY, new_id TEXT NOT NULL)` and populates `(id, lower(hex(randomblob(9))))` for all selected scenario-scoped rows (`scenario`, `scenario_character`, `character_relationship`, `conversation`, `conversation_participant`, `scenario_character_group`, `scenario_character_group_schedule`, `scenario_event_log`) plus any Global Entities where the user chose **Make a Copy**.
@@ -199,7 +220,9 @@ All domain logic stays in the frontend via `importStagingDatabase`:
      - For scenarios where **Memories** and/or **Character Groups** were unchecked on import, clears `globalMemories` / `rollingConversationSummaries` / `nextConversationWithCharacterId` (for unchecked **Memories**) and `groupIds` (for unchecked **Character Groups**) on `import_staging.scenario_character` via `json_patch`.
 
 ### Stage 3: Single-Transaction Commit (`POST /api/import/commit`)
+
 The frontend sends a commit request containing:
+
 - `sqlStatements`: Ordered `INSERT INTO main.<table> ... SELECT apply_id_map(...) FROM import_staging.<table> ...` statements in foreign-key dependency order:
   - Sets `updated_at` to import time on top-level entities (`scenario`, `map`, `character`), using `ON CONFLICT(id) DO UPDATE` for Global Entities where **Overwrite** was chosen.
   - Preserves original `created_at` and `updated_at` on historical log tables (`conversation`, `conversation_participant`, `scenario_event_log` ordered by `rowid ASC`) so chronological history order is maintained.
@@ -207,6 +230,7 @@ The frontend sends a commit request containing:
 - `imageCopies`: Array of `{ zipPath: string, targetRelPath: string }` filtered from `images.jsonl` for non-skipped selected entities/categories (with `targetRelPath` still containing the pre-remap relative path, e.g. `"scenario/<oldScenId>/character_cards/<oldCharId>.png"`).
 
 The backend executes `POST /api/import/commit` without any domain schema knowledge:
+
 1. **Backup `app.sqlite`:** Runs `await db.backup(backupPath)` (SQLite's backup API backs up `"main"` specifically and ignores attached schemas).
 2. **Register `apply_id_map`:**
    - Loads `SELECT old_id, new_id FROM import_staging._id_map` into a JS `Map<string, string>` and registers a custom SQLite scalar function `apply_id_map(text)` via `better-sqlite3`'s `db.function()`, reusing `applyIdMap(text, idMap)` from `server/src/id_map.ts` (built in Phase 0).
@@ -219,31 +243,37 @@ The backend executes `POST /api/import/commit` without any domain schema knowled
 ## 5. Development Phases
 
 ### Phase 0: Shared ID Rewriter & Universal Entity ID Normalization (`0007` Migration)
+
 1. Implement shared server ID-rewriting utility `server/src/id_map.ts` (`applyIdMap` + 18-char hex generator) used by both migration `0007` and Phase 3 import commits.
 2. Define static 18-char lowercase hex IDs for `DEFAULT_WORLD_MAPS` (and their locations) and `DEMO_CHARACTERS` (keeping `imagePath: "/images/character/demo-*.png"` unchanged).
 3. Pass `{ dataDir }` context into `runMigrations` and add migration `0007` to rewrite **all** legacy IDs (the 71 static IDs plus any user-created 32-char UUID hex IDs from older `newId()`) across all SQLite tables and `<dataDir>` image files/folders so every entity ID in the app conforms to `[0-9a-f]{18}`.
 
 ### Phase 1: `TreeDataViewer` & Export Pipeline
+
 1. Build generic `TreeDataViewer` with tri-state checkboxes, lazy `getChildren()`, aliased node selection (for Scenario $\leftrightarrow$ Map sync), and recursive `getChildren()` selection when checking a collapsed parent.
 2. Add the Import / Export modal and launch button at the bottom of the button column in [`MainMenu.tsx`](file:///c:/Users/Randall/code/yozakura/client/src/pages/MainMenu.tsx).
 3. Build `DataExportComponent` with the SQL query builder per selected table/category (using SQLite `json_patch` when Memories and/or Character Groups are unchecked), pre-built `settings` row with full concrete `TemplateChainSettingsData` for selected template chains, `.yozakura_export.zip` filename suffixing, overwrite confirmation dialog on `409`, and `ImageCopyDescriptor[]` builder.
 4. Implement `POST /api/export` on the backend: validates `.yozakura_export.zip` suffix, checks existing file vs. `overwrite`, writes inside `<dataDir>/data_exports/`, streams SQL queries and pre-built rows into `db_rows.jsonl`, copies files/directories from `ImageCopyDescriptor[]` into `images/` + `images.jsonl`, zips, and returns the saved file path.
 
 ### Phase 2: `DatabaseClient` Refactor, Import Staging & Preview Tree
+
 1. Refactor [`database.ts`](file:///c:/Users/Randall/code/yozakura/client/src/backend_bridge/database.ts) into a `DatabaseClient(targetSchema)` class exporting `mainDatabase` (`main`) and `importStagingDatabase` (`import_staging`).
 2. Implement `POST /api/import/stage` (detaches any prior `import_staging`, unpacks zip, creates `import_staging.sqlite`, migrates `0 -> dbUserVersion`, generically truncates all user tables via `sqlite_schema`, inserts `db_rows.jsonl`, migrates `dbUserVersion -> latest`, `ATTACH`es `import_staging.sqlite` as `import_staging`, returns `manifest.json` + `images.jsonl`).
 3. Wire `DataImportComponent` to reuse the tree builder via `importStagingDatabase` (hiding empty branches, selecting all present nodes by default, and badging `templateGroupData` nodes with executable-code warnings).
 
 ### Phase 3: Frontend Staging Prep, Atomic Commit & Resilience
+
 1. Build frontend conflict resolution via `useMapStore` and `useGlobalCharactersStore` (**Skip** / **Overwrite** / **Make a Copy**), paged Zod validation via `importStagingDatabase`, and `import_staging._id_map` / data preparation in `import_staging`.
 2. Implement `POST /api/import/commit`: `db.backup()`, `apply_id_map()` custom SQLite function, single-transaction SQL execution, `applyIdMap`-driven image copying, cache clear + `DETACH`, and staging cleanup.
 3. Update scenario load / [`ScenarioView.tsx`](file:///c:/Users/Randall/code/yozakura/client/src/pages/ScenarioView.tsx) to auto-add a random character from `useGlobalCharactersStore` as `userCharacterId` when a scenario has no characters (or render an error screen in `ScenarioView.tsx` if no global characters exist), and update turn/chat engine loading (`scenario_<id>_turn`) to gracefully start a fresh turn if referenced characters are missing.
 
 ### Phase 4: Character Editor Global Save & Cleanup
+
 1. Add the "Overwrite / Save to Global Character" option in the Character Editor Modal for scenario characters (clearing runtime scenario fields).
 2. Add cleanup of stale staging directories and rotation of old pre-import DB backups.
 
 ### Phase 5: Top-Level Integration Test Suite (`test/`)
+
 1. **Separate Top-Level Test Suite (`test/`):**
    - Keep `client/src/**/*.test.ts` focused on fast unit tests, and add a top-level `test/` folder (`test/vitest.config.ts`, `test/tsconfig.json`, `test/*.test.ts`) wired to `vitest` and `@types/node` in the root [`package.json`](file:///c:/Users/Randall/code/yozakura/package.json) (`npm run test:integration` and `npm run typecheck:test`, added to `check:all` and [`.github/workflows/ci.yml`](file:///c:/Users/Randall/code/yozakura/.github/workflows/ci.yml)).
    - Because `test/` sits above both `server/` and `client/`, tests can directly import `startServer` from [`server/src/app.ts`](file:///c:/Users/Randall/code/yozakura/server/src/app.ts) alongside client engine modules (`mainDatabase`, `importStagingDatabase`, stores, and the headless export/import orchestrators).
