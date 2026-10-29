@@ -23,6 +23,7 @@ export type TreeDataViewerProps = {
   selectedIds: Set<string>;
   onSelectionChange: (selectedIds: Set<string>) => void;
   renderControls?: (selection: TreeSelectionState) => ReactNode;
+  disabled?: boolean;
   className?: string;
 };
 
@@ -63,6 +64,7 @@ export default function TreeDataViewer({
   selectedIds,
   onSelectionChange,
   renderControls,
+  disabled = false,
   className = '',
 }: TreeDataViewerProps) {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set());
@@ -105,7 +107,7 @@ export default function TreeDataViewer({
   // Toggle node expansion
   const toggleExpand = useCallback(
     async (node: TreeNode, path: string) => {
-      if (!node.getChildren) return;
+      if (disabled || !node.getChildren) return;
 
       const isExpanded = expandedPaths.has(path);
       if (isExpanded) {
@@ -119,20 +121,22 @@ export default function TreeDataViewer({
         await loadChildren(node, path);
       }
     },
-    [expandedPaths, loadChildren]
+    [disabled, expandedPaths, loadChildren]
   );
 
   // Toggle checkbox for a node at path
   const handleToggleCheck = useCallback(
     async (node: TreeNode, path: string) => {
+      if (disabled) return;
       const next = await toggleNodeSelection(node, path, selectedIds, childrenMap, loadChildren);
       onSelectionChange(next);
     },
-    [childrenMap, loadChildren, onSelectionChange, selectedIds]
+    [childrenMap, disabled, loadChildren, onSelectionChange, selectedIds]
   );
 
   // Select all across all roots
   const selectAll = useCallback(async () => {
+    if (disabled) return;
     const nextSelected = new Set(selectedIds);
     for (const root of roots) {
       const ids = await collectDescendantIds(root, root.id, loadChildren);
@@ -141,12 +145,13 @@ export default function TreeDataViewer({
       }
     }
     onSelectionChange(nextSelected);
-  }, [loadChildren, onSelectionChange, roots, selectedIds]);
+  }, [disabled, loadChildren, onSelectionChange, roots, selectedIds]);
 
   // Clear all selections
   const clearAll = useCallback(() => {
+    if (disabled) return;
     onSelectionChange(new Set());
-  }, [onSelectionChange]);
+  }, [disabled, onSelectionChange]);
 
   const hasSelection = useMemo(() => selectedIds.size > 0, [selectedIds]);
 
@@ -174,7 +179,10 @@ export default function TreeDataViewer({
             <button
               type="button"
               onClick={() => toggleExpand(node, path)}
-              className="w-5 h-5 flex items-center justify-center text-secondary hover:text-primary transition-transform cursor-pointer"
+              disabled={disabled || isLoading}
+              className={`w-5 h-5 flex items-center justify-center text-secondary transition-transform ${
+                disabled ? 'cursor-not-allowed opacity-50' : 'hover:text-primary cursor-pointer'
+              }`}
               aria-label={isExpanded ? 'Collapse' : 'Expand'}
             >
               {isLoading ? (
@@ -190,12 +198,16 @@ export default function TreeDataViewer({
           <TriStateCheckbox
             state={checkState}
             onChange={() => handleToggleCheck(node, path)}
+            disabled={disabled}
             aria-label={`Select ${node.label}`}
           />
 
           <div
-            className="flex flex-1 items-baseline gap-2 cursor-pointer min-w-0"
+            className={`flex flex-1 items-baseline gap-2 min-w-0 ${
+              disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+            }`}
             onClick={() => {
+              if (disabled) return;
               if (canExpand) {
                 toggleExpand(node, path);
               } else {
@@ -244,7 +256,9 @@ export default function TreeDataViewer({
       {renderControls && <div className="mb-3">{renderControls(selectionState)}</div>}
       <div
         role="tree"
-        className="border border-border-default rounded-sm bg-surface-soft p-2 overflow-y-auto max-h-96"
+        className={`border border-border-default rounded-sm bg-surface-soft p-2 overflow-y-auto max-h-96 ${
+          disabled ? 'opacity-60 cursor-not-allowed select-none' : ''
+        }`}
       >
         {roots.length === 0 ? (
           <div className="p-4 text-center text-sm text-secondary">No items available</div>

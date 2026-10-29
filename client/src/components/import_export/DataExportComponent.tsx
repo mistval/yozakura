@@ -5,7 +5,7 @@ import { useScenarioStore } from '../../state/scenario_store.js';
 import { useMapStore } from '../../state/map_store.js';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
 import { useSettingsStore } from '../../state/settings_store.js';
-import { buildExportPayload, sanitizeExportFilename } from './exportPayloadBuilder.js';
+import { buildExportPayload, sanitizeExportFilename, TreeEntityIds } from './exportPayloadBuilder.js';
 import { requestDataExport, type ExportResult } from '../../backend_bridge/export_api.js';
 
 function getDefaultExportName(): string {
@@ -15,7 +15,11 @@ function getDefaultExportName(): string {
   return `yozakura_export_${dateStr}`;
 }
 
-export default function DataExportComponent() {
+export type DataExportComponentProps = {
+  onExportStateChange?: (isExporting: boolean) => void;
+};
+
+export default function DataExportComponent({ onExportStateChange }: DataExportComponentProps) {
   const [exportName, setExportName] = useState<string>(() => getDefaultExportName());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -32,6 +36,11 @@ export default function DataExportComponent() {
   const globalCharactersLoaded = useGlobalCharactersStore((s) => s.globalCharactersAreLoaded);
   const templateGroupData = useSettingsStore((s) => s.templateGroupData);
 
+  // Notify parent of export progress
+  useEffect(() => {
+    onExportStateChange?.(isExporting);
+  }, [isExporting, onExportStateChange]);
+
   // Ensure stores are populated
   useEffect(() => {
     if (!scenarioSummariesLoaded) {
@@ -45,60 +54,60 @@ export default function DataExportComponent() {
     }
   }, [scenarioSummariesLoaded, mapsLoaded, globalCharactersLoaded]);
 
-  // Construct tree roots
+  // Construct tree roots using centralized TreeEntityIds
   const roots = useMemo<TreeNode[]>(() => {
     const treeRoots: TreeNode[] = [];
 
     // 1. Scenarios Root
     const scenariosRoot: TreeNode = {
-      id: 'root:scenarios',
+      id: TreeEntityIds.rootScenarios(),
       label: 'Scenarios',
       subtitle: `(${scenarioSummaries.length} available)`,
       getChildren: async () => {
         return scenarioSummaries.map((summary) => {
           const scenId = summary.scenario.id;
           return {
-            id: `scenario:${scenId}`,
+            id: TreeEntityIds.scenario(scenId),
             label: `${summary.userCharacterName} on ${summary.mapName}`,
             subtitle: `Turn ${summary.scenario.turnNumber}`,
             getChildren: async () => [
               {
-                id: `map:${summary.scenario.mapId}`,
+                id: TreeEntityIds.map(summary.scenario.mapId),
                 label: `Map: ${summary.mapName}`,
                 subtitle: 'Aliased to global map',
               },
               {
-                id: `scenario:${scenId}:characters`,
+                id: TreeEntityIds.scenarioCharacters(scenId),
                 label: 'Characters',
                 subtitle: 'Scenario character definitions and cards',
               },
               {
-                id: `scenario:${scenId}:groups`,
+                id: TreeEntityIds.scenarioGroups(scenId),
                 label: 'Character Groups',
                 subtitle: 'Zones and groups',
               },
               {
-                id: `scenario:${scenId}:schedules`,
+                id: TreeEntityIds.scenarioSchedules(scenId),
                 label: 'Group Schedules',
                 subtitle: 'Requires Character Groups',
               },
               {
-                id: `scenario:${scenId}:memories`,
+                id: TreeEntityIds.scenarioMemories(scenId),
                 label: 'Memories & Relationships',
                 subtitle: 'Global memories, relationship graphs and summaries',
               },
               {
-                id: `scenario:${scenId}:conversations`,
+                id: TreeEntityIds.scenarioConversations(scenId),
                 label: 'Conversation Logs',
                 subtitle: 'Chat logs, participants and images',
               },
               {
-                id: `scenario:${scenId}:turn`,
+                id: TreeEntityIds.scenarioTurn(scenId),
                 label: 'Active Conversation State',
                 subtitle: 'Current turn runtime state',
               },
               {
-                id: `scenario:${scenId}:event_logs`,
+                id: TreeEntityIds.scenarioEventLogs(scenId),
                 label: 'Event Logs',
                 subtitle: 'Historical simulation event log',
               },
@@ -111,12 +120,12 @@ export default function DataExportComponent() {
 
     // 2. Maps Root
     const mapsRoot: TreeNode = {
-      id: 'root:maps',
+      id: TreeEntityIds.rootMaps(),
       label: 'Maps',
       subtitle: `(${maps.length} available)`,
       getChildren: async () => {
         return maps.map((map) => ({
-          id: `map:${map.id}`,
+          id: TreeEntityIds.map(map.id),
           label: map.name,
           subtitle: `${map.locations.length} locations, ${map.zones.length} zones`,
         }));
@@ -126,12 +135,12 @@ export default function DataExportComponent() {
 
     // 3. Global Characters Root
     const charactersRoot: TreeNode = {
-      id: 'root:characters',
+      id: TreeEntityIds.rootCharacters(),
       label: 'Global Characters',
       subtitle: `(${globalCharacters.length} available)`,
       getChildren: async () => {
         return globalCharacters.map((char) => ({
-          id: `character:${char.id}`,
+          id: TreeEntityIds.character(char.id),
           label: `${char.firstName} ${char.lastName}`.trim() || 'Unnamed Character',
           subtitle: char.internalDescription,
         }));
@@ -146,11 +155,11 @@ export default function DataExportComponent() {
 
     if (promptChainsExist) {
       const settingsRoot: TreeNode = {
-        id: 'root:settings',
+        id: TreeEntityIds.rootSettings(),
         label: 'Settings & Prompts',
         getChildren: async () => [
           {
-            id: 'root:prompt_templates',
+            id: TreeEntityIds.rootPromptTemplates(),
             label: 'Prompt Templates',
             getChildren: async () => {
               const groupNodes: TreeNode[] = [];
@@ -159,11 +168,11 @@ export default function DataExportComponent() {
                 if (chainEntries.length === 0) continue;
 
                 groupNodes.push({
-                  id: `prompt_group:${groupId}`,
+                  id: TreeEntityIds.promptGroup(groupId),
                   label: groupId,
                   getChildren: async () => {
                     return chainEntries.map(([chainId, chain]) => ({
-                      id: `prompt_chain:${chainId}`,
+                      id: TreeEntityIds.promptChain(chainId),
                       label: chain.title || chainId,
                       subtitle: chain.description,
                       ...(chain.parserSource
@@ -243,7 +252,7 @@ export default function DataExportComponent() {
             type="text"
             value={exportName}
             onChange={(e) => setExportName(e.target.value)}
-            className="flex-1 rounded border border-border-default bg-surface px-3 py-1.5 text-sm text-primary focus:ring-focus-ring"
+            className="flex-1 rounded border border-border-default bg-surface px-3 py-1.5 text-sm text-primary focus:ring-focus-ring disabled:opacity-60 disabled:cursor-not-allowed"
             placeholder="my_export"
             disabled={isExporting}
           />
@@ -260,6 +269,7 @@ export default function DataExportComponent() {
           roots={roots}
           selectedIds={selectedIds}
           onSelectionChange={setSelectedIds}
+          disabled={isExporting}
           renderControls={(selection) => (
             <div className="flex items-center justify-between text-xs text-secondary">
               <span>{selection.selectedIds.size} items selected</span>
@@ -267,7 +277,7 @@ export default function DataExportComponent() {
                 <button
                   type="button"
                   onClick={() => selection.selectAll()}
-                  className="hover:text-primary underline cursor-pointer"
+                  className="hover:text-primary underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
                   disabled={isExporting}
                 >
                   Select All
@@ -276,7 +286,7 @@ export default function DataExportComponent() {
                 <button
                   type="button"
                   onClick={() => selection.clearAll()}
-                  className="hover:text-primary underline cursor-pointer"
+                  className="hover:text-primary underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
                   disabled={isExporting}
                 >
                   Clear All
@@ -286,6 +296,13 @@ export default function DataExportComponent() {
           )}
         />
       </div>
+
+      {isExporting && (
+        <div className="p-3 bg-surface border border-border-default rounded text-sm flex items-center gap-3 text-primary font-medium animate-pulse">
+          <span className="text-base animate-spin inline-block">⟳</span>
+          <span>Exporting data to {finalZipFilename}... Please wait.</span>
+        </div>
+      )}
 
       {errorMessage && (
         <div className="p-3 bg-danger-bg text-danger-text border border-danger-border rounded text-sm">
@@ -304,7 +321,8 @@ export default function DataExportComponent() {
             <button
               type="button"
               onClick={handleCopyPath}
-              className="px-2 py-1 bg-surface border border-border-default rounded text-xs text-primary hover:bg-surface-hover"
+              disabled={isExporting}
+              className="px-2 py-1 bg-surface border border-border-default rounded text-xs text-primary hover:bg-surface-hover disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {copied ? 'Copied to clipboard!' : 'Copy Full Path'}
             </button>
@@ -317,7 +335,7 @@ export default function DataExportComponent() {
           type="button"
           onClick={() => executeExport(false)}
           disabled={isExporting || selectedIds.size === 0}
-          className="px-4 py-2 bg-button-emphasized-bg text-button-emphasized-text font-medium rounded hover:opacity-90 disabled:opacity-50 cursor-pointer"
+          className="px-4 py-2 bg-button-emphasized-bg text-button-emphasized-text font-medium rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {isExporting ? 'Exporting...' : 'Export Selected Data'}
         </button>
@@ -329,11 +347,14 @@ export default function DataExportComponent() {
         message={`The file "${finalZipFilename}" already exists in the data_exports folder. Do you want to overwrite it?`}
         confirmLabel="Overwrite"
         cancelLabel="Cancel"
+        confirmDisabled={isExporting}
         onConfirm={() => {
           setOverwriteConfirmOpen(false);
           void executeExport(true);
         }}
-        onClose={() => setOverwriteConfirmOpen(false)}
+        onClose={() => {
+          if (!isExporting) setOverwriteConfirmOpen(false);
+        }}
       />
     </div>
   );
