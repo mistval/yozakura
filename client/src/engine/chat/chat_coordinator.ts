@@ -233,7 +233,7 @@ export class ChatCoordinator {
       chain?: PromptTemplateChain<PromptExecutionContext, string> | undefined;
     }
   ) {
-    return this.turnMachineStore().doWithState('generating_image', async () => {
+    return this.turnMachineStore().doWithState('generating_image_prompt', async () => {
       return withPhaseTransitionGate(
         async (abortSignal) => {
           const primaryCharacter = this.getCharacterById(primaryCharacterId);

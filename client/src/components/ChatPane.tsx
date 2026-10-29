@@ -79,13 +79,13 @@ export default function ChatPane() {
   const pendingImagePromptEdit = useScenarioLoopStateStore((state) => state.pendingImagePromptEdit);
   const setPendingImagePromptEdit = useScenarioLoopStateStore((state) => state.setPendingImagePromptEdit);
 
-  const generatingAutoImage = chatState === 'generating_image';
   const processingMemories = chatState === 'processing_memories';
   const chatMemoryUpdateStatus = processingMemories ? (processingMemoryStatusInfo ?? '') : '';
 
   const isGenerating =
     chatState === 'character_speaking' ||
     chatState === 'generating_image' ||
+    chatState === 'generating_image_prompt' ||
     chatState === 'selecting_speaker' ||
     chatState === 'judging_conversation_end' ||
     chatState === 'processing_memories';
@@ -139,8 +139,10 @@ export default function ChatPane() {
         messageLimit = groupChatMessageLimit;
       }
     }
-
-    if (generatingAutoImage) {
+    
+    if (chatState === 'generating_image_prompt') {
+      return 'Generating image prompt...';
+    } else if (chatState === 'generating_image') {
       return 'Generating image...';
     } else if (chatState === 'selecting_speaker') {
       return 'Selecting speaker...';
