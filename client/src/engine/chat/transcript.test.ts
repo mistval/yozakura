@@ -6,11 +6,11 @@ function char(id: string, firstName: string, lastName: string): Character {
   return { id, firstName, lastName, imagePath: '' } as unknown as Character;
 }
 
-const ALICE = char('a', 'Alice', 'Anderson');
-const BOB = char('b', 'Bob', 'Baker');
-const CAROL = char('c', 'Carol', 'Carter');
-const DAVE = char('d', 'Dave', 'Dixon');
-const EVE = char('e', 'Eve', 'Evans');
+const ALICE = char('000000000000000001', 'Alice', 'Anderson');
+const BOB = char('000000000000000002', 'Bob', 'Baker');
+const CAROL = char('000000000000000003', 'Carol', 'Carter');
+const DAVE = char('000000000000000004', 'Dave', 'Dixon');
+const EVE = char('000000000000000005', 'Eve', 'Evans');
 
 const ALL_CHARACTERS = [ALICE, BOB, CAROL, DAVE, EVE];
 
