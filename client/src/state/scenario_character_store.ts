@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as Database from '../backend_bridge/database.js';
+import { doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database.js';
 import * as Files from '../backend_bridge/files.js';
 import { type WorldMap, type Character, type Scenario } from '../engine/types.js';
 import { assertNonNullish } from '../errors/application_error.js';
@@ -106,7 +106,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
       async setDatabaseState(entities: UpdatedScenarioCharacter[]) {
         const debouncerKey = entities.length === 1 ? entities[0]!.id : `${DATABASE_OBJECT_NAME}.all`;
 
-        await Database.doAsDataWrite(
+        await doAsDataWrite(
           async () => {
             const characters = await Promise.all(
               entities.map(async (entity) => {
@@ -144,7 +144,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
               return;
             }
 
-            await Database.storeScenarioCharacters(existingCharacters);
+            await mainDatabase.storeScenarioCharacters(existingCharacters);
           },
           `${DATABASE_OBJECT_NAME}.all`,
           { debouncerKey }
@@ -152,9 +152,9 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
       },
 
       deleteDatabaseState(entities: UpdatedScenarioCharacter[]) {
-        return Database.doAsDataWrite(
+        return doAsDataWrite(
           async () => {
-            await Database.deleteScenarioCharacters(entities.map((entity) => entity.id));
+            await mainDatabase.deleteScenarioCharacters(entities.map((entity) => entity.id));
           },
           DATABASE_OBJECT_NAME,
           {
@@ -164,8 +164,8 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
       },
 
       getEntitiesFromDatabase(entities: UpdatedScenarioCharacter[]) {
-        return Database.doAsDataRead(
-          () => Database.loadScenarioCharactersByIds(entities.map((entity) => entity.id)),
+        return doAsDataRead(
+          () => mainDatabase.loadScenarioCharactersByIds(entities.map((entity) => entity.id)),
           `${DATABASE_OBJECT_NAME}.partial.refresh`
         );
       },
@@ -204,8 +204,8 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     });
 
     const scenarioId = getRequiredActiveScenario().id;
-    const characters = await Database.doAsDataRead(async () => {
-      return Database.loadScenarioCharacters(scenarioId);
+    const characters = await doAsDataRead(async () => {
+      return mainDatabase.loadScenarioCharacters(scenarioId);
     }, `${DATABASE_OBJECT_NAME}.${scenarioId}.all`);
 
     get().setScenarioCharacters(characters);
@@ -245,7 +245,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     const scenarioId = getRequiredActiveScenario().id;
     const map = getRequiredActiveScenarioMap();
 
-    await Database.doAsDataWrite(async () => {
+    await doAsDataWrite(async () => {
       const scenarioCharacter = await copyGlobalCharacterForScenario(character, scenarioId, map);
       const wardrobes = applyDailyWardrobeAutoselect(scenarioCharacter.wardrobes);
       get().saveScenarioCharacter(scenarioCharacter, undefined, () => ({
@@ -272,9 +272,9 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
       characters.map((c) => copyGlobalCharacterForScenario(c, scenarioId, map))
     );
 
-    await Database.doAsDataWrite(
+    await doAsDataWrite(
       async () => {
-        await Database.storeScenarioCharacters(scenarioCharacters);
+        await mainDatabase.storeScenarioCharacters(scenarioCharacters);
       },
       `${DATABASE_OBJECT_NAME}.all`,
       {
@@ -286,9 +286,9 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
   },
 
   async saveInactiveScenarioCharacterImmediate(character: Character) {
-    await Database.doAsDataWrite(
+    await doAsDataWrite(
       async () => {
-        await Database.storeScenarioCharacters([character]);
+        await mainDatabase.storeScenarioCharacters([character]);
       },
       `${DATABASE_OBJECT_NAME}.all`,
       {

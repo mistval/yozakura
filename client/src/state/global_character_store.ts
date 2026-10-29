@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as Database from '../backend_bridge/database.js';
+import { doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database.js';
 import * as Files from '../backend_bridge/files.js';
 import type { Character } from '../engine/types.js';
 import { assert } from '../errors/application_error.js';
@@ -31,8 +31,8 @@ export const useGlobalCharactersStore = create<{
   },
 
   async refresh() {
-    await Database.doAsDataRead(async () => {
-      const characters = await Database.loadGlobalCharacters();
+    await doAsDataRead(async () => {
+      const characters = await mainDatabase.loadGlobalCharacters();
       get().setGlobalCharacters(characters);
     }, 'global_character.all');
   },
@@ -49,14 +49,14 @@ export const useGlobalCharactersStore = create<{
 
     get().setGlobalCharacters(concatUniqueById(get().globalCharacters, withUpdatedFields));
 
-    void Database.doAsDataWrite(
+    void doAsDataWrite(
       async () => {
         let latestCharacter = get().globalCharactersById[withUpdatedFields.id];
         if (!latestCharacter) {
           return;
         }
 
-        await Database.storeGlobalCharacters([latestCharacter]);
+        await mainDatabase.storeGlobalCharacters([latestCharacter]);
 
         if (imageFile) {
           await Files.upload(
@@ -88,9 +88,9 @@ export const useGlobalCharactersStore = create<{
   deleteGlobalCharacter(character: Pick<Character, 'id' | 'imagePath'>) {
     assert(get().globalCharactersAreLoaded, 'Global characters not yet loaded');
 
-    void Database.doAsDataWrite(
+    void doAsDataWrite(
       async () => {
-        await Database.deleteGlobalCharacter(character.id);
+        await mainDatabase.deleteGlobalCharacter(character.id);
         await Files.deleteCharacterImage(character.imagePath);
       },
       'global_character',
@@ -107,8 +107,8 @@ export const useGlobalCharactersStore = create<{
     assert(get().globalCharactersAreLoaded, 'Global characters not yet loaded');
     const nonExistentDemoCharacters = DEMO_CHARACTERS.filter((c) => !get().globalCharactersById[c.id]);
 
-    void Database.doAsDataWrite(async () => {
-      await Database.storeGlobalCharacters(nonExistentDemoCharacters);
+    void doAsDataWrite(async () => {
+      await mainDatabase.storeGlobalCharacters(nonExistentDemoCharacters);
     }, 'global_demo_characters');
 
     get().setGlobalCharacters(get().globalCharacters.concat(nonExistentDemoCharacters));

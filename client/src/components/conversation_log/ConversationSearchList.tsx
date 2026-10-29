@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStateRef } from '../../hooks/useStateRef.js';
-import * as Database from '../../backend_bridge/database';
+import { doAsDataRead, mainDatabase } from '../../backend_bridge/database';
 import type { Character, StoredConversation, TranscriptParticipant } from '../../engine/types.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
@@ -135,8 +135,12 @@ export default function ConversationSearchList({
     const run = async () => {
       setLoading(true);
       try {
-        const pageResult = await Database.doAsDataRead(() => {
-          return Database.loadConversationByParticipantsPage(scenarioId, uniqueParticipantIds, currentPage);
+        const pageResult = await doAsDataRead(() => {
+          return mainDatabase.loadConversationByParticipantsPage(
+            scenarioId,
+            uniqueParticipantIds,
+            currentPage
+          );
         }, 'conversation');
 
         if (cancelled) {

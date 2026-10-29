@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as Database from '../backend_bridge/database';
+import { createPersistedObject, doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database';
 import * as Files from '../backend_bridge/files';
 import { type Scenario, type ScenarioSummary, type WorldMap } from '../engine/types.js';
 import * as MapHelper from '../engine/map/world_map.js';
@@ -62,9 +62,9 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
 
     set({ pendingScenarioId: undefined });
 
-    const loadedScenario = await Database.doAsDataRead(
+    const loadedScenario = await doAsDataRead(
       () => {
-        return Database.loadScenario(scenarioId);
+        return mainDatabase.loadScenario(scenarioId);
       },
       'scenario',
       {
@@ -104,14 +104,14 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
       activeScenario: nextScenario,
     });
 
-    void Database.doAsDataWrite(
+    void doAsDataWrite(
       async () => {
         const curScenario = get().activeScenario;
         if (curScenario?.id !== nextScenario.id) {
           return;
         }
 
-        await Database.storeScenario(curScenario);
+        await mainDatabase.storeScenario(curScenario);
       },
       'scenario',
       {
@@ -213,7 +213,7 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
   },
 
   saveImmediateBlankInactiveScenario: async (mapId) => {
-    const scenario = Database.createPersistedObject({
+    const scenario = createPersistedObject({
       mapId,
       turnNumber: 0,
       userCharacterId: '',
@@ -225,9 +225,9 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
   },
 
   saveImmediateInactiveScenario: async (scenario, opts) => {
-    await Database.doAsDataWrite(
+    await doAsDataWrite(
       async () => {
-        await Database.storeScenario(scenario);
+        await mainDatabase.storeScenario(scenario);
       },
       'scenario',
       {
@@ -248,18 +248,15 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
         scenarioSummaries: newScenarioSummaries,
       });
 
-      void Database.doAsDataWrite(async () => {
-        await Database.deleteScenarioDatabase(scenarioId);
+      void doAsDataWrite(async () => {
+        await mainDatabase.deleteScenarioDatabase(scenarioId);
         await Files.deleteScenarioFolder(scenarioId);
       }, 'scenario');
     }
   },
 
   refreshScenarioSummaries: async () => {
-    const summaries = await Database.doAsDataRead(
-      () => Database.loadScenarioSummaries(),
-      'scenario_summary.all'
-    );
+    const summaries = await doAsDataRead(() => mainDatabase.loadScenarioSummaries(), 'scenario_summary.all');
 
     set({
       scenarioSummaries: summaries,

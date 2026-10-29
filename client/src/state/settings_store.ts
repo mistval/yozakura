@@ -17,7 +17,7 @@ import {
   type LLMConfig,
 } from '../engine/settings/cascading_llm_configs.js';
 import _ from 'lodash';
-import * as Database from '../backend_bridge/database.js';
+import { doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database.js';
 import { templateGroupDataSchema } from '../engine/prompt_templates/template_types.js';
 import { DEFAULT_TEMPLATE_GROUP_DATA } from '../engine/prompt_templates/default_template_group_data.js';
 import {
@@ -192,9 +192,9 @@ const SETTINGS_KV_KEY = 'settings';
 const overridesStorageSchema = z.record(z.string(), z.unknown());
 
 function persistSettingsOverrides(overrides: SettingsOverrides) {
-  void Database.doAsDataWrite(
+  void doAsDataWrite(
     async () => {
-      await Database.storeKeyValue(
+      await mainDatabase.storeKeyValue(
         SETTINGS_KV_KEY,
         overrides as Record<string, unknown>,
         overridesStorageSchema
@@ -224,9 +224,9 @@ export const useSettingsStore = create<SettingsStoreState>((set, get) => ({
   },
   resetSettings: () => {
     set(DEFAULT_SETTINGS);
-    void Database.doAsDataWrite(
+    void doAsDataWrite(
       async () => {
-        await Database.deleteKeyValue(SETTINGS_KV_KEY);
+        await mainDatabase.deleteKeyValue(SETTINGS_KV_KEY);
       },
       'settings',
       { debouncerKey: SETTINGS_KV_KEY }
@@ -235,8 +235,8 @@ export const useSettingsStore = create<SettingsStoreState>((set, get) => ({
 }));
 
 async function loadOverridesFromBackend(): Promise<SettingsOverrides> {
-  const stored = await Database.doAsDataRead(
-    () => Database.loadKeyValue(SETTINGS_KV_KEY, overridesStorageSchema),
+  const stored = await doAsDataRead(
+    () => mainDatabase.loadKeyValue(SETTINGS_KV_KEY, overridesStorageSchema),
     'settings',
     { debouncerKey: SETTINGS_KV_KEY }
   );
