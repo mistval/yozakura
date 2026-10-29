@@ -411,12 +411,20 @@ export class DatabaseClient {
     return rows[0];
   }
 
-  private async dbRun(statement: string, parameterGroups: unknown[][]) {
+  public async dbRun(statement: string, parameterGroups: unknown[][] = [[]]) {
     if (parameterGroups.length === 0) {
       return;
     }
 
     await Api.dbRun(statement, parameterGroups);
+  }
+
+  public async dbAll<TRowType>(
+    statement: string,
+    parameterGroups: unknown[][],
+    rowSchema: z.ZodType<TRowType>
+  ): Promise<TRowType[]> {
+    return this.selectTypedMultiQuery(statement, parameterGroups, rowSchema);
   }
 
   public async loadScenarioSummaries(): Promise<ScenarioSummary[]> {

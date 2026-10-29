@@ -35,7 +35,7 @@ export type NpcChatEndMode = z.infer<typeof npcChatEndModeSchema>;
 const chatPaneWidthSchema = z.enum(['narrow', 'medium', 'wide', 'extra_wide', 'unconstrained']);
 export type ChatPaneWidth = z.infer<typeof chatPaneWidthSchema>;
 
-const settingsSchema = z.object({
+export const settingsSchema = z.object({
   llmConfigs: z.record(z.string(), llmConfigSchema),
   richNpcInteractionRate: z.number(),
   richNpcMessageCount: z.number(),
@@ -114,7 +114,7 @@ type SettingsStoreState = Settings & {
   resetSettings: () => void;
 };
 
-const DEFAULT_SETTINGS: Settings = {
+export const DEFAULT_SETTINGS: Settings = {
   llmConfigs: DEFAULT_LLM_CONFIGS,
   richNpcInteractionRate: 0.3,
   richNpcMessageCount: 6,

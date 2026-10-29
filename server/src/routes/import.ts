@@ -10,6 +10,7 @@ import yauzl from 'yauzl';
 import { guardPathWithinBase } from './pathGuard.js';
 import { runMigrations } from '../migrator.js';
 import { clearPreparedStatementCache } from './db.js';
+import { applyIdMap } from '../id_map.js';
 
 export type ManifestData = {
   exportName: string;
@@ -225,6 +226,7 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
 
       res.json({
         ok: true,
+        sessionId,
         manifest,
         images,
       });
@@ -239,6 +241,100 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
       res
         .status(400)
         .json({ error: error instanceof Error ? error.message : 'Failed to stage import archive' });
+    }
+  });
+
+  router.post('/import/commit', async (req: Request, res: Response): Promise<void> => {
+    const { sessionId, sqlStatements, imageCopies } = req.body ?? {};
+
+    if (typeof sessionId !== 'string' || !sessionId.trim()) {
+      res.status(400).json({ error: 'Missing sessionId' });
+      return;
+    }
+
+    const stagingDir = path.join(tempImportBaseDir, sessionId);
+    if (!fs.existsSync(stagingDir)) {
+      res.status(400).json({ error: 'Invalid or expired import staging session' });
+      return;
+    }
+
+    const attached = db.pragma('database_list') as { seq: number; name: string; file: string }[];
+    if (!attached.some((d) => d.name === 'import_staging')) {
+      res.status(400).json({ error: 'Staging database is not attached' });
+      return;
+    }
+
+    if (!Array.isArray(sqlStatements)) {
+      res.status(400).json({ error: 'sqlStatements must be an array' });
+      return;
+    }
+
+    if (!Array.isArray(imageCopies)) {
+      res.status(400).json({ error: 'imageCopies must be an array' });
+      return;
+    }
+
+    try {
+      // 1. Pre-import backup of main database
+      const backupDir = path.resolve(dataDir, 'backups');
+      fs.mkdirSync(backupDir, { recursive: true });
+      const backupFilename = `app_pre_import_${new Date().toISOString().replace(/[:.]/g, '-')}.sqlite`;
+      const backupPath = path.join(backupDir, backupFilename);
+      await db.backup(backupPath);
+
+      // 2. Load idMap from import_staging._id_map and register apply_id_map scalar function
+      let idMap = new Map<string, string>();
+      try {
+        const idMapRows = db.prepare('SELECT old_id, new_id FROM import_staging._id_map').all() as Array<{
+          old_id: string;
+          new_id: string;
+        }>;
+        idMap = new Map(idMapRows.map((r) => [r.old_id, r.new_id]));
+      } catch {
+        // _id_map table does not exist if no ID remappings were performed
+      }
+
+      db.function('apply_id_map', (val: unknown) => {
+        if (typeof val !== 'string') return val;
+        return applyIdMap(val, idMap);
+      });
+
+      // 3. Atomic Multi-Table Copy inside a single transaction
+      const commitTx = db.transaction(() => {
+        for (const sql of sqlStatements) {
+          if (typeof sql === 'string' && sql.trim()) {
+            db.prepare(sql).run();
+          }
+        }
+      });
+      commitTx();
+
+      // 4. Copy & Rename image assets on disk
+      const unpackedDir = path.join(stagingDir, 'unpacked');
+      for (const item of imageCopies) {
+        if (!item || typeof item.zipPath !== 'string' || typeof item.targetRelPath !== 'string') {
+          continue;
+        }
+        const mappedRelPath = applyIdMap(item.targetRelPath, idMap);
+        const targetAbsPath = guardPathWithinBase(dataDir, mappedRelPath);
+        const sourceAbsPath = guardPathWithinBase(unpackedDir, item.zipPath);
+        if (fs.existsSync(sourceAbsPath)) {
+          fs.mkdirSync(path.dirname(targetAbsPath), { recursive: true });
+          fs.copyFileSync(sourceAbsPath, targetAbsPath);
+        }
+      }
+
+      // 5. Clean up & Detach
+      clearPreparedStatementCache();
+      db.exec('DETACH DATABASE import_staging');
+      fs.rmSync(stagingDir, { recursive: true, force: true });
+
+      res.json({ ok: true, backupFilename });
+    } catch (error) {
+      console.error('Error committing import:', error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : 'Failed to commit import transaction',
+      });
     }
   });
 

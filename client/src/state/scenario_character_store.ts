@@ -12,6 +12,7 @@ import {
 import { addOrReplaceVersionQueryParam, newId } from '../util/id.js';
 import { ephemeralStateSlice, IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
 import { applyDailyWardrobeAutoselect } from '../engine/wardrobes.js';
+import { useGlobalCharactersStore } from './global_character_store.js';
 
 type UpdatedScenarioCharacter = Character & {
   imageFile?: File;
@@ -209,6 +210,20 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     }, `${DATABASE_OBJECT_NAME}.${scenarioId}.all`);
 
     get().setScenarioCharacters(characters);
+
+    const scenario = useScenarioStore.getState().activeScenario;
+    if (scenario && scenario.id === scenarioId) {
+      if (characters.length === 0) {
+        const globalChars = useGlobalCharactersStore.getState().globalCharacters;
+        if (globalChars.length > 0) {
+          const randomGlobalChar = getRequiredRandomChoice(globalChars);
+          await get().addGlobalCharacterToActiveScenario(randomGlobalChar);
+          useScenarioStore.getState().setUserCharacter(randomGlobalChar.id);
+        }
+      } else if (!characters.some((c) => c.id === scenario.userCharacterId)) {
+        useScenarioStore.getState().setUserCharacter(characters[0]!.id);
+      }
+    }
   },
 
   saveScenarioCharacter: (character, imageFile, setter) => {

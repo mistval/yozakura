@@ -17,6 +17,7 @@ export type StagedImageEntry =
 export type StageImportResult =
   | {
       success: true;
+      sessionId: string;
       manifest: StagedManifest;
       images: StagedImageEntry[];
     }
@@ -46,14 +47,65 @@ export async function stageImportArchive(file: File): Promise<StageImportResult>
 
   const data = (await response.json()) as {
     ok: boolean;
+    sessionId: string;
     manifest: StagedManifest;
     images: StagedImageEntry[];
   };
 
   return {
     success: true,
+    sessionId: data.sessionId,
     manifest: data.manifest,
     images: data.images,
+  };
+}
+
+export type ImportCommitPayload = {
+  sessionId: string;
+  sqlStatements: string[];
+  imageCopies: Array<{
+    zipPath: string;
+    targetRelPath: string;
+  }>;
+};
+
+export type CommitImportResult =
+  | {
+      success: true;
+      backupFilename?: string;
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+export async function commitImport(payload: ImportCommitPayload): Promise<CommitImportResult> {
+  const response = await fetch('/api/import/commit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({ error: 'Failed to commit import' }))) as {
+      error?: string;
+    };
+    return {
+      success: false,
+      error: data.error || `Commit failed with status ${response.status}`,
+    };
+  }
+
+  const data = (await response.json()) as {
+    ok: boolean;
+    backupFilename?: string;
+  };
+
+  return {
+    success: true,
+    ...(data.backupFilename ? { backupFilename: data.backupFilename } : {}),
   };
 }
 
@@ -62,4 +114,3 @@ export async function cancelImport(): Promise<void> {
     method: 'POST',
   });
 }
-
