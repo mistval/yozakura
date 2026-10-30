@@ -120,7 +120,7 @@ describe('importCommitPayloadBuilder', () => {
     const dbRunCalls = vi.mocked(importStagingDatabase.dbRun).mock.calls;
     const nameUpdateCall = dbRunCalls.find((call) => call[0].includes("json_set(data, '$.name'"));
     expect(nameUpdateCall).toBeDefined();
-    expect(nameUpdateCall![1]).toEqual([[' (Imported From HolidayArchive)'], ['["map_copy"]']]);
+    expect(nameUpdateCall![1]).toEqual([[' (Imported From HolidayArchive)', '["map_copy"]']]);
 
     // Skipped character image should not be in imageCopies
     expect(payload.imageCopies).toEqual([
@@ -152,10 +152,10 @@ describe('importCommitPayloadBuilder', () => {
 
     // dbRun calls should include stripping memories and stripping groupIds
     const dbRunCalls = vi.mocked(importStagingDatabase.dbRun).mock.calls;
-    const stripMemoriesCall = dbRunCalls.find((call) => call[0].includes('$.globalMemories'));
+    const stripMemoriesCall = dbRunCalls.find((call) => call[0].includes('globalMemories'));
     expect(stripMemoriesCall).toBeDefined();
 
-    const stripGroupsCall = dbRunCalls.find((call) => call[0].includes('$.groupIds'));
+    const stripGroupsCall = dbRunCalls.find((call) => call[0].includes('groupIds'));
     expect(stripGroupsCall).toBeDefined();
   });
 });

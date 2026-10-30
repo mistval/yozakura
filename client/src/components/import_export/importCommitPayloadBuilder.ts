@@ -59,7 +59,7 @@ export async function prepareStagingAndBuildCommitPayload(
 
     // Conversation participants
     await importStagingDatabase.dbRun(
-      'INSERT INTO import_staging._id_map (old_id, new_id) SELECT id, lower(hex(randomblob(9))) FROM import_staging.conversation_participant WHERE scenario_id IN (SELECT value FROM json_each(?));',
+      'INSERT INTO import_staging._id_map (old_id, new_id) SELECT cp.id, lower(hex(randomblob(9))) FROM import_staging.conversation_participant cp JOIN import_staging.conversation c ON cp.conversation_id = c.id WHERE c.scenario_id IN (SELECT value FROM json_each(?));',
       [[scenJson]]
     );
 
@@ -73,7 +73,7 @@ export async function prepareStagingAndBuildCommitPayload(
   // Character relationships (for scenarios where memories are selected)
   if (selectedScenarioMemoriesIds.length > 0) {
     await importStagingDatabase.dbRun(
-      'INSERT INTO import_staging._id_map (old_id, new_id) SELECT id, lower(hex(randomblob(9))) FROM import_staging.character_relationship WHERE scenario_id IN (SELECT value FROM json_each(?));',
+      'INSERT INTO import_staging._id_map (old_id, new_id) SELECT cr.id, lower(hex(randomblob(9))) FROM import_staging.character_relationship cr JOIN import_staging.scenario_character sc ON cr.from_id = sc.id WHERE sc.scenario_id IN (SELECT value FROM json_each(?));',
       [[JSON.stringify(selectedScenarioMemoriesIds)]]
     );
   }
@@ -103,7 +103,7 @@ export async function prepareStagingAndBuildCommitPayload(
     const suffix = ` (Imported From ${exportName})`;
     await importStagingDatabase.dbRun(
       "UPDATE import_staging.map SET data = json_set(data, '$.name', json_extract(data, '$.name') || ?) WHERE id IN (SELECT value FROM json_each(?));",
-      [[suffix], [JSON.stringify(copiedMapIds)]]
+      [[suffix, JSON.stringify(copiedMapIds)]]
     );
   }
 
@@ -134,7 +134,7 @@ export async function prepareStagingAndBuildCommitPayload(
        )
        WHERE id IN (SELECT value FROM json_each(?))
          AND json_extract(data, '$.imagePath') LIKE '/api/files/%';`,
-      [[timestamp], [timestamp], [JSON.stringify(overwrittenGlobalCharIds)]]
+      [[timestamp, timestamp, JSON.stringify(overwrittenGlobalCharIds)]]
     );
   }
 
@@ -145,13 +145,7 @@ export async function prepareStagingAndBuildCommitPayload(
   if (scenariosWithoutMemories.length > 0) {
     await importStagingDatabase.dbRun(
       `UPDATE import_staging.scenario_character
-       SET data = json_set(
-         json_set(
-           json_set(data, '$.globalMemories', json('[]')),
-           '$.rollingConversationSummaries', json('[]')
-         ),
-         '$.nextConversationWithCharacterId', json('null')
-       )
+       SET data = json_patch(data, '{"globalMemories":"","rollingConversationSummaries":[],"nextConversationWithCharacterId":""}')
        WHERE scenario_id IN (SELECT value FROM json_each(?));`,
       [[JSON.stringify(scenariosWithoutMemories)]]
     );
@@ -161,7 +155,7 @@ export async function prepareStagingAndBuildCommitPayload(
   if (scenariosWithoutGroups.length > 0) {
     await importStagingDatabase.dbRun(
       `UPDATE import_staging.scenario_character
-       SET data = json_set(data, '$.groupIds', json('[]'))
+       SET data = json_patch(data, '{"groupIds":[]}')
        WHERE scenario_id IN (SELECT value FROM json_each(?));`,
       [[JSON.stringify(scenariosWithoutGroups)]]
     );
@@ -256,10 +250,9 @@ export async function prepareStagingAndBuildCommitPayload(
     const memScenJson = JSON.stringify(selectedScenarioMemoriesIds).replace(/'/g, "''");
     sqlStatements.push(
       `
-      INSERT INTO main.character_relationship (id, scenario_id, from_id, to_id, created_at, updated_at, data)
+      INSERT INTO main.character_relationship (id, from_id, to_id, created_at, updated_at, data)
       SELECT
         m.new_id,
-        sm.new_id,
         COALESCE(from_m.new_id, s.from_id),
         COALESCE(to_m.new_id, s.to_id),
         s.created_at,
@@ -267,10 +260,10 @@ export async function prepareStagingAndBuildCommitPayload(
         apply_id_map(s.data)
       FROM import_staging.character_relationship s
       JOIN import_staging._id_map m ON s.id = m.old_id
-      JOIN import_staging._id_map sm ON s.scenario_id = sm.old_id
+      JOIN import_staging.scenario_character sc ON s.from_id = sc.id
       LEFT JOIN import_staging._id_map from_m ON s.from_id = from_m.old_id
       LEFT JOIN import_staging._id_map to_m ON s.to_id = to_m.old_id
-      WHERE s.scenario_id IN (SELECT value FROM json_each('${memScenJson}'));
+      WHERE sc.scenario_id IN (SELECT value FROM json_each('${memScenJson}'));
     `.trim()
     );
   }
@@ -338,20 +331,19 @@ export async function prepareStagingAndBuildCommitPayload(
     // conversation_participant
     sqlStatements.push(
       `
-      INSERT INTO main.conversation_participant (id, scenario_id, conversation_id, character_id, created_at, updated_at)
+      INSERT INTO main.conversation_participant (id, conversation_id, character_id, created_at, updated_at)
       SELECT
         m.new_id,
-        sm.new_id,
         cm.new_id,
         COALESCE(char_m.new_id, s.character_id),
         s.created_at,
         s.updated_at
       FROM import_staging.conversation_participant s
       JOIN import_staging._id_map m ON s.id = m.old_id
-      JOIN import_staging._id_map sm ON s.scenario_id = sm.old_id
       JOIN import_staging._id_map cm ON s.conversation_id = cm.old_id
+      JOIN import_staging.conversation c ON s.conversation_id = c.id
       LEFT JOIN import_staging._id_map char_m ON s.character_id = char_m.old_id
-      WHERE s.scenario_id IN (SELECT value FROM json_each('${scenJson}'))
+      WHERE c.scenario_id IN (SELECT value FROM json_each('${scenJson}'))
       ORDER BY s.rowid ASC;
     `.trim()
     );
@@ -359,20 +351,37 @@ export async function prepareStagingAndBuildCommitPayload(
     // scenario_event_log
     sqlStatements.push(
       `
-      INSERT INTO main.scenario_event_log (id, scenario_id, character_id, created_at, updated_at, data)
+      INSERT INTO main.scenario_event_log (id, scenario_id, event_type, created_at, updated_at, data)
       SELECT
         m.new_id,
         sm.new_id,
-        COALESCE(char_m.new_id, s.character_id),
+        s.event_type,
         s.created_at,
         s.updated_at,
         apply_id_map(s.data)
       FROM import_staging.scenario_event_log s
       JOIN import_staging._id_map m ON s.id = m.old_id
       JOIN import_staging._id_map sm ON s.scenario_id = sm.old_id
-      LEFT JOIN import_staging._id_map char_m ON s.character_id = char_m.old_id
       WHERE s.scenario_id IN (SELECT value FROM json_each('${scenJson}'))
       ORDER BY s.rowid ASC;
+    `.trim()
+    );
+
+    // scenario turn state in key_value
+    sqlStatements.push(
+      `
+      INSERT INTO main.key_value (key, data, created_at, updated_at)
+      SELECT
+        'scenario_' || sm.new_id || '_turn',
+        apply_id_map(s.data),
+        s.created_at,
+        CURRENT_TIMESTAMP
+      FROM import_staging.key_value s
+      JOIN import_staging._id_map sm ON s.key = 'scenario_' || sm.old_id || '_turn'
+      WHERE sm.old_id IN (SELECT value FROM json_each('${scenJson}'))
+      ON CONFLICT(key) DO UPDATE SET
+        data = excluded.data,
+        updated_at = CURRENT_TIMESTAMP;
     `.trim()
     );
   }
@@ -393,7 +402,9 @@ export async function prepareStagingAndBuildCommitPayload(
       }
       imageCopies.push({
         zipPath: entry.zipPath,
-        targetRelPath: entry.zipPath.replace(/^images\//, ''),
+        targetRelPath: entry.zipPath
+          .replace(/^images\/(?:scenarios|scenario)\//, 'scenario/')
+          .replace(/^images\//, ''),
       });
     } else if (entry.kind === 'scenario_character_card' || entry.kind === 'chat_image') {
       if (!selectedScenarioIds.includes(entry.scenarioId)) {
@@ -401,7 +412,9 @@ export async function prepareStagingAndBuildCommitPayload(
       }
       imageCopies.push({
         zipPath: entry.zipPath,
-        targetRelPath: entry.zipPath.replace(/^images\/scenarios\//, 'scenario/'),
+        targetRelPath: entry.zipPath
+          .replace(/^images\/(?:scenarios|scenario)\//, 'scenario/')
+          .replace(/^images\//, ''),
       });
     }
   }

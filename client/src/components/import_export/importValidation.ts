@@ -113,7 +113,7 @@ export async function validateStagedData(options: {
 
       // Relationships
       const relRows = await importStagingDatabase.dbAll(
-        'SELECT id, data FROM import_staging.character_relationship WHERE scenario_id = ?',
+        'SELECT cr.id, cr.data FROM import_staging.character_relationship cr JOIN import_staging.scenario_character sc ON cr.from_id = sc.id WHERE sc.scenario_id = ?',
         [[scenId]],
         jsonRowSchema
       );
@@ -200,4 +200,3 @@ export async function validateStagedData(options: {
 
   return { valid: true };
 }
-

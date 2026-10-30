@@ -3,6 +3,10 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import type { Server } from 'http';
+import Database from 'better-sqlite3';
+
+export type { Database };
 import { openDatabase } from './database.js';
 import { runMigrations } from './migrator.js';
 import dbRouter from './routes/db.js';
@@ -11,13 +15,21 @@ import proxyRouter from './routes/proxy.js';
 import exportRouter from './routes/export.js';
 import importRouter, { detachImportStagingIfAttached } from './routes/import.js';
 
-type CreateAppOptions = {
+export type CreateAppOptions = {
   dataDir?: string;
   frontendDistDir?: string;
+  db?: Database.Database;
 };
 
-type StartServerOptions = CreateAppOptions & {
+export type StartServerOptions = CreateAppOptions & {
   port?: number | string;
+};
+
+export type StartedServer = {
+  app: Express;
+  server: Server;
+  close: () => Promise<void>;
+  db: Database.Database;
 };
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,7 +51,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   fs.mkdirSync(staticDir, { recursive: true });
 
-  const db = openDatabase(dataDir);
+  const db = options.db ?? openDatabase(dataDir);
   runMigrations(db, { dataDir });
 
   const app = express();
@@ -83,8 +95,10 @@ export function createApp(options: CreateAppOptions = {}): Express {
   return app;
 }
 
-export function startServer(options: StartServerOptions = {}) {
-  const app = createApp(options);
+export function startServer(options: StartServerOptions = {}): StartedServer {
+  const dataDir = path.resolve(options.dataDir ?? process.env.YOZAKURA_DATA_DIR ?? DEFAULT_DATA_DIR);
+  const db = options.db ?? openDatabase(dataDir);
+  const app = createApp({ ...options, dataDir, db });
   const port = options.port ?? process.env.PORT ?? 3001;
   const server = app.listen(Number(port), () => {
     const address = server.address();
@@ -94,7 +108,26 @@ export function startServer(options: StartServerOptions = {}) {
 
   const close = () =>
     new Promise<void>((resolve, reject) => {
+      if (!server.listening) {
+        try {
+          db.close();
+        } catch {
+          // ignore if already closed
+        }
+        resolve();
+        return;
+      }
+
       server.close((error) => {
+        try {
+          db.close();
+        } catch (dbError) {
+          if (!error) {
+            reject(dbError);
+            return;
+          }
+        }
+
         if (error) {
           reject(error);
           return;
@@ -104,5 +137,5 @@ export function startServer(options: StartServerOptions = {}) {
       });
     });
 
-  return { app, server, close };
+  return { app, server, close, db };
 }

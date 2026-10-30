@@ -27,4 +27,3 @@ describe('DatabaseClient', () => {
     expect(importStagingDatabase.targetSchema).toBe('import_staging');
   });
 });
-

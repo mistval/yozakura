@@ -87,4 +87,3 @@ describe('importConflictResolver', () => {
     expect(conflicts.map((c) => c.kind)).toEqual(['map', 'character']);
   });
 });
-
