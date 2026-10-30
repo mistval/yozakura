@@ -5,7 +5,6 @@ import crypto from 'crypto';
 import type Database from 'better-sqlite3';
 import { startServer } from '../server/src/app.js';
 import type { ExportPayload } from '../client/src/components/import_export/exportPayloadBuilder.js';
-import type { StageImportResult, ImportCommitPayload } from '../client/src/backend_bridge/import_api.js';
 
 let activeServerUrl: string | null = null;
 const originalFetch = globalThis.fetch;
