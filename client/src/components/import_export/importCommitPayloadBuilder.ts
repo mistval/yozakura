@@ -439,7 +439,7 @@ export async function prepareStagingAndBuildCommitPayload(
       }
       imageCopies.push({
         zipPath: entry.zipPath,
-        targetRelPath: Files.toTargetRelPathFromZip(entry.zipPath),
+        targetRelPath: entry.zipPath,
       });
     } else if (entry.kind === 'scenario_character_card' || entry.kind === 'chat_image') {
       if (!selectedScenarioIds.includes(entry.scenarioId)) {
@@ -447,7 +447,7 @@ export async function prepareStagingAndBuildCommitPayload(
       }
       imageCopies.push({
         zipPath: entry.zipPath,
-        targetRelPath: Files.toTargetRelPathFromZip(entry.zipPath),
+        targetRelPath: entry.zipPath,
       });
     }
   }

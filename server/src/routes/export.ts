@@ -141,7 +141,6 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
         flags: 'w',
         encoding: 'utf-8',
       });
-      const imagesWorkDir = path.join(workDir, 'images');
 
       for (const descriptor of imageDescriptors) {
         if (descriptor.mode === 'file') {
@@ -154,12 +153,12 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
 
           if (fs.existsSync(srcPath) && fs.statSync(srcPath).isFile()) {
             const relNormalized = descriptor.sourceRelPath.replace(/\\/g, '/');
-            const destPath = path.resolve(imagesWorkDir, relNormalized);
+            const destPath = path.resolve(workDir, relNormalized);
             fs.mkdirSync(path.dirname(destPath), { recursive: true });
             fs.copyFileSync(srcPath, destPath);
 
             const manifestEntry = JSON.stringify({
-              zipPath: `images/${relNormalized}`,
+              zipPath: relNormalized,
               kind: descriptor.kind,
             });
             imagesManifestStream.write(`${manifestEntry}\n`);
@@ -178,12 +177,12 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
               const fileSrc = path.join(srcDir, file);
               if (fs.statSync(fileSrc).isFile()) {
                 const relNormalized = `${descriptor.sourceRelDir}/${file}`.replace(/\\/g, '/');
-                const destPath = path.resolve(imagesWorkDir, relNormalized);
+                const destPath = path.resolve(workDir, relNormalized);
                 fs.mkdirSync(path.dirname(destPath), { recursive: true });
                 fs.copyFileSync(fileSrc, destPath);
 
                 const manifestEntry = JSON.stringify({
-                  zipPath: `images/${relNormalized}`,
+                  zipPath: relNormalized,
                   kind: descriptor.kind,
                   scenarioId: descriptor.scenarioId,
                 });

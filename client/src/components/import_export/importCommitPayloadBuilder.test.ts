@@ -30,25 +30,25 @@ describe('importCommitPayloadBuilder', () => {
 
   const dummyImages: StagedImageEntry[] = [
     {
-      zipPath: 'images/character_cards/custom_1.png',
+      zipPath: 'character_cards/custom_1.png',
       kind: 'global_character_card',
     },
     {
-      zipPath: 'images/character_cards/custom_2.png',
+      zipPath: 'character_cards/custom_2.png',
       kind: 'global_character_card',
     },
     {
-      zipPath: 'images/scenarios/scen_1/character_cards/scen_char_1.png',
+      zipPath: 'scenario/scen_1/character_cards/scen_char_1.png',
       kind: 'scenario_character_card',
       scenarioId: 'scen_1',
     },
     {
-      zipPath: 'images/scenarios/scen_1/chat_images/chat_img_1.png',
+      zipPath: 'scenario/scen_1/chat_images/chat_img_1.png',
       kind: 'chat_image',
       scenarioId: 'scen_1',
     },
     {
-      zipPath: 'images/scenarios/scen_2/chat_images/chat_img_2.png',
+      zipPath: 'scenario/scen_2/chat_images/chat_img_2.png',
       kind: 'chat_image',
       scenarioId: 'scen_2',
     },
@@ -92,15 +92,15 @@ describe('importCommitPayloadBuilder', () => {
     // Verify image copies include char_1, scen_1 cards and chat images, but not scen_2
     expect(payload.imageCopies).toEqual([
       {
-        zipPath: 'images/character_cards/custom_1.png',
+        zipPath: 'character_cards/custom_1.png',
         targetRelPath: 'character_cards/custom_1.png',
       },
       {
-        zipPath: 'images/scenarios/scen_1/character_cards/scen_char_1.png',
+        zipPath: 'scenario/scen_1/character_cards/scen_char_1.png',
         targetRelPath: 'scenario/scen_1/character_cards/scen_char_1.png',
       },
       {
-        zipPath: 'images/scenarios/scen_1/chat_images/chat_img_1.png',
+        zipPath: 'scenario/scen_1/chat_images/chat_img_1.png',
         targetRelPath: 'scenario/scen_1/chat_images/chat_img_1.png',
       },
     ]);
@@ -124,8 +124,8 @@ describe('importCommitPayloadBuilder', () => {
         char_overwrite: 'overwrite',
       },
       stagedImages: [
-        { zipPath: 'images/character_cards/skip_portrait.png', kind: 'global_character_card' },
-        { zipPath: 'images/character_cards/overwrite_portrait.png', kind: 'global_character_card' },
+        { zipPath: 'character_cards/skip_portrait.png', kind: 'global_character_card' },
+        { zipPath: 'character_cards/overwrite_portrait.png', kind: 'global_character_card' },
       ],
       stagedGlobalCharacters: dummyGlobalCharacters,
       stagingDb,
@@ -155,7 +155,7 @@ describe('importCommitPayloadBuilder', () => {
     // Skipped character image should not be in imageCopies
     expect(payload.imageCopies).toEqual([
       {
-        zipPath: 'images/character_cards/overwrite_portrait.png',
+        zipPath: 'character_cards/overwrite_portrait.png',
         targetRelPath: 'character_cards/overwrite_portrait.png',
       },
     ]);

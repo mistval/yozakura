@@ -20,17 +20,8 @@ export function extractApiFileRelativePath(filePath: string | undefined): string
   return (filePath as string).slice('/api/files/'.length).split('?')[0] || undefined;
 }
 
-export function toZipImagePath(relPath: string): string {
-  return `images/${relPath}`;
-}
-
-export function toTargetRelPathFromZip(zipPath: string): string {
-  return zipPath.replace(/^images\/(?:scenarios|scenario)\//, 'scenario/').replace(/^images\//, '');
-}
-
 export function getCharacterZipImagePath(character: Pick<Character, 'imagePath'>): string | undefined {
-  const relPath = extractApiFileRelativePath(character.imagePath);
-  return relPath ? toZipImagePath(relPath) : undefined;
+  return extractApiFileRelativePath(character.imagePath);
 }
 
 function getScenarioCharacterPath(scenarioId: string, characterId: string) {
