@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { createZipBuffer } from '../server/src/routes/export.js';
 import {
   createTestServer,
   seedCompleteScenario,
@@ -182,5 +183,173 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
     // Re-staging immediately should succeed without detached database collisions
     const secondStage = await stageImportArchive(file);
     expect(secondStage.success).toBe(true);
+  });
+
+  it('stages successfully when db_rows.jsonl has out-of-order foreign key rows (child before parent)', async () => {
+    server = await createTestServer();
+    server.setActive();
+
+    const manifest = { exportName: 'OutOfOrderExport', dbUserVersion: 7 };
+    const now = new Date().toISOString();
+
+    // Child row (scenario_character) before parent row (scenario)
+    const dbRowsLines = [
+      JSON.stringify({
+        table: 'scenario_character',
+        row: {
+          id: '0123456789abcdef30',
+          scenario_id: '0123456789abcdef01',
+          data: JSON.stringify({
+            id: '0123456789abcdef30',
+            firstName: 'Child',
+            lastName: 'First',
+            scenarioId: '0123456789abcdef01',
+          }),
+          created_at: now,
+          updated_at: now,
+        },
+      }),
+      JSON.stringify({
+        table: 'scenario',
+        row: {
+          id: '0123456789abcdef01',
+          data: JSON.stringify({
+            id: '0123456789abcdef01',
+            name: 'Parent Scenario',
+            userCharacterId: '0123456789abcdef30',
+          }),
+          created_at: now,
+          updated_at: now,
+        },
+      }),
+    ].join('\n');
+
+    const zipBuffer = await createZipBuffer([
+      { name: 'manifest.json', content: JSON.stringify(manifest) },
+      { name: 'db_rows.jsonl', content: dbRowsLines },
+    ]);
+
+    const file = new File([new Uint8Array(zipBuffer)], 'OutOfOrder.yozakura_export.zip', {
+      type: 'application/zip',
+    });
+
+    const stageResult = await stageImportArchive(file);
+    expect(stageResult.success).toBe(true);
+
+    // Verify both rows were populated into staging
+    const charRow = server.db
+      .prepare("SELECT id FROM import_staging.scenario_character WHERE id = '0123456789abcdef30'")
+      .get() as { id: string } | undefined;
+    const scenRow = server.db
+      .prepare("SELECT id FROM import_staging.scenario WHERE id = '0123456789abcdef01'")
+      .get() as { id: string } | undefined;
+
+    expect(charRow).toBeDefined();
+    expect(scenRow).toBeDefined();
+  });
+
+  it('safely ignores unknown tables and malicious properties in db_rows.jsonl without throwing SQL errors', async () => {
+    server = await createTestServer();
+    server.setActive();
+
+    const manifest = { exportName: 'MaliciousExport', dbUserVersion: 7 };
+    const now = new Date().toISOString();
+
+    const dbRowsLines = [
+      // SQL injection table name
+      JSON.stringify({
+        table: 'scenario"; DROP TABLE sqlite_schema; --',
+        row: { id: 'bad_table' },
+      }),
+      // Nonexistent table
+      JSON.stringify({
+        table: 'nonexistent_table',
+        row: { id: 'unknown' },
+      }),
+      // Valid table with legitimate and illegitimate/malicious property keys
+      JSON.stringify({
+        table: 'scenario',
+        row: {
+          id: '0123456789abcdef99',
+          data: JSON.stringify({ id: '0123456789abcdef99', name: 'Safe Scenario' }),
+          'bad_column"; DROP TABLE scenario; --': 'exploit',
+          created_at: now,
+          updated_at: now,
+        },
+      }),
+    ].join('\n');
+
+    const zipBuffer = await createZipBuffer([
+      { name: 'manifest.json', content: JSON.stringify(manifest) },
+      { name: 'db_rows.jsonl', content: dbRowsLines },
+    ]);
+
+    const file = new File([new Uint8Array(zipBuffer)], 'Malicious.yozakura_export.zip', {
+      type: 'application/zip',
+    });
+
+    const stageResult = await stageImportArchive(file);
+    expect(stageResult.success).toBe(true);
+
+    const safeScen = server.db
+      .prepare("SELECT id FROM import_staging.scenario WHERE id = '0123456789abcdef99'")
+      .get() as { id: string } | undefined;
+    expect(safeScen).toBeDefined();
+  });
+
+  it('runs forward migrations against unpackedDir and renames disk assets', async () => {
+    server = await createTestServer();
+    server.setActive();
+
+    // dbUserVersion: 6 has 32-char hex IDs before migration 7 normalizes them
+    const oldCharId = '93449930c6a045acbd8c538e3dc96206';
+    const normalizedCharId = '8725fc2bda99a82672';
+    const now = new Date().toISOString();
+
+    const manifest = { exportName: 'OlderArchive', dbUserVersion: 6 };
+    const dbRowsLines = [
+      JSON.stringify({
+        table: 'character',
+        row: {
+          id: oldCharId,
+          data: JSON.stringify({
+            id: oldCharId,
+            firstName: 'Old',
+            lastName: 'Format',
+            imagePath: `/api/files/character_cards/${oldCharId}.png`,
+          }),
+          created_at: now,
+          updated_at: now,
+        },
+      }),
+    ].join('\n');
+
+    const zipBuffer = await createZipBuffer([
+      { name: 'manifest.json', content: JSON.stringify(manifest) },
+      { name: 'db_rows.jsonl', content: dbRowsLines },
+      { name: `character_cards/${oldCharId}.png`, content: Buffer.from('FAKE_CARD_DATA') },
+    ]);
+
+    const file = new File([new Uint8Array(zipBuffer)], 'OlderArchive.yozakura_export.zip', {
+      type: 'application/zip',
+    });
+
+    const stageResult = await stageImportArchive(file);
+    expect(stageResult.success).toBe(true);
+
+    // Staging DB row should be migrated to normalized ID
+    const migratedChar = server.db.prepare('SELECT id, data FROM import_staging.character').get() as
+      | { id: string; data: string }
+      | undefined;
+    expect(migratedChar).toBeDefined();
+    expect(migratedChar?.id).toBe(normalizedCharId);
+
+    // Disk asset in unpackedDir should have been renamed from oldCharId.png to normalizedCharId.png
+    const stagingDir = path.join(server.dataDir, 'import_staging');
+    const oldCardPath = path.join(stagingDir, 'unpacked', 'character_cards', `${oldCharId}.png`);
+    const newCardPath = path.join(stagingDir, 'unpacked', 'character_cards', `${normalizedCharId}.png`);
+
+    expect(fs.existsSync(oldCardPath)).toBe(false);
+    expect(fs.existsSync(newCardPath)).toBe(true);
   });
 });

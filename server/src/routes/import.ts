@@ -164,7 +164,22 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
       for (const { name } of tables) {
         stagingDb.prepare(`DELETE FROM "${name}"`).run();
       }
-      stagingDb.pragma('foreign_keys = ON');
+
+      // Pre-compile insert statements and cache column lists once per table using SQLite's schema
+      const tableColumns = new Map<string, string[]>();
+      const insertStatementsByTable = new Map<string, Database.Statement>();
+
+      for (const { name: tableName } of tables) {
+        const columnRows = stagingDb.pragma(`table_info("${tableName}")`) as Array<{ name: string }>;
+        const colNames = columnRows.map((c) => c.name);
+        tableColumns.set(tableName, colNames);
+
+        const placeholders = colNames.map(() => '?').join(', ');
+        const quotedCols = colNames.map((c) => `"${c}"`).join(', ');
+
+        const stmt = stagingDb.prepare(`INSERT INTO "${tableName}" (${quotedCols}) VALUES (${placeholders})`);
+        insertStatementsByTable.set(tableName, stmt);
+      }
 
       // 8. Stream db_rows.jsonl into stagingDb
       const dbRowsPath = path.join(unpackedDir, 'db_rows.jsonl');
@@ -184,13 +199,12 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
 
         const insertAll = stagingDb.transaction(() => {
           for (const { table, row } of rowsToInsert) {
-            const cols = Object.keys(row);
-            if (cols.length === 0) continue;
-            const placeholders = cols.map(() => '?').join(', ');
-            const stmt = stagingDb!.prepare(
-              `INSERT INTO "${table}" (${cols.map((c) => `"${c}"`).join(', ')}) VALUES (${placeholders})`
-            );
-            stmt.run(...Object.values(row));
+            const stmt = insertStatementsByTable.get(table);
+            const cols = tableColumns.get(table);
+            if (!stmt || !cols) continue;
+
+            const values = cols.map((col) => row[col] ?? null);
+            stmt.run(...values);
           }
         });
 
@@ -198,7 +212,7 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
       }
 
       // 9. Run remaining migrations (manifest.dbUserVersion -> latest)
-      runMigrations(stagingDb, { dataDir: stagingDir });
+      runMigrations(stagingDb, { dataDir: unpackedDir });
 
       // 10. Close standalone handle
       stagingDb.close();

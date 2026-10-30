@@ -39,6 +39,21 @@ export type ExportRequestBody = {
   imageDescriptors?: ImageCopyDescriptor[];
 };
 
+export function createZipBuffer(entries: { name: string; content: string | Buffer }[]): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const archive = new ZipArchive({ zlib: { level: 9 } });
+    const chunks: Buffer[] = [];
+    archive.on('data', (chunk: Buffer) => chunks.push(chunk));
+    archive.on('end', () => resolve(Buffer.concat(chunks)));
+    archive.on('error', (err: unknown) => reject(err));
+
+    for (const entry of entries) {
+      archive.append(entry.content, { name: entry.name });
+    }
+    archive.finalize().catch((err: unknown) => reject(err));
+  });
+}
+
 function zipDirectory(sourceDir: string, outZipPath: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const output = fs.createWriteStream(outZipPath);
