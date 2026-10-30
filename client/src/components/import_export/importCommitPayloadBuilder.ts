@@ -12,8 +12,12 @@ export type BuildCommitPayloadOptions = {
   sessionId: string;
   exportName: string;
   selectedScenarioIds: string[];
-  selectedScenarioMemoriesIds: string[];
+  selectedScenarioCharactersIds?: string[];
   selectedScenarioGroupsIds: string[];
+  selectedScenarioSchedulesIds?: string[];
+  selectedScenarioMemoriesIds: string[];
+  selectedScenarioConversationsIds?: string[];
+  selectedScenarioTurnIds?: string[];
   selectedMapIds: string[];
   selectedGlobalCharacterIds: string[];
   conflictResolutions: Record<string, ConflictAction>;
@@ -29,8 +33,12 @@ export async function prepareStagingAndBuildCommitPayload(
     sessionId,
     exportName,
     selectedScenarioIds,
-    selectedScenarioMemoriesIds,
+    selectedScenarioCharactersIds = selectedScenarioIds,
     selectedScenarioGroupsIds,
+    selectedScenarioSchedulesIds = selectedScenarioGroupsIds,
+    selectedScenarioMemoriesIds,
+    selectedScenarioConversationsIds = selectedScenarioIds,
+    selectedScenarioTurnIds = selectedScenarioIds,
     selectedMapIds,
     selectedGlobalCharacterIds,
     conflictResolutions,
@@ -38,6 +46,16 @@ export async function prepareStagingAndBuildCommitPayload(
     stagedGlobalCharacters,
     stagingDb,
   } = options;
+
+  const effectiveMemoriesScenIds = selectedScenarioMemoriesIds.filter((id) =>
+    selectedScenarioCharactersIds.includes(id)
+  );
+  const effectiveTurnScenIds = selectedScenarioTurnIds.filter((id) =>
+    selectedScenarioCharactersIds.includes(id)
+  );
+  const effectiveSchedulesScenIds = selectedScenarioSchedulesIds.filter((id) =>
+    selectedScenarioGroupsIds.includes(id)
+  );
 
   const db = stagingDb ?? importStagingDatabase;
 
@@ -64,8 +82,10 @@ export async function prepareStagingAndBuildCommitPayload(
       `.trim(),
       [[scenJson]]
     );
+  }
 
-    // Scenario characters
+  // Scenario characters
+  if (selectedScenarioCharactersIds.length > 0) {
     await db.dbRun(
       `
         INSERT INTO import_staging._id_map (old_id, new_id)
@@ -73,10 +93,13 @@ export async function prepareStagingAndBuildCommitPayload(
         FROM import_staging.scenario_character
         WHERE scenario_id IN (SELECT value FROM json_each(?));
       `.trim(),
-      [[scenJson]]
+      [[JSON.stringify(selectedScenarioCharactersIds)]]
     );
+  }
 
-    // Conversations
+  // Conversations & participants
+  if (selectedScenarioConversationsIds.length > 0) {
+    const convScenJson = JSON.stringify(selectedScenarioConversationsIds);
     await db.dbRun(
       `
         INSERT INTO import_staging._id_map (old_id, new_id)
@@ -84,10 +107,9 @@ export async function prepareStagingAndBuildCommitPayload(
         FROM import_staging.conversation
         WHERE scenario_id IN (SELECT value FROM json_each(?));
       `.trim(),
-      [[scenJson]]
+      [[convScenJson]]
     );
 
-    // Conversation participants
     await db.dbRun(
       `
         INSERT INTO import_staging._id_map (old_id, new_id)
@@ -96,12 +118,12 @@ export async function prepareStagingAndBuildCommitPayload(
         JOIN import_staging.conversation c ON cp.conversation_id = c.id
         WHERE c.scenario_id IN (SELECT value FROM json_each(?));
       `.trim(),
-      [[scenJson]]
+      [[convScenJson]]
     );
   }
 
-  // Character relationships (for scenarios where memories are selected)
-  if (selectedScenarioMemoriesIds.length > 0) {
+  // Character relationships (for scenarios where memories and characters are selected)
+  if (effectiveMemoriesScenIds.length > 0) {
     await db.dbRun(
       `
         INSERT INTO import_staging._id_map (old_id, new_id)
@@ -110,11 +132,11 @@ export async function prepareStagingAndBuildCommitPayload(
         JOIN import_staging.scenario_character sc ON cr.from_id = sc.id
         WHERE sc.scenario_id IN (SELECT value FROM json_each(?));
       `.trim(),
-      [[JSON.stringify(selectedScenarioMemoriesIds)]]
+      [[JSON.stringify(effectiveMemoriesScenIds)]]
     );
   }
 
-  // Character groups and schedules (for scenarios where groups are selected)
+  // Character groups
   if (selectedScenarioGroupsIds.length > 0) {
     const groupsJson = JSON.stringify(selectedScenarioGroupsIds);
     await db.dbRun(
@@ -126,6 +148,10 @@ export async function prepareStagingAndBuildCommitPayload(
       `.trim(),
       [[groupsJson]]
     );
+  }
+
+  // Group schedules (for scenarios where groups and schedules are selected)
+  if (effectiveSchedulesScenIds.length > 0) {
     await db.dbRun(
       `
         INSERT INTO import_staging._id_map (old_id, new_id)
@@ -133,7 +159,7 @@ export async function prepareStagingAndBuildCommitPayload(
         FROM import_staging.scenario_character_group_schedule
         WHERE scenario_id IN (SELECT value FROM json_each(?));
       `.trim(),
-      [[groupsJson]]
+      [[JSON.stringify(effectiveSchedulesScenIds)]]
     );
   }
 
@@ -253,7 +279,7 @@ export async function prepareStagingAndBuildCommitPayload(
   if (selectedScenarioIds.length > 0) {
     const scenJson = JSON.stringify(selectedScenarioIds);
 
-    // scenario
+    // scenario (if scenario characters are omitted, reset userCharacterId to empty)
     sqlStatements.push({
       statement: `
         INSERT INTO main.scenario (id, created_at, updated_at, data)
@@ -261,36 +287,41 @@ export async function prepareStagingAndBuildCommitPayload(
           m.new_id,
           s.created_at,
           CURRENT_TIMESTAMP,
-          apply_id_map(s.data)
+          CASE
+            WHEN s.id IN (SELECT value FROM json_each(?)) THEN apply_id_map(s.data)
+            ELSE json_set(apply_id_map(s.data), '$.userCharacterId', '')
+          END
         FROM import_staging.scenario s
         JOIN import_staging._id_map m ON s.id = m.old_id
         WHERE s.id IN (SELECT value FROM json_each(?));
       `.trim(),
-      params: [scenJson],
+      params: [JSON.stringify(selectedScenarioCharactersIds), scenJson],
     });
 
     // scenario_character
-    sqlStatements.push({
-      statement: `
-        INSERT INTO main.scenario_character (id, scenario_id, created_at, updated_at, data)
-        SELECT
-          m.new_id,
-          sm.new_id,
-          s.created_at,
-          CURRENT_TIMESTAMP,
-          apply_id_map(s.data)
-        FROM import_staging.scenario_character s
-        JOIN import_staging._id_map m ON s.id = m.old_id
-        JOIN import_staging._id_map sm ON s.scenario_id = sm.old_id
-        WHERE s.scenario_id IN (SELECT value FROM json_each(?));
-      `.trim(),
-      params: [scenJson],
-    });
+    if (selectedScenarioCharactersIds.length > 0) {
+      sqlStatements.push({
+        statement: `
+          INSERT INTO main.scenario_character (id, scenario_id, created_at, updated_at, data)
+          SELECT
+            m.new_id,
+            sm.new_id,
+            s.created_at,
+            CURRENT_TIMESTAMP,
+            apply_id_map(s.data)
+          FROM import_staging.scenario_character s
+          JOIN import_staging._id_map m ON s.id = m.old_id
+          JOIN import_staging._id_map sm ON s.scenario_id = sm.old_id
+          WHERE s.scenario_id IN (SELECT value FROM json_each(?));
+        `.trim(),
+        params: [JSON.stringify(selectedScenarioCharactersIds)],
+      });
+    }
   }
 
-  // character_relationship (for scenarios where memories are selected)
-  if (selectedScenarioMemoriesIds.length > 0) {
-    const memScenJson = JSON.stringify(selectedScenarioMemoriesIds);
+  // character_relationship (for scenarios where memories and characters are selected)
+  if (effectiveMemoriesScenIds.length > 0) {
+    const memScenJson = JSON.stringify(effectiveMemoriesScenIds);
     sqlStatements.push({
       statement: `
         INSERT INTO main.character_relationship (id, from_id, to_id, created_at, updated_at, data)
@@ -312,7 +343,7 @@ export async function prepareStagingAndBuildCommitPayload(
     });
   }
 
-  // scenario_character_group & schedule (for scenarios where groups are selected)
+  // scenario_character_group (for scenarios where groups are selected)
   if (selectedScenarioGroupsIds.length > 0) {
     const grpScenJson = JSON.stringify(selectedScenarioGroupsIds);
     sqlStatements.push({
@@ -331,7 +362,11 @@ export async function prepareStagingAndBuildCommitPayload(
       `.trim(),
       params: [grpScenJson],
     });
+  }
 
+  // scenario_character_group_schedule (for scenarios where groups and schedules are selected)
+  if (effectiveSchedulesScenIds.length > 0) {
+    const schedScenJson = JSON.stringify(effectiveSchedulesScenIds);
     sqlStatements.push({
       statement: `
         INSERT INTO main.scenario_character_group_schedule (id, scenario_id, group_id, created_at, updated_at, data)
@@ -348,13 +383,13 @@ export async function prepareStagingAndBuildCommitPayload(
         JOIN import_staging._id_map gm ON s.group_id = gm.old_id
         WHERE s.scenario_id IN (SELECT value FROM json_each(?));
       `.trim(),
-      params: [grpScenJson],
+      params: [schedScenJson],
     });
   }
 
-  // Historical log tables (chronological rowid order preserved)
-  if (selectedScenarioIds.length > 0) {
-    const scenJson = JSON.stringify(selectedScenarioIds);
+  // Historical conversation logs
+  if (selectedScenarioConversationsIds.length > 0) {
+    const convScenJson = JSON.stringify(selectedScenarioConversationsIds);
 
     // conversation
     sqlStatements.push({
@@ -372,7 +407,7 @@ export async function prepareStagingAndBuildCommitPayload(
         WHERE s.scenario_id IN (SELECT value FROM json_each(?))
         ORDER BY s.rowid ASC;
       `.trim(),
-      params: [scenJson],
+      params: [convScenJson],
     });
 
     // conversation_participant
@@ -393,10 +428,13 @@ export async function prepareStagingAndBuildCommitPayload(
         WHERE c.scenario_id IN (SELECT value FROM json_each(?))
         ORDER BY s.rowid ASC;
       `.trim(),
-      params: [scenJson],
+      params: [convScenJson],
     });
+  }
 
-    // scenario turn state in key_value
+  // scenario turn state in key_value (for scenarios where characters and turn are selected)
+  if (effectiveTurnScenIds.length > 0) {
+    const turnScenJson = JSON.stringify(effectiveTurnScenIds);
     sqlStatements.push({
       statement: `
         INSERT INTO main.key_value (key, data, created_at, updated_at)
@@ -412,7 +450,7 @@ export async function prepareStagingAndBuildCommitPayload(
           data = excluded.data,
           updated_at = CURRENT_TIMESTAMP;
       `.trim(),
-      params: [scenJson],
+      params: [turnScenJson],
     });
   }
 
@@ -441,8 +479,16 @@ export async function prepareStagingAndBuildCommitPayload(
         zipPath: entry.zipPath,
         targetRelPath: entry.zipPath,
       });
-    } else if (entry.kind === 'scenario_character_card' || entry.kind === 'chat_image') {
-      if (!selectedScenarioIds.includes(entry.scenarioId)) {
+    } else if (entry.kind === 'scenario_character_card') {
+      if (!selectedScenarioCharactersIds.includes(entry.scenarioId)) {
+        continue;
+      }
+      imageCopies.push({
+        zipPath: entry.zipPath,
+        targetRelPath: entry.zipPath,
+      });
+    } else if (entry.kind === 'chat_image') {
+      if (!selectedScenarioConversationsIds.includes(entry.scenarioId)) {
         continue;
       }
       imageCopies.push({

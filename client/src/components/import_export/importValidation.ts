@@ -129,6 +129,11 @@ async function loadPagedConversations(
 
 export async function validateStagedData(options: {
   selectedScenarioIds: string[];
+  selectedScenarioCharactersIds?: string[];
+  selectedScenarioGroupsIds?: string[];
+  selectedScenarioSchedulesIds?: string[];
+  selectedScenarioMemoriesIds?: string[];
+  selectedScenarioConversationsIds?: string[];
   selectedMapIds: string[];
   selectedGlobalCharacterIds: string[];
   selectedTemplateChainIds: string[];
@@ -184,44 +189,60 @@ export async function validateStagedData(options: {
       }
 
       // Scenario characters
-      await validateEntities(
-        once(() => importStagingDatabase.loadScenarioCharacters(scenId)),
-        characterSchema,
-        `scenario character in scenario ${scenId}`,
-        errors
-      );
+      if (!options.selectedScenarioCharactersIds || options.selectedScenarioCharactersIds.includes(scenId)) {
+        await validateEntities(
+          once(() => importStagingDatabase.loadScenarioCharacters(scenId)),
+          characterSchema,
+          `scenario character in scenario ${scenId}`,
+          errors
+        );
+      }
 
       // Groups
-      await validateEntities(
-        once(() => importStagingDatabase.loadScenarioCharacterGroups(scenId)),
-        scenarioCharacterGroupSchema,
-        `character group in scenario ${scenId}`,
-        errors
-      );
+      if (!options.selectedScenarioGroupsIds || options.selectedScenarioGroupsIds.includes(scenId)) {
+        await validateEntities(
+          once(() => importStagingDatabase.loadScenarioCharacterGroups(scenId)),
+          scenarioCharacterGroupSchema,
+          `character group in scenario ${scenId}`,
+          errors
+        );
+      }
 
       // Schedules
-      await validateEntities(
-        once(() => importStagingDatabase.loadGroupSchedules(scenId)),
-        scenarioCharacterGroupScheduleSchema,
-        `schedule in scenario ${scenId}`,
-        errors
-      );
+      if (!options.selectedScenarioSchedulesIds || options.selectedScenarioSchedulesIds.includes(scenId)) {
+        await validateEntities(
+          once(() => importStagingDatabase.loadGroupSchedules(scenId)),
+          scenarioCharacterGroupScheduleSchema,
+          `schedule in scenario ${scenId}`,
+          errors
+        );
+      }
 
       // Relationships (paged)
-      await validateEntities(
-        (page) => loadPagedRelationships(scenId, page),
-        characterRelationshipSchema,
-        `character relationship in scenario ${scenId}`,
-        errors
-      );
+      const shouldValidateMemories =
+        (!options.selectedScenarioMemoriesIds || options.selectedScenarioMemoriesIds.includes(scenId)) &&
+        (!options.selectedScenarioCharactersIds || options.selectedScenarioCharactersIds.includes(scenId));
+      if (shouldValidateMemories) {
+        await validateEntities(
+          (page) => loadPagedRelationships(scenId, page),
+          characterRelationshipSchema,
+          `character relationship in scenario ${scenId}`,
+          errors
+        );
+      }
 
       // Conversations (paged)
-      await validateEntities(
-        (page) => loadPagedConversations(scenId, page),
-        storedConversationSchema,
-        `conversation in scenario ${scenId}`,
-        errors
-      );
+      if (
+        !options.selectedScenarioConversationsIds ||
+        options.selectedScenarioConversationsIds.includes(scenId)
+      ) {
+        await validateEntities(
+          (page) => loadPagedConversations(scenId, page),
+          storedConversationSchema,
+          `conversation in scenario ${scenId}`,
+          errors
+        );
+      }
     } catch (e) {
       errors.push(`Failed to validate scenario ${scenId}: ${e instanceof Error ? e.message : String(e)}`);
     }

@@ -191,4 +191,137 @@ describe('importCommitPayloadBuilder', () => {
     const stripGroupsCall = dbRunCalls.find((call) => call.statement.includes('groupIds'));
     expect(stripGroupsCall).toBeDefined();
   });
+
+  it('omits scenario characters, relationships, cards, and turn state when characters are unchecked', async () => {
+    const stagingDb = createImportStagingDatabase(testSqlTarget);
+
+    const payload = await prepareStagingAndBuildCommitPayload({
+      sessionId: 'test-session-123',
+      exportName: 'PartialExportNoChars',
+      selectedScenarioIds: ['scen_1'],
+      selectedScenarioCharactersIds: [], // unchecked characters
+      selectedScenarioGroupsIds: ['scen_1'],
+      selectedScenarioMemoriesIds: ['scen_1'],
+      selectedScenarioConversationsIds: ['scen_1'],
+      selectedScenarioTurnIds: ['scen_1'],
+      selectedMapIds: [],
+      selectedGlobalCharacterIds: [],
+      conflictResolutions: {},
+      stagedImages: dummyImages,
+      stagedGlobalCharacters: dummyGlobalCharacters,
+      stagingDb,
+    });
+
+    const sqlText = payload.sqlStatements.map((s) => (typeof s === 'string' ? s : s.statement)).join('\n');
+    expect(sqlText).toContain('INSERT INTO main.scenario (');
+    expect(sqlText).not.toContain('INSERT INTO main.scenario_character (');
+    // Memories and turn require characters, so relationships and key_value turn state must be omitted
+    expect(sqlText).not.toContain('INSERT INTO main.character_relationship');
+    expect(sqlText).not.toContain('INSERT INTO main.key_value');
+
+    // Scenario insert statement should clear userCharacterId
+    const scenInsert = payload.sqlStatements.find(
+      (s) => typeof s === 'object' && s.statement.includes('INSERT INTO main.scenario')
+    );
+    expect(scenInsert).toBeDefined();
+    if (typeof scenInsert === 'object') {
+      expect(scenInsert.statement).toContain("json_set(apply_id_map(s.data), '$.userCharacterId', '')");
+    }
+
+    // Character cards should be omitted from image copies, but chat images retained
+    expect(payload.imageCopies).toEqual([
+      {
+        zipPath: 'scenario/scen_1/chat_images/chat_img_1.png',
+        targetRelPath: 'scenario/scen_1/chat_images/chat_img_1.png',
+      },
+    ]);
+  });
+
+  it('omits conversation logs and chat images when conversations are unchecked', async () => {
+    const stagingDb = createImportStagingDatabase(testSqlTarget);
+
+    const payload = await prepareStagingAndBuildCommitPayload({
+      sessionId: 'test-session-123',
+      exportName: 'PartialExportNoConvs',
+      selectedScenarioIds: ['scen_1'],
+      selectedScenarioCharactersIds: ['scen_1'],
+      selectedScenarioGroupsIds: ['scen_1'],
+      selectedScenarioSchedulesIds: ['scen_1'],
+      selectedScenarioMemoriesIds: ['scen_1'],
+      selectedScenarioConversationsIds: [], // unchecked conversations
+      selectedScenarioTurnIds: ['scen_1'],
+      selectedMapIds: [],
+      selectedGlobalCharacterIds: [],
+      conflictResolutions: {},
+      stagedImages: dummyImages,
+      stagedGlobalCharacters: dummyGlobalCharacters,
+      stagingDb,
+    });
+
+    const sqlText = payload.sqlStatements.map((s) => (typeof s === 'string' ? s : s.statement)).join('\n');
+    expect(sqlText).toContain('INSERT INTO main.scenario');
+    expect(sqlText).toContain('INSERT INTO main.scenario_character');
+    expect(sqlText).not.toContain('INSERT INTO main.conversation');
+    expect(sqlText).not.toContain('INSERT INTO main.conversation_participant');
+
+    // Chat images should be omitted from image copies, but character cards retained
+    expect(payload.imageCopies).toEqual([
+      {
+        zipPath: 'scenario/scen_1/character_cards/scen_char_1.png',
+        targetRelPath: 'scenario/scen_1/character_cards/scen_char_1.png',
+      },
+    ]);
+  });
+
+  it('omits schedules when schedules are unchecked but groups are checked', async () => {
+    const stagingDb = createImportStagingDatabase(testSqlTarget);
+
+    const payload = await prepareStagingAndBuildCommitPayload({
+      sessionId: 'test-session-123',
+      exportName: 'PartialExportNoSchedules',
+      selectedScenarioIds: ['scen_1'],
+      selectedScenarioCharactersIds: ['scen_1'],
+      selectedScenarioGroupsIds: ['scen_1'], // checked groups
+      selectedScenarioSchedulesIds: [], // unchecked schedules
+      selectedScenarioMemoriesIds: ['scen_1'],
+      selectedScenarioConversationsIds: ['scen_1'],
+      selectedScenarioTurnIds: ['scen_1'],
+      selectedMapIds: [],
+      selectedGlobalCharacterIds: [],
+      conflictResolutions: {},
+      stagedImages: [],
+      stagedGlobalCharacters: dummyGlobalCharacters,
+      stagingDb,
+    });
+
+    const sqlText = payload.sqlStatements.map((s) => (typeof s === 'string' ? s : s.statement)).join('\n');
+    expect(sqlText).toContain('INSERT INTO main.scenario_character_group');
+    expect(sqlText).not.toContain('INSERT INTO main.scenario_character_group_schedule');
+  });
+
+  it('omits turn state when turn state is unchecked', async () => {
+    const stagingDb = createImportStagingDatabase(testSqlTarget);
+
+    const payload = await prepareStagingAndBuildCommitPayload({
+      sessionId: 'test-session-123',
+      exportName: 'PartialExportNoTurn',
+      selectedScenarioIds: ['scen_1'],
+      selectedScenarioCharactersIds: ['scen_1'],
+      selectedScenarioGroupsIds: ['scen_1'],
+      selectedScenarioSchedulesIds: ['scen_1'],
+      selectedScenarioMemoriesIds: ['scen_1'],
+      selectedScenarioConversationsIds: ['scen_1'],
+      selectedScenarioTurnIds: [], // unchecked turn
+      selectedMapIds: [],
+      selectedGlobalCharacterIds: [],
+      conflictResolutions: {},
+      stagedImages: [],
+      stagedGlobalCharacters: dummyGlobalCharacters,
+      stagingDb,
+    });
+
+    const sqlText = payload.sqlStatements.map((s) => (typeof s === 'string' ? s : s.statement)).join('\n');
+    expect(sqlText).toContain('INSERT INTO main.scenario');
+    expect(sqlText).not.toContain('INSERT INTO main.key_value');
+  });
 });

@@ -182,13 +182,29 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       .filter((id) => selectedIds.has(TreeEntityIds.scenario(id)));
   }, [stagedData, selectedIds]);
 
-  const selectedScenarioMemoriesIds = useMemo(() => {
-    return selectedScenarioIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioMemories(id)));
+  const selectedScenarioCharactersIds = useMemo(() => {
+    return selectedScenarioIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioCharacters(id)));
   }, [selectedScenarioIds, selectedIds]);
 
   const selectedScenarioGroupsIds = useMemo(() => {
     return selectedScenarioIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioGroups(id)));
   }, [selectedScenarioIds, selectedIds]);
+
+  const selectedScenarioSchedulesIds = useMemo(() => {
+    return selectedScenarioGroupsIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioSchedules(id)));
+  }, [selectedScenarioGroupsIds, selectedIds]);
+
+  const selectedScenarioMemoriesIds = useMemo(() => {
+    return selectedScenarioCharactersIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioMemories(id)));
+  }, [selectedScenarioCharactersIds, selectedIds]);
+
+  const selectedScenarioConversationsIds = useMemo(() => {
+    return selectedScenarioIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioConversations(id)));
+  }, [selectedScenarioIds, selectedIds]);
+
+  const selectedScenarioTurnIds = useMemo(() => {
+    return selectedScenarioCharactersIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioTurn(id)));
+  }, [selectedScenarioCharactersIds, selectedIds]);
 
   const selectedMapIds = useMemo(() => {
     if (!stagedData) return [];
@@ -223,8 +239,12 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
         sessionId: stagedData.sessionId,
         exportName: stagedData.manifest.exportName,
         selectedScenarioIds,
-        selectedScenarioMemoriesIds,
+        selectedScenarioCharactersIds,
         selectedScenarioGroupsIds,
+        selectedScenarioSchedulesIds,
+        selectedScenarioMemoriesIds,
+        selectedScenarioConversationsIds,
+        selectedScenarioTurnIds,
         selectedMapIds,
         selectedGlobalCharacterIds,
         conflictResolutions,
@@ -320,6 +340,11 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
     // 1. Paged Zod Validation
     const validation = await validateStagedData({
       selectedScenarioIds,
+      selectedScenarioCharactersIds,
+      selectedScenarioGroupsIds,
+      selectedScenarioSchedulesIds,
+      selectedScenarioMemoriesIds,
+      selectedScenarioConversationsIds,
       selectedMapIds,
       selectedGlobalCharacterIds,
       selectedTemplateChainIds,
