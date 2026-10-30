@@ -6,7 +6,7 @@ import {
 } from '../../state/turn_machine_store';
 import { useScenarioStore } from '../../state/scenario_store';
 
-function turnPersistenceKey(scenarioId: string) {
+export function turnPersistenceKey(scenarioId: string) {
   return `scenario_${scenarioId}_turn`;
 }
 

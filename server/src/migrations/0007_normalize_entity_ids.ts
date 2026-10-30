@@ -3,7 +3,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import type Database from 'better-sqlite3';
 import type { Migration } from '../types.js';
-import { applyIdMap, generateHex18Id } from '../id_map.js';
+import { applyIdMap, deriveDeterministicHex18Id } from '../id_map.js';
 
 const OLD_TO_NEW_MAP_IDS: Readonly<Record<string, string>> = {
   f918d31fb1a24a5da88a2507678d40de: '77857aab9e47d2d6d5',
@@ -102,7 +102,7 @@ function collect32HexTokens(text: string, idMap: Map<string, string>): void {
   for (const match of text.matchAll(HEX_32_PATTERN)) {
     const token = match[0];
     if (!idMap.has(token)) {
-      idMap.set(token, generateHex18Id());
+      idMap.set(token, deriveDeterministicHex18Id(token));
     }
   }
 }

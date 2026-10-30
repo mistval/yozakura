@@ -28,7 +28,7 @@ export type BuildCommitPayloadOptions = {
   selectedMapIds: string[];
   selectedGlobalCharacterIds: string[];
   conflictResolutions: Record<string, ConflictAction>;
-  stagedImages: StagedImageEntry[];
+  stagedImages?: StagedImageEntry[];
   stagedGlobalCharacters?: Character[];
   stagingDb?: DatabaseClient;
 };
@@ -49,7 +49,6 @@ export async function prepareStagingAndBuildCommitPayload(
     selectedMapIds,
     selectedGlobalCharacterIds,
     conflictResolutions,
-    stagedImages,
     stagedGlobalCharacters,
     stagingDb,
   } = options;
@@ -76,99 +75,23 @@ export async function prepareStagingAndBuildCommitPayload(
   `);
   await db.dbRun('DELETE FROM import_staging._id_map;');
 
-  // 2. Populate _id_map for scenario-scoped entities
-  if (selectedScenarioIds.length > 0) {
-    const scenJson = JSON.stringify(selectedScenarioIds);
+  // 2. Populate _id_map unconditionally for all scenario-scoped entities in staging
+  const scenarioScopedTables = [
+    'scenario',
+    'scenario_character',
+    'character_relationship',
+    'scenario_character_group',
+    'scenario_character_group_schedule',
+    'conversation',
+    'conversation_participant',
+  ];
 
-    // Scenarios
-    await db.dbRun(
-      `
-        INSERT INTO import_staging._id_map (old_id, new_id)
-        SELECT id, lower(hex(randomblob(9)))
-        FROM import_staging.scenario
-        WHERE id IN (SELECT value FROM json_each(?));
-      `.trim(),
-      [[scenJson]]
-    );
-  }
-
-  // Scenario characters
-  if (selectedScenarioCharactersIds.length > 0) {
-    await db.dbRun(
-      `
-        INSERT INTO import_staging._id_map (old_id, new_id)
-        SELECT id, lower(hex(randomblob(9)))
-        FROM import_staging.scenario_character
-        WHERE scenario_id IN (SELECT value FROM json_each(?));
-      `.trim(),
-      [[JSON.stringify(selectedScenarioCharactersIds)]]
-    );
-  }
-
-  // Conversations & participants
-  if (selectedScenarioConversationsIds.length > 0) {
-    const convScenJson = JSON.stringify(selectedScenarioConversationsIds);
-    await db.dbRun(
-      `
-        INSERT INTO import_staging._id_map (old_id, new_id)
-        SELECT id, lower(hex(randomblob(9)))
-        FROM import_staging.conversation
-        WHERE scenario_id IN (SELECT value FROM json_each(?));
-      `.trim(),
-      [[convScenJson]]
-    );
-
-    await db.dbRun(
-      `
-        INSERT INTO import_staging._id_map (old_id, new_id)
-        SELECT cp.id, lower(hex(randomblob(9)))
-        FROM import_staging.conversation_participant cp
-        JOIN import_staging.conversation c ON cp.conversation_id = c.id
-        WHERE c.scenario_id IN (SELECT value FROM json_each(?));
-      `.trim(),
-      [[convScenJson]]
-    );
-  }
-
-  // Character relationships (for scenarios where memories and characters are selected)
-  if (effectiveMemoriesScenIds.length > 0) {
-    await db.dbRun(
-      `
-        INSERT INTO import_staging._id_map (old_id, new_id)
-        SELECT cr.id, lower(hex(randomblob(9)))
-        FROM import_staging.character_relationship cr
-        JOIN import_staging.scenario_character sc ON cr.from_id = sc.id
-        WHERE sc.scenario_id IN (SELECT value FROM json_each(?));
-      `.trim(),
-      [[JSON.stringify(effectiveMemoriesScenIds)]]
-    );
-  }
-
-  // Character groups
-  if (selectedScenarioGroupsIds.length > 0) {
-    const groupsJson = JSON.stringify(selectedScenarioGroupsIds);
-    await db.dbRun(
-      `
-        INSERT INTO import_staging._id_map (old_id, new_id)
-        SELECT id, lower(hex(randomblob(9)))
-        FROM import_staging.scenario_character_group
-        WHERE scenario_id IN (SELECT value FROM json_each(?));
-      `.trim(),
-      [[groupsJson]]
-    );
-  }
-
-  // Group schedules (for scenarios where groups and schedules are selected)
-  if (effectiveSchedulesScenIds.length > 0) {
-    await db.dbRun(
-      `
-        INSERT INTO import_staging._id_map (old_id, new_id)
-        SELECT id, lower(hex(randomblob(9)))
-        FROM import_staging.scenario_character_group_schedule
-        WHERE scenario_id IN (SELECT value FROM json_each(?));
-      `.trim(),
-      [[JSON.stringify(effectiveSchedulesScenIds)]]
-    );
+  for (const table of scenarioScopedTables) {
+    await db.dbRun(`
+      INSERT INTO import_staging._id_map (old_id, new_id)
+      SELECT id, lower(hex(randomblob(9)))
+      FROM import_staging.${table};
+    `);
   }
 
   // 3. Populate _id_map for Global Entities where Make a Copy was chosen
@@ -490,56 +413,44 @@ export async function prepareStagingAndBuildCommitPayload(
     });
   }
 
-  // 6. Filter imageCopies from stagedImages using character objects as source of truth
-  const zipPathToGlobalChar = new Map<string, Character>();
-  for (const char of globalCharacters) {
-    const zipPath = Files.getCharacterZipImagePath(char);
-    if (zipPath) {
-      zipPathToGlobalChar.set(zipPath, char);
-    }
-  }
-
+  // 6. Build imageCopies directly from selected entities
   const imageCopies: Array<{ zipPath: string; targetRelPath: string }> = [];
 
-  for (const entry of stagedImages) {
-    if (entry.kind === 'global_character_card') {
-      const char = zipPathToGlobalChar.get(entry.zipPath);
-      if (!char || !selectedGlobalCharacterIds.includes(char.id)) {
-        continue;
-      }
-      if (conflictResolutions[char.id] === 'skip') {
-        continue;
-      }
+  // Global character cards
+  for (const char of globalCharacters) {
+    if (!selectedGlobalCharacterIds.includes(char.id)) continue;
+    if (conflictResolutions[char.id] === 'skip') continue;
 
-      let targetRelPath = entry.zipPath;
-      if (conflictResolutions[char.id] === 'copy') {
-        const newId = copiedCharIdToNewId.get(char.id);
-        if (newId) {
-          targetRelPath = `character_cards/${newId}.png`;
-        }
-      }
+    const zipPath = Files.getCharacterZipImagePath(char);
+    if (!zipPath) continue;
 
-      imageCopies.push({
-        zipPath: entry.zipPath,
-        targetRelPath,
-      });
-    } else if (entry.kind === 'scenario_character_card') {
-      if (!selectedScenarioCharactersIds.includes(entry.scenarioId)) {
-        continue;
+    let targetRelPath = zipPath;
+    if (conflictResolutions[char.id] === 'copy') {
+      const newId = copiedCharIdToNewId.get(char.id);
+      if (newId) {
+        targetRelPath = `character_cards/${newId}.png`;
       }
-      imageCopies.push({
-        zipPath: entry.zipPath,
-        targetRelPath: entry.zipPath,
-      });
-    } else if (entry.kind === 'chat_image') {
-      if (!selectedScenarioConversationsIds.includes(entry.scenarioId)) {
-        continue;
-      }
-      imageCopies.push({
-        zipPath: entry.zipPath,
-        targetRelPath: entry.zipPath,
-      });
     }
+
+    imageCopies.push({
+      zipPath,
+      targetRelPath,
+    });
+  }
+
+  // Scenario character cards and chat images
+  for (const scenId of selectedScenarioCharactersIds) {
+    imageCopies.push({
+      zipPath: `scenario/${scenId}/character_cards`,
+      targetRelPath: `scenario/${scenId}/character_cards`,
+    });
+  }
+
+  for (const scenId of selectedScenarioConversationsIds) {
+    imageCopies.push({
+      zipPath: `scenario/${scenId}/chat_images`,
+      targetRelPath: `scenario/${scenId}/chat_images`,
+    });
   }
 
   return {

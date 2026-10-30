@@ -174,6 +174,50 @@ describe('tree_selection', () => {
     });
   });
 
+  describe('ancestor synchronization on child toggle', () => {
+    it('automatically adds ancestor IDs when selecting a child node, and removes them when all children are unselected', async () => {
+      const child1: TreeNode = { id: 'c1', label: 'Child 1' };
+      const child2: TreeNode = { id: 'c2', label: 'Child 2' };
+      const parent: TreeNode = {
+        id: 'parent',
+        label: 'Parent',
+        getChildren: async () => [child1, child2],
+      };
+
+      const childrenMap = {
+        root: [parent],
+        'root/parent': [child1, child2],
+      };
+
+      let selected = new Set<string>();
+
+      // Select child1 at path 'root/parent/c1'
+      selected = await toggleNodeSelection(child1, 'root/parent/c1', selected, childrenMap, async () => []);
+      expect(selected.has('c1')).toBe(true);
+      expect(selected.has('parent')).toBe(true);
+      expect(selected.has('root')).toBe(true);
+
+      // Select child2 at path 'root/parent/c2'
+      selected = await toggleNodeSelection(child2, 'root/parent/c2', selected, childrenMap, async () => []);
+      expect(selected.has('c2')).toBe(true);
+      expect(selected.has('parent')).toBe(true);
+      expect(selected.has('root')).toBe(true);
+
+      // Unselect child1 -> parent and root remain selected because child2 is still selected
+      selected = await toggleNodeSelection(child1, 'root/parent/c1', selected, childrenMap, async () => []);
+      expect(selected.has('c1')).toBe(false);
+      expect(selected.has('c2')).toBe(true);
+      expect(selected.has('parent')).toBe(true);
+      expect(selected.has('root')).toBe(true);
+
+      // Unselect child2 -> parent and root are removed because no children remain
+      selected = await toggleNodeSelection(child2, 'root/parent/c2', selected, childrenMap, async () => []);
+      expect(selected.has('c2')).toBe(false);
+      expect(selected.has('parent')).toBe(false);
+      expect(selected.has('root')).toBe(false);
+    });
+  });
+
   describe('isTreeAllSelected', () => {
     it('returns true when all roots and children are selected', () => {
       const item1: TreeNode = { id: 'item1', label: 'Item 1' };

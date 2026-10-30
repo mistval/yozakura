@@ -154,7 +154,7 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
       stagingDb.pragma('synchronous = NORMAL');
 
       // 6. Run migrations 0 -> manifest.dbUserVersion
-      runMigrations(stagingDb, { dataDir: stagingDir }, manifest.dbUserVersion);
+      runMigrations(stagingDb, { dataDir: unpackedDir }, manifest.dbUserVersion);
 
       // 7. Generically truncate all user tables
       stagingDb.pragma('foreign_keys = OFF');
@@ -211,6 +211,13 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
         insertAll();
       }
 
+      // Re-enable foreign keys and verify integrity of staged data
+      stagingDb.pragma('foreign_keys = ON');
+      const fkViolations = stagingDb.pragma('foreign_key_check') as unknown[];
+      if (Array.isArray(fkViolations) && fkViolations.length > 0) {
+        throw new Error(`Import archive failed foreign_key_check with ${fkViolations.length} violations`);
+      }
+
       // 9. Run remaining migrations (manifest.dbUserVersion -> latest)
       runMigrations(stagingDb, { dataDir: unpackedDir });
 
@@ -221,27 +228,12 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
       // 11. Early ATTACH to main database connection
       db.exec(`ATTACH DATABASE '${stagingSqlitePath.replace(/'/g, "''")}' AS import_staging`);
 
-      // 12. Parse images.jsonl if present
-      const images: ImageManifestEntry[] = [];
-      const imagesManifestPath = path.join(unpackedDir, 'images.jsonl');
-      if (fs.existsSync(imagesManifestPath)) {
-        const imagesContent = fs.readFileSync(imagesManifestPath, 'utf-8');
-        const lines = imagesContent.split('\n');
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            images.push(JSON.parse(line));
-          } catch {
-            // Ignore
-          }
-        }
-      }
-
+      // 12. Staging complete
       res.json({
         ok: true,
         sessionId,
         manifest,
-        images,
+        images: [],
       });
     } catch (error) {
       console.error('Error staging import archive:', error);
@@ -306,7 +298,38 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
         return applyIdMap(val, idMap);
       });
 
-      // 3. Atomic Multi-Table Copy inside a single transaction
+      // 3. Copy & Rename image assets on disk first so failure leaves DB untouched
+      const unpackedDir = path.join(stagingDir, 'unpacked');
+      for (const item of imageCopies) {
+        if (!item || typeof item.zipPath !== 'string' || typeof item.targetRelPath !== 'string') {
+          continue;
+        }
+        const sourceAbsPath = guardPathWithinBase(unpackedDir, item.zipPath);
+        if (!fs.existsSync(sourceAbsPath)) {
+          continue;
+        }
+
+        const stat = fs.statSync(sourceAbsPath);
+        if (stat.isDirectory()) {
+          const files = fs.readdirSync(sourceAbsPath);
+          for (const file of files) {
+            const fileSrc = path.join(sourceAbsPath, file);
+            if (fs.statSync(fileSrc).isFile()) {
+              const mappedRelPath = applyIdMap(`${item.targetRelPath}/${file}`, idMap);
+              const targetAbsPath = guardPathWithinBase(dataDir, mappedRelPath);
+              fs.mkdirSync(path.dirname(targetAbsPath), { recursive: true });
+              fs.copyFileSync(fileSrc, targetAbsPath);
+            }
+          }
+        } else if (stat.isFile()) {
+          const mappedRelPath = applyIdMap(item.targetRelPath, idMap);
+          const targetAbsPath = guardPathWithinBase(dataDir, mappedRelPath);
+          fs.mkdirSync(path.dirname(targetAbsPath), { recursive: true });
+          fs.copyFileSync(sourceAbsPath, targetAbsPath);
+        }
+      }
+
+      // 4. Atomic Multi-Table Copy inside a single transaction
       const commitTx = db.transaction(() => {
         for (const entry of sqlStatements) {
           if (typeof entry === 'string') {
@@ -324,21 +347,6 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
         }
       });
       commitTx();
-
-      // 4. Copy & Rename image assets on disk
-      const unpackedDir = path.join(stagingDir, 'unpacked');
-      for (const item of imageCopies) {
-        if (!item || typeof item.zipPath !== 'string' || typeof item.targetRelPath !== 'string') {
-          continue;
-        }
-        const mappedRelPath = applyIdMap(item.targetRelPath, idMap);
-        const targetAbsPath = guardPathWithinBase(dataDir, mappedRelPath);
-        const sourceAbsPath = guardPathWithinBase(unpackedDir, item.zipPath);
-        if (fs.existsSync(sourceAbsPath)) {
-          fs.mkdirSync(path.dirname(targetAbsPath), { recursive: true });
-          fs.copyFileSync(sourceAbsPath, targetAbsPath);
-        }
-      }
 
       // 5. Clean up & Detach
       detachImportStagingIfAttached(db, stagingDir);

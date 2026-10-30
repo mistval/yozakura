@@ -219,6 +219,7 @@ describe('exportPayloadBuilder', () => {
   it('extracts turn key_value via json_each', () => {
     const selectedIds = new Set<string>([
       TreeEntityIds.scenario('scen_001'),
+      TreeEntityIds.scenarioCharacters('scen_001'),
       TreeEntityIds.scenarioTurn('scen_001'),
     ]);
 
@@ -255,7 +256,6 @@ describe('exportPayloadBuilder', () => {
       {
         mode: 'file',
         sourceRelPath: 'character_cards/custom.png',
-        kind: 'global_character_card',
       },
     ]);
   });

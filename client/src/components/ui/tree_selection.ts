@@ -105,9 +105,29 @@ export async function toggleNodeSelection(
     for (const id of allIds) {
       nextSelected.add(id);
     }
+    // Auto-select ancestors along path
+    const pathSegments = path.split('/');
+    for (const ancestorId of pathSegments) {
+      nextSelected.add(ancestorId);
+    }
   } else {
     for (const id of allIds) {
       nextSelected.delete(id);
+    }
+    // Deselect ancestors whose loaded children now evaluate to 'none'
+    const pathSegments = path.split('/');
+    for (let i = pathSegments.length - 2; i >= 0; i--) {
+      const ancestorPath = pathSegments.slice(0, i + 1).join('/');
+      const ancestorId = pathSegments[i]!;
+      const children = childrenMap[ancestorPath];
+      if (children && children.length > 0) {
+        const anyChildChecked = children.some(
+          (c) => computeNodeCheckState(c, `${ancestorPath}/${c.id}`, nextSelected, childrenMap) !== 'none'
+        );
+        if (!anyChildChecked) {
+          nextSelected.delete(ancestorId);
+        }
+      }
     }
   }
 

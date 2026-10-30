@@ -96,12 +96,12 @@ describe('importCommitPayloadBuilder', () => {
         targetRelPath: 'character_cards/custom_1.png',
       },
       {
-        zipPath: 'scenario/scen_1/character_cards/scen_char_1.png',
-        targetRelPath: 'scenario/scen_1/character_cards/scen_char_1.png',
+        zipPath: 'scenario/scen_1/character_cards',
+        targetRelPath: 'scenario/scen_1/character_cards',
       },
       {
-        zipPath: 'scenario/scen_1/chat_images/chat_img_1.png',
-        targetRelPath: 'scenario/scen_1/chat_images/chat_img_1.png',
+        zipPath: 'scenario/scen_1/chat_images',
+        targetRelPath: 'scenario/scen_1/chat_images',
       },
     ]);
   });
@@ -295,8 +295,8 @@ describe('importCommitPayloadBuilder', () => {
     // Character cards should be omitted from image copies, but chat images retained
     expect(payload.imageCopies).toEqual([
       {
-        zipPath: 'scenario/scen_1/chat_images/chat_img_1.png',
-        targetRelPath: 'scenario/scen_1/chat_images/chat_img_1.png',
+        zipPath: 'scenario/scen_1/chat_images',
+        targetRelPath: 'scenario/scen_1/chat_images',
       },
     ]);
   });
@@ -331,8 +331,8 @@ describe('importCommitPayloadBuilder', () => {
     // Chat images should be omitted from image copies, but character cards retained
     expect(payload.imageCopies).toEqual([
       {
-        zipPath: 'scenario/scen_1/character_cards/scen_char_1.png',
-        targetRelPath: 'scenario/scen_1/character_cards/scen_char_1.png',
+        zipPath: 'scenario/scen_1/character_cards',
+        targetRelPath: 'scenario/scen_1/character_cards',
       },
     ]);
   });

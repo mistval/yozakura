@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import * as Files from '../../backend_bridge/files.js';
 import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
 import type { TemplateGroupData } from '../../engine/prompt_templates/template_types.js';
@@ -7,31 +8,12 @@ import {
   STRIP_MEMORIES_PATCH,
   STRIP_GROUPS_PATCH,
   STRIP_BOTH_PATCH,
-  getScenarioTurnKey,
+  TreeEntityIds,
+  turnPersistenceKey,
+  decomposeSelection,
 } from './importExportCommon.js';
 
-export const TreeEntityIds = {
-  rootScenarios: () => 'root:scenarios',
-  rootMaps: () => 'root:maps',
-  rootCharacters: () => 'root:characters',
-  rootSettings: () => 'root:settings',
-  rootPromptTemplates: () => 'root:prompt_templates',
-
-  scenario: (scenId: string) => `scenario:${scenId}`,
-  scenarioCharacters: (scenId: string) => `scenario:${scenId}:characters`,
-  scenarioGroups: (scenId: string) => `scenario:${scenId}:groups`,
-  scenarioSchedules: (scenId: string) => `scenario:${scenId}:schedules`,
-  scenarioMemories: (scenId: string) => `scenario:${scenId}:memories`,
-  scenarioConversations: (scenId: string) => `scenario:${scenId}:conversations`,
-  scenarioTurn: (scenId: string) => `scenario:${scenId}:turn`,
-  scenarioMap: (scenId: string, mapId: string) => `scenario_map:${scenId}:${mapId}`,
-
-  map: (mapId: string) => `map:${mapId}`,
-  character: (charId: string) => `character:${charId}`,
-
-  promptGroup: (groupId: string) => `prompt_group:${groupId}`,
-  promptChain: (chainId: string) => `prompt_chain:${chainId}`,
-} as const;
+export { TreeEntityIds };
 
 export function isTemplateChainModifiedOrCustom(
   groupId: string,
@@ -42,7 +24,7 @@ export function isTemplateChainModifiedOrCustom(
   if (!defaultGroup) return true;
   const defaultChain = defaultGroup.templateChains[chainId];
   if (!defaultChain) return true;
-  return JSON.stringify(chainData) !== JSON.stringify(defaultChain);
+  return !_.isEqual(chainData, defaultChain);
 }
 
 export type TableExportQuery = {
@@ -55,13 +37,13 @@ export type ImageCopyDescriptor =
   | {
       mode: 'file';
       sourceRelPath: string;
-      kind: 'global_character_card';
+      kind?: string;
     }
   | {
       mode: 'directory';
       sourceRelDir: string;
-      kind: 'scenario_character_card' | 'chat_image';
-      scenarioId: string;
+      kind?: string;
+      scenarioId?: string;
     };
 
 export type PrebuiltRow = {
@@ -109,77 +91,68 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   const prebuiltRows: PrebuiltRow[] = [];
   const imageDescriptors: ImageCopyDescriptor[] = [];
 
+  const decomposed = decomposeSelection({
+    selectedIds,
+    scenarios,
+    maps,
+    globalCharacters,
+    templateGroupData,
+  });
+
   // 1. Process Scenarios and their subcategories
-  const selectedScenarioIds: string[] = [];
+  const selectedScenarioIds = decomposed.selectedScenarioIds;
   const scenariosWithMemories: string[] = [];
   const scenariosWithConversations: string[] = [];
   const scenariosWithGroups: string[] = [];
   const scenariosWithSchedules: string[] = [];
   const turnKeys: string[] = [];
 
-  // Group scenario characters by their json_patch requirements:
-  // profile: 'full' | 'strip_memories' | 'strip_groups' | 'strip_both'
   const charScenariosFull: string[] = [];
   const charScenariosStripMemories: string[] = [];
   const charScenariosStripGroups: string[] = [];
   const charScenariosStripBoth: string[] = [];
 
-  for (const summary of scenarios) {
-    const scenId = summary.scenario.id;
-    if (selectedIds.has(TreeEntityIds.scenario(scenId))) {
-      selectedScenarioIds.push(scenId);
-
-      const hasChars = selectedIds.has(TreeEntityIds.scenarioCharacters(scenId));
-      const hasMemories = selectedIds.has(TreeEntityIds.scenarioMemories(scenId));
-      const hasGroups = selectedIds.has(TreeEntityIds.scenarioGroups(scenId));
-      const hasSchedules = selectedIds.has(TreeEntityIds.scenarioSchedules(scenId));
-      const hasConversations = selectedIds.has(TreeEntityIds.scenarioConversations(scenId));
-      const hasTurn = selectedIds.has(TreeEntityIds.scenarioTurn(scenId));
-
-      if (hasChars) {
-        if (hasMemories && hasGroups) {
-          charScenariosFull.push(scenId);
-        } else if (!hasMemories && hasGroups) {
-          charScenariosStripMemories.push(scenId);
-        } else if (hasMemories && !hasGroups) {
-          charScenariosStripGroups.push(scenId);
-        } else {
-          charScenariosStripBoth.push(scenId);
-        }
-
-        imageDescriptors.push({
-          mode: 'directory',
-          sourceRelDir: `scenario/${scenId}/character_cards`,
-          kind: 'scenario_character_card',
-          scenarioId: scenId,
-        });
+  for (const scenId of selectedScenarioIds) {
+    const details = decomposed.scenarioDetails.get(scenId)!;
+    if (details.hasCharacters) {
+      if (details.hasMemories && details.hasGroups) {
+        charScenariosFull.push(scenId);
+      } else if (!details.hasMemories && details.hasGroups) {
+        charScenariosStripMemories.push(scenId);
+      } else if (details.hasMemories && !details.hasGroups) {
+        charScenariosStripGroups.push(scenId);
+      } else {
+        charScenariosStripBoth.push(scenId);
       }
 
-      if (hasMemories) {
-        scenariosWithMemories.push(scenId);
-      }
+      imageDescriptors.push({
+        mode: 'directory',
+        sourceRelDir: `scenario/${scenId}/character_cards`,
+      });
+    }
 
-      if (hasGroups) {
-        scenariosWithGroups.push(scenId);
-      }
+    if (details.hasMemories) {
+      scenariosWithMemories.push(scenId);
+    }
 
-      if (hasSchedules && hasGroups) {
-        scenariosWithSchedules.push(scenId);
-      }
+    if (details.hasGroups) {
+      scenariosWithGroups.push(scenId);
+    }
 
-      if (hasConversations) {
-        scenariosWithConversations.push(scenId);
-        imageDescriptors.push({
-          mode: 'directory',
-          sourceRelDir: `scenario/${scenId}/chat_images`,
-          kind: 'chat_image',
-          scenarioId: scenId,
-        });
-      }
+    if (details.hasSchedules) {
+      scenariosWithSchedules.push(scenId);
+    }
 
-      if (hasTurn) {
-        turnKeys.push(getScenarioTurnKey(scenId));
-      }
+    if (details.hasConversations) {
+      scenariosWithConversations.push(scenId);
+      imageDescriptors.push({
+        mode: 'directory',
+        sourceRelDir: `scenario/${scenId}/chat_images`,
+      });
+    }
+
+    if (details.hasTurn) {
+      turnKeys.push(turnPersistenceKey(scenId));
     }
   }
 
@@ -328,17 +301,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   }
 
   // 2. Maps
-  const selectedMapIds: string[] = [];
-  for (const map of maps) {
-    const isDirectlySelected = selectedIds.has(TreeEntityIds.map(map.id));
-    const isScenarioMapSelected = scenarios.some(
-      (s) => s.scenario.mapId === map.id && selectedIds.has(TreeEntityIds.scenarioMap(s.scenario.id, map.id))
-    );
-    if (isDirectlySelected || isScenarioMapSelected) {
-      selectedMapIds.push(map.id);
-    }
-  }
-
+  const selectedMapIds = decomposed.selectedMapIds;
   if (selectedMapIds.length > 0) {
     queries.push({
       table: 'map',
@@ -352,21 +315,16 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   }
 
   // 3. Global Characters
-  const selectedGlobalCharIds: string[] = [];
-  for (const char of globalCharacters) {
-    if (selectedIds.has(TreeEntityIds.character(char.id))) {
-      selectedGlobalCharIds.push(char.id);
-
-      // Check if imagePath is a custom uploaded image under /api/files/
-      if (Files.isApiFilePath(char.imagePath)) {
-        const cleanPath = Files.extractApiFileRelativePath(char.imagePath);
-        if (cleanPath) {
-          imageDescriptors.push({
-            mode: 'file',
-            sourceRelPath: cleanPath,
-            kind: 'global_character_card',
-          });
-        }
+  const selectedGlobalCharIds = decomposed.selectedGlobalCharacterIds;
+  for (const charId of selectedGlobalCharIds) {
+    const char = globalCharacters.find((c) => c.id === charId);
+    if (char && Files.isApiFilePath(char.imagePath)) {
+      const cleanPath = Files.extractApiFileRelativePath(char.imagePath);
+      if (cleanPath) {
+        imageDescriptors.push({
+          mode: 'file',
+          sourceRelPath: cleanPath,
+        });
       }
     }
   }
@@ -388,7 +346,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   for (const [groupId, group] of Object.entries(templateGroupData)) {
     for (const [chainId, chainData] of Object.entries(group.templateChains)) {
       if (
-        selectedIds.has(TreeEntityIds.promptChain(chainId)) &&
+        decomposed.selectedTemplateChainIds.includes(chainId) &&
         isTemplateChainModifiedOrCustom(groupId, chainId, chainData)
       ) {
         if (!exportedTemplateGroupData[groupId]) {

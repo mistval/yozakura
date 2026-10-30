@@ -151,12 +151,7 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
         });
       });
 
-      // 3. Process imageDescriptors and write images.jsonl
-      const imagesManifestStream = fs.createWriteStream(path.join(workDir, 'images.jsonl'), {
-        flags: 'w',
-        encoding: 'utf-8',
-      });
-
+      // 3. Process imageDescriptors (copy disk files into workDir)
       for (const descriptor of imageDescriptors) {
         if (descriptor.mode === 'file') {
           let srcPath: string;
@@ -171,12 +166,6 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
             const destPath = path.resolve(workDir, relNormalized);
             fs.mkdirSync(path.dirname(destPath), { recursive: true });
             fs.copyFileSync(srcPath, destPath);
-
-            const manifestEntry = JSON.stringify({
-              zipPath: relNormalized,
-              kind: descriptor.kind,
-            });
-            imagesManifestStream.write(`${manifestEntry}\n`);
           }
         } else if (descriptor.mode === 'directory') {
           let srcDir: string;
@@ -195,25 +184,11 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
                 const destPath = path.resolve(workDir, relNormalized);
                 fs.mkdirSync(path.dirname(destPath), { recursive: true });
                 fs.copyFileSync(fileSrc, destPath);
-
-                const manifestEntry = JSON.stringify({
-                  zipPath: relNormalized,
-                  kind: descriptor.kind,
-                  scenarioId: descriptor.scenarioId,
-                });
-                imagesManifestStream.write(`${manifestEntry}\n`);
               }
             }
           }
         }
       }
-
-      await new Promise<void>((resolve, reject) => {
-        imagesManifestStream.end((err?: Error | null) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
 
       // 4. Zip the working directory to targetZipPath
       await zipDirectory(workDir, targetZipPath);

@@ -6,6 +6,10 @@ export function generateHex18Id(): string {
   return crypto.randomBytes(9).toString('hex');
 }
 
+export function deriveDeterministicHex18Id(oldId: string): string {
+  return crypto.createHash('sha256').update(oldId).digest('hex').slice(0, 18);
+}
+
 /**
  * Matches either:
  * 1. Static demo character portrait image asset path (/images/character/demo-*.png) - preserved untouched.

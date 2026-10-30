@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import TreeDataViewer, { type TreeNode } from '../ui/TreeDataViewer.js';
+import { collectDescendantIds } from '../ui/tree_selection.js';
 import { importStagingDatabase } from '../../backend_bridge/database.js';
 import {
   stageImportArchive,
@@ -8,7 +9,7 @@ import {
   type StagedManifest,
   type StagedImageEntry,
 } from '../../backend_bridge/import_api.js';
-import { TreeEntityIds } from './exportPayloadBuilder.js';
+import { decomposeSelection } from './importExportCommon.js';
 import { buildImportExportTreeRoots } from './treeBuilder.js';
 import { templateGroupDataSchema } from '../../engine/prompt_templates/template_types.js';
 import type { ScenarioSummary, WorldMap, Character } from '../../engine/types.js';
@@ -105,50 +106,24 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
 
         setStagedData(staged);
 
-        // Pre-select ALL present items by default on import
+        // Pre-select ALL present items by default on import via tree roots traversal
+        const treeRoots = buildImportExportTreeRoots({
+          mode: 'import',
+          scenarios,
+          maps,
+          globalCharacters,
+          templateGroupData,
+        });
+
         const initialSelected = new Set<string>();
-
-        // Select root categories and their descendants
-        if (scenarios.length > 0) {
-          initialSelected.add(TreeEntityIds.rootScenarios());
-          for (const s of scenarios) {
-            const scenId = s.scenario.id;
-            initialSelected.add(TreeEntityIds.scenario(scenId));
-            initialSelected.add(TreeEntityIds.scenarioMap(scenId, s.scenario.mapId));
-            initialSelected.add(TreeEntityIds.scenarioCharacters(scenId));
-            initialSelected.add(TreeEntityIds.scenarioGroups(scenId));
-            initialSelected.add(TreeEntityIds.scenarioSchedules(scenId));
-            initialSelected.add(TreeEntityIds.scenarioMemories(scenId));
-            initialSelected.add(TreeEntityIds.scenarioConversations(scenId));
-            initialSelected.add(TreeEntityIds.scenarioTurn(scenId));
-          }
-        }
-
-        if (maps.length > 0) {
-          initialSelected.add(TreeEntityIds.rootMaps());
-          for (const m of maps) {
-            initialSelected.add(TreeEntityIds.map(m.id));
-          }
-        }
-
-        if (globalCharacters.length > 0) {
-          initialSelected.add(TreeEntityIds.rootCharacters());
-          for (const c of globalCharacters) {
-            initialSelected.add(TreeEntityIds.character(c.id));
-          }
-        }
-
-        const promptChainEntries = Object.values(templateGroupData).flatMap((g) =>
-          Object.keys(g.templateChains)
-        );
-        if (promptChainEntries.length > 0) {
-          initialSelected.add(TreeEntityIds.rootSettings());
-          initialSelected.add(TreeEntityIds.rootPromptTemplates());
-          for (const [groupId, group] of Object.entries(templateGroupData)) {
-            initialSelected.add(TreeEntityIds.promptGroup(groupId));
-            for (const chainId of Object.keys(group.templateChains)) {
-              initialSelected.add(TreeEntityIds.promptChain(chainId));
-            }
+        for (const root of treeRoots) {
+          const ids = await collectDescendantIds(
+            root,
+            root.id,
+            (n) => n.getChildren?.() ?? Promise.resolve([])
+          );
+          for (const id of ids) {
+            initialSelected.add(id);
           }
         }
 
@@ -184,66 +159,28 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
     }
   };
 
-  // Selected entities decomposition
-  const selectedScenarioIds = useMemo(() => {
-    if (!stagedData) return [];
-    return stagedData.scenarios
-      .map((s) => s.scenario.id)
-      .filter((id) => selectedIds.has(TreeEntityIds.scenario(id)));
+  // Selected entities decomposition via centralized helper
+  const decomposed = useMemo(() => {
+    if (!stagedData) return undefined;
+    return decomposeSelection({
+      selectedIds,
+      scenarios: stagedData.scenarios,
+      maps: stagedData.maps,
+      globalCharacters: stagedData.globalCharacters,
+      templateGroupData: stagedData.templateGroupData,
+    });
   }, [stagedData, selectedIds]);
 
-  const selectedScenarioCharactersIds = useMemo(() => {
-    return selectedScenarioIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioCharacters(id)));
-  }, [selectedScenarioIds, selectedIds]);
-
-  const selectedScenarioGroupsIds = useMemo(() => {
-    return selectedScenarioIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioGroups(id)));
-  }, [selectedScenarioIds, selectedIds]);
-
-  const selectedScenarioSchedulesIds = useMemo(() => {
-    return selectedScenarioGroupsIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioSchedules(id)));
-  }, [selectedScenarioGroupsIds, selectedIds]);
-
-  const selectedScenarioMemoriesIds = useMemo(() => {
-    return selectedScenarioCharactersIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioMemories(id)));
-  }, [selectedScenarioCharactersIds, selectedIds]);
-
-  const selectedScenarioConversationsIds = useMemo(() => {
-    return selectedScenarioIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioConversations(id)));
-  }, [selectedScenarioIds, selectedIds]);
-
-  const selectedScenarioTurnIds = useMemo(() => {
-    return selectedScenarioCharactersIds.filter((id) => selectedIds.has(TreeEntityIds.scenarioTurn(id)));
-  }, [selectedScenarioCharactersIds, selectedIds]);
-
-  const selectedMapIds = useMemo(() => {
-    if (!stagedData) return [];
-    return stagedData.maps
-      .map((m) => m.id)
-      .filter((id) => {
-        const isDirectlySelected = selectedIds.has(TreeEntityIds.map(id));
-        const isScenarioMapSelected = stagedData.scenarios.some(
-          (s) => s.scenario.mapId === id && selectedIds.has(TreeEntityIds.scenarioMap(s.scenario.id, id))
-        );
-        return isDirectlySelected || isScenarioMapSelected;
-      });
-  }, [stagedData, selectedIds]);
-
-  const selectedGlobalCharacterIds = useMemo(() => {
-    if (!stagedData) return [];
-    return stagedData.globalCharacters
-      .map((c) => c.id)
-      .filter((id) => selectedIds.has(TreeEntityIds.character(id)));
-  }, [stagedData, selectedIds]);
-
-  const selectedTemplateChainIds = useMemo(() => {
-    if (!stagedData) return [];
-    return Object.values(stagedData.templateGroupData).flatMap((group) =>
-      Object.keys(group.templateChains).filter((chainId) =>
-        selectedIds.has(TreeEntityIds.promptChain(chainId))
-      )
-    );
-  }, [stagedData, selectedIds]);
+  const selectedScenarioIds = decomposed?.selectedScenarioIds ?? [];
+  const selectedScenarioCharactersIds = decomposed?.selectedScenarioCharactersIds ?? [];
+  const selectedScenarioGroupsIds = decomposed?.selectedScenarioGroupsIds ?? [];
+  const selectedScenarioSchedulesIds = decomposed?.selectedScenarioSchedulesIds ?? [];
+  const selectedScenarioMemoriesIds = decomposed?.selectedScenarioMemoriesIds ?? [];
+  const selectedScenarioConversationsIds = decomposed?.selectedScenarioConversationsIds ?? [];
+  const selectedScenarioTurnIds = decomposed?.selectedScenarioTurnIds ?? [];
+  const selectedMapIds = decomposed?.selectedMapIds ?? [];
+  const selectedGlobalCharacterIds = decomposed?.selectedGlobalCharacterIds ?? [];
+  const selectedTemplateChainIds = decomposed?.selectedTemplateChainIds ?? [];
 
   // Execute commit with given conflict resolutions
   const executeCommit = async (conflictResolutions: Record<string, ConflictAction>) => {
