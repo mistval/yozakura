@@ -2,6 +2,13 @@ import * as Files from '../../backend_bridge/files.js';
 import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
 import type { TemplateGroupData } from '../../engine/prompt_templates/template_types.js';
 import { DEFAULT_TEMPLATE_GROUP_DATA } from '../../engine/prompt_templates/default_template_group_data.js';
+import {
+  TABLE_COLUMNS,
+  STRIP_MEMORIES_PATCH,
+  STRIP_GROUPS_PATCH,
+  STRIP_BOTH_PATCH,
+  getScenarioTurnKey,
+} from './importExportCommon.js';
 
 export const TreeEntityIds = {
   rootScenarios: () => 'root:scenarios',
@@ -171,7 +178,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
       }
 
       if (hasTurn) {
-        turnKeys.push(`scenario_${scenId}_turn`);
+        turnKeys.push(getScenarioTurnKey(scenId));
       }
     }
   }
@@ -181,7 +188,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     queries.push({
       table: 'scenario',
       statement: `
-        SELECT id, data, created_at, updated_at
+        SELECT ${TABLE_COLUMNS.scenario.join(', ')}
         FROM scenario
         WHERE id IN (SELECT value FROM json_each(?))
       `.trim(),
@@ -190,28 +197,16 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   }
 
   // Scenario characters queries
-  const STRIP_MEMORIES_PATCH = JSON.stringify({
-    globalMemories: '',
-    rollingConversationSummaries: [],
-    nextConversationWithCharacterId: '',
-  });
-
-  const STRIP_GROUPS_PATCH = JSON.stringify({
-    groupIds: [],
-  });
-
-  const STRIP_BOTH_PATCH = JSON.stringify({
-    globalMemories: '',
-    rollingConversationSummaries: [],
-    nextConversationWithCharacterId: '',
-    groupIds: [],
-  });
+  const scenCharCols = TABLE_COLUMNS.scenario_character.join(', ');
+  const scenCharPatchedCols = TABLE_COLUMNS.scenario_character
+    .map((c) => (c === 'data' ? 'json_patch(data, ?) AS data' : c))
+    .join(', ');
 
   if (charScenariosFull.length > 0) {
     queries.push({
       table: 'scenario_character',
       statement: `
-        SELECT id, scenario_id, data, created_at, updated_at
+        SELECT ${scenCharCols}
         FROM scenario_character
         WHERE scenario_id IN (SELECT value FROM json_each(?))
       `.trim(),
@@ -223,7 +218,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     queries.push({
       table: 'scenario_character',
       statement: `
-        SELECT id, scenario_id, json_patch(data, ?) AS data, created_at, updated_at
+        SELECT ${scenCharPatchedCols}
         FROM scenario_character
         WHERE scenario_id IN (SELECT value FROM json_each(?))
       `.trim(),
@@ -235,7 +230,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     queries.push({
       table: 'scenario_character',
       statement: `
-        SELECT id, scenario_id, json_patch(data, ?) AS data, created_at, updated_at
+        SELECT ${scenCharPatchedCols}
         FROM scenario_character
         WHERE scenario_id IN (SELECT value FROM json_each(?))
       `.trim(),
@@ -247,7 +242,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     queries.push({
       table: 'scenario_character',
       statement: `
-        SELECT id, scenario_id, json_patch(data, ?) AS data, created_at, updated_at
+        SELECT ${scenCharPatchedCols}
         FROM scenario_character
         WHERE scenario_id IN (SELECT value FROM json_each(?))
       `.trim(),
@@ -260,7 +255,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     queries.push({
       table: 'character_relationship',
       statement: `
-        SELECT cr.id, cr.from_id, cr.to_id, cr.data, cr.created_at, cr.updated_at
+        SELECT ${TABLE_COLUMNS.character_relationship.map((c) => `cr.${c}`).join(', ')}
         FROM character_relationship cr
         JOIN scenario_character sc ON cr.from_id = sc.id
         WHERE sc.scenario_id IN (SELECT value FROM json_each(?))
@@ -274,7 +269,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     queries.push({
       table: 'scenario_character_group',
       statement: `
-        SELECT id, scenario_id, data, created_at, updated_at
+        SELECT ${TABLE_COLUMNS.scenario_character_group.join(', ')}
         FROM scenario_character_group
         WHERE scenario_id IN (SELECT value FROM json_each(?))
       `.trim(),
@@ -287,7 +282,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     queries.push({
       table: 'scenario_character_group_schedule',
       statement: `
-        SELECT id, scenario_id, group_id, data, created_at, updated_at
+        SELECT ${TABLE_COLUMNS.scenario_character_group_schedule.join(', ')}
         FROM scenario_character_group_schedule
         WHERE scenario_id IN (SELECT value FROM json_each(?))
       `.trim(),
@@ -300,7 +295,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     queries.push({
       table: 'conversation',
       statement: `
-        SELECT id, scenario_id, data, created_at, updated_at
+        SELECT ${TABLE_COLUMNS.conversation.join(', ')}
         FROM conversation
         WHERE scenario_id IN (SELECT value FROM json_each(?))
       `.trim(),
@@ -310,7 +305,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     queries.push({
       table: 'conversation_participant',
       statement: `
-        SELECT cp.id, cp.character_id, cp.conversation_id, cp.created_at, cp.updated_at
+        SELECT ${TABLE_COLUMNS.conversation_participant.map((c) => `cp.${c}`).join(', ')}
         FROM conversation_participant cp
         JOIN conversation c ON cp.conversation_id = c.id
         WHERE c.scenario_id IN (SELECT value FROM json_each(?))
@@ -324,7 +319,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     queries.push({
       table: 'key_value',
       statement: `
-        SELECT key, data, created_at, updated_at
+        SELECT ${TABLE_COLUMNS.key_value.join(', ')}
         FROM key_value
         WHERE key IN (SELECT value FROM json_each(?))
       `.trim(),
@@ -348,7 +343,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     queries.push({
       table: 'map',
       statement: `
-        SELECT id, data, created_at, updated_at
+        SELECT ${TABLE_COLUMNS.map.join(', ')}
         FROM map
         WHERE id IN (SELECT value FROM json_each(?))
       `.trim(),
@@ -380,7 +375,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     queries.push({
       table: 'character',
       statement: `
-        SELECT id, data, created_at, updated_at
+        SELECT ${TABLE_COLUMNS.character.join(', ')}
         FROM character
         WHERE id IN (SELECT value FROM json_each(?))
       `.trim(),

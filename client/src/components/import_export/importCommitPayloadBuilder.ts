@@ -8,6 +8,12 @@ import type {
 } from '../../backend_bridge/import_api.js';
 import type { Character } from '../../engine/types.js';
 import type { ConflictAction } from './importConflictResolver.js';
+import {
+  SQL_UTC_NOW,
+  TABLE_COLUMNS,
+  STRIP_MEMORIES_PATCH,
+  STRIP_GROUPS_PATCH,
+} from './importExportCommon.js';
 
 export type BuildCommitPayloadOptions = {
   sessionId: string;
@@ -239,7 +245,7 @@ export async function prepareStagingAndBuildCommitPayload(
     await db.dbRun(
       `
         UPDATE import_staging.scenario_character
-        SET data = json_patch(data, '{"globalMemories":"","rollingConversationSummaries":[],"nextConversationWithCharacterId":""}')
+        SET data = json_patch(data, '${STRIP_MEMORIES_PATCH}')
         WHERE scenario_id IN (SELECT value FROM json_each(?));
       `.trim(),
       [[JSON.stringify(scenariosWithoutMemories)]]
@@ -251,7 +257,7 @@ export async function prepareStagingAndBuildCommitPayload(
     await db.dbRun(
       `
         UPDATE import_staging.scenario_character
-        SET data = json_patch(data, '{"groupIds":[]}')
+        SET data = json_patch(data, '${STRIP_GROUPS_PATCH}')
         WHERE scenario_id IN (SELECT value FROM json_each(?));
       `.trim(),
       [[JSON.stringify(scenariosWithoutGroups)]]
@@ -266,17 +272,17 @@ export async function prepareStagingAndBuildCommitPayload(
   if (activeMapIds.length > 0) {
     sqlStatements.push({
       statement: `
-        INSERT INTO main.map (id, created_at, updated_at, data)
+        INSERT INTO main.map (${TABLE_COLUMNS.map.join(', ')})
         SELECT
           COALESCE(m.new_id, s.id),
           s.created_at,
-          CURRENT_TIMESTAMP,
+          ${SQL_UTC_NOW},
           apply_id_map(s.data)
         FROM import_staging.map s
         LEFT JOIN import_staging._id_map m ON s.id = m.old_id
         WHERE s.id IN (SELECT value FROM json_each(?))
         ON CONFLICT(id) DO UPDATE SET
-          updated_at = CURRENT_TIMESTAMP,
+          updated_at = ${SQL_UTC_NOW},
           data = excluded.data;
       `.trim(),
       params: [JSON.stringify(activeMapIds)],
@@ -288,17 +294,17 @@ export async function prepareStagingAndBuildCommitPayload(
   if (activeGlobalCharIds.length > 0) {
     sqlStatements.push({
       statement: `
-        INSERT INTO main.character (id, created_at, updated_at, data)
+        INSERT INTO main.character (${TABLE_COLUMNS.character.join(', ')})
         SELECT
           COALESCE(m.new_id, s.id),
           s.created_at,
-          CURRENT_TIMESTAMP,
+          ${SQL_UTC_NOW},
           apply_id_map(s.data)
         FROM import_staging.character s
         LEFT JOIN import_staging._id_map m ON s.id = m.old_id
         WHERE s.id IN (SELECT value FROM json_each(?))
         ON CONFLICT(id) DO UPDATE SET
-          updated_at = CURRENT_TIMESTAMP,
+          updated_at = ${SQL_UTC_NOW},
           data = excluded.data;
       `.trim(),
       params: [JSON.stringify(activeGlobalCharIds)],
@@ -312,11 +318,11 @@ export async function prepareStagingAndBuildCommitPayload(
     // scenario (if scenario characters are omitted, reset userCharacterId to empty)
     sqlStatements.push({
       statement: `
-        INSERT INTO main.scenario (id, created_at, updated_at, data)
+        INSERT INTO main.scenario (${TABLE_COLUMNS.scenario.join(', ')})
         SELECT
           m.new_id,
           s.created_at,
-          CURRENT_TIMESTAMP,
+          ${SQL_UTC_NOW},
           CASE
             WHEN s.id IN (SELECT value FROM json_each(?)) THEN apply_id_map(s.data)
             ELSE json_set(apply_id_map(s.data), '$.userCharacterId', '')
@@ -332,12 +338,12 @@ export async function prepareStagingAndBuildCommitPayload(
     if (selectedScenarioCharactersIds.length > 0) {
       sqlStatements.push({
         statement: `
-          INSERT INTO main.scenario_character (id, scenario_id, created_at, updated_at, data)
+          INSERT INTO main.scenario_character (${TABLE_COLUMNS.scenario_character.join(', ')})
           SELECT
             m.new_id,
             sm.new_id,
             s.created_at,
-            CURRENT_TIMESTAMP,
+            ${SQL_UTC_NOW},
             apply_id_map(s.data)
           FROM import_staging.scenario_character s
           JOIN import_staging._id_map m ON s.id = m.old_id
@@ -354,13 +360,13 @@ export async function prepareStagingAndBuildCommitPayload(
     const memScenJson = JSON.stringify(effectiveMemoriesScenIds);
     sqlStatements.push({
       statement: `
-        INSERT INTO main.character_relationship (id, from_id, to_id, created_at, updated_at, data)
+        INSERT INTO main.character_relationship (${TABLE_COLUMNS.character_relationship.join(', ')})
         SELECT
           m.new_id,
           COALESCE(from_m.new_id, s.from_id),
           COALESCE(to_m.new_id, s.to_id),
           s.created_at,
-          CURRENT_TIMESTAMP,
+          ${SQL_UTC_NOW},
           apply_id_map(s.data)
         FROM import_staging.character_relationship s
         JOIN import_staging._id_map m ON s.id = m.old_id
@@ -378,12 +384,12 @@ export async function prepareStagingAndBuildCommitPayload(
     const grpScenJson = JSON.stringify(selectedScenarioGroupsIds);
     sqlStatements.push({
       statement: `
-        INSERT INTO main.scenario_character_group (id, scenario_id, created_at, updated_at, data)
+        INSERT INTO main.scenario_character_group (${TABLE_COLUMNS.scenario_character_group.join(', ')})
         SELECT
           m.new_id,
           sm.new_id,
           s.created_at,
-          CURRENT_TIMESTAMP,
+          ${SQL_UTC_NOW},
           apply_id_map(s.data)
         FROM import_staging.scenario_character_group s
         JOIN import_staging._id_map m ON s.id = m.old_id
@@ -399,13 +405,13 @@ export async function prepareStagingAndBuildCommitPayload(
     const schedScenJson = JSON.stringify(effectiveSchedulesScenIds);
     sqlStatements.push({
       statement: `
-        INSERT INTO main.scenario_character_group_schedule (id, scenario_id, group_id, created_at, updated_at, data)
+        INSERT INTO main.scenario_character_group_schedule (${TABLE_COLUMNS.scenario_character_group_schedule.join(', ')})
         SELECT
           m.new_id,
           sm.new_id,
           gm.new_id,
           s.created_at,
-          CURRENT_TIMESTAMP,
+          ${SQL_UTC_NOW},
           apply_id_map(s.data)
         FROM import_staging.scenario_character_group_schedule s
         JOIN import_staging._id_map m ON s.id = m.old_id
@@ -424,7 +430,7 @@ export async function prepareStagingAndBuildCommitPayload(
     // conversation
     sqlStatements.push({
       statement: `
-        INSERT INTO main.conversation (id, scenario_id, created_at, updated_at, data)
+        INSERT INTO main.conversation (${TABLE_COLUMNS.conversation.join(', ')})
         SELECT
           m.new_id,
           sm.new_id,
@@ -443,7 +449,7 @@ export async function prepareStagingAndBuildCommitPayload(
     // conversation_participant
     sqlStatements.push({
       statement: `
-        INSERT INTO main.conversation_participant (id, conversation_id, character_id, created_at, updated_at)
+        INSERT INTO main.conversation_participant (${TABLE_COLUMNS.conversation_participant.join(', ')})
         SELECT
           m.new_id,
           cm.new_id,
@@ -467,18 +473,18 @@ export async function prepareStagingAndBuildCommitPayload(
     const turnScenJson = JSON.stringify(effectiveTurnScenIds);
     sqlStatements.push({
       statement: `
-        INSERT INTO main.key_value (key, data, created_at, updated_at)
+        INSERT INTO main.key_value (${TABLE_COLUMNS.key_value.join(', ')})
         SELECT
           'scenario_' || sm.new_id || '_turn',
-          apply_id_map(s.data),
           s.created_at,
-          CURRENT_TIMESTAMP
+          ${SQL_UTC_NOW},
+          apply_id_map(s.data)
         FROM import_staging.key_value s
         JOIN import_staging._id_map sm ON s.key = 'scenario_' || sm.old_id || '_turn'
         WHERE sm.old_id IN (SELECT value FROM json_each(?))
         ON CONFLICT(key) DO UPDATE SET
           data = excluded.data,
-          updated_at = CURRENT_TIMESTAMP;
+          updated_at = ${SQL_UTC_NOW};
       `.trim(),
       params: [turnScenJson],
     });

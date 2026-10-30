@@ -9,6 +9,7 @@ import {
   type StagedImageEntry,
 } from '../../backend_bridge/import_api.js';
 import { TreeEntityIds } from './exportPayloadBuilder.js';
+import { buildImportExportTreeRoots } from './treeBuilder.js';
 import { templateGroupDataSchema } from '../../engine/prompt_templates/template_types.js';
 import type { ScenarioSummary, WorldMap, Character } from '../../engine/types.js';
 import { detectConflicts, type ConflictAction, type EntityConflict } from './importConflictResolver.js';
@@ -402,140 +403,13 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
   // Build tree roots dynamically based on what actually exists in stagedData
   const roots = useMemo<TreeNode[]>(() => {
     if (!stagedData) return [];
-    const treeRoots: TreeNode[] = [];
-
-    // 1. Scenarios (only if present in archive)
-    if (stagedData.scenarios.length > 0) {
-      treeRoots.push({
-        id: TreeEntityIds.rootScenarios(),
-        label: 'Scenarios',
-        subtitle: `(${stagedData.scenarios.length} in archive)`,
-        getChildren: async () => {
-          return stagedData.scenarios.map((summary) => {
-            const scenId = summary.scenario.id;
-            return {
-              id: TreeEntityIds.scenario(scenId),
-              label: `${summary.userCharacterName} on ${summary.mapName}`,
-              subtitle: `Turn ${summary.scenario.turnNumber}`,
-              getChildren: async () => {
-                const children: TreeNode[] = [];
-
-                if (summary.scenario.mapId) {
-                  children.push({
-                    id: TreeEntityIds.scenarioMap(scenId, summary.scenario.mapId),
-                    label: `Map: ${summary.mapName}`,
-                    subtitle: 'Map used by this scenario',
-                  });
-                }
-
-                children.push(
-                  {
-                    id: TreeEntityIds.scenarioCharacters(scenId),
-                    label: 'Characters',
-                    subtitle: 'Scenario characters and portraits',
-                  },
-                  {
-                    id: TreeEntityIds.scenarioGroups(scenId),
-                    label: 'Character Groups',
-                    subtitle: 'Zones and groups',
-                  },
-                  {
-                    id: TreeEntityIds.scenarioSchedules(scenId),
-                    label: 'Group Schedules',
-                    subtitle: 'Requires Character Groups',
-                  },
-                  {
-                    id: TreeEntityIds.scenarioMemories(scenId),
-                    label: 'Memories & Relationships',
-                    subtitle: 'Pairwise memories and relationships',
-                  },
-                  {
-                    id: TreeEntityIds.scenarioConversations(scenId),
-                    label: 'Conversation Logs',
-                    subtitle: 'Chat logs and participants',
-                  },
-                  {
-                    id: TreeEntityIds.scenarioTurn(scenId),
-                    label: 'Active Conversation State',
-                    subtitle: 'Saved turn runtime state',
-                  }
-                );
-
-                return children;
-              },
-            };
-          });
-        },
-      });
-    }
-
-    // 2. Maps (only if present in archive)
-    if (stagedData.maps.length > 0) {
-      treeRoots.push({
-        id: TreeEntityIds.rootMaps(),
-        label: 'Maps',
-        subtitle: `(${stagedData.maps.length} in archive)`,
-        getChildren: async () => {
-          return stagedData.maps.map((map) => ({
-            id: TreeEntityIds.map(map.id),
-            label: map.name,
-            subtitle: `${map.locations.length} locations, ${map.zones.length} zones`,
-          }));
-        },
-      });
-    }
-
-    // 3. Global Characters (only if present in archive)
-    if (stagedData.globalCharacters.length > 0) {
-      treeRoots.push({
-        id: TreeEntityIds.rootCharacters(),
-        label: 'Global Characters',
-        subtitle: `(${stagedData.globalCharacters.length} in archive)`,
-        getChildren: async () => {
-          return stagedData.globalCharacters.map((char) => ({
-            id: TreeEntityIds.character(char.id),
-            label: `${char.firstName} ${char.lastName}`.trim() || 'Unnamed Character',
-            subtitle: char.internalDescription,
-          }));
-        },
-      });
-    }
-
-    // 4. Prompt Templates (only if template chains present in archive)
-    const promptChainEntries = Object.entries(stagedData.templateGroupData).filter(
-      ([, group]) => Object.keys(group.templateChains).length > 0
-    );
-
-    if (promptChainEntries.length > 0) {
-      treeRoots.push({
-        id: TreeEntityIds.rootSettings(),
-        label: 'Settings & Prompts',
-        getChildren: async () => [
-          {
-            id: TreeEntityIds.rootPromptTemplates(),
-            label: 'Prompt Templates',
-            getChildren: async () => {
-              return promptChainEntries.map(([groupId, group]) => ({
-                id: TreeEntityIds.promptGroup(groupId),
-                label: groupId,
-                getChildren: async () => {
-                  return Object.entries(group.templateChains).map(([chainId, chain]) => ({
-                    id: TreeEntityIds.promptChain(chainId),
-                    label: chain.title || chainId,
-                    subtitle: chain.description,
-                    badge: chain.parserSource
-                      ? { text: 'Executable Code', variant: 'warning' as const }
-                      : undefined,
-                  }));
-                },
-              }));
-            },
-          },
-        ],
-      });
-    }
-
-    return treeRoots;
+    return buildImportExportTreeRoots({
+      mode: 'import',
+      scenarios: stagedData.scenarios,
+      maps: stagedData.maps,
+      globalCharacters: stagedData.globalCharacters,
+      templateGroupData: stagedData.templateGroupData,
+    });
   }, [stagedData]);
 
   // View 1: Upload Archive

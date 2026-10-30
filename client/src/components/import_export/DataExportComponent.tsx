@@ -5,12 +5,8 @@ import { useScenarioStore } from '../../state/scenario_store.js';
 import { useMapStore } from '../../state/map_store.js';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
 import { useSettingsStore } from '../../state/settings_store.js';
-import {
-  buildExportPayload,
-  sanitizeExportFilename,
-  TreeEntityIds,
-  isTemplateChainModifiedOrCustom,
-} from './exportPayloadBuilder.js';
+import { buildExportPayload, sanitizeExportFilename } from './exportPayloadBuilder.js';
+import { buildImportExportTreeRoots } from './treeBuilder.js';
 import { requestDataExport, type ExportResult } from '../../backend_bridge/export_api.js';
 
 function getDefaultExportName(): string {
@@ -61,140 +57,13 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
 
   // Construct tree roots using centralized TreeEntityIds
   const roots = useMemo<TreeNode[]>(() => {
-    const treeRoots: TreeNode[] = [];
-
-    // 1. Scenarios Root
-    const scenariosRoot: TreeNode = {
-      id: TreeEntityIds.rootScenarios(),
-      label: 'Scenarios',
-      subtitle: `(${scenarioSummaries.length} available)`,
-      getChildren: async () => {
-        return scenarioSummaries.map((summary) => {
-          const scenId = summary.scenario.id;
-          return {
-            id: TreeEntityIds.scenario(scenId),
-            label: `${summary.userCharacterName} on ${summary.mapName}`,
-            subtitle: `Turn ${summary.scenario.turnNumber}`,
-            getChildren: async () => [
-              {
-                id: TreeEntityIds.scenarioMap(scenId, summary.scenario.mapId),
-                label: `Map: ${summary.mapName}`,
-                subtitle: 'Map used by this scenario',
-              },
-              {
-                id: TreeEntityIds.scenarioCharacters(scenId),
-                label: 'Characters',
-                subtitle: 'Scenario character definitions and cards',
-              },
-              {
-                id: TreeEntityIds.scenarioGroups(scenId),
-                label: 'Character Groups',
-                subtitle: 'Zones and groups',
-              },
-              {
-                id: TreeEntityIds.scenarioSchedules(scenId),
-                label: 'Group Schedules',
-                subtitle: 'Requires Character Groups',
-              },
-              {
-                id: TreeEntityIds.scenarioMemories(scenId),
-                label: 'Memories & Relationships',
-                subtitle: 'Global memories, relationship graphs and summaries',
-              },
-              {
-                id: TreeEntityIds.scenarioConversations(scenId),
-                label: 'Conversation Logs',
-                subtitle: 'Chat logs, participants and images',
-              },
-              {
-                id: TreeEntityIds.scenarioTurn(scenId),
-                label: 'Active Conversation State',
-                subtitle: 'Current turn runtime state',
-              },
-            ],
-          };
-        });
-      },
-    };
-    treeRoots.push(scenariosRoot);
-
-    // 2. Maps Root
-    const mapsRoot: TreeNode = {
-      id: TreeEntityIds.rootMaps(),
-      label: 'Maps',
-      subtitle: `(${maps.length} available)`,
-      getChildren: async () => {
-        return maps.map((map) => ({
-          id: TreeEntityIds.map(map.id),
-          label: map.name,
-          subtitle: `${map.locations.length} locations, ${map.zones.length} zones`,
-        }));
-      },
-    };
-    treeRoots.push(mapsRoot);
-
-    // 3. Global Characters Root
-    const charactersRoot: TreeNode = {
-      id: TreeEntityIds.rootCharacters(),
-      label: 'Global Characters',
-      subtitle: `(${globalCharacters.length} available)`,
-      getChildren: async () => {
-        return globalCharacters.map((char) => ({
-          id: TreeEntityIds.character(char.id),
-          label: `${char.firstName} ${char.lastName}`.trim() || 'Unnamed Character',
-          subtitle: char.internalDescription,
-        }));
-      },
-    };
-    treeRoots.push(charactersRoot);
-
-    // 4. Settings & Prompt Templates Root (Only show custom or modified chains)
-    const hasCustomPromptChains = Object.entries(templateGroupData).some(([groupId, g]) =>
-      Object.entries(g.templateChains).some(([chainId, chain]) =>
-        isTemplateChainModifiedOrCustom(groupId, chainId, chain)
-      )
-    );
-
-    if (hasCustomPromptChains) {
-      const settingsRoot: TreeNode = {
-        id: TreeEntityIds.rootSettings(),
-        label: 'Settings & Prompts',
-        getChildren: async () => [
-          {
-            id: TreeEntityIds.rootPromptTemplates(),
-            label: 'Prompt Templates',
-            getChildren: async () => {
-              const groupNodes: TreeNode[] = [];
-              for (const [groupId, group] of Object.entries(templateGroupData)) {
-                const chainEntries = Object.entries(group.templateChains).filter(([chainId, chain]) =>
-                  isTemplateChainModifiedOrCustom(groupId, chainId, chain)
-                );
-                if (chainEntries.length === 0) continue;
-
-                groupNodes.push({
-                  id: TreeEntityIds.promptGroup(groupId),
-                  label: groupId,
-                  getChildren: async () => {
-                    return chainEntries.map(([chainId, chain]) => ({
-                      id: TreeEntityIds.promptChain(chainId),
-                      label: chain.title || chainId,
-                      subtitle: chain.description,
-                      ...(chain.parserSource
-                        ? { badge: { text: 'Executable Code', variant: 'warning' as const } }
-                        : {}),
-                    }));
-                  },
-                });
-              }
-              return groupNodes;
-            },
-          },
-        ],
-      };
-      treeRoots.push(settingsRoot);
-    }
-
-    return treeRoots;
+    return buildImportExportTreeRoots({
+      mode: 'export',
+      scenarios: scenarioSummaries,
+      maps,
+      globalCharacters,
+      templateGroupData,
+    });
   }, [scenarioSummaries, maps, globalCharacters, templateGroupData]);
 
   const executeExport = useCallback(
