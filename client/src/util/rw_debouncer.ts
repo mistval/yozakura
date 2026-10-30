@@ -6,12 +6,12 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 type Resolvers<TReturnType> = ReturnType<typeof Promise.withResolvers<TReturnType>>;
 
-class Timer<TReadType> {
-  private pendingWriteOperation: (() => Promise<unknown>) | undefined = undefined;
+class Timer<TReadType, TWriteType> {
+  private pendingWriteOperation: (() => Promise<TWriteType>) | undefined = undefined;
   private writeOperationsInFlight = false;
   private lastWriteAdd = 0;
 
-  private writeWaiters: Array<Resolvers<unknown>> = [];
+  private writeWaiters: Array<Resolvers<TWriteType>> = [];
   private readOperations: Array<
     Resolvers<TReadType> & {
       operation: () => Promise<TReadType>;
@@ -20,11 +20,11 @@ class Timer<TReadType> {
 
   public constructor(private readonly idleCallback: () => void) {}
 
-  public write(op: () => Promise<unknown>) {
+  public write(op: () => Promise<TWriteType>): Promise<TWriteType> {
     const needsStartLoop = this.lastWriteAdd === 0;
     this.lastWriteAdd = Date.now();
     this.pendingWriteOperation = op;
-    const resolvers = Promise.withResolvers();
+    const resolvers = Promise.withResolvers<TWriteType>();
     this.writeWaiters.push(resolvers);
 
     if (needsStartLoop) {
@@ -103,18 +103,18 @@ class Timer<TReadType> {
  * 1. Most recent write before the trailing edge wins and is committed. The rest resolve, but don't actually execute.
  * 2. Reads are deferred until there are no writes remaining in the pipeline
  */
-export class ReadWriteDebouncer<TReadType> {
-  private debouncer = new Map<string, Timer<TReadType>>();
+export class ReadWriteDebouncer<TReadType, TWriteType> {
+  private debouncer = new Map<string, Timer<TReadType, TWriteType>>();
 
-  async write(key: string, writeFn: () => Promise<void>): Promise<void> {
+  async write(key: string, writeFn: () => Promise<TWriteType>): Promise<TWriteType> {
     const timer =
       this.debouncer.get(key) ??
-      new Timer<TReadType>(() => {
+      new Timer<TReadType, TWriteType>(() => {
         this.debouncer.delete(key);
       });
 
     this.debouncer.set(key, timer);
-    await timer.write(writeFn);
+    return timer.write(writeFn);
   }
 
   async read(key: string, readFn: () => Promise<TReadType>): Promise<TReadType> {

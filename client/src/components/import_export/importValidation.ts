@@ -43,7 +43,9 @@ async function validateEntities<T extends { id: string }>(
     try {
       items = await loader(page);
     } catch (e) {
-      errors.push(`Failed to load ${entityTypeName} (page ${page}): ${e instanceof Error ? e.message : String(e)}`);
+      errors.push(
+        `Failed to load ${entityTypeName} (page ${page}): ${e instanceof Error ? e.message : String(e)}`
+      );
       break;
     }
 

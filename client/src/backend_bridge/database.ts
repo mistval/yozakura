@@ -913,16 +913,16 @@ export function createPersistedObject<
   };
 }
 
-const databaseDebouncer = new ReadWriteDebouncer<any>();
+const databaseDebouncer = new ReadWriteDebouncer<any, any>();
 
-export async function doAsDataWrite(
-  func: () => Promise<void>,
+export async function doAsDataWrite<TWriteType>(
+  func: () => Promise<TWriteType>,
   objectType: string,
   opts?: {
     debouncerKey: string;
   }
 ) {
-  await runWithInteractiveRetry({
+  return runWithInteractiveRetry({
     operationType: `database.write.${objectType}`,
     hint: 'The backend server might not be running. Changes are failing to save. Data may be lost.',
     run: () => {

@@ -38,13 +38,13 @@ type ScenarioCharacterStoreState = {
   ) => void;
   saveInactiveScenarioCharacterImmediate: (character: Character) => Promise<void>;
   saveScenarioCharacterFields: (id: string, fields: Partial<Character>, syncOptions?: SyncOptions) => void;
-  addGlobalCharacterToActiveScenario: (
+  addGlobalCharacterToActiveScenarioImmediate: (
     character: Character,
     scenarioArgs?: {
       scenarioId: string;
       map: WorldMap;
     }
-  ) => Promise<void>;
+  ) => Promise<Character>;
   copyGlobalCharactersToInactiveScenarioImmediate: (
     characters: Character[],
     scenarioId: string,
@@ -217,8 +217,8 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
         const globalChars = useGlobalCharactersStore.getState().globalCharacters;
         if (globalChars.length > 0) {
           const randomGlobalChar = getRequiredRandomChoice(globalChars);
-          await get().addGlobalCharacterToActiveScenario(randomGlobalChar);
-          useScenarioStore.getState().setUserCharacter(randomGlobalChar.id);
+          const scenarioCharacter = await get().addGlobalCharacterToActiveScenarioImmediate(randomGlobalChar);
+          useScenarioStore.getState().setUserCharacter(scenarioCharacter.id);
         }
       } else if (!characters.some((c) => c.id === scenario.userCharacterId)) {
         useScenarioStore.getState().setUserCharacter(characters[0]!.id);
@@ -256,17 +256,19 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     return filtered;
   },
 
-  async addGlobalCharacterToActiveScenario(character: Character): Promise<void> {
+  async addGlobalCharacterToActiveScenarioImmediate(character: Character): Promise<Character> {
     const scenarioId = getRequiredActiveScenario().id;
     const map = getRequiredActiveScenarioMap();
 
-    await doAsDataWrite(async () => {
+    return doAsDataWrite(async () => {
       const scenarioCharacter = await copyGlobalCharacterForScenario(character, scenarioId, map);
       const wardrobes = applyDailyWardrobeAutoselect(scenarioCharacter.wardrobes);
       get().saveScenarioCharacter(scenarioCharacter, undefined, () => ({
         ...scenarioCharacter,
         wardrobes: wardrobes ?? character.wardrobes,
       }));
+
+      return scenarioCharacter;
     }, 'add_scenario_character');
   },
 

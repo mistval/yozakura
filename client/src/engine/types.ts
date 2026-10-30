@@ -221,7 +221,7 @@ export type WorldMap = z.infer<typeof worldMapSchema>;
 
 export const scenarioSchema = basePersistedObjectSchema.extend({
   mapId: idSchema,
-  userCharacterId: idSchema,
+  userCharacterId: idSchema.or(z.literal('')),
   turnNumber: z.number(),
   temporalContext: settingsScriptSectionStateSchema.meta({
     description:
