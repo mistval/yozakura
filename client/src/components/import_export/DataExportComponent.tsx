@@ -24,8 +24,8 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [overwriteConfirmOpen, setOverwriteConfirmOpen] = useState<boolean>(false);
-  const [exportResult, setExportResult] = useState<ExportResult | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [exportResult, setExportResult] = useState<ExportResult | undefined>(undefined);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [copied, setCopied] = useState<boolean>(false);
 
   const scenarioSummaries = useScenarioStore((s) => s.scenarioSummaries);
@@ -105,11 +105,6 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
                 id: TreeEntityIds.scenarioTurn(scenId),
                 label: 'Active Conversation State',
                 subtitle: 'Current turn runtime state',
-              },
-              {
-                id: TreeEntityIds.scenarioEventLogs(scenId),
-                label: 'Event Logs',
-                subtitle: 'Historical simulation event log',
               },
             ],
           };
@@ -196,8 +191,8 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
   const executeExport = useCallback(
     async (overwrite = false) => {
       setIsExporting(true);
-      setErrorMessage(null);
-      setExportResult(null);
+      setErrorMessage(undefined);
+      setExportResult(undefined);
 
       try {
         const payload = buildExportPayload({

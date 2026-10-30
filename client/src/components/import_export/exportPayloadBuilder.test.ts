@@ -216,10 +216,9 @@ describe('exportPayloadBuilder', () => {
     expect(charQuery?.params[1]).toEqual(JSON.stringify(['scen_001']));
   });
 
-  it('orders scenario_event_log by rowid ASC and extracts turn key_value via json_each', () => {
+  it('extracts turn key_value via json_each', () => {
     const selectedIds = new Set<string>([
       TreeEntityIds.scenario('scen_001'),
-      TreeEntityIds.scenarioEventLogs('scen_001'),
       TreeEntityIds.scenarioTurn('scen_001'),
     ]);
 
@@ -231,11 +230,6 @@ describe('exportPayloadBuilder', () => {
       globalCharacters: [],
       templateGroupData: {},
     });
-
-    const eventQuery = payload.queries.find((q) => q.table === 'scenario_event_log');
-    expect(eventQuery?.statement).toContain('ORDER BY rowid ASC');
-    expect(eventQuery?.statement).toContain('IN (SELECT value FROM json_each(?))');
-    expect(eventQuery?.params).toEqual([JSON.stringify(['scen_001'])]);
 
     const kvQuery = payload.queries.find((q) => q.table === 'key_value');
     expect(kvQuery?.statement).toContain('IN (SELECT value FROM json_each(?))');

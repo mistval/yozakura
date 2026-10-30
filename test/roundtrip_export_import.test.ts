@@ -77,7 +77,6 @@ describe('Integration: Full Round-Trip Pack, Unpack & ID Remapping', () => {
       TreeEntityIds.scenarioMemories(seeded.scenarioId),
       TreeEntityIds.scenarioConversations(seeded.scenarioId),
       TreeEntityIds.scenarioTurn(seeded.scenarioId),
-      TreeEntityIds.scenarioEventLogs(seeded.scenarioId),
       TreeEntityIds.map(seeded.mapId),
       TreeEntityIds.character(seeded.globalCharId),
     ]);
@@ -224,20 +223,6 @@ describe('Integration: Full Round-Trip Pack, Unpack & ID Remapping', () => {
     expect(turnData.scenarioId).toBe(newScenarioId);
     expect(turnData.activeParticipantIds).not.toContain(seeded.scenarioChar1Id);
     expect(turnData.currentSpeakerId).not.toBe(seeded.scenarioChar1Id);
-
-    // Assert Event Logs in identical order
-    const eventLogs = targetServer.db
-      .prepare('SELECT id, scenario_id, data FROM scenario_event_log ORDER BY rowid ASC')
-      .all() as Array<{ id: string; scenario_id: string; data: string }>;
-    expect(eventLogs.length).toBe(2);
-    expect(eventLogs[0]!.scenario_id).toBe(newScenarioId);
-    expect(eventLogs[1]!.scenario_id).toBe(newScenarioId);
-    const log1 = JSON.parse(eventLogs[0]!.data) as { eventType: string; turnNumber: number };
-    const log2 = JSON.parse(eventLogs[1]!.data) as { eventType: string; turnNumber: number };
-    expect(log1.eventType).toBe('movement');
-    expect(log2.eventType).toBe('movement');
-    expect(log1.turnNumber).toBe(1);
-    expect(log2.turnNumber).toBe(2);
 
     // 9. Assert Copied Images in Target Filesystem
     const targetCard1Path = path.join(

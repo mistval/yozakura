@@ -15,6 +15,7 @@ export const useGlobalCharactersStore = create<{
   setGlobalCharacters: (characters: Character[]) => void;
   installDemoCharactersGlobally: () => void;
   refresh: () => Promise<void>;
+  bustImageCache: (characterIds: string[]) => void;
   saveGlobalCharacter: (character: Character, imageFile?: File) => void;
   saveScenarioCharacterAsGlobal: (scenarioChar: Character, imageFile?: File) => Promise<Character>;
   deleteGlobalCharacter: (character: Character) => void;
@@ -36,6 +37,21 @@ export const useGlobalCharactersStore = create<{
       const characters = await mainDatabase.loadGlobalCharacters();
       get().setGlobalCharacters(characters);
     }, 'global_character.all');
+  },
+
+  bustImageCache(characterIds: string[]) {
+    if (characterIds.length === 0) return;
+    const idSet = new Set(characterIds);
+    const updated = get().globalCharacters.map((c) => {
+      if (idSet.has(c.id) && Files.isApiFilePath(c.imagePath)) {
+        return {
+          ...c,
+          imagePath: addOrReplaceVersionQueryParam(c.imagePath),
+        };
+      }
+      return c;
+    });
+    get().setGlobalCharacters(updated);
   },
 
   async saveGlobalCharacter(character: Character, imageFile?: File) {

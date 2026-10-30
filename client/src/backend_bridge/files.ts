@@ -9,6 +9,30 @@ export function getGlobalCharacterImagePath(characterId: string) {
   return `/api/files/${CHARACTER_IMAGE_FOLDER}/${characterId}.png`;
 }
 
+export function isApiFilePath(path: string | undefined): boolean {
+  return typeof path === 'string' && path.startsWith('/api/files/');
+}
+
+export function extractApiFileRelativePath(filePath: string | undefined): string | undefined {
+  if (!isApiFilePath(filePath)) {
+    return undefined;
+  }
+  return (filePath as string).slice('/api/files/'.length).split('?')[0] || undefined;
+}
+
+export function toZipImagePath(relPath: string): string {
+  return `images/${relPath}`;
+}
+
+export function toTargetRelPathFromZip(zipPath: string): string {
+  return zipPath.replace(/^images\/(?:scenarios|scenario)\//, 'scenario/').replace(/^images\//, '');
+}
+
+export function getCharacterZipImagePath(character: Pick<Character, 'imagePath'>): string | undefined {
+  const relPath = extractApiFileRelativePath(character.imagePath);
+  return relPath ? toZipImagePath(relPath) : undefined;
+}
+
 function getScenarioCharacterPath(scenarioId: string, characterId: string) {
   return `/api/files/${SCENARIO_FOLDER}/${scenarioId}/${CHARACTER_IMAGE_FOLDER}/${characterId}.png`;
 }

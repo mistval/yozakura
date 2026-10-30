@@ -294,9 +294,18 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
 
       // 3. Atomic Multi-Table Copy inside a single transaction
       const commitTx = db.transaction(() => {
-        for (const sql of sqlStatements) {
-          if (typeof sql === 'string' && sql.trim()) {
-            db.prepare(sql).run();
+        for (const entry of sqlStatements) {
+          if (typeof entry === 'string') {
+            const sql = entry.trim();
+            if (sql) {
+              db.prepare(sql).run();
+            }
+          } else if (entry && typeof entry === 'object' && typeof entry.statement === 'string') {
+            const sql = entry.statement.trim();
+            if (sql) {
+              const params = Array.isArray(entry.params) ? entry.params : [];
+              db.prepare(sql).run(...params);
+            }
           }
         }
       });

@@ -1,56 +1,55 @@
-import { useState } from 'react';
 import { useCharacterEditorModal } from './CharacterEditorModalContext.js';
-import ConfirmDialog from '../ui/ConfirmDialog.js';
+import ButtonOptions from '../ui/ButtonOptions.js';
 
 export default function FooterSection() {
-  const { hasAllRequiredFields, isBusy, isGlobalMode, save, saveToGlobal } = useCharacterEditorModal();
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const { hasAllRequiredFields, isBusy, isGlobalMode, save, saveAsScenarioAndGlobal } =
+    useCharacterEditorModal();
 
   return (
-    <>
-      <div className="flex gap-2 items-center">
-        {!isGlobalMode && (
+    <div className="flex justify-end items-center mt-5">
+      <ButtonOptions
+        showDropdown={!isGlobalMode}
+        disabled={!hasAllRequiredFields || isBusy}
+        placement="top-end"
+        className="w-full h-20"
+        ariaLabel="Save options"
+        button={
           <button
             type="button"
-            className="mt-5 w-full h-20 text-2xl font-bold disabled:bg-muted flex justify-center items-center"
+            className="w-full h-20 text-4xl font-bold disabled:bg-muted flex justify-center items-center"
             onClick={() => {
-              setConfirmOpen(true);
+              void save();
             }}
             disabled={!hasAllRequiredFields || isBusy}
             title={
               !hasAllRequiredFields ? 'You must provide at least First Name and Internal Description' : ''
             }
           >
-            Save to Global Library
+            Save
           </button>
-        )}
-        <button
-          type="button"
-          className="mt-5 w-full h-20 text-4xl font-bold disabled:bg-muted flex justify-center items-center"
-          onClick={() => {
-            void save();
-          }}
-          disabled={!hasAllRequiredFields || isBusy}
-          title={!hasAllRequiredFields ? 'You must provide at least First Name and Internal Description' : ''}
-        >
-          Save
-        </button>
-      </div>
-
-      {!isGlobalMode && (
-        <ConfirmDialog
-          open={confirmOpen}
-          title="Save to Global Library"
-          message="Save this character to the Global Character library? If a corresponding global character exists, it will be overwritten."
-          confirmLabel="Save to Global"
-          confirmDisabled={isBusy}
-          onConfirm={() => {
-            setConfirmOpen(false);
-            void saveToGlobal();
-          }}
-          onClose={() => setConfirmOpen(false)}
-        />
-      )}
-    </>
+        }
+      >
+        <div className="w-72 space-y-1 select-none">
+          <button
+            type="button"
+            className="w-full text-left px-3 py-2 text-sm rounded hover:bg-surface-elevated cursor-pointer"
+            onClick={() => {
+              void save();
+            }}
+          >
+            Save as scenario character
+          </button>
+          <button
+            type="button"
+            className="w-full text-left px-3 py-2 text-sm rounded hover:bg-surface-elevated cursor-pointer"
+            onClick={() => {
+              void saveAsScenarioAndGlobal();
+            }}
+          >
+            Save as scenario character and global character
+          </button>
+        </div>
+      </ButtonOptions>
+    </div>
   );
 }

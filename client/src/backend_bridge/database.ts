@@ -353,13 +353,24 @@ function createSqlStatements(schema: string) {
   };
 }
 
+export interface ISQLTarget {
+  dbRun(statement: string, parameterGroups: unknown[][]): Promise<unknown>;
+  dbAll(
+    statement: string,
+    parameterGroups: unknown[][]
+  ): Promise<{ results: Array<Array<Record<string, unknown>>> }>;
+  dbExec?(sql: string): Promise<unknown>;
+}
+
 export class DatabaseClient {
   public readonly targetSchema: string;
   public readonly sql: ReturnType<typeof createSqlStatements>;
+  private readonly target: ISQLTarget;
 
-  constructor(targetSchema: string = 'main') {
+  constructor(targetSchema: string = 'main', target: ISQLTarget = Api) {
     this.targetSchema = targetSchema;
     this.sql = createSqlStatements(targetSchema);
+    this.target = target;
   }
 
   private async selectUntypedMultiQuery(statement: string, parameterGroups: unknown[][]) {
@@ -367,7 +378,7 @@ export class DatabaseClient {
       return [];
     }
 
-    const response = await Api.dbAll(statement, parameterGroups);
+    const response = await this.target.dbAll(statement, parameterGroups);
     return response.results.flat();
   }
 
@@ -389,7 +400,7 @@ export class DatabaseClient {
     return rows[0];
   }
 
-  private async selectDataRows<TDataType>(
+  private async selectDataRows<TDataType extends { createdAt: string; updatedAt: string }>(
     statement: string,
     parameterGroups: unknown[][],
     dataSchema: z.ZodType<TDataType>
@@ -402,7 +413,7 @@ export class DatabaseClient {
     }));
   }
 
-  private async selectSingleDataRow<TDataType>(
+  private async selectSingleDataRow<TDataType extends { createdAt: string; updatedAt: string }>(
     statement: string,
     parameters: unknown[],
     dataSchema: z.ZodType<TDataType>
@@ -416,7 +427,7 @@ export class DatabaseClient {
       return;
     }
 
-    await Api.dbRun(statement, parameterGroups);
+    await this.target.dbRun(statement, parameterGroups);
   }
 
   public async dbAll<TRowType>(
@@ -876,9 +887,13 @@ export class DatabaseClient {
   }
 }
 
+export function createImportStagingDatabase(target: ISQLTarget = Api): DatabaseClient {
+  return new DatabaseClient('import_staging', target);
+}
+
 // Two shared instances: main and import_staging
 export const mainDatabase = new DatabaseClient('main');
-export const importStagingDatabase = new DatabaseClient('import_staging');
+export const importStagingDatabase = createImportStagingDatabase();
 
 export function createPersistedObject<
   TFieldsType extends {

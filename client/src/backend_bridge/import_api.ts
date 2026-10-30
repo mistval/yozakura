@@ -60,9 +60,16 @@ export async function stageImportArchive(file: File): Promise<StageImportResult>
   };
 }
 
+export type SqlStatementEntry =
+  | string
+  | {
+      statement: string;
+      params?: unknown[];
+    };
+
 export type ImportCommitPayload = {
   sessionId: string;
-  sqlStatements: string[];
+  sqlStatements: SqlStatementEntry[];
   imageCopies: Array<{
     zipPath: string;
     targetRelPath: string;

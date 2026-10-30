@@ -1,3 +1,4 @@
+import * as Files from '../../backend_bridge/files.js';
 import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
 import type { TemplateGroupData } from '../../engine/prompt_templates/template_types.js';
 
@@ -15,7 +16,6 @@ export const TreeEntityIds = {
   scenarioMemories: (scenId: string) => `scenario:${scenId}:memories`,
   scenarioConversations: (scenId: string) => `scenario:${scenId}:conversations`,
   scenarioTurn: (scenId: string) => `scenario:${scenId}:turn`,
-  scenarioEventLogs: (scenId: string) => `scenario:${scenId}:event_logs`,
 
   map: (mapId: string) => `map:${mapId}`,
   character: (charId: string) => `character:${charId}`,
@@ -94,7 +94,6 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   const scenariosWithConversations: string[] = [];
   const scenariosWithGroups: string[] = [];
   const scenariosWithSchedules: string[] = [];
-  const scenariosWithEventLogs: string[] = [];
   const turnKeys: string[] = [];
 
   // Group scenario characters by their json_patch requirements:
@@ -115,7 +114,6 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
       const hasSchedules = selectedIds.has(TreeEntityIds.scenarioSchedules(scenId));
       const hasConversations = selectedIds.has(TreeEntityIds.scenarioConversations(scenId));
       const hasTurn = selectedIds.has(TreeEntityIds.scenarioTurn(scenId));
-      const hasEventLogs = selectedIds.has(TreeEntityIds.scenarioEventLogs(scenId));
 
       if (hasChars) {
         if (hasMemories && hasGroups) {
@@ -161,10 +159,6 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
       if (hasTurn) {
         turnKeys.push(`scenario_${scenId}_turn`);
       }
-
-      if (hasEventLogs) {
-        scenariosWithEventLogs.push(scenId);
-      }
     }
   }
 
@@ -172,8 +166,11 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   if (selectedScenarioIds.length > 0) {
     queries.push({
       table: 'scenario',
-      statement:
-        'SELECT id, data, created_at, updated_at FROM scenario WHERE id IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT id, data, created_at, updated_at
+        FROM scenario
+        WHERE id IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [JSON.stringify(selectedScenarioIds)],
     });
   }
@@ -199,8 +196,11 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   if (charScenariosFull.length > 0) {
     queries.push({
       table: 'scenario_character',
-      statement:
-        'SELECT id, scenario_id, data, created_at, updated_at FROM scenario_character WHERE scenario_id IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT id, scenario_id, data, created_at, updated_at
+        FROM scenario_character
+        WHERE scenario_id IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [JSON.stringify(charScenariosFull)],
     });
   }
@@ -208,8 +208,11 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   if (charScenariosStripMemories.length > 0) {
     queries.push({
       table: 'scenario_character',
-      statement:
-        'SELECT id, scenario_id, json_patch(data, ?) AS data, created_at, updated_at FROM scenario_character WHERE scenario_id IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT id, scenario_id, json_patch(data, ?) AS data, created_at, updated_at
+        FROM scenario_character
+        WHERE scenario_id IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [STRIP_MEMORIES_PATCH, JSON.stringify(charScenariosStripMemories)],
     });
   }
@@ -217,8 +220,11 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   if (charScenariosStripGroups.length > 0) {
     queries.push({
       table: 'scenario_character',
-      statement:
-        'SELECT id, scenario_id, json_patch(data, ?) AS data, created_at, updated_at FROM scenario_character WHERE scenario_id IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT id, scenario_id, json_patch(data, ?) AS data, created_at, updated_at
+        FROM scenario_character
+        WHERE scenario_id IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [STRIP_GROUPS_PATCH, JSON.stringify(charScenariosStripGroups)],
     });
   }
@@ -226,8 +232,11 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   if (charScenariosStripBoth.length > 0) {
     queries.push({
       table: 'scenario_character',
-      statement:
-        'SELECT id, scenario_id, json_patch(data, ?) AS data, created_at, updated_at FROM scenario_character WHERE scenario_id IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT id, scenario_id, json_patch(data, ?) AS data, created_at, updated_at
+        FROM scenario_character
+        WHERE scenario_id IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [STRIP_BOTH_PATCH, JSON.stringify(charScenariosStripBoth)],
     });
   }
@@ -236,8 +245,12 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   if (scenariosWithMemories.length > 0) {
     queries.push({
       table: 'character_relationship',
-      statement:
-        'SELECT cr.id, cr.from_id, cr.to_id, cr.data, cr.created_at, cr.updated_at FROM character_relationship cr JOIN scenario_character sc ON cr.from_id = sc.id WHERE sc.scenario_id IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT cr.id, cr.from_id, cr.to_id, cr.data, cr.created_at, cr.updated_at
+        FROM character_relationship cr
+        JOIN scenario_character sc ON cr.from_id = sc.id
+        WHERE sc.scenario_id IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [JSON.stringify(scenariosWithMemories)],
     });
   }
@@ -246,8 +259,11 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   if (scenariosWithGroups.length > 0) {
     queries.push({
       table: 'scenario_character_group',
-      statement:
-        'SELECT id, scenario_id, data, created_at, updated_at FROM scenario_character_group WHERE scenario_id IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT id, scenario_id, data, created_at, updated_at
+        FROM scenario_character_group
+        WHERE scenario_id IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [JSON.stringify(scenariosWithGroups)],
     });
   }
@@ -256,8 +272,11 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   if (scenariosWithSchedules.length > 0) {
     queries.push({
       table: 'scenario_character_group_schedule',
-      statement:
-        'SELECT id, scenario_id, group_id, data, created_at, updated_at FROM scenario_character_group_schedule WHERE scenario_id IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT id, scenario_id, group_id, data, created_at, updated_at
+        FROM scenario_character_group_schedule
+        WHERE scenario_id IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [JSON.stringify(scenariosWithSchedules)],
     });
   }
@@ -266,15 +285,22 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   if (scenariosWithConversations.length > 0) {
     queries.push({
       table: 'conversation',
-      statement:
-        'SELECT id, scenario_id, data, created_at, updated_at FROM conversation WHERE scenario_id IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT id, scenario_id, data, created_at, updated_at
+        FROM conversation
+        WHERE scenario_id IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [JSON.stringify(scenariosWithConversations)],
     });
 
     queries.push({
       table: 'conversation_participant',
-      statement:
-        'SELECT cp.id, cp.character_id, cp.conversation_id, cp.created_at, cp.updated_at FROM conversation_participant cp JOIN conversation c ON cp.conversation_id = c.id WHERE c.scenario_id IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT cp.id, cp.character_id, cp.conversation_id, cp.created_at, cp.updated_at
+        FROM conversation_participant cp
+        JOIN conversation c ON cp.conversation_id = c.id
+        WHERE c.scenario_id IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [JSON.stringify(scenariosWithConversations)],
     });
   }
@@ -283,19 +309,12 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   if (turnKeys.length > 0) {
     queries.push({
       table: 'key_value',
-      statement:
-        'SELECT key, data, created_at, updated_at FROM key_value WHERE key IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT key, data, created_at, updated_at
+        FROM key_value
+        WHERE key IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [JSON.stringify(turnKeys)],
-    });
-  }
-
-  // Event logs (ORDER BY rowid ASC)
-  if (scenariosWithEventLogs.length > 0) {
-    queries.push({
-      table: 'scenario_event_log',
-      statement:
-        'SELECT id, scenario_id, event_type, data, created_at, updated_at FROM scenario_event_log WHERE scenario_id IN (SELECT value FROM json_each(?)) ORDER BY rowid ASC',
-      params: [JSON.stringify(scenariosWithEventLogs)],
     });
   }
 
@@ -310,8 +329,11 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   if (selectedMapIds.length > 0) {
     queries.push({
       table: 'map',
-      statement:
-        'SELECT id, data, created_at, updated_at FROM map WHERE id IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT id, data, created_at, updated_at
+        FROM map
+        WHERE id IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [JSON.stringify(selectedMapIds)],
     });
   }
@@ -323,8 +345,8 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
       selectedGlobalCharIds.push(char.id);
 
       // Check if imagePath is a custom uploaded image under /api/files/
-      if (char.imagePath && char.imagePath.startsWith('/api/files/')) {
-        const cleanPath = char.imagePath.replace(/^\/api\/files\//, '').split('?')[0];
+      if (Files.isApiFilePath(char.imagePath)) {
+        const cleanPath = Files.extractApiFileRelativePath(char.imagePath);
         if (cleanPath) {
           imageDescriptors.push({
             mode: 'file',
@@ -339,8 +361,11 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   if (selectedGlobalCharIds.length > 0) {
     queries.push({
       table: 'character',
-      statement:
-        'SELECT id, data, created_at, updated_at FROM character WHERE id IN (SELECT value FROM json_each(?))',
+      statement: `
+        SELECT id, data, created_at, updated_at
+        FROM character
+        WHERE id IN (SELECT value FROM json_each(?))
+      `.trim(),
       params: [JSON.stringify(selectedGlobalCharIds)],
     });
   }

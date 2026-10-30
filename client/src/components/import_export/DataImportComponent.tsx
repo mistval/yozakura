@@ -36,14 +36,14 @@ type StagedData = {
 };
 
 export default function DataImportComponent({ onImportStateChange }: DataImportComponentProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | undefined>(undefined);
   const [isStaging, setIsStaging] = useState<boolean>(false);
   const [isCommitting, setIsCommitting] = useState<boolean>(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [stagedData, setStagedData] = useState<StagedData | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
+  const [successMessage, setSuccessMessage] = useState<string | undefined>(undefined);
+  const [stagedData, setStagedData] = useState<StagedData | undefined>(undefined);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [pendingConflicts, setPendingConflicts] = useState<EntityConflict[] | null>(null);
+  const [pendingConflicts, setPendingConflicts] = useState<EntityConflict[] | undefined>(undefined);
 
   const isBusy = isStaging || isCommitting;
 
@@ -56,8 +56,8 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      setErrorMessage(null);
-      setSuccessMessage(null);
+      setErrorMessage(undefined);
+      setSuccessMessage(undefined);
     }
   };
 
@@ -67,8 +67,8 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       if (!file) return;
 
       setIsStaging(true);
-      setErrorMessage(null);
-      setSuccessMessage(null);
+      setErrorMessage(undefined);
+      setSuccessMessage(undefined);
 
       try {
         const result = await stageImportArchive(file);
@@ -79,17 +79,15 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
 
         // Query importStagingDatabase for staged entities
         const [scenarios, maps, globalCharacters, settingsRow] = await Promise.all([
-          importStagingDatabase.loadScenarioSummaries().catch(() => []),
-          importStagingDatabase.loadMaps().catch(() => []),
-          importStagingDatabase.loadGlobalCharacters().catch(() => []),
-          importStagingDatabase
-            .loadKeyValue(
-              'settings',
-              z.object({
-                templateGroupData: templateGroupDataSchema.optional(),
-              })
-            )
-            .catch(() => undefined),
+          importStagingDatabase.loadScenarioSummaries(),
+          importStagingDatabase.loadMaps(),
+          importStagingDatabase.loadGlobalCharacters(),
+          importStagingDatabase.loadKeyValue(
+            'settings',
+            z.object({
+              templateGroupData: templateGroupDataSchema.optional(),
+            })
+          ),
         ]);
 
         const templateGroupData = settingsRow?.templateGroupData ?? {};
@@ -122,7 +120,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
             initialSelected.add(TreeEntityIds.scenarioMemories(scenId));
             initialSelected.add(TreeEntityIds.scenarioConversations(scenId));
             initialSelected.add(TreeEntityIds.scenarioTurn(scenId));
-            initialSelected.add(TreeEntityIds.scenarioEventLogs(scenId));
           }
         }
 
@@ -170,10 +167,10 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       await cancelImport();
     } finally {
       setIsStaging(false);
-      setStagedData(null);
-      setSelectedFile(null);
+      setStagedData(undefined);
+      setSelectedFile(undefined);
       setSelectedIds(new Set());
-      setPendingConflicts(null);
+      setPendingConflicts(undefined);
     }
   };
 
@@ -219,7 +216,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
     if (!stagedData) return;
 
     setIsCommitting(true);
-    setErrorMessage(null);
+    setErrorMessage(undefined);
 
     try {
       const payload = await prepareStagingAndBuildCommitPayload({
@@ -232,6 +229,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
         selectedGlobalCharacterIds,
         conflictResolutions,
         stagedImages: stagedData.images,
+        stagedGlobalCharacters: stagedData.globalCharacters,
       });
 
       const result = await commitImport(payload);
@@ -279,13 +277,20 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
         useScenarioStore.getState().refreshScenarioSummaries(),
       ]);
 
+      const overwrittenGlobalCharIds = selectedGlobalCharacterIds.filter(
+        (id) => conflictResolutions[id] === 'overwrite'
+      );
+      if (overwrittenGlobalCharIds.length > 0) {
+        useGlobalCharactersStore.getState().bustImageCache(overwrittenGlobalCharIds);
+      }
+
       setSuccessMessage(
         `Import completed successfully! ${
           result.backupFilename ? `(Database backup saved to backups/${result.backupFilename})` : ''
         }`
       );
-      setStagedData(null);
-      setSelectedFile(null);
+      setStagedData(undefined);
+      setSelectedFile(undefined);
       setSelectedIds(new Set());
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'Failed to commit import');
@@ -310,7 +315,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
     }
 
     setIsCommitting(true);
-    setErrorMessage(null);
+    setErrorMessage(undefined);
 
     // 1. Paged Zod Validation
     const validation = await validateStagedData({
@@ -411,11 +416,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
                     id: TreeEntityIds.scenarioTurn(scenId),
                     label: 'Active Conversation State',
                     subtitle: 'Saved turn runtime state',
-                  },
-                  {
-                    id: TreeEntityIds.scenarioEventLogs(scenId),
-                    label: 'Event Logs',
-                    subtitle: 'Historical simulation event log',
                   }
                 );
 
@@ -559,10 +559,10 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
           open={true}
           conflicts={pendingConflicts}
           onConfirm={(resolutions) => {
-            setPendingConflicts(null);
+            setPendingConflicts(undefined);
             void executeCommit(resolutions);
           }}
-          onCancel={() => setPendingConflicts(null)}
+          onCancel={() => setPendingConflicts(undefined)}
         />
       )}
 

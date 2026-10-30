@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { DatabaseClient, mainDatabase, importStagingDatabase } from './database.js';
+import {
+  DatabaseClient,
+  mainDatabase,
+  importStagingDatabase,
+  createImportStagingDatabase,
+  type ISQLTarget,
+} from './database.js';
 
 describe('DatabaseClient', () => {
   it('correctly qualifies table names with the assigned schema', () => {
@@ -25,5 +31,23 @@ describe('DatabaseClient', () => {
 
     expect(importStagingDatabase).toBeInstanceOf(DatabaseClient);
     expect(importStagingDatabase.targetSchema).toBe('import_staging');
+  });
+
+  it('allows custom ISQLTarget via createImportStagingDatabase', async () => {
+    const calls: string[] = [];
+    const customTarget: ISQLTarget = {
+      async dbRun(statement) {
+        calls.push(statement);
+      },
+      async dbAll() {
+        return { results: [] };
+      },
+    };
+
+    const customStagingDb = createImportStagingDatabase(customTarget);
+    expect(customStagingDb.targetSchema).toBe('import_staging');
+
+    await customStagingDb.dbRun('TEST SQL');
+    expect(calls).toEqual(['TEST SQL']);
   });
 });

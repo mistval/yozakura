@@ -1,26 +1,40 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { prepareStagingAndBuildCommitPayload } from './importCommitPayloadBuilder.js';
-import { importStagingDatabase } from '../../backend_bridge/database.js';
+import { createImportStagingDatabase, type ISQLTarget } from '../../backend_bridge/database.js';
 import type { StagedImageEntry } from '../../backend_bridge/import_api.js';
-
-vi.mock('../../backend_bridge/database.js', () => ({
-  importStagingDatabase: {
-    dbRun: vi.fn(async () => {}),
-  },
-}));
+import type { Character } from '../../engine/types.js';
 
 describe('importCommitPayloadBuilder', () => {
+  let dbRunCalls: Array<{ statement: string; params: unknown[][] }>;
+  let testSqlTarget: ISQLTarget;
+
   beforeEach(() => {
-    vi.clearAllMocks();
+    dbRunCalls = [];
+    testSqlTarget = {
+      async dbRun(statement, parameterGroups) {
+        dbRunCalls.push({ statement, params: parameterGroups });
+        return {};
+      },
+      async dbAll() {
+        return { results: [] };
+      },
+    };
   });
+
+  const dummyGlobalCharacters: Character[] = [
+    { id: 'char_1', imagePath: '/api/files/character_cards/custom_1.png' } as Character,
+    { id: 'char_2', imagePath: '/api/files/character_cards/custom_2.png' } as Character,
+    { id: 'char_skip', imagePath: '/api/files/character_cards/skip_portrait.png' } as Character,
+    { id: 'char_overwrite', imagePath: '/api/files/character_cards/overwrite_portrait.png' } as Character,
+  ];
 
   const dummyImages: StagedImageEntry[] = [
     {
-      zipPath: 'images/character_cards/char_1.png',
+      zipPath: 'images/character_cards/custom_1.png',
       kind: 'global_character_card',
     },
     {
-      zipPath: 'images/character_cards/char_2.png',
+      zipPath: 'images/character_cards/custom_2.png',
       kind: 'global_character_card',
     },
     {
@@ -41,6 +55,8 @@ describe('importCommitPayloadBuilder', () => {
   ];
 
   it('builds commit payload for full scenario import with no conflicts', async () => {
+    const stagingDb = createImportStagingDatabase(testSqlTarget);
+
     const payload = await prepareStagingAndBuildCommitPayload({
       sessionId: 'test-session-123',
       exportName: 'MyExport',
@@ -51,15 +67,17 @@ describe('importCommitPayloadBuilder', () => {
       selectedGlobalCharacterIds: ['char_1'],
       conflictResolutions: {},
       stagedImages: dummyImages,
+      stagedGlobalCharacters: dummyGlobalCharacters,
+      stagingDb,
     });
 
     expect(payload.sessionId).toBe('test-session-123');
 
     // Check DB queries called to populate _id_map
-    expect(importStagingDatabase.dbRun).toHaveBeenCalled();
+    expect(dbRunCalls.length).toBeGreaterThan(0);
 
-    // Verify SQL statements include map, character, scenario, scenario_character, character_relationship, groups, schedules, conversation, event_log
-    const sqlText = payload.sqlStatements.join('\n');
+    // Verify SQL statements include map, character, scenario, scenario_character, character_relationship, groups, schedules, conversation, turn
+    const sqlText = payload.sqlStatements.map((s) => (typeof s === 'string' ? s : s.statement)).join('\n');
     expect(sqlText).toContain('INSERT INTO main.map');
     expect(sqlText).toContain('INSERT INTO main.character');
     expect(sqlText).toContain('INSERT INTO main.scenario');
@@ -69,13 +87,13 @@ describe('importCommitPayloadBuilder', () => {
     expect(sqlText).toContain('INSERT INTO main.scenario_character_group_schedule');
     expect(sqlText).toContain('INSERT INTO main.conversation');
     expect(sqlText).toContain('INSERT INTO main.conversation_participant');
-    expect(sqlText).toContain('INSERT INTO main.scenario_event_log');
+    expect(sqlText).toContain('INSERT INTO main.key_value');
 
     // Verify image copies include char_1, scen_1 cards and chat images, but not scen_2
     expect(payload.imageCopies).toEqual([
       {
-        zipPath: 'images/character_cards/char_1.png',
-        targetRelPath: 'character_cards/char_1.png',
+        zipPath: 'images/character_cards/custom_1.png',
+        targetRelPath: 'character_cards/custom_1.png',
       },
       {
         zipPath: 'images/scenarios/scen_1/character_cards/scen_char_1.png',
@@ -89,6 +107,8 @@ describe('importCommitPayloadBuilder', () => {
   });
 
   it('handles conflict resolutions: skips skipped entities and renames copied maps', async () => {
+    const stagingDb = createImportStagingDatabase(testSqlTarget);
+
     const payload = await prepareStagingAndBuildCommitPayload({
       sessionId: 'test-session-123',
       exportName: 'HolidayArchive',
@@ -104,34 +124,46 @@ describe('importCommitPayloadBuilder', () => {
         char_overwrite: 'overwrite',
       },
       stagedImages: [
-        { zipPath: 'images/character_cards/char_skip.png', kind: 'global_character_card' },
-        { zipPath: 'images/character_cards/char_overwrite.png', kind: 'global_character_card' },
+        { zipPath: 'images/character_cards/skip_portrait.png', kind: 'global_character_card' },
+        { zipPath: 'images/character_cards/overwrite_portrait.png', kind: 'global_character_card' },
       ],
+      stagedGlobalCharacters: dummyGlobalCharacters,
+      stagingDb,
     });
 
-    const sqlText = payload.sqlStatements.join('\n');
-    // map_skip and char_skip should NOT be in the SQL statements
-    expect(sqlText).not.toContain('map_skip');
-    expect(sqlText).toContain('map_copy');
-    expect(sqlText).not.toContain('char_skip');
-    expect(sqlText).toContain('char_overwrite');
+    const mapStatement = payload.sqlStatements.find(
+      (s) => typeof s === 'object' && s.statement.includes('INSERT INTO main.map')
+    );
+    expect(mapStatement).toBeDefined();
+    if (typeof mapStatement === 'object') {
+      expect(mapStatement.params).toEqual([JSON.stringify(['map_copy'])]);
+    }
+
+    const charStatement = payload.sqlStatements.find(
+      (s) => typeof s === 'object' && s.statement.includes('INSERT INTO main.character')
+    );
+    expect(charStatement).toBeDefined();
+    if (typeof charStatement === 'object') {
+      expect(charStatement.params).toEqual([JSON.stringify(['char_overwrite'])]);
+    }
 
     // dbRun should have updated the copied map name with ' (Imported From HolidayArchive)'
-    const dbRunCalls = vi.mocked(importStagingDatabase.dbRun).mock.calls;
-    const nameUpdateCall = dbRunCalls.find((call) => call[0].includes("json_set(data, '$.name'"));
+    const nameUpdateCall = dbRunCalls.find((call) => call.statement.includes("json_set(data, '$.name'"));
     expect(nameUpdateCall).toBeDefined();
-    expect(nameUpdateCall![1]).toEqual([[' (Imported From HolidayArchive)', '["map_copy"]']]);
+    expect(nameUpdateCall!.params).toEqual([[' (Imported From HolidayArchive)', '["map_copy"]']]);
 
     // Skipped character image should not be in imageCopies
     expect(payload.imageCopies).toEqual([
       {
-        zipPath: 'images/character_cards/char_overwrite.png',
-        targetRelPath: 'character_cards/char_overwrite.png',
+        zipPath: 'images/character_cards/overwrite_portrait.png',
+        targetRelPath: 'character_cards/overwrite_portrait.png',
       },
     ]);
   });
 
   it('omits relationship and group tables and strips data when memories or groups are unchecked', async () => {
+    const stagingDb = createImportStagingDatabase(testSqlTarget);
+
     const payload = await prepareStagingAndBuildCommitPayload({
       sessionId: 'test-session-123',
       exportName: 'PartialExport',
@@ -142,20 +174,21 @@ describe('importCommitPayloadBuilder', () => {
       selectedGlobalCharacterIds: [],
       conflictResolutions: {},
       stagedImages: [],
+      stagedGlobalCharacters: dummyGlobalCharacters,
+      stagingDb,
     });
 
-    const sqlText = payload.sqlStatements.join('\n');
+    const sqlText = payload.sqlStatements.map((s) => (typeof s === 'string' ? s : s.statement)).join('\n');
     expect(sqlText).toContain('INSERT INTO main.scenario');
     expect(sqlText).toContain('INSERT INTO main.scenario_character');
     expect(sqlText).not.toContain('INSERT INTO main.character_relationship');
     expect(sqlText).not.toContain('INSERT INTO main.scenario_character_group');
 
     // dbRun calls should include stripping memories and stripping groupIds
-    const dbRunCalls = vi.mocked(importStagingDatabase.dbRun).mock.calls;
-    const stripMemoriesCall = dbRunCalls.find((call) => call[0].includes('globalMemories'));
+    const stripMemoriesCall = dbRunCalls.find((call) => call.statement.includes('globalMemories'));
     expect(stripMemoriesCall).toBeDefined();
 
-    const stripGroupsCall = dbRunCalls.find((call) => call[0].includes('groupIds'));
+    const stripGroupsCall = dbRunCalls.find((call) => call.statement.includes('groupIds'));
     expect(stripGroupsCall).toBeDefined();
   });
 });

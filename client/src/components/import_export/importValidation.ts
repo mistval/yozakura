@@ -4,7 +4,6 @@ import {
   characterSchema,
   scenarioCharacterGroupScheduleSchema,
   scenarioCharacterGroupSchema,
-  scenarioEventSchema,
   scenarioSchema,
   storedConversationSchema,
   worldMapSchema,
@@ -113,7 +112,12 @@ export async function validateStagedData(options: {
 
       // Relationships
       const relRows = await importStagingDatabase.dbAll(
-        'SELECT cr.id, cr.data FROM import_staging.character_relationship cr JOIN import_staging.scenario_character sc ON cr.from_id = sc.id WHERE sc.scenario_id = ?',
+        `
+          SELECT cr.id, cr.data
+          FROM import_staging.character_relationship cr
+          JOIN import_staging.scenario_character sc ON cr.from_id = sc.id
+          WHERE sc.scenario_id = ?
+        `.trim(),
         [[scenId]],
         jsonRowSchema
       );
@@ -130,7 +134,11 @@ export async function validateStagedData(options: {
 
       // Conversations
       const convRows = await importStagingDatabase.dbAll(
-        'SELECT id, data FROM import_staging.conversation WHERE scenario_id = ?',
+        `
+          SELECT id, data
+          FROM import_staging.conversation
+          WHERE scenario_id = ?
+        `.trim(),
         [[scenId]],
         jsonRowSchema
       );
@@ -142,23 +150,6 @@ export async function validateStagedData(options: {
           }
         } catch {
           errors.push(`Malformed JSON in conversation ${row.id}`);
-        }
-      }
-
-      // Event log
-      const eventRows = await importStagingDatabase.dbAll(
-        'SELECT id, data FROM import_staging.scenario_event_log WHERE scenario_id = ?',
-        [[scenId]],
-        jsonRowSchema
-      );
-      for (const row of eventRows) {
-        try {
-          const parsed = scenarioEventSchema.safeParse(JSON.parse(row.data));
-          if (!parsed.success) {
-            errors.push(`Invalid event log entry ${row.id}: ${parsed.error.message}`);
-          }
-        } catch {
-          errors.push(`Malformed JSON in event log ${row.id}`);
         }
       }
     } catch (e) {
