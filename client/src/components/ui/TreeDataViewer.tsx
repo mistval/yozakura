@@ -74,6 +74,10 @@ export default function TreeDataViewer({
   const childrenMapRef = useRef(childrenMap);
   childrenMapRef.current = childrenMap;
 
+  useEffect(() => {
+    setChildrenMap({});
+  }, [roots]);
+
   // Load children for a given node at path
   const loadChildren = useCallback(async (node: TreeNode, path: string): Promise<TreeNode[]> => {
     if (childrenMapRef.current[path]) {

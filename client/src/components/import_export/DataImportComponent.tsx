@@ -113,7 +113,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
           for (const s of scenarios) {
             const scenId = s.scenario.id;
             initialSelected.add(TreeEntityIds.scenario(scenId));
-            initialSelected.add(TreeEntityIds.map(s.scenario.mapId));
+            initialSelected.add(TreeEntityIds.scenarioMap(scenId, s.scenario.mapId));
             initialSelected.add(TreeEntityIds.scenarioCharacters(scenId));
             initialSelected.add(TreeEntityIds.scenarioGroups(scenId));
             initialSelected.add(TreeEntityIds.scenarioSchedules(scenId));
@@ -153,7 +153,16 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
 
         setSelectedIds(initialSelected);
       } catch (err) {
-        setErrorMessage(err instanceof Error ? err.message : 'Failed to inspect import archive');
+        setErrorMessage(
+          err instanceof Error
+            ? `This import archive is corrupted and cannot be loaded: ${err.message}`
+            : 'This import archive is corrupted and cannot be loaded.'
+        );
+        try {
+          await cancelImport();
+        } catch {}
+        setStagedData(undefined);
+        setSelectedFile(undefined);
       } finally {
         setIsStaging(false);
       }
@@ -208,7 +217,15 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
 
   const selectedMapIds = useMemo(() => {
     if (!stagedData) return [];
-    return stagedData.maps.map((m) => m.id).filter((id) => selectedIds.has(TreeEntityIds.map(id)));
+    return stagedData.maps
+      .map((m) => m.id)
+      .filter((id) => {
+        const isDirectlySelected = selectedIds.has(TreeEntityIds.map(id));
+        const isScenarioMapSelected = stagedData.scenarios.some(
+          (s) => s.scenario.mapId === id && selectedIds.has(TreeEntityIds.scenarioMap(s.scenario.id, id))
+        );
+        return isDirectlySelected || isScenarioMapSelected;
+      });
   }, [stagedData, selectedIds]);
 
   const selectedGlobalCharacterIds = useMemo(() => {
@@ -405,9 +422,9 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
 
                 if (summary.scenario.mapId) {
                   children.push({
-                    id: TreeEntityIds.map(summary.scenario.mapId),
+                    id: TreeEntityIds.scenarioMap(scenId, summary.scenario.mapId),
                     label: `Map: ${summary.mapName}`,
-                    subtitle: 'Aliased to map in archive',
+                    subtitle: 'Map used by this scenario',
                   });
                 }
 

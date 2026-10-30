@@ -5,7 +5,12 @@ import { useScenarioStore } from '../../state/scenario_store.js';
 import { useMapStore } from '../../state/map_store.js';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
 import { useSettingsStore } from '../../state/settings_store.js';
-import { buildExportPayload, sanitizeExportFilename, TreeEntityIds } from './exportPayloadBuilder.js';
+import {
+  buildExportPayload,
+  sanitizeExportFilename,
+  TreeEntityIds,
+  isTemplateChainModifiedOrCustom,
+} from './exportPayloadBuilder.js';
 import { requestDataExport, type ExportResult } from '../../backend_bridge/export_api.js';
 
 function getDefaultExportName(): string {
@@ -72,9 +77,9 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
             subtitle: `Turn ${summary.scenario.turnNumber}`,
             getChildren: async () => [
               {
-                id: TreeEntityIds.map(summary.scenario.mapId),
+                id: TreeEntityIds.scenarioMap(scenId, summary.scenario.mapId),
                 label: `Map: ${summary.mapName}`,
-                subtitle: 'Aliased to global map',
+                subtitle: 'Map used by this scenario',
               },
               {
                 id: TreeEntityIds.scenarioCharacters(scenId),
@@ -143,12 +148,14 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
     };
     treeRoots.push(charactersRoot);
 
-    // 4. Settings & Prompt Templates Root
-    const promptChainsExist = Object.values(templateGroupData).some(
-      (g) => Object.keys(g.templateChains).length > 0
+    // 4. Settings & Prompt Templates Root (Only show custom or modified chains)
+    const hasCustomPromptChains = Object.entries(templateGroupData).some(([groupId, g]) =>
+      Object.entries(g.templateChains).some(([chainId, chain]) =>
+        isTemplateChainModifiedOrCustom(groupId, chainId, chain)
+      )
     );
 
-    if (promptChainsExist) {
+    if (hasCustomPromptChains) {
       const settingsRoot: TreeNode = {
         id: TreeEntityIds.rootSettings(),
         label: 'Settings & Prompts',
@@ -159,7 +166,9 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
             getChildren: async () => {
               const groupNodes: TreeNode[] = [];
               for (const [groupId, group] of Object.entries(templateGroupData)) {
-                const chainEntries = Object.entries(group.templateChains);
+                const chainEntries = Object.entries(group.templateChains).filter(([chainId, chain]) =>
+                  isTemplateChainModifiedOrCustom(groupId, chainId, chain)
+                );
                 if (chainEntries.length === 0) continue;
 
                 groupNodes.push({

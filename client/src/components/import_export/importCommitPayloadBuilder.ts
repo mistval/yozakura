@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { importStagingDatabase, DatabaseClient } from '../../backend_bridge/database.js';
 import * as Files from '../../backend_bridge/files.js';
 import type {
@@ -58,6 +59,7 @@ export async function prepareStagingAndBuildCommitPayload(
   );
 
   const db = stagingDb ?? importStagingDatabase;
+  const globalCharacters = stagedGlobalCharacters ?? (await db.loadGlobalCharacters());
 
   // 1. Create import_staging._id_map table
   await db.dbRun(`
@@ -189,6 +191,7 @@ export async function prepareStagingAndBuildCommitPayload(
   }
 
   const copiedGlobalCharIds = selectedGlobalCharacterIds.filter((id) => conflictResolutions[id] === 'copy');
+  const copiedCharIdToNewId = new Map<string, string>();
   if (copiedGlobalCharIds.length > 0) {
     await db.dbRun(
       `
@@ -199,6 +202,33 @@ export async function prepareStagingAndBuildCommitPayload(
       `.trim(),
       [[JSON.stringify(copiedGlobalCharIds)]]
     );
+
+    const renameSuffix = ` (Imported From ${exportName})`;
+    await db.dbRun(
+      `
+        UPDATE import_staging.character
+        SET data = json_set(
+          json_set(data, '$.firstName', json_extract(data, '$.firstName') || ?),
+          '$.imagePath',
+          CASE
+            WHEN json_extract(data, '$.imagePath') LIKE '/api/files/character_cards/%'
+            THEN '/api/files/character_cards/' || (SELECT new_id FROM import_staging._id_map WHERE old_id = character.id) || '.png'
+            ELSE json_extract(data, '$.imagePath')
+          END
+        )
+        WHERE id IN (SELECT value FROM json_each(?));
+      `.trim(),
+      [[renameSuffix, JSON.stringify(copiedGlobalCharIds)]]
+    );
+
+    const idMapRows = await db.dbAll<{ old_id: string; new_id: string }>(
+      `SELECT old_id, new_id FROM import_staging._id_map WHERE old_id IN (SELECT value FROM json_each(?))`.trim(),
+      [[JSON.stringify(copiedGlobalCharIds)]],
+      z.object({ old_id: z.string(), new_id: z.string() })
+    );
+    for (const r of idMapRows) {
+      copiedCharIdToNewId.set(r.old_id, r.new_id);
+    }
   }
 
   // 4. Strip unchecked memories and groups from scenario_character data
@@ -455,7 +485,6 @@ export async function prepareStagingAndBuildCommitPayload(
   }
 
   // 6. Filter imageCopies from stagedImages using character objects as source of truth
-  const globalCharacters = stagedGlobalCharacters ?? (await db.loadGlobalCharacters());
   const zipPathToGlobalChar = new Map<string, Character>();
   for (const char of globalCharacters) {
     const zipPath = Files.getCharacterZipImagePath(char);
@@ -475,9 +504,18 @@ export async function prepareStagingAndBuildCommitPayload(
       if (conflictResolutions[char.id] === 'skip') {
         continue;
       }
+
+      let targetRelPath = entry.zipPath;
+      if (conflictResolutions[char.id] === 'copy') {
+        const newId = copiedCharIdToNewId.get(char.id);
+        if (newId) {
+          targetRelPath = `character_cards/${newId}.png`;
+        }
+      }
+
       imageCopies.push({
         zipPath: entry.zipPath,
-        targetRelPath: entry.zipPath,
+        targetRelPath,
       });
     } else if (entry.kind === 'scenario_character_card') {
       if (!selectedScenarioCharactersIds.includes(entry.scenarioId)) {

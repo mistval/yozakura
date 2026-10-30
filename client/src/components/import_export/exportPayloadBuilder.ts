@@ -1,6 +1,7 @@
 import * as Files from '../../backend_bridge/files.js';
 import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
 import type { TemplateGroupData } from '../../engine/prompt_templates/template_types.js';
+import { DEFAULT_TEMPLATE_GROUP_DATA } from '../../engine/prompt_templates/default_template_group_data.js';
 
 export const TreeEntityIds = {
   rootScenarios: () => 'root:scenarios',
@@ -16,6 +17,7 @@ export const TreeEntityIds = {
   scenarioMemories: (scenId: string) => `scenario:${scenId}:memories`,
   scenarioConversations: (scenId: string) => `scenario:${scenId}:conversations`,
   scenarioTurn: (scenId: string) => `scenario:${scenId}:turn`,
+  scenarioMap: (scenId: string, mapId: string) => `scenario_map:${scenId}:${mapId}`,
 
   map: (mapId: string) => `map:${mapId}`,
   character: (charId: string) => `character:${charId}`,
@@ -23,6 +25,18 @@ export const TreeEntityIds = {
   promptGroup: (groupId: string) => `prompt_group:${groupId}`,
   promptChain: (chainId: string) => `prompt_chain:${chainId}`,
 } as const;
+
+export function isTemplateChainModifiedOrCustom(
+  groupId: string,
+  chainId: string,
+  chainData: unknown
+): boolean {
+  const defaultGroup = DEFAULT_TEMPLATE_GROUP_DATA[groupId];
+  if (!defaultGroup) return true;
+  const defaultChain = defaultGroup.templateChains[chainId];
+  if (!defaultChain) return true;
+  return JSON.stringify(chainData) !== JSON.stringify(defaultChain);
+}
 
 export type TableExportQuery = {
   table: string;
@@ -321,7 +335,11 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   // 2. Maps
   const selectedMapIds: string[] = [];
   for (const map of maps) {
-    if (selectedIds.has(TreeEntityIds.map(map.id))) {
+    const isDirectlySelected = selectedIds.has(TreeEntityIds.map(map.id));
+    const isScenarioMapSelected = scenarios.some(
+      (s) => s.scenario.mapId === map.id && selectedIds.has(TreeEntityIds.scenarioMap(s.scenario.id, map.id))
+    );
+    if (isDirectlySelected || isScenarioMapSelected) {
       selectedMapIds.push(map.id);
     }
   }
@@ -370,11 +388,14 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     });
   }
 
-  // 4. Prompt Templates (Template Chains)
+  // 4. Prompt Templates (Template Chains) - Only export customized or modified chains
   const exportedTemplateGroupData: TemplateGroupData = {};
   for (const [groupId, group] of Object.entries(templateGroupData)) {
     for (const [chainId, chainData] of Object.entries(group.templateChains)) {
-      if (selectedIds.has(TreeEntityIds.promptChain(chainId))) {
+      if (
+        selectedIds.has(TreeEntityIds.promptChain(chainId)) &&
+        isTemplateChainModifiedOrCustom(groupId, chainId, chainData)
+      ) {
         if (!exportedTemplateGroupData[groupId]) {
           exportedTemplateGroupData[groupId] = { templateChains: {} };
         }

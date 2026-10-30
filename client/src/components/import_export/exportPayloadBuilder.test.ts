@@ -281,4 +281,67 @@ describe('exportPayloadBuilder', () => {
     expect(parsedData.templateGroupData.chat_group.templateChains.chain_1).toBeDefined();
     expect(parsedData.templateGroupData.chat_group.templateChains.chain_2).toBeUndefined();
   });
+
+  it('excludes unmodified built-in template chains even if selected, but includes modified ones', async () => {
+    const { DEFAULT_TEMPLATE_GROUP_DATA } =
+      await import('../../engine/prompt_templates/default_template_group_data.js');
+    const { RUNTIME_CHAT_TEMPLATES_GROUP_ID } =
+      await import('../../engine/prompt_templates/template_types.js');
+
+    // 1. Unmodified default chain
+    const unmodifiedGroups = JSON.parse(JSON.stringify(DEFAULT_TEMPLATE_GROUP_DATA));
+    const selectedIds = new Set<string>([TreeEntityIds.promptChain('gen_npc_response')]);
+
+    const unmodifiedPayload = buildExportPayload({
+      exportName: 'Test Pack',
+      selectedIds,
+      scenarios: [],
+      maps: [],
+      globalCharacters: [],
+      templateGroupData: unmodifiedGroups,
+    });
+
+    // Unmodified stock chain should not be exported
+    expect(unmodifiedPayload.prebuiltRows.length).toBe(0);
+
+    // 2. Modified default chain
+    const modifiedGroups = JSON.parse(JSON.stringify(DEFAULT_TEMPLATE_GROUP_DATA));
+    modifiedGroups[RUNTIME_CHAT_TEMPLATES_GROUP_ID].templateChains['gen_npc_response'].title =
+      'Custom Modified Title';
+
+    const modifiedPayload = buildExportPayload({
+      exportName: 'Test Pack',
+      selectedIds,
+      scenarios: [],
+      maps: [],
+      globalCharacters: [],
+      templateGroupData: modifiedGroups,
+    });
+
+    expect(modifiedPayload.prebuiltRows.length).toBe(1);
+    const parsedData = JSON.parse(modifiedPayload.prebuiltRows[0]!.row.data as string);
+    expect(
+      parsedData.templateGroupData[RUNTIME_CHAT_TEMPLATES_GROUP_ID].templateChains['gen_npc_response']
+    ).toBeDefined();
+  });
+
+  it('includes map when selected via scenarioMap even if global map node is unselected', () => {
+    const selectedIds = new Set<string>([
+      TreeEntityIds.scenario('scen_001'),
+      TreeEntityIds.scenarioMap('scen_001', 'map_001'),
+    ]);
+
+    const payload = buildExportPayload({
+      exportName: 'ScenarioMapTest',
+      selectedIds,
+      scenarios: [dummyScenario],
+      maps: [dummyMap],
+      globalCharacters: [],
+      templateGroupData: {},
+    });
+
+    const mapQuery = payload.queries.find((q) => q.table === 'map');
+    expect(mapQuery).toBeDefined();
+    expect(mapQuery?.params).toEqual([JSON.stringify(['map_001'])]);
+  });
 });

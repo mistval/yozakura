@@ -362,4 +362,96 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
     const scenData = JSON.parse(targetScenarios[0]!.data) as Scenario;
     expect(scenData.mapId).toBe(copied!.id);
   });
+
+  it('Make a Copy on a global character creates a duplicate character with new ID and portrait without overwriting existing portrait', async () => {
+    const { seeded, zipBuffer } = await setupSourceAndExport();
+
+    targetServer = await createTestServer();
+    targetServer.setActive();
+
+    // Pre-seed target server with conflicting global character and image
+    const existingChar = {
+      id: seeded.globalCharId,
+      globalCharacterId: seeded.globalCharId,
+      scenarioId: '',
+      firstName: 'Existing Alice',
+      lastName: 'Original',
+      internalDescription: 'Existing character',
+      externalDescription: '',
+      baseAppearanceTags: '',
+      imagePath: `/api/files/character_cards/${seeded.globalCharId}.png`,
+      wardrobes: [],
+      globalMemories: '',
+      locationId: '',
+      exampleDialogue: '',
+      rollingConversationSummaries: [],
+      nextConversationWithCharacterId: '',
+      groupIds: [],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+    targetServer.db
+      .prepare('INSERT INTO character (id, data, created_at, updated_at) VALUES (?, ?, ?, ?)')
+      .run(seeded.globalCharId, JSON.stringify(existingChar), existingChar.createdAt, existingChar.updatedAt);
+
+    const targetCardDir = path.join(targetServer.dataDir, 'character_cards');
+    fs.mkdirSync(targetCardDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(targetCardDir, `${seeded.globalCharId}.png`),
+      Buffer.from('ORIGINAL_EXISTING_PORTRAIT')
+    );
+
+    // Stage and commit with 'copy' for global character
+    const file = new File([new Uint8Array(zipBuffer)], 'ConflictTest.yozakura_export.zip', {
+      type: 'application/zip',
+    });
+    const stageResult = await stageImportArchive(file);
+    expect(stageResult.success).toBe(true);
+    if (!stageResult.success) throw new Error('Stage failed');
+
+    const commitPayload = await prepareStagingAndBuildCommitPayload({
+      sessionId: stageResult.sessionId,
+      exportName: stageResult.manifest.exportName,
+      selectedScenarioIds: [],
+      selectedScenarioMemoriesIds: [],
+      selectedScenarioGroupsIds: [],
+      selectedMapIds: [],
+      selectedGlobalCharacterIds: [seeded.globalCharId],
+      conflictResolutions: {
+        [seeded.globalCharId]: 'copy',
+      },
+      stagedImages: stageResult.images,
+    });
+
+    const commitResult = await commitImport(commitPayload);
+    expect(commitResult.success).toBe(true);
+
+    // Both original character and copied character must exist
+    const chars = targetServer.db.prepare('SELECT id, data FROM character').all() as Array<{
+      id: string;
+      data: string;
+    }>;
+    expect(chars.length).toBe(2);
+
+    const original = chars.find((c) => c.id === seeded.globalCharId);
+    const copied = chars.find((c) => c.id !== seeded.globalCharId);
+
+    expect(original).toBeDefined();
+    expect(copied).toBeDefined();
+    expect(copied!.id).toMatch(/^[0-9a-f]{18}$/);
+
+    const copiedData = JSON.parse(copied!.data) as Character;
+    expect(copiedData.firstName).toContain('(Imported From ConflictTest)');
+    expect(copiedData.imagePath).toBe(`/api/files/character_cards/${copied!.id}.png`);
+
+    // Verify disk files: original file is NOT overwritten
+    const originalContent = fs.readFileSync(path.join(targetCardDir, `${seeded.globalCharId}.png`), 'utf8');
+    expect(originalContent).toBe('ORIGINAL_EXISTING_PORTRAIT');
+
+    // New file exists with imported data
+    const newCardPath = path.join(targetCardDir, `${copied!.id}.png`);
+    expect(fs.existsSync(newCardPath)).toBe(true);
+    const newContent = fs.readFileSync(newCardPath, 'utf8');
+    expect(newContent).toBe('FAKE_GLOBAL_PNG');
+  });
 });

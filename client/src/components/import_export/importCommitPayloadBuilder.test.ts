@@ -161,6 +161,70 @@ describe('importCommitPayloadBuilder', () => {
     ]);
   });
 
+  it('handles global character copy: updates name, updates imagePath in DB, and rewrites image targetRelPath to new_id', async () => {
+    testSqlTarget = {
+      async dbRun(statement, parameterGroups) {
+        dbRunCalls.push({ statement, params: parameterGroups });
+        return {};
+      },
+      async dbAll(statement) {
+        if (statement.includes('import_staging._id_map')) {
+          return {
+            results: [[{ old_id: 'char_copy', new_id: 'new_hex_id_99999999' }]],
+          };
+        }
+        return { results: [] };
+      },
+    };
+
+    const stagingDb = createImportStagingDatabase(testSqlTarget);
+
+    const payload = await prepareStagingAndBuildCommitPayload({
+      sessionId: 'test-session-copy',
+      exportName: 'ArchiveCopy',
+      selectedScenarioIds: [],
+      selectedScenarioMemoriesIds: [],
+      selectedScenarioGroupsIds: [],
+      selectedMapIds: [],
+      selectedGlobalCharacterIds: ['char_copy'],
+      conflictResolutions: {
+        char_copy: 'copy',
+      },
+      stagedImages: [
+        {
+          zipPath: 'character_cards/copy_portrait.png',
+          kind: 'global_character_card',
+        },
+      ],
+      stagedGlobalCharacters: [
+        {
+          id: 'char_copy',
+          imagePath: '/api/files/character_cards/copy_portrait.png',
+        } as Character,
+      ],
+      stagingDb,
+    });
+
+    // Check that dbRun updated character name and imagePath
+    const charUpdateCall = dbRunCalls.find(
+      (call) =>
+        call.statement.includes('UPDATE import_staging.character') &&
+        call.statement.includes("json_set(data, '$.firstName'")
+    );
+    expect(charUpdateCall).toBeDefined();
+    expect(charUpdateCall!.statement).toContain(
+      "'/api/files/character_cards/' || (SELECT new_id FROM import_staging._id_map"
+    );
+
+    // Check that imageCopies rewrote targetRelPath to the new character ID
+    expect(payload.imageCopies).toEqual([
+      {
+        zipPath: 'character_cards/copy_portrait.png',
+        targetRelPath: 'character_cards/new_hex_id_99999999.png',
+      },
+    ]);
+  });
+
   it('omits relationship and group tables and strips data when memories or groups are unchecked', async () => {
     const stagingDb = createImportStagingDatabase(testSqlTarget);
 
