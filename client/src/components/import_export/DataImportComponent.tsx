@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import TreeDataViewer, { type TreeNode } from '../ui/TreeDataViewer.js';
 import { collectDescendantIds } from '../ui/tree_selection.js';
-import { importStagingDatabase } from '../../backend_bridge/database.js';
+import { importStagingDatabase, mainDatabase } from '../../backend_bridge/database.js';
 import {
   stageImportArchive,
   cancelImport,
@@ -81,7 +81,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
 
         // Query importStagingDatabase for staged entities
         const [scenarios, maps, globalCharacters, settingsRow] = await Promise.all([
-          importStagingDatabase.loadScenarioSummaries(),
+          importStagingDatabase.loadScenarioSummaries().then(s => mainDatabase.augmentSummaryMetadata(s)),
           importStagingDatabase.loadMaps(),
           importStagingDatabase.loadGlobalCharacters(),
           importStagingDatabase.loadKeyValue(

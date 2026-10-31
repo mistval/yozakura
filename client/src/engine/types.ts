@@ -245,7 +245,8 @@ export type Scenario = z.infer<typeof scenarioSchema>;
 
 export type ScenarioSummary = {
   scenario: Scenario;
-  mapName: string;
+  mapId: string;
+  mapName: string | undefined;
   userCharacterName: string;
   createdAt: string;
   updatedAt: string;

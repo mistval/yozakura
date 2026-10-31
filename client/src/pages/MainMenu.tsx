@@ -65,7 +65,7 @@ export default function MainMenu() {
                     <div className="text-sm text-secondary-strong mb-2">
                       User: {summary.userCharacterName}
                     </div>
-                    <div className="text-sm text-secondary-strong mb-2">Map: {summary.mapName}</div>
+                    <div className="text-sm text-secondary-strong mb-2">Map: {summary.mapName ?? 'Unknown Map'}</div>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-xs text-secondary">
                         Updated: {formatDateTime(summary.updatedAt)}

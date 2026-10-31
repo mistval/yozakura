@@ -21,7 +21,7 @@ import {
   type ScenarioCharacterGroup,
   type ScenarioCharacterGroupSchedule,
 } from '../engine/types.js';
-import { newId } from '../util/id.js';
+import { idSchema, newId } from '../util/id.js';
 import { runWithInteractiveRetry } from '../engine/interative_retry.js';
 import { ReadWriteDebouncer } from '../util/rw_debouncer.js';
 
@@ -262,7 +262,8 @@ function createSqlStatements(schema: string) {
         s.created_at,
         s.updated_at,
         m.data AS map_data,
-        uc.data AS user_character_data
+        uc.data AS user_character_data,
+        json_extract(s.data, '$.mapId') AS map_id
       FROM ${table('scenario')} s
       LEFT JOIN ${table('map')} m ON m.id = json_extract(s.data, '$.mapId')
       LEFT JOIN ${table('scenario_character')} uc ON uc.id = json_extract(s.data, '$.userCharacterId')
@@ -438,6 +439,18 @@ export class DatabaseClient {
     return this.selectTypedMultiQuery(statement, parameterGroups, rowSchema);
   }
 
+  public async augmentSummaryMetadata(toAugment: ScenarioSummary[]): Promise<ScenarioSummary[]> {
+    if (toAugment.every(s => s.mapName)) {
+      return toAugment;
+    }
+
+    const maps = await this.loadMaps();
+    return toAugment.map(s => ({
+      ...s,
+      mapName: s.mapName ?? (maps.find(m => m.id === s.mapId))?.name,
+    }));
+  }
+
   public async loadScenarioSummaries(): Promise<ScenarioSummary[]> {
     const rowSchema = z.object({
       scenario_data: z.string(),
@@ -445,6 +458,7 @@ export class DatabaseClient {
       updated_at: z.string(),
       map_data: z.string().nullable(),
       user_character_data: z.string().nullable(),
+      map_id: idSchema,
     });
 
     const rows = await this.selectTypedMultiQuery(this.sql.SELECT_SCENARIO_SUMMARIES_SQL, [[]], rowSchema);
@@ -455,7 +469,8 @@ export class DatabaseClient {
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       };
-      const mapName = row.map_data ? worldMapSchema.parse(JSON.parse(row.map_data)).name : 'Deleted Map';
+      const mapName = row.map_data ? worldMapSchema.parse(JSON.parse(row.map_data)).name : undefined;
+      const mapId = row.map_id;
       const userChar = row.user_character_data
         ? characterSchema.parse(JSON.parse(row.user_character_data))
         : null;
@@ -463,7 +478,7 @@ export class DatabaseClient {
         ? `${userChar.firstName} ${userChar.lastName}`.trim()
         : 'Deleted Character';
 
-      return { scenario, mapName, userCharacterName, createdAt: row.created_at, updatedAt: row.updated_at };
+      return { scenario, mapName, mapId, userCharacterName, createdAt: row.created_at, updatedAt: row.updated_at };
     });
   }
 
