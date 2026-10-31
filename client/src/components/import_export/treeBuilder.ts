@@ -115,8 +115,7 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
       getChildren: async () => {
         return globalCharacters.map((char) => ({
           id: TreeEntityIds.character(char.id),
-          label: `${char.firstName} ${char.lastName}`.trim() || 'Unnamed Character',
-          subtitle: char.internalDescription,
+          label: `${char.firstName} ${char.lastName}`,
         }));
       },
     };
