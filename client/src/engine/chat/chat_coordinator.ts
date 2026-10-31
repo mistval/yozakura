@@ -9,7 +9,12 @@ import {
 } from '../prompt_templates/prompt_context_builder';
 import { decideIntelligentChatEnd, type ChatEndDecision } from './intelligent_chat_end';
 import { useSettingsStore, type SpeakerSelectionMode } from '../../state/settings_store.js';
-import * as Database from '../../backend_bridge/database.js';
+import {
+  createPersistedObject,
+  doAsDataRead,
+  doAsDataWrite,
+  mainDatabase,
+} from '../../backend_bridge/database.js';
 import type { Character, ChatMessage, EphemeralLocation, StoredConversation } from '../types';
 import { getRequiredActiveScenario } from '../../state/scenario_store.js';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
@@ -233,7 +238,7 @@ export class ChatCoordinator {
       chain?: PromptTemplateChain<PromptExecutionContext, string> | undefined;
     }
   ) {
-    return this.turnMachineStore().doWithState('generating_image', async () => {
+    return this.turnMachineStore().doWithState('generating_image_prompt', async () => {
       return withPhaseTransitionGate(
         async (abortSignal) => {
           const primaryCharacter = this.getCharacterById(primaryCharacterId);
@@ -307,7 +312,7 @@ export class ChatCoordinator {
         rethrowSignalException(err);
       }
 
-      const conversationLog: StoredConversation = Database.createPersistedObject({
+      const conversationLog: StoredConversation = createPersistedObject({
         serializedTranscript: this.transcript().serialize(),
         label: this.getPastTenseLabel(),
         characterUpdates,
@@ -315,9 +320,9 @@ export class ChatCoordinator {
         turnNumber: scenario.turnNumber,
       });
 
-      void Database.doAsDataWrite(
+      void doAsDataWrite(
         async () => {
-          await Database.storeConversation(scenario.id, conversationLog);
+          await mainDatabase.storeConversation(scenario.id, conversationLog);
         },
         'conversation',
         {
@@ -667,8 +672,8 @@ export class ChatCoordinator {
     const gossipSourceId = participantIds.find((id) => id !== this.getUserCharacter().id);
     assertNonNullish(gossipSourceId, 'Could not get a gossip source ID');
 
-    return Database.doAsDataRead(() => {
-      return Database.loadWeightedGossipTargetCharacterId(
+    return doAsDataRead(() => {
+      return mainDatabase.loadWeightedGossipTargetCharacterId(
         gossipSourceId,
         participantIds,
         userCharacterId,

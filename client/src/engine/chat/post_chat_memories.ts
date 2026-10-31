@@ -1,4 +1,4 @@
-import * as Database from '../../backend_bridge/database';
+import { createPersistedObject } from '../../backend_bridge/database';
 import { assert } from '../../errors/application_error';
 import {
   getActiveChatMedium,
@@ -185,7 +185,7 @@ export async function generateCharacterEndOfChatUpdates(
   const conversationId = newId();
   const createdAt = new Date().toISOString();
 
-  const conversationSummaryEntry: ConversationSummary = Database.createPersistedObject({
+  const conversationSummaryEntry: ConversationSummary = createPersistedObject({
     conversationId,
     turnNumber: activeScenario.turnNumber,
     createdAt,
@@ -227,7 +227,7 @@ export async function generateCharacterEndOfChatUpdates(
       );
 
       if (extractedInformation) {
-        newLearnedInformation = Database.createPersistedObject({
+        newLearnedInformation = createPersistedObject({
           sourceConversationId: conversationId,
           turnNumber: activeScenario.turnNumber,
           createdAt,
@@ -279,7 +279,7 @@ export async function generateCharacterEndOfChatUpdates(
         );
 
         pairwiseUpdates.push(
-          Database.createPersistedObject({
+          createPersistedObject({
             towardsCharacter: otherCharacter,
             oldMemory: initialPairwiseRelationship.memory,
             newMemory: updatedPairwiseRelationship.memory,
@@ -351,7 +351,7 @@ export async function generateCharacterEndOfChatUpdates(
     );
 
     pairwiseUpdates.push(
-      Database.createPersistedObject({
+      createPersistedObject({
         towardsCharacter: otherCharacter,
         oldMemory: initialPairwiseRelationship.memory,
         newMemory: updatedPairwiseRelationship.memory,
@@ -379,7 +379,7 @@ export async function generateCharacterEndOfChatUpdates(
     globalMemories: newGlobalMemory,
   });
 
-  return Database.createPersistedObject({
+  return createPersistedObject({
     conversationSummary: conversationSummaryEntry,
     characterId: fromCharacterPerspective.id,
     oldGlobalMemory,

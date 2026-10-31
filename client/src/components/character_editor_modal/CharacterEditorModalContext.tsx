@@ -27,6 +27,7 @@ import type { CharacterEditorModalProps, PendingCardImport } from './types';
 import { generateCharacterCard } from '../../engine/image_gen';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
 import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
+import { addOrReplaceVersionQueryParam } from '../../util/id.js';
 
 type CharacterEditorModalContextValue = {
   open: boolean;
@@ -60,6 +61,8 @@ type CharacterEditorModalContextValue = {
   generateImage: () => Promise<void>;
   exportCard: () => Promise<void>;
   save: () => Promise<void>;
+  saveToGlobal: () => Promise<void>;
+  saveAsScenarioAndGlobal: () => Promise<void>;
   remove: () => Promise<void>;
   handleUploadedCardFile: (file: File) => Promise<void>;
   closePendingImport: () => void;
@@ -131,7 +134,7 @@ export function CharacterEditorModalProvider({
   const currentImageSrc = previewUrl
     ? previewUrl
     : currentImagePath
-      ? `${currentImagePath}?v=${imageRefreshKey}`
+      ?  addOrReplaceVersionQueryParam(currentImagePath, imageRefreshKey)
       : '/images/character/default_character.png';
 
   useEffect(() => {
@@ -353,7 +356,7 @@ export function CharacterEditorModalProvider({
       ? new Uint8Array(await selectedImageFile.arrayBuffer())
       : currentImagePath
         ? await (async () => {
-            const response = await fetch(`${currentImagePath}?v=${Date.now()}`);
+            const response = await fetch(addOrReplaceVersionQueryParam(currentImagePath));
             if (!response.ok) {
               throw new Error('No existing character card image was found to export.');
             }
@@ -397,6 +400,43 @@ export function CharacterEditorModalProvider({
         saveScenarioCharacter(sanitizedCharacter, selectedImageFile);
       }
 
+      onClose();
+    });
+  };
+
+  const saveToGlobal = async () => {
+    const sanitizedCharacter = {
+      ...character,
+      firstName: character.firstName.trim(),
+      lastName: character.lastName.trim(),
+    };
+
+    await runWithField('saveToGlobal', async () => {
+      const savedGlobal = await useGlobalCharactersStore
+        .getState()
+        .saveScenarioCharacterAsGlobal(sanitizedCharacter, selectedImageFile);
+      setCharacterField('globalCharacterId', savedGlobal.id);
+    });
+  };
+
+  const saveAsScenarioAndGlobal = async () => {
+    const sanitizedCharacter = {
+      ...character,
+      firstName: character.firstName.trim(),
+      lastName: character.lastName.trim(),
+    };
+
+    await runWithField('save', async () => {
+      const savedGlobal = await useGlobalCharactersStore
+        .getState()
+        .saveScenarioCharacterAsGlobal(sanitizedCharacter, selectedImageFile);
+      saveScenarioCharacter(
+        {
+          ...sanitizedCharacter,
+          globalCharacterId: savedGlobal.id,
+        },
+        selectedImageFile
+      );
       onClose();
     });
   };
@@ -561,6 +601,8 @@ export function CharacterEditorModalProvider({
     generateImage: generateImageField,
     exportCard,
     save,
+    saveToGlobal,
+    saveAsScenarioAndGlobal,
     remove,
     handleUploadedCardFile,
     closePendingImport,

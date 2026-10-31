@@ -46,6 +46,8 @@ This runs the server and the client concurrently with hot reloading.
 
 That should be all you need to do to get it running. Navigate to [http://localhost:5173/](http://localhost:5173/) in your browser to see the app.
 
+Alternatively, there is also a VS Code Dev Container that you can run via VS Code's Dev Container extension. This is especially good for running agentic coding sessions in a safe sandbox. Once the dev container launches, run `npm run dev` in the terminal to start the dev server.
+
 ## Debugging in VS Code
 
 To debug both the server and the client from within VS Code, the repo ships two VS Code launch configurations in [.vscode/launch.json](.vscode/launch.json):

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { settingsScriptSectionStateSchema } from './settings/settings_scripts/settings_scripts_state.js';
+import { idSchema } from '../util/id.js';
 
 export type OpenAIChatCompletionRequestMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -10,10 +11,12 @@ export const chatMediumSchema = z.enum(['in_person', 'remote']).meta({
   description: 'The medium of the chat, which can influence the style and content of the generated messages.',
 });
 
+export const TRANSCRIPT_SYSTEM = '__transcript_system__';
+
 export type ChatMedium = z.infer<typeof chatMediumSchema>;
 
 const basePersistedObjectSchema = z.object({
-  id: z.string(),
+  id: idSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -21,7 +24,7 @@ const basePersistedObjectSchema = z.object({
 export type RootPersistedObject = z.infer<typeof basePersistedObjectSchema>;
 
 const conversationSummarySchema = basePersistedObjectSchema.extend({
-  conversationId: z.string(),
+  conversationId: idSchema,
   turnNumber: z.number(),
   createdAt: z.string(),
   summary: z.string().meta({
@@ -38,7 +41,7 @@ const conversationSummarySchema = basePersistedObjectSchema.extend({
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
 
 const offscreenLearnedInformationSchema = basePersistedObjectSchema.extend({
-  sourceConversationId: z.string(),
+  sourceConversationId: idSchema,
   turnNumber: z.number(),
   createdAt: z.string(),
   information: z.string().meta({
@@ -87,15 +90,15 @@ export const wardrobeSchema = basePersistedObjectSchema
 export type Wardrobe = z.infer<typeof wardrobeSchema>;
 
 export const characterSchema = basePersistedObjectSchema.extend({
-  id: z.string().meta({
+  id: idSchema.meta({
     examples: ['char_123'],
     description: 'Unique identifier for the character.',
   }),
-  globalCharacterId: z.string().meta({
+  globalCharacterId: idSchema.meta({
     description:
       'This is the ID of the globally available character that this scenario character was instantiated from.',
   }),
-  scenarioId: z.string(),
+  scenarioId: idSchema.or(z.literal('')),
   firstName: z
     .string()
     .min(1)
@@ -135,11 +138,11 @@ export const characterSchema = basePersistedObjectSchema.extend({
       "Alice's goal is to find her long-lost sibling. Alice recently met Evan at a coffee shop and they had a great conversation about travel.",
     ],
   }),
-  locationId: z.string().meta({
+  locationId: idSchema.or(z.literal('')).meta({
     description: 'The ID of the world map location where the character is currently located.',
     examples: ['loc_123'],
   }),
-  nextConversationWithCharacterId: z.string(),
+  nextConversationWithCharacterId: idSchema.or(z.literal('')),
   exampleDialogue: z.string().meta({
     description:
       "Example dialogue for the character that can be used in system prompts to help ground the character's voice and manner of speaking. This should ideally be a snippet of dialogue in first person perspective, so the model can more easily mimic the style and content. May be an empty string.",
@@ -217,8 +220,8 @@ export const worldMapSchema = basePersistedObjectSchema.extend({
 export type WorldMap = z.infer<typeof worldMapSchema>;
 
 export const scenarioSchema = basePersistedObjectSchema.extend({
-  mapId: z.string(),
-  userCharacterId: z.string(),
+  mapId: idSchema,
+  userCharacterId: idSchema.or(z.literal('')),
   turnNumber: z.number(),
   temporalContext: settingsScriptSectionStateSchema.meta({
     description:
@@ -242,7 +245,8 @@ export type Scenario = z.infer<typeof scenarioSchema>;
 
 export type ScenarioSummary = {
   scenario: Scenario;
-  mapName: string;
+  mapId: string;
+  mapName: string | undefined;
   userCharacterName: string;
   createdAt: string;
   updatedAt: string;
@@ -252,7 +256,7 @@ export const movementPolicySchema = z.enum(['teleport', 'jump', 'rush', 'casual'
 export type MovementPolicy = z.infer<typeof movementPolicySchema>;
 
 export const scenarioCharacterGroupSchema = basePersistedObjectSchema.extend({
-  scenarioId: z.string(),
+  scenarioId: idSchema,
   name: z.string(),
   privateZones: z.array(z.string()),
 });
@@ -260,10 +264,10 @@ export const scenarioCharacterGroupSchema = basePersistedObjectSchema.extend({
 export type ScenarioCharacterGroup = z.infer<typeof scenarioCharacterGroupSchema>;
 
 export const scheduleSegmentSchema = z.object({
-  id: z.string(),
+  id: idSchema,
   startTurn: z.number().int().nonnegative(),
   endTurn: z.number().int().positive(),
-  zoneId: z.string(),
+  zoneId: idSchema,
   movementPolicy: movementPolicySchema,
   obedienceRate: z.number(),
   reason: z.string().optional(),
@@ -272,8 +276,8 @@ export const scheduleSegmentSchema = z.object({
 export type ScheduleSegment = z.infer<typeof scheduleSegmentSchema>;
 
 export const scenarioCharacterGroupScheduleSchema = basePersistedObjectSchema.extend({
-  scenarioId: z.string(),
-  groupId: z.string(),
+  scenarioId: idSchema,
+  groupId: idSchema,
   lengthInTurns: z.number().int().positive(),
   segments: z.array(scheduleSegmentSchema),
 });
@@ -281,8 +285,8 @@ export const scenarioCharacterGroupScheduleSchema = basePersistedObjectSchema.ex
 export type ScenarioCharacterGroupSchedule = z.infer<typeof scenarioCharacterGroupScheduleSchema>;
 
 export const characterRelationshipSchema = basePersistedObjectSchema.extend({
-  fromId: z.string(),
-  toId: z.string(),
+  fromId: idSchema,
+  toId: idSchema,
   familiarity: z.number().meta({
     description:
       'A numeric value representing how familiar the from character is with the to character. This increases with interactions. It influences how likely the two characters are to approach each other.',
@@ -342,7 +346,7 @@ const conversationPairwiseUpdateSchema = basePersistedObjectSchema.extend({
 export type ConversationPairwiseUpdate = z.infer<typeof conversationPairwiseUpdateSchema>;
 
 const conversationCharacterUpdateSchema = basePersistedObjectSchema.extend({
-  characterId: z.string(),
+  characterId: idSchema,
   oldGlobalMemory: z.string(),
   newGlobalMemory: z.string(),
   conversationSummary: conversationSummarySchema.pick({
@@ -379,12 +383,12 @@ const conversationStateUpdateNodeSchema: z.ZodType<ConversationStateUpdateNode> 
 );
 
 const baseMessageSchema = basePersistedObjectSchema.extend({
-  id: z.string(),
+  id: idSchema,
 });
 
 const baseSystemMessageSchema = baseMessageSchema.extend({
   messageType: z.literal('system_message'),
-  isPrivateToCharacterId: z.string().optional(),
+  isPrivateToCharacterId: idSchema.or(z.literal(TRANSCRIPT_SYSTEM)).optional(),
 });
 
 const imageMessageSchema = baseMessageSchema.extend({
@@ -396,16 +400,14 @@ export type ImageMessage = z.infer<typeof imageMessageSchema>;
 
 const joinLeaveSystemMessageSchema = baseSystemMessageSchema.extend({
   systemMessageType: z.enum(['join', 'leave']),
-  characterId: z.string(),
+  characterId: idSchema,
 });
 
 export type JoinLeaveSystemMessage = z.infer<typeof joinLeaveSystemMessageSchema>;
 
-export const TRANSCRIPT_SYSTEM = '__transcript_system__';
-
 const characterMessageSchema = baseMessageSchema.extend({
   messageType: z.literal('chat_message'),
-  senderId: z.string(),
+  senderId: idSchema,
   message: z.string(),
 });
 
@@ -429,7 +431,7 @@ const transcriptParticipantSchema = characterSchema.pick({
 export type TranscriptParticipant = z.infer<typeof transcriptParticipantSchema>;
 
 export const ragMessageSchema = z.object({
-  mentionedCharacterId: z.string(),
+  mentionedCharacterId: idSchema,
   content: z.string(),
 });
 
@@ -437,7 +439,7 @@ export type RagMessage = z.infer<typeof ragMessageSchema>;
 
 export const serializedRagHelperSchema = z.object({
   messageMentions: z.array(
-    z.tuple([z.string(), z.object({ senderId: z.string(), mentionedCharacterIds: z.array(z.string()) })])
+    z.tuple([z.string(), z.object({ senderId: idSchema, mentionedCharacterIds: z.array(z.string()) })])
   ),
   ragCache: z.array(z.tuple([z.string(), ragMessageSchema])),
 });
@@ -465,7 +467,7 @@ export type StoredConversation = z.infer<typeof storedConversationSchema>;
 export const scenarioMovementEventSchema = basePersistedObjectSchema.extend({
   eventType: z.literal('movement'),
   turnNumber: z.number(),
-  characterId: z.string(),
+  characterId: idSchema,
   characterName: z.string(),
   movementPolicy: movementPolicySchema.optional(),
   fromLocationName: z.string(),

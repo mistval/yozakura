@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import ConfirmDialog from '../components/ui/ConfirmDialog.js';
 import MainMenuFtueModal from '../components/MainMenuFtueModal.js';
+import ImportExportModal from '../components/import_export/ImportExportModal.js';
 import YozakuraLogo from '../theme/yozakura_logo.js';
 import { useSettingsStore } from '../state/settings_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
@@ -21,6 +22,7 @@ export default function MainMenu() {
   const navigate = useNavigate();
   const { openSettings } = useSettingsModal();
   const [scenarioPendingDelete, setScenarioPendingDelete] = useState<ScenarioSummary | undefined>(undefined);
+  const [importExportOpen, setImportExportOpen] = useState(false);
   const scenarioSummaries = useScenarioStore((s) => s.scenarioSummaries);
   const scenarioSummariesAreLoaded = useScenarioStore((s) => s.scenarioSummariesAreLoaded);
   const mainMenuFtueSeen = useSettingsStore((s) => s.mainMenuFtueSeen);
@@ -63,7 +65,7 @@ export default function MainMenu() {
                     <div className="text-sm text-secondary-strong mb-2">
                       User: {summary.userCharacterName}
                     </div>
-                    <div className="text-sm text-secondary-strong mb-2">Map: {summary.mapName}</div>
+                    <div className="text-sm text-secondary-strong mb-2">Map: {summary.mapName ?? 'Unknown Map'}</div>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="text-xs text-secondary">
                         Updated: {formatDateTime(summary.updatedAt)}
@@ -102,6 +104,9 @@ export default function MainMenu() {
             <button type="button" className="w-full" onClick={() => navigate('/maps')}>
               Manage Maps
             </button>
+            <button type="button" className="w-full" onClick={() => setImportExportOpen(true)}>
+              Import / Export
+            </button>
           </section>
 
           <div>
@@ -126,6 +131,8 @@ export default function MainMenu() {
           void removeScenario(scenarioPendingDelete);
         }}
       />
+
+      <ImportExportModal open={importExportOpen} onClose={() => setImportExportOpen(false)} />
     </div>
   );
 }

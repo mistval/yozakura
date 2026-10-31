@@ -31,6 +31,7 @@ import {
 
 export type ChatState =
   | 'inactive'
+  | 'generating_image_prompt'
   | 'generating_image'
   | 'processing_memories'
   | 'character_speaking'

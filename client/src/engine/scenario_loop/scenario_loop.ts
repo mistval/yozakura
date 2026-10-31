@@ -1,5 +1,8 @@
 import { useTurnMachineStore } from '../../state/turn_machine_store';
-import { whenScenarioCharactersLoaded } from '../../state/scenario_character_store';
+import {
+  useScenarioCharacterStore,
+  whenScenarioCharactersLoaded,
+} from '../../state/scenario_character_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
 import { useScenarioStore } from '../../state/scenario_store';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry';
@@ -50,10 +53,21 @@ export async function startScenarioLoop() {
     const restored = await loadPersistedTurn(activeScenarioId);
 
     if (restored) {
-      useTurnMachineStore.getState().hydrate(restored);
+      const scenarioChars = useScenarioCharacterStore.getState().scenarioCharactersById;
+      const invalidPending = restored.pendingTurnCharacterIds.some((id) => !scenarioChars[id]);
+      const invalidActiveChat = restored.activeChat?.participantIds.some((id) => !scenarioChars[id]);
 
-      if (shouldPauseOnHydrate(useTurnMachineStore.getState())) {
-        useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
+      if (invalidPending || invalidActiveChat) {
+        console.warn(
+          'Persisted turn references characters that no longer exist in this scenario. Starting a fresh turn.'
+        );
+        useTurnMachineStore.getState().reset();
+      } else {
+        useTurnMachineStore.getState().hydrate(restored);
+
+        if (shouldPauseOnHydrate(useTurnMachineStore.getState())) {
+          useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
+        }
       }
     }
 

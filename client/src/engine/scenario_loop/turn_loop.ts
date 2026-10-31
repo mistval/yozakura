@@ -4,7 +4,7 @@ import { useScenarioCharacterStore } from '../../state/scenario_character_store'
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
 import { getRequiredUserCharacterId, useScenarioStore } from '../../state/scenario_store';
-import * as Database from '../../backend_bridge/database';
+import { createPersistedObject, doAsDataWrite, mainDatabase } from '../../backend_bridge/database';
 import { useSettingsStore } from '../../state/settings_store';
 import { useTemporalContextStore } from '../../state/temporal_context_store';
 import { ChatCoordinator } from '../chat/chat_coordinator';
@@ -286,7 +286,7 @@ function recordMovement(characterId: string, toId: string, movementPolicy: Movem
   const locationName = (locationId: string) =>
     map.locations.find((location) => location.id === locationId)?.name ?? locationId;
 
-  const event = Database.createPersistedObject({
+  const event = createPersistedObject({
     eventType: 'movement' as const,
     turnNumber: scenario.turnNumber,
     characterId,
@@ -296,7 +296,7 @@ function recordMovement(characterId: string, toId: string, movementPolicy: Movem
     toLocationName: locationName(toId),
   });
 
-  void Database.doAsDataWrite(() => Database.storeScenarioEvent(scenario.id, event), 'scenario_event_log');
+  void doAsDataWrite(() => mainDatabase.storeScenarioEvent(scenario.id, event), 'scenario_event_log');
 }
 
 async function recomputeTemporalContextAndAutoselectWardrobes() {

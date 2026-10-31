@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as Database from '../backend_bridge/database.js';
+import { doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database.js';
 import { DEFAULT_WORLD_MAPS } from '../engine/map/default_maps.js';
 import type { WorldMap } from '../engine/types.js';
 import { concatUniqueById, findById, findRequiredById, removeById } from '../util/array.js';
@@ -28,8 +28,8 @@ export const useMapStore = create<{
   },
 
   async refreshMaps() {
-    const existing = await Database.doAsDataRead(async () => {
-      return Database.loadMaps();
+    const existing = await doAsDataRead(async () => {
+      return mainDatabase.loadMaps();
     }, 'map.all');
 
     if (existing.length > 0) {
@@ -37,9 +37,9 @@ export const useMapStore = create<{
       return;
     }
 
-    void Database.doAsDataWrite(
+    void doAsDataWrite(
       async () => {
-        await Database.storeMaps(DEFAULT_WORLD_MAPS);
+        await mainDatabase.storeMaps(DEFAULT_WORLD_MAPS);
       },
       'map.default',
       {
@@ -58,14 +58,14 @@ export const useMapStore = create<{
 
     get().setMaps(concatUniqueById(get().maps, withUpdatedFields));
 
-    void Database.doAsDataWrite(
+    void doAsDataWrite(
       async () => {
         const map = findById(get().maps, withUpdatedFields.id);
         if (!map) {
           return;
         }
 
-        await Database.storeMaps([map]);
+        await mainDatabase.storeMaps([map]);
       },
       'map',
       {
@@ -83,8 +83,8 @@ export const useMapStore = create<{
   },
 
   deleteMap(mapId: string) {
-    void Database.doAsDataWrite(async () => {
-      await Database.deleteMap(mapId);
+    void doAsDataWrite(async () => {
+      await mainDatabase.deleteMap(mapId);
     }, 'map');
 
     const newMaps = removeById(get().maps, mapId);

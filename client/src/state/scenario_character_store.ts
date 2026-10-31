@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as Database from '../backend_bridge/database.js';
+import { doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database.js';
 import * as Files from '../backend_bridge/files.js';
 import { type WorldMap, type Character, type Scenario } from '../engine/types.js';
 import { assertNonNullish } from '../errors/application_error.js';
@@ -12,6 +12,7 @@ import {
 import { addOrReplaceVersionQueryParam, newId } from '../util/id.js';
 import { ephemeralStateSlice, IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
 import { applyDailyWardrobeAutoselect } from '../engine/wardrobes.js';
+import { useGlobalCharactersStore } from './global_character_store.js';
 
 type UpdatedScenarioCharacter = Character & {
   imageFile?: File;
@@ -37,13 +38,13 @@ type ScenarioCharacterStoreState = {
   ) => void;
   saveInactiveScenarioCharacterImmediate: (character: Character) => Promise<void>;
   saveScenarioCharacterFields: (id: string, fields: Partial<Character>, syncOptions?: SyncOptions) => void;
-  addGlobalCharacterToActiveScenario: (
+  addGlobalCharacterToActiveScenarioImmediate: (
     character: Character,
     scenarioArgs?: {
       scenarioId: string;
       map: WorldMap;
     }
-  ) => Promise<void>;
+  ) => Promise<Character>;
   copyGlobalCharactersToInactiveScenarioImmediate: (
     characters: Character[],
     scenarioId: string,
@@ -106,7 +107,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
       async setDatabaseState(entities: UpdatedScenarioCharacter[]) {
         const debouncerKey = entities.length === 1 ? entities[0]!.id : `${DATABASE_OBJECT_NAME}.all`;
 
-        await Database.doAsDataWrite(
+        await doAsDataWrite(
           async () => {
             const characters = await Promise.all(
               entities.map(async (entity) => {
@@ -144,7 +145,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
               return;
             }
 
-            await Database.storeScenarioCharacters(existingCharacters);
+            await mainDatabase.storeScenarioCharacters(existingCharacters);
           },
           `${DATABASE_OBJECT_NAME}.all`,
           { debouncerKey }
@@ -152,9 +153,9 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
       },
 
       deleteDatabaseState(entities: UpdatedScenarioCharacter[]) {
-        return Database.doAsDataWrite(
+        return doAsDataWrite(
           async () => {
-            await Database.deleteScenarioCharacters(entities.map((entity) => entity.id));
+            await mainDatabase.deleteScenarioCharacters(entities.map((entity) => entity.id));
           },
           DATABASE_OBJECT_NAME,
           {
@@ -163,13 +164,11 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
         );
       },
 
-      async refreshStoreStateFromDatabase(entities: UpdatedScenarioCharacter[]) {
-        const refreshed = await Database.doAsDataRead(
-          () => Database.loadScenarioCharactersByIds(entities.map((entity) => entity.id)),
+      getEntitiesFromDatabase(entities: UpdatedScenarioCharacter[]) {
+        return doAsDataRead(
+          () => mainDatabase.loadScenarioCharactersByIds(entities.map((entity) => entity.id)),
           `${DATABASE_OBJECT_NAME}.partial.refresh`
         );
-
-        set(getCharacterDataStructuresFromArray(concatUniqueByIds(get().scenarioCharacters, refreshed)));
       },
     },
     { discardPendingChangesOnScenarioChange: true }
@@ -206,11 +205,25 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     });
 
     const scenarioId = getRequiredActiveScenario().id;
-    const characters = await Database.doAsDataRead(async () => {
-      return Database.loadScenarioCharacters(scenarioId);
+    const characters = await doAsDataRead(async () => {
+      return mainDatabase.loadScenarioCharacters(scenarioId);
     }, `${DATABASE_OBJECT_NAME}.${scenarioId}.all`);
 
     get().setScenarioCharacters(characters);
+
+    const scenario = useScenarioStore.getState().activeScenario;
+    if (scenario && scenario.id === scenarioId) {
+      if (characters.length === 0) {
+        const globalChars = useGlobalCharactersStore.getState().globalCharacters;
+        if (globalChars.length > 0) {
+          const randomGlobalChar = getRequiredRandomChoice(globalChars);
+          const scenarioCharacter = await get().addGlobalCharacterToActiveScenarioImmediate(randomGlobalChar);
+          useScenarioStore.getState().setUserCharacter(scenarioCharacter.id);
+        }
+      } else if (!characters.some((c) => c.id === scenario.userCharacterId)) {
+        useScenarioStore.getState().setUserCharacter(characters[0]!.id);
+      }
+    }
   },
 
   saveScenarioCharacter: (character, imageFile, setter) => {
@@ -243,17 +256,19 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     return filtered;
   },
 
-  async addGlobalCharacterToActiveScenario(character: Character): Promise<void> {
+  async addGlobalCharacterToActiveScenarioImmediate(character: Character): Promise<Character> {
     const scenarioId = getRequiredActiveScenario().id;
     const map = getRequiredActiveScenarioMap();
 
-    await Database.doAsDataWrite(async () => {
+    return doAsDataWrite(async () => {
       const scenarioCharacter = await copyGlobalCharacterForScenario(character, scenarioId, map);
       const wardrobes = applyDailyWardrobeAutoselect(scenarioCharacter.wardrobes);
       get().saveScenarioCharacter(scenarioCharacter, undefined, () => ({
         ...scenarioCharacter,
         wardrobes: wardrobes ?? character.wardrobes,
       }));
+
+      return scenarioCharacter;
     }, 'add_scenario_character');
   },
 
@@ -274,9 +289,9 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
       characters.map((c) => copyGlobalCharacterForScenario(c, scenarioId, map))
     );
 
-    await Database.doAsDataWrite(
+    await doAsDataWrite(
       async () => {
-        await Database.storeScenarioCharacters(scenarioCharacters);
+        await mainDatabase.storeScenarioCharacters(scenarioCharacters);
       },
       `${DATABASE_OBJECT_NAME}.all`,
       {
@@ -288,9 +303,9 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
   },
 
   async saveInactiveScenarioCharacterImmediate(character: Character) {
-    await Database.doAsDataWrite(
+    await doAsDataWrite(
       async () => {
-        await Database.storeScenarioCharacters([character]);
+        await mainDatabase.storeScenarioCharacters([character]);
       },
       `${DATABASE_OBJECT_NAME}.all`,
       {

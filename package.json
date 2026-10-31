@@ -21,16 +21,21 @@
     "docs:dev": "npm run start --prefix docs",
     "docs:build": "npm run build --prefix docs",
     "prompt-schemas:docs": "node --import tsx ./scripts/export-prompt-template-context-schemas.ts && bash ./scripts/generate-prompt-template-context-docs.sh",
-    "check:all": "npm run typecheck --prefix client && npm run typecheck --prefix server && npm run typecheck --prefix docs && npm run format:check && npm run build:web && npm run build:server"
+    "test:integration": "vitest run --config test/vitest.config.mjs",
+    "typecheck:test": "tsc --project test/tsconfig.json --noEmit",
+    "check:all": "npm run typecheck --prefix client && npm run typecheck --prefix server && npm run typecheck --prefix docs && npm run typecheck:test && npm run test:integration && npm run format:check && npm run build:web && npm run build:server"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.2",
     "@electron-forge/maker-zip": "^7.11.2",
     "@electron-forge/plugin-auto-unpack-natives": "^7.11.2",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.16.0",
     "concurrently": "^10.0.4",
     "electron": "^41.7.2",
     "prettier": "3.8.1",
     "tsx": "^4.22.4",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
   }
 }

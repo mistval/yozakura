@@ -6,7 +6,8 @@ import { migration as migration0003GroupsZonesSchedulesTemporal } from './migrat
 import { migration as migration0004RagHelperState } from './migrations/0004_rag_helper_state.js';
 import { migration as migration0005WardrobeTags } from './migrations/0005_wardrobe_tags.js';
 import { migration as migration0006TemplateGroupData } from './migrations/0006_template_group_data.js';
-import type { Migration } from './types.js';
+import { migration as migration0007NormalizeEntityIds } from './migrations/0007_normalize_entity_ids.js';
+import type { Migration, MigrationContext } from './types.js';
 
 /**
  * The ordered, append-only list of migrations. The array index of a migration
@@ -23,15 +24,23 @@ const migrations: Migration[] = [
   migration0004RagHelperState,
   migration0005WardrobeTags,
   migration0006TemplateGroupData,
+  migration0007NormalizeEntityIds,
 ];
 
 function getUserVersion(db: Database.Database): number {
   return Number(db.pragma('user_version', { simple: true }));
 }
 
-export function runMigrations(db: Database.Database): void {
+export function runMigrations(
+  db: Database.Database,
+  context?: MigrationContext,
+  targetVersion?: number
+): void {
   while (true) {
     const version = getUserVersion(db);
+    if (targetVersion !== undefined && version >= targetVersion) {
+      return;
+    }
     const migration = migrations[version];
 
     if (!migration) {
@@ -48,7 +57,7 @@ export function runMigrations(db: Database.Database): void {
         );
       }
 
-      migration.doMigration(db);
+      migration.doMigration(db, context);
       db.pragma(`user_version = ${version + 1}`);
     });
 
