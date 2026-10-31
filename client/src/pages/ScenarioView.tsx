@@ -66,11 +66,15 @@ export default function ScenarioView() {
   const setUserRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.setUserRequestedPhaseTransition
   );
+  const isAwaitingCharacterInput = useTurnMachineStore(
+    (state) => state.chatState === 'awaiting_character_input'
+  );
   const isUserTurn =
     currentTurnCharacterId !== undefined && currentTurnCharacterId === scenario?.userCharacterId;
   const npcPhaseBusy =
     currentTurnCharacterId !== undefined && currentTurnCharacterId !== scenario?.userCharacterId;
   const canSubmitUserTurn = isUserTurn && !hasActiveChatSession;
+  const canReturnToMainMenu = canSubmitUserTurn || isAwaitingCharacterInput;
   const previousUserIdRef = useRef<string | null>(null);
   const visibleRelationships = useCachedCharacterRelationships();
 
@@ -299,7 +303,7 @@ export default function ScenarioView() {
           Map
         </button>
         {includeMenu && (
-          <button type="button" onClick={() => navigate('/')} disabled={!canSubmitUserTurn}>
+          <button type="button" onClick={() => navigate('/')} disabled={!canReturnToMainMenu}>
             Main Menu
           </button>
         )}
