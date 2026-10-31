@@ -73,7 +73,8 @@ export const openAiImageGenerationsImageScript: ImageGenerationSettingsScript = 
       default: '9999',
       min: 1,
       step: 1,
-      tooltipHtml: "In case your image model has a prompt character limit. Yozakura will truncate prompts to this length.",
+      tooltipHtml:
+        'In case your image model has a prompt character limit. Yozakura will truncate prompts to this length.',
     },
     {
       id: 'extraParams',

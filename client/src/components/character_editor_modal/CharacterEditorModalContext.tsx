@@ -134,7 +134,7 @@ export function CharacterEditorModalProvider({
   const currentImageSrc = previewUrl
     ? previewUrl
     : currentImagePath
-      ?  addOrReplaceVersionQueryParam(currentImagePath, imageRefreshKey)
+      ? addOrReplaceVersionQueryParam(currentImagePath, imageRefreshKey)
       : '/images/character/default_character.png';
 
   useEffect(() => {

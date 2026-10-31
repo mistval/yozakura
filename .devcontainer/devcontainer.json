@@ -3,9 +3,7 @@
   "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
   "customizations": {
     "vscode": {
-      "extensions": [
-        "Google.google-antigravity"
-      ],
+      "extensions": ["Google.google-antigravity"],
       "settings": {
         "google.antigravity.enableTerminalSandbox": false,
         "google.antigravity.toolPermission": "proceed",

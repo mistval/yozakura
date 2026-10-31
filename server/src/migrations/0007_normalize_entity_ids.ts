@@ -228,7 +228,10 @@ function extractScenarioDataIds(data: Record<string, unknown>, idMap: Map<string
   addId(data.userCharacterId, idMap);
 }
 
-function extractCharacterRelationshipDataIds(data: Record<string, unknown>, idMap: Map<string, string>): void {
+function extractCharacterRelationshipDataIds(
+  data: Record<string, unknown>,
+  idMap: Map<string, string>
+): void {
   addId(data.fromId, idMap);
   addId(data.toId, idMap);
 
@@ -293,7 +296,10 @@ function extractMapDataIds(data: Record<string, unknown>, idMap: Map<string, str
   }
 }
 
-function extractScenarioCharacterGroupDataIds(data: Record<string, unknown>, idMap: Map<string, string>): void {
+function extractScenarioCharacterGroupDataIds(
+  data: Record<string, unknown>,
+  idMap: Map<string, string>
+): void {
   addId(data.id, idMap);
   addId(data.scenarioId, idMap);
   addIds(data.privateZones, idMap);

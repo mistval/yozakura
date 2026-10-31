@@ -81,7 +81,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
 
         // Query importStagingDatabase for staged entities
         const [scenarios, maps, globalCharacters, settingsRow] = await Promise.all([
-          importStagingDatabase.loadScenarioSummaries().then(s => mainDatabase.augmentSummaryMetadata(s)),
+          importStagingDatabase.loadScenarioSummaries().then((s) => mainDatabase.augmentSummaryMetadata(s)),
           importStagingDatabase.loadMaps(),
           importStagingDatabase.loadGlobalCharacters(),
           importStagingDatabase.loadKeyValue(

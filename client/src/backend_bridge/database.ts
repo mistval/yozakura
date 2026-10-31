@@ -440,14 +440,14 @@ export class DatabaseClient {
   }
 
   public async augmentSummaryMetadata(toAugment: ScenarioSummary[]): Promise<ScenarioSummary[]> {
-    if (toAugment.every(s => s.mapName)) {
+    if (toAugment.every((s) => s.mapName)) {
       return toAugment;
     }
 
     const maps = await this.loadMaps();
-    return toAugment.map(s => ({
+    return toAugment.map((s) => ({
       ...s,
-      mapName: s.mapName ?? (maps.find(m => m.id === s.mapId))?.name,
+      mapName: s.mapName ?? maps.find((m) => m.id === s.mapId)?.name,
     }));
   }
 
@@ -478,7 +478,14 @@ export class DatabaseClient {
         ? `${userChar.firstName} ${userChar.lastName}`.trim()
         : 'Deleted Character';
 
-      return { scenario, mapName, mapId, userCharacterName, createdAt: row.created_at, updatedAt: row.updated_at };
+      return {
+        scenario,
+        mapName,
+        mapId,
+        userCharacterName,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
     });
   }
 
