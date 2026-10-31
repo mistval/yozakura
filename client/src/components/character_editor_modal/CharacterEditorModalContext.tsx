@@ -27,6 +27,7 @@ import type { CharacterEditorModalProps, PendingCardImport } from './types';
 import { generateCharacterCard } from '../../engine/image_gen';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
 import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
+import { addOrReplaceVersionQueryParam } from '../../util/id.js';
 
 type CharacterEditorModalContextValue = {
   open: boolean;
@@ -133,7 +134,7 @@ export function CharacterEditorModalProvider({
   const currentImageSrc = previewUrl
     ? previewUrl
     : currentImagePath
-      ? `${currentImagePath}?v=${imageRefreshKey}`
+      ?  addOrReplaceVersionQueryParam(currentImagePath, imageRefreshKey)
       : '/images/character/default_character.png';
 
   useEffect(() => {
@@ -355,7 +356,7 @@ export function CharacterEditorModalProvider({
       ? new Uint8Array(await selectedImageFile.arrayBuffer())
       : currentImagePath
         ? await (async () => {
-            const response = await fetch(`${currentImagePath}?v=${Date.now()}`);
+            const response = await fetch(addOrReplaceVersionQueryParam(currentImagePath));
             if (!response.ok) {
               throw new Error('No existing character card image was found to export.');
             }

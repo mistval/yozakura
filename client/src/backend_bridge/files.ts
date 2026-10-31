@@ -1,5 +1,6 @@
 import * as Api from './api';
 import type { Character } from '../engine/types';
+import { addOrReplaceVersionQueryParam } from '../util/id';
 
 const CHARACTER_IMAGE_FOLDER = 'character_cards';
 const SCENARIO_FOLDER = 'scenario';
@@ -41,7 +42,7 @@ export function deleteScenarioFolder(scenarioId: string) {
 }
 
 async function fetchDataImageBlob(imagePath: string): Promise<Blob | undefined> {
-  const response = await fetch(`${imagePath}?v=${Date.now()}`);
+  const response = await fetch(addOrReplaceVersionQueryParam(imagePath));
   if (!response.ok) {
     return undefined;
   }
