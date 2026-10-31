@@ -19,7 +19,7 @@
     "archiver": "^8.0.0",
     "better-sqlite3": "^12.10.0",
     "cors": "^2.8.6",
-    "express": "^4.21.2",
+    "express": "^4.22.3",
     "extract-zip": "^2.0.1",
     "lru-cache": "^11.5.1",
     "p-queue": "^10.0.0",
