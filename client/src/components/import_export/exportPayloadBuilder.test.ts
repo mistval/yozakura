@@ -5,6 +5,7 @@ import type { TemplateGroupData } from '../../engine/prompt_templates/template_t
 
 describe('exportPayloadBuilder', () => {
   const dummyScenario: ScenarioSummary = {
+    mapId: 'map_001',
     scenario: {
       id: 'scen_001',
       mapId: 'map_001',

@@ -5,10 +5,9 @@ import {
   type SerializedTurn,
 } from '../../state/turn_machine_store';
 import { useScenarioStore } from '../../state/scenario_store';
+import { turnPersistenceKey } from '../../util/id';
 
-export function turnPersistenceKey(scenarioId: string) {
-  return `scenario_${scenarioId}_turn`;
-}
+export { turnPersistenceKey };
 
 export function persistTurn() {
   const scenario = useScenarioStore.getState().activeScenario;

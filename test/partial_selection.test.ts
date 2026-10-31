@@ -64,6 +64,7 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
 
     const sourceScenarioSummary: ScenarioSummary = {
       scenario: sourceScenario,
+      mapId: sourceScenario.mapId,
       mapName: sourceMap.name,
       userCharacterName: 'Alice Liddell',
       createdAt: sourceScenario.createdAt,
@@ -162,6 +163,7 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
 
     const sourceScenarioSummary: ScenarioSummary = {
       scenario: sourceScenario,
+      mapId: sourceScenario.mapId,
       mapName: sourceMap.name,
       userCharacterName: 'Alice Liddell',
       createdAt: sourceScenario.createdAt,
@@ -257,6 +259,7 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
 
     const sourceScenarioSummary: ScenarioSummary = {
       scenario: sourceScenario,
+      mapId: sourceScenario.mapId,
       mapName: sourceMap.name,
       userCharacterName: 'Alice Liddell',
       createdAt: sourceScenario.createdAt,

@@ -62,6 +62,26 @@ export const commitRequestBodySchema = z.object({
 });
 export type CommitRequestBody = z.infer<typeof commitRequestBodySchema>;
 
+export const stageJsonRequestSchema = z.object({
+  prepackagedName: z.string().min(1).optional(),
+  archivePath: z.string().min(1).optional(),
+});
+export type StageJsonRequest = z.infer<typeof stageJsonRequestSchema>;
+
+export function resolvePrepackagedArchivePath(name: string): string {
+  if (name === 'demo') {
+    const candidates = [
+      path.resolve(import.meta.dirname, '../../demo_data.yozakura_export.zip'),
+      path.resolve(import.meta.dirname, '../../../demo_data.yozakura_export.zip'),
+    ];
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate)) return candidate;
+    }
+    throw new Error(`Prepackaged archive "${name}" not found. Searched: ${candidates.join(', ')}`);
+  }
+  throw new Error(`Unknown prepackaged archive "${name}"`);
+}
+
 export function detachImportStagingIfAttached(db: Database.Database, stagingDir?: string): void {
   const attached = db.pragma('database_list') as { seq: number; name: string; file: string }[];
   if (attached.some((d) => d.name === 'import_staging')) {
@@ -96,8 +116,37 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
     let stagingDb: Database.Database | undefined = undefined;
 
     try {
-      // 2. Stream uploaded file directly to disk
-      await pipeline(req, fs.createWriteStream(zipFilePath));
+      // 2. Obtain zip archive: from JSON prepackaged/path or raw upload stream
+      if (req.is('json')) {
+        const jsonResult = stageJsonRequestSchema.safeParse(req.body);
+        if (!jsonResult.success) {
+          res.status(400).json({ error: 'Invalid stage request body', details: jsonResult.error.format() });
+          return;
+        }
+
+        const { prepackagedName, archivePath } = jsonResult.data;
+        let sourceZipPath: string;
+
+        if (prepackagedName) {
+          sourceZipPath = resolvePrepackagedArchivePath(prepackagedName);
+        } else if (archivePath) {
+          sourceZipPath = guardPathWithinBase(dataDir, archivePath);
+        } else {
+          res.status(400).json({
+            error: 'Either prepackagedName or archivePath must be provided in JSON request',
+          });
+          return;
+        }
+
+        if (!fs.existsSync(sourceZipPath)) {
+          res.status(404).json({ error: `Archive file not found: ${sourceZipPath}` });
+          return;
+        }
+
+        fs.copyFileSync(sourceZipPath, zipFilePath);
+      } else {
+        await pipeline(req, fs.createWriteStream(zipFilePath));
+      }
 
       // 3. Extract the archive safely using extract-zip
       await extract(zipFilePath, { dir: path.resolve(unpackedDir) });
@@ -312,7 +361,10 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
 
       // 3. Normalize allowedImageDirectories and validate image copy targets
       const normalizedAllowedDirs = allowedImageDirectories.map((d) => {
-        const norm = path.normalize(d).replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+        const norm = path
+          .normalize(d)
+          .replace(/\\/g, '/')
+          .replace(/^\/+|\/+$/g, '');
         if (norm === '..' || norm.startsWith('../') || norm === '') {
           throw new Error(`Invalid allowed image directory: "${d}"`);
         }

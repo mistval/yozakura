@@ -3,7 +3,7 @@ import { doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/dat
 import * as Files from '../backend_bridge/files.js';
 import type { Character } from '../engine/types.js';
 import { assert } from '../errors/application_error.js';
-import { DEMO_CHARACTERS } from '../engine/demo_characters.js';
+import { importDemoGlobalCharacters } from '../backend_bridge/demo_import.js';
 import { concatUniqueById } from '../util/array.js';
 import { addOrReplaceVersionQueryParam } from '../util/id.js';
 
@@ -13,7 +13,7 @@ export const useGlobalCharactersStore = create<{
   globalCharactersAreLoaded: boolean;
 
   setGlobalCharacters: (characters: Character[]) => void;
-  installDemoCharactersGlobally: () => void;
+  installDemoCharactersGlobally: () => Promise<void>;
   refresh: () => Promise<void>;
   bustImageCache: (characterIds: string[]) => void;
   saveGlobalCharacter: (character: Character, imageFile?: File) => void;
@@ -161,15 +161,9 @@ export const useGlobalCharactersStore = create<{
     get().setGlobalCharacters(newCharacters);
   },
 
-  installDemoCharactersGlobally() {
-    assert(get().globalCharactersAreLoaded, 'Global characters not yet loaded');
-    const nonExistentDemoCharacters = DEMO_CHARACTERS.filter((c) => !get().globalCharactersById[c.id]);
-
-    void doAsDataWrite(async () => {
-      await mainDatabase.storeGlobalCharacters(nonExistentDemoCharacters);
-    }, 'global_demo_characters');
-
-    get().setGlobalCharacters(get().globalCharacters.concat(nonExistentDemoCharacters));
+  async installDemoCharactersGlobally() {
+    await importDemoGlobalCharacters();
+    await get().refresh();
   },
 }));
 

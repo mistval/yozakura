@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database.js';
-import { DEFAULT_WORLD_MAPS } from '../engine/map/default_maps.js';
+import { importDemoMaps } from '../backend_bridge/demo_import.js';
 import type { WorldMap } from '../engine/types.js';
 import { concatUniqueById, findById, findRequiredById, removeById } from '../util/array.js';
 
@@ -14,6 +14,7 @@ export const useMapStore = create<{
   updateMap: (mapId: string, mutator: (prev: WorldMap) => WorldMap) => void;
   deleteMap: (mapId: string) => void;
   refreshMaps: () => Promise<void>;
+  importDemoMaps: () => Promise<void>;
 }>((set, get) => ({
   maps: [],
   mapsById: {},
@@ -27,6 +28,14 @@ export const useMapStore = create<{
     });
   },
 
+  async importDemoMaps() {
+    await importDemoMaps();
+    const reloaded = await doAsDataRead(async () => {
+      return mainDatabase.loadMaps();
+    }, 'map.all');
+    get().setMaps(reloaded);
+  },
+
   async refreshMaps() {
     const existing = await doAsDataRead(async () => {
       return mainDatabase.loadMaps();
@@ -37,17 +46,11 @@ export const useMapStore = create<{
       return;
     }
 
-    void doAsDataWrite(
-      async () => {
-        await mainDatabase.storeMaps(DEFAULT_WORLD_MAPS);
-      },
-      'map.default',
-      {
-        debouncerKey: 'default_maps',
-      }
-    );
-
-    get().setMaps(DEFAULT_WORLD_MAPS);
+    try {
+      await get().importDemoMaps();
+    } catch (err) {
+      console.error('Failed to auto-import demo maps:', err);
+    }
   },
 
   saveMap(map: WorldMap) {

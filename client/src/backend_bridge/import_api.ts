@@ -60,6 +60,40 @@ export async function stageImportArchive(file: File): Promise<StageImportResult>
   };
 }
 
+export async function stagePrepackagedArchive(prepackagedName: string = 'demo'): Promise<StageImportResult> {
+  const response = await fetch('/api/import/stage', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prepackagedName }),
+  });
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({ error: 'Failed to stage prepackaged archive' }))) as {
+      error?: string;
+    };
+    return {
+      success: false,
+      error: data.error || `Staging failed with status ${response.status}`,
+    };
+  }
+
+  const data = (await response.json()) as {
+    ok: boolean;
+    sessionId: string;
+    manifest: StagedManifest;
+    images: StagedImageEntry[];
+  };
+
+  return {
+    success: true,
+    sessionId: data.sessionId,
+    manifest: data.manifest,
+    images: data.images,
+  };
+}
+
 export type SqlStatementEntry =
   | string
   | {

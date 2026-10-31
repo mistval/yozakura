@@ -62,6 +62,7 @@ describe('Integration: Full Round-Trip Pack, Unpack & ID Remapping', () => {
 
     const sourceScenarioSummary: ScenarioSummary = {
       scenario: sourceScenario,
+      mapId: sourceScenario.mapId,
       mapName: sourceMap.name,
       userCharacterName: 'Alice Liddell',
       createdAt: sourceScenario.createdAt,

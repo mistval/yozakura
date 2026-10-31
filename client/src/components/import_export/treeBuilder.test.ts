@@ -10,6 +10,7 @@ import {
 describe('buildImportExportTreeRoots', () => {
   const dummyScenarios: ScenarioSummary[] = [
     {
+      mapId: 'map_1',
       scenario: {
         id: 'scen_1',
         mapId: 'map_1',

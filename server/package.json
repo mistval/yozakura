@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "tsx watch index.ts",
     "start": "tsx index.ts",
-    "build": "tsc --noEmit false --outDir dist",
+    "pack:demo": "tsx scripts/pack_demo.ts",
+    "build": "npm run pack:demo && tsc --noEmit false --outDir dist",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

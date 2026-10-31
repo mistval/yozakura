@@ -147,6 +147,7 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
 
     const sourceScenarioSummary: ScenarioSummary = {
       scenario: sourceScenario,
+      mapId: sourceScenario.mapId,
       mapName: sourceMap.name,
       userCharacterName: 'Alice Liddell',
       createdAt: sourceScenario.createdAt,

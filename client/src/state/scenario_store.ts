@@ -4,6 +4,7 @@ import * as Files from '../backend_bridge/files';
 import { type Scenario, type ScenarioSummary, type WorldMap } from '../engine/types.js';
 import * as MapHelper from '../engine/map/world_map.js';
 import { useMapStore } from './map_store.js';
+import { importDemoScenario } from '../backend_bridge/demo_import.js';
 import { assert, assertNonNullish } from '../errors/application_error.js';
 import { createDefaultTemporalSectionState } from '../engine/settings/settings_scripts/temporal/temporal_scripts.js';
 
@@ -32,6 +33,7 @@ type ScenarioStoreState = {
   ) => Promise<void>;
   refreshScenario: (scenarioId: string) => Promise<void>;
   refreshScenarioSummaries: () => Promise<ScenarioSummary[]>;
+  importDemoScenario: () => Promise<{ newScenarioId: string }>;
 };
 
 function applyMapOverrides(map: WorldMap, scenario: Scenario): WorldMap {
@@ -48,6 +50,12 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
   pendingScenarioId: undefined,
   scenarioSummariesAreLoaded: false,
   scenarioSummaries: [],
+
+  importDemoScenario: async () => {
+    const { newScenarioId } = await importDemoScenario();
+    await Promise.all([useMapStore.getState().refreshMaps(), get().refreshScenarioSummaries()]);
+    return { newScenarioId };
+  },
 
   refreshScenario: async (scenarioId) => {
     if (get().activeScenario?.id === scenarioId) {

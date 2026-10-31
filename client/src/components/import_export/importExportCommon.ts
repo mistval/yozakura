@@ -1,6 +1,6 @@
 import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
 import type { TemplateGroupData } from '../../engine/prompt_templates/template_types.js';
-import { turnPersistenceKey } from '../../engine/scenario_loop/turn_persistence.js';
+import { turnPersistenceKey } from '../../util/id.js';
 
 export const SQL_UTC_NOW = "CONCAT(datetime('now'), 'Z')";
 

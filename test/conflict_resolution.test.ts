@@ -71,6 +71,7 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
 
     const sourceScenarioSummary: ScenarioSummary = {
       scenario: sourceScenario,
+      mapId: sourceScenario.mapId,
       mapName: sourceMap.name,
       userCharacterName: 'Alice Liddell',
       createdAt: sourceScenario.createdAt,
