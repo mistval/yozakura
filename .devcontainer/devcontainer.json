@@ -14,7 +14,11 @@
     }
   },
   "mounts": [
-    "source=antigravity-session-cache,target=/home/node/.gemini,type=volume"
+    "source=antigravity-session-cache,target=/home/node/.gemini,type=volume",
+    "source=${localWorkspaceFolderBasename}-root-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
+    "source=${localWorkspaceFolderBasename}-server-node_modules,target=${containerWorkspaceFolder}/server/node_modules,type=volume",
+    "source=${localWorkspaceFolderBasename}-client-node_modules,target=${containerWorkspaceFolder}/client/node_modules,type=volume",
+    "source=${localWorkspaceFolderBasename}-docs-node_modules,target=${containerWorkspaceFolder}/docs/node_modules,type=volume"
   ],
-  "postCreateCommand": "sudo chown -R node:node /home/node/.gemini && npm install && npm install --prefix client && npm install --prefix server && npm install --prefix docs"
+  "postCreateCommand": "sudo chown -R node:node /home/node/.gemini && sudo chown -R node:node ${containerWorkspaceFolder}/node_modules && sudo chown -R node:node ${containerWorkspaceFolder}/client/node_modules && sudo chown -R node:node ${containerWorkspaceFolder}/server/node_modules && sudo chown -R node:node ${containerWorkspaceFolder}/docs/node_modules && npm install && npm install --prefix client && npm install --prefix server && npm install --prefix docs"
 }
