@@ -157,6 +157,7 @@ export default function CharacterSelectionGrid({
                     type="radio"
                     name="userCharacter"
                     checked={isUser}
+                    onClick={(ev) => ev.stopPropagation()}
                     onChange={() => {
                       if (!selectedCharacterIdsSet.has(character.id)) {
                         toggleSelected(character);
