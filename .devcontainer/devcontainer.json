@@ -1,0 +1,17 @@
+{
+  "name": "Agent Sandbox",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Google.google-antigravity"
+      ],
+      "settings": {
+        "google.antigravity.enableTerminalSandbox": false,
+        "google.antigravity.toolPermission": "proceed",
+        "google.antigravity.allowNonWorkspaceAccess": false
+      }
+    }
+  },
+  "postCreateCommand": "npm install && npm install --prefix client && npm install --prefix server"
+}
