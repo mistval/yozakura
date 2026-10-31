@@ -305,6 +305,8 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
     const oldCharId = '93449930c6a045acbd8c538e3dc96206';
     const normalizedCharId = '8725fc2bda99a82672';
     const nonIdHexToken = 'abcdef0123456789abcdef0123456789';
+    const oldWardrobeId = '11112222333344445555666677778888';
+    const userEnteredJson = JSON.stringify({ id: nonIdHexToken, note: 'User custom json payload' });
     const now = new Date().toISOString();
 
     const manifest = { exportName: 'OlderArchive', dbUserVersion: 6 };
@@ -317,7 +319,16 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
             id: oldCharId,
             firstName: 'Old',
             lastName: 'Format',
-            internalDescription: `Refer to commit hash ${nonIdHexToken} in repo`,
+            internalDescription: userEnteredJson,
+            wardrobes: [
+              {
+                id: oldWardrobeId,
+                text: 'casual',
+                enabled: true,
+                tags: [],
+                autoRevert: false,
+              },
+            ],
             imagePath: `/api/files/character_cards/${oldCharId}.png`,
           }),
           created_at: now,
@@ -346,9 +357,13 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
     expect(migratedChar).toBeDefined();
     expect(migratedChar?.id).toBe(normalizedCharId);
 
-    // Non-ID 32-hex tokens in freeform text fields must NOT be mutated
+    // Non-ID 32-hex tokens in user-entered JSON text fields must NOT be mutated
     const parsedData = JSON.parse(migratedChar!.data);
-    expect(parsedData.internalDescription).toBe(`Refer to commit hash ${nonIdHexToken} in repo`);
+    expect(parsedData.internalDescription).toBe(userEnteredJson);
+
+    // Wardrobe ID must be normalized to 18 hex chars
+    expect(parsedData.wardrobes[0].id).toMatch(/^[0-9a-f]{18}$/);
+    expect(parsedData.wardrobes[0].id).not.toBe(oldWardrobeId);
 
     // Disk asset in unpackedDir should have been renamed from oldCharId.png to normalizedCharId.png
     const stagingDir = path.join(server.dataDir, 'import_staging');

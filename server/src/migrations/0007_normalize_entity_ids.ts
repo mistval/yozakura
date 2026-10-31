@@ -102,9 +102,17 @@ function is32HexId(value: unknown): value is string {
   return typeof value === 'string' && HEX_32_ID_PATTERN.test(value);
 }
 
-function collect32HexId(id: string, idMap: Map<string, string>): void {
-  if (is32HexId(id) && !idMap.has(id)) {
+function addId(id: unknown, idMap: Map<string, string>): void {
+  if (typeof id === 'string' && is32HexId(id) && !idMap.has(id)) {
     idMap.set(id, deriveDeterministicHex18Id(id));
+  }
+}
+
+function addIds(ids: unknown, idMap: Map<string, string>): void {
+  if (Array.isArray(ids)) {
+    for (const item of ids) {
+      addId(item, idMap);
+    }
   }
 }
 
@@ -121,18 +129,6 @@ const TABLE_ID_COLUMNS: Readonly<Record<string, readonly string[]>> = {
   scenario_event_log: ['id', 'scenario_id'],
 };
 
-const TABLES_WITH_DATA_COLUMN: readonly string[] = [
-  'character',
-  'scenario',
-  'scenario_character',
-  'character_relationship',
-  'conversation',
-  'map',
-  'scenario_character_group',
-  'scenario_character_group_schedule',
-  'scenario_event_log',
-];
-
 function scanTableIdColumnsFor32Hex(
   db: Database.Database,
   tableName: string,
@@ -142,53 +138,258 @@ function scanTableIdColumnsFor32Hex(
   const selectStmt = db.prepare(`SELECT ${idColumns.join(', ')} FROM ${tableName}`);
   for (const row of selectStmt.iterate() as Iterable<Record<string, unknown>>) {
     for (const col of idColumns) {
-      const val = row[col];
-      if (typeof val === 'string') {
-        collect32HexId(val, idMap);
-      }
+      addId(row[col], idMap);
     }
   }
 }
 
-function scanObjectFor32HexIds(obj: unknown, idMap: Map<string, string>): void {
-  if (typeof obj !== 'object' || obj === null) {
-    return;
-  }
+function extractTranscriptIds(transcript: unknown, idMap: Map<string, string>): void {
+  if (typeof transcript !== 'object' || transcript === null) return;
+  const t = transcript as Record<string, unknown>;
 
-  if (Array.isArray(obj)) {
-    for (const item of obj) {
-      scanObjectFor32HexIds(item, idMap);
-    }
-    return;
-  }
+  addId(t.id, idMap);
 
-  for (const [key, value] of Object.entries(obj)) {
-    if (key === 'id' || key.endsWith('Id')) {
-      if (typeof value === 'string') {
-        collect32HexId(value, idMap);
+  if (Array.isArray(t.participants)) {
+    for (const p of t.participants) {
+      if (typeof p === 'object' && p !== null) {
+        addId((p as Record<string, unknown>).id, idMap);
       }
-    } else if (
-      key === 'locationIds' ||
-      key === 'groupIds' ||
-      key === 'participantIds' ||
-      key === 'adjacency'
-    ) {
-      if (Array.isArray(value)) {
-        for (const item of value) {
-          if (typeof item === 'string') {
-            collect32HexId(item, idMap);
+    }
+  }
+
+  if (Array.isArray(t.rawMessages)) {
+    for (const m of t.rawMessages) {
+      if (typeof m === 'object' && m !== null) {
+        const msg = m as Record<string, unknown>;
+        addId(msg.id, idMap);
+        addId(msg.senderId, idMap);
+        addId(msg.characterId, idMap);
+        if (msg.isPrivateToCharacterId !== '__transcript_system__') {
+          addId(msg.isPrivateToCharacterId, idMap);
+        }
+      }
+    }
+  }
+
+  if (typeof t.ragHelperState === 'object' && t.ragHelperState !== null) {
+    const rag = t.ragHelperState as Record<string, unknown>;
+    if (Array.isArray(rag.messageMentions)) {
+      for (const entry of rag.messageMentions) {
+        if (Array.isArray(entry)) {
+          addId(entry[0], idMap);
+          if (typeof entry[1] === 'object' && entry[1] !== null) {
+            const mentionObj = entry[1] as Record<string, unknown>;
+            addId(mentionObj.senderId, idMap);
+            addIds(mentionObj.mentionedCharacterIds, idMap);
           }
         }
       }
-    } else if (typeof value === 'object' && value !== null) {
-      scanObjectFor32HexIds(value, idMap);
+    }
+    if (Array.isArray(rag.ragCache)) {
+      for (const entry of rag.ragCache) {
+        if (Array.isArray(entry) && typeof entry[1] === 'object' && entry[1] !== null) {
+          addId((entry[1] as Record<string, unknown>).mentionedCharacterId, idMap);
+        }
+      }
     }
   }
 }
+
+function extractCharacterDataIds(data: Record<string, unknown>, idMap: Map<string, string>): void {
+  addId(data.id, idMap);
+  addId(data.globalCharacterId, idMap);
+  addId(data.scenarioId, idMap);
+  addId(data.locationId, idMap);
+  addId(data.nextConversationWithCharacterId, idMap);
+  addIds(data.groupIds, idMap);
+
+  if (Array.isArray(data.wardrobes)) {
+    for (const w of data.wardrobes) {
+      if (typeof w === 'object' && w !== null) {
+        addId((w as Record<string, unknown>).id, idMap);
+      }
+    }
+  }
+
+  if (Array.isArray(data.rollingConversationSummaries)) {
+    for (const s of data.rollingConversationSummaries) {
+      if (typeof s === 'object' && s !== null) {
+        const summary = s as Record<string, unknown>;
+        addId(summary.id, idMap);
+        addId(summary.conversationId, idMap);
+      }
+    }
+  }
+}
+
+function extractScenarioDataIds(data: Record<string, unknown>, idMap: Map<string, string>): void {
+  addId(data.id, idMap);
+  addId(data.mapId, idMap);
+  addId(data.userCharacterId, idMap);
+}
+
+function extractCharacterRelationshipDataIds(data: Record<string, unknown>, idMap: Map<string, string>): void {
+  addId(data.fromId, idMap);
+  addId(data.toId, idMap);
+
+  if (Array.isArray(data.rollingPairwiseSummaries)) {
+    for (const s of data.rollingPairwiseSummaries) {
+      if (typeof s === 'object' && s !== null) {
+        const summary = s as Record<string, unknown>;
+        addId(summary.id, idMap);
+        addId(summary.conversationId, idMap);
+      }
+    }
+  }
+
+  if (Array.isArray(data.rollingOffscreenLearnedInformation)) {
+    for (const info of data.rollingOffscreenLearnedInformation) {
+      if (typeof info === 'object' && info !== null) {
+        const learned = info as Record<string, unknown>;
+        addId(learned.id, idMap);
+        addId(learned.sourceConversationId, idMap);
+      }
+    }
+  }
+}
+
+function extractConversationDataIds(data: Record<string, unknown>, idMap: Map<string, string>): void {
+  addId(data.id, idMap);
+
+  if (Array.isArray(data.characterUpdates)) {
+    for (const u of data.characterUpdates) {
+      if (typeof u === 'object' && u !== null) {
+        const update = u as Record<string, unknown>;
+        addId(update.id, idMap);
+        addId(update.characterId, idMap);
+      }
+    }
+  }
+
+  extractTranscriptIds(data.serializedTranscript, idMap);
+}
+
+function extractMapDataIds(data: Record<string, unknown>, idMap: Map<string, string>): void {
+  addId(data.id, idMap);
+
+  if (Array.isArray(data.locations)) {
+    for (const loc of data.locations) {
+      if (typeof loc === 'object' && loc !== null) {
+        const location = loc as Record<string, unknown>;
+        addId(location.id, idMap);
+        addIds(location.adjacency, idMap);
+      }
+    }
+  }
+
+  if (Array.isArray(data.zones)) {
+    for (const z of data.zones) {
+      if (typeof z === 'object' && z !== null) {
+        const zone = z as Record<string, unknown>;
+        addId(zone.id, idMap);
+        addIds(zone.locationIds, idMap);
+      }
+    }
+  }
+}
+
+function extractScenarioCharacterGroupDataIds(data: Record<string, unknown>, idMap: Map<string, string>): void {
+  addId(data.id, idMap);
+  addId(data.scenarioId, idMap);
+  addIds(data.privateZones, idMap);
+}
+
+function extractScenarioCharacterGroupScheduleDataIds(
+  data: Record<string, unknown>,
+  idMap: Map<string, string>
+): void {
+  addId(data.id, idMap);
+  addId(data.scenarioId, idMap);
+  addId(data.groupId, idMap);
+
+  if (Array.isArray(data.segments)) {
+    for (const seg of data.segments) {
+      if (typeof seg === 'object' && seg !== null) {
+        const segment = seg as Record<string, unknown>;
+        addId(segment.id, idMap);
+        addId(segment.zoneId, idMap);
+      }
+    }
+  }
+}
+
+function extractScenarioEventLogDataIds(data: Record<string, unknown>, idMap: Map<string, string>): void {
+  addId(data.id, idMap);
+  addId(data.characterId, idMap);
+}
+
+function extractTurnDataIds(data: Record<string, unknown>, idMap: Map<string, string>): void {
+  addIds(data.pendingTurnCharacterIds, idMap);
+
+  if (typeof data.chatsSoFar === 'object' && data.chatsSoFar !== null) {
+    for (const [charId, chatRecords] of Object.entries(data.chatsSoFar)) {
+      addId(charId, idMap);
+      if (Array.isArray(chatRecords)) {
+        for (const record of chatRecords) {
+          if (typeof record === 'object' && record !== null) {
+            addIds((record as Record<string, unknown>).withIds, idMap);
+          }
+        }
+      }
+    }
+  }
+
+  if (typeof data.activeChat === 'object' && data.activeChat !== null) {
+    const chat = data.activeChat as Record<string, unknown>;
+    addIds(chat.participantIds, idMap);
+    addIds(chat.removedParticipantIds, idMap);
+    addId(chat.gossipTargetCharacterId, idMap);
+    addId(chat.initiatorId, idMap);
+
+    if (
+      typeof chat.preConversationWardrobeSnapshotByCharacterId === 'object' &&
+      chat.preConversationWardrobeSnapshotByCharacterId !== null
+    ) {
+      for (const [charId, wardrobes] of Object.entries(chat.preConversationWardrobeSnapshotByCharacterId)) {
+        addId(charId, idMap);
+        if (Array.isArray(wardrobes)) {
+          for (const w of wardrobes) {
+            if (typeof w === 'object' && w !== null) {
+              addId((w as Record<string, unknown>).id, idMap);
+            }
+          }
+        }
+      }
+    }
+
+    if (typeof chat.ephemeralLocation === 'object' && chat.ephemeralLocation !== null) {
+      const eph = chat.ephemeralLocation as Record<string, unknown>;
+      addId(eph.id, idMap);
+      addIds(eph.adjacency, idMap);
+    }
+
+    extractTranscriptIds(chat.serializedTranscript, idMap);
+  }
+}
+
+type DataExtractor = (data: Record<string, unknown>, idMap: Map<string, string>) => void;
+
+const TABLE_DATA_EXTRACTORS: Readonly<Record<string, DataExtractor>> = {
+  character: extractCharacterDataIds,
+  scenario: extractScenarioDataIds,
+  scenario_character: extractCharacterDataIds,
+  character_relationship: extractCharacterRelationshipDataIds,
+  conversation: extractConversationDataIds,
+  map: extractMapDataIds,
+  scenario_character_group: extractScenarioCharacterGroupDataIds,
+  scenario_character_group_schedule: extractScenarioCharacterGroupScheduleDataIds,
+  scenario_event_log: extractScenarioEventLogDataIds,
+};
 
 function scanTableDataColumnFor32Hex(
   db: Database.Database,
   tableName: string,
+  extractor: DataExtractor,
   idMap: Map<string, string>
 ): void {
   const selectStmt = db.prepare(`SELECT data FROM ${tableName}`);
@@ -196,7 +397,9 @@ function scanTableDataColumnFor32Hex(
     if (typeof row.data === 'string') {
       try {
         const parsed: unknown = JSON.parse(row.data);
-        scanObjectFor32HexIds(parsed, idMap);
+        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+          extractor(parsed as Record<string, unknown>, idMap);
+        }
       } catch {
         // Skip unparseable JSON
       }
@@ -209,12 +412,14 @@ function scanTurnKeyValueFor32Hex(db: Database.Database, idMap: Map<string, stri
   for (const row of selectStmt.iterate() as Iterable<{ key: string; data: unknown }>) {
     const match = row.key.match(/^scenario_([0-9a-f]{32})_turn$/);
     if (match?.[1]) {
-      collect32HexId(match[1], idMap);
+      addId(match[1], idMap);
     }
     if (typeof row.data === 'string') {
       try {
         const parsed: unknown = JSON.parse(row.data);
-        scanObjectFor32HexIds(parsed, idMap);
+        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+          extractTurnDataIds(parsed as Record<string, unknown>, idMap);
+        }
       } catch {
         // Skip unparseable JSON
       }
@@ -248,7 +453,7 @@ function scanSettingsLlmConfigKeysFor32Hex(db: Database.Database, idMap: Map<str
   }
 
   for (const key of Object.keys(llmConfigs)) {
-    collect32HexId(key, idMap);
+    addId(key, idMap);
   }
 }
 
@@ -408,8 +613,9 @@ export const migration: Migration = {
 
     for (const [table, idColumns] of Object.entries(TABLE_ID_COLUMNS)) {
       scanTableIdColumnsFor32Hex(db, table, idColumns, idMap);
-      if (TABLES_WITH_DATA_COLUMN.includes(table)) {
-        scanTableDataColumnFor32Hex(db, table, idMap);
+      const extractor = TABLE_DATA_EXTRACTORS[table];
+      if (extractor) {
+        scanTableDataColumnFor32Hex(db, table, extractor, idMap);
       }
     }
     scanTurnKeyValueFor32Hex(db, idMap);
