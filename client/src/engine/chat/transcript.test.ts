@@ -63,9 +63,9 @@ describe('ConversationTranscript offscreen-mention RAG', () => {
     transcript = transcript.addParticipant(EVE).updatedTranscript;
 
     for (const message of transcript.getRawMessages()) {
-      if (
-        !(message.messageType === 'system_message' && message.isPrivateToCharacterId === TRANSCRIPT_SYSTEM)
-      ) {
+      if (!(
+        message.messageType === 'system_message' && message.isPrivateToCharacterId === TRANSCRIPT_SYSTEM
+      )) {
         transcript = transcript.deleteMessageById(message.id).updatedTranscript;
       }
     }

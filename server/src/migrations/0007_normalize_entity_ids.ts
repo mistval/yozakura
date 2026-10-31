@@ -435,8 +435,7 @@ function scanTurnKeyValueFor32Hex(db: Database.Database, idMap: Map<string, stri
 
 function scanSettingsLlmConfigKeysFor32Hex(db: Database.Database, idMap: Map<string, string>): void {
   const row = db.prepare("SELECT data FROM key_value WHERE key = 'settings' LIMIT 1").get() as
-    | { data: string }
-    | undefined;
+    { data: string } | undefined;
 
   if (!row || typeof row.data !== 'string') {
     return;

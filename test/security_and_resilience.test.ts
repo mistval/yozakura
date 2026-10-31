@@ -353,8 +353,7 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
 
     // Staging DB row should be migrated to normalized ID
     const migratedChar = server.db.prepare('SELECT id, data FROM import_staging.character').get() as
-      | { id: string; data: string }
-      | undefined;
+      { id: string; data: string } | undefined;
     expect(migratedChar).toBeDefined();
     expect(migratedChar?.id).toBe(normalizedCharId);
 

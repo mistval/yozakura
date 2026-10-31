@@ -60,8 +60,7 @@ export function evaluateCustomTemporalScript(source: string): TemporalContextSet
 }
 
 export type ResolvedTemporalScript =
-  | { ok: true; script: TemporalContextSettingsScript }
-  | { ok: false; error: string };
+  { ok: true; script: TemporalContextSettingsScript } | { ok: false; error: string };
 
 export function resolveTemporalScript(selectedScriptId: string, source: string): ResolvedTemporalScript {
   const builtin = getBuiltinTemporalScript(selectedScriptId);

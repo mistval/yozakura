@@ -20,4 +20,3 @@ export const idSchema = z.string().regex(/^[a-f0-9]{18}$/);
 export function turnPersistenceKey(scenarioId: string): string {
   return `scenario_${scenarioId}_turn`;
 }
-
