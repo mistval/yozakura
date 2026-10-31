@@ -67,6 +67,15 @@ export const openAiImageGenerationsImageScript: ImageGenerationSettingsScript = 
       step: 8,
     },
     {
+      id: 'maxCharacters',
+      type: 'number',
+      label: 'Max Characters',
+      default: '9999',
+      min: 1,
+      step: 1,
+      tooltipHtml: "In case your image model has a prompt character limit. Yozakura will truncate prompts to this length.",
+    },
+    {
       id: 'extraParams',
       type: 'json',
       label: 'Extra parameters (JSON)',
@@ -128,13 +137,14 @@ export const openAiImageGenerationsImageScript: ImageGenerationSettingsScript = 
     const isCard = request.context.promptType === 'character_card';
     const width = Math.round(Number(isCard ? controlValues.cardWidth : controlValues.sceneWidth));
     const height = Math.round(Number(isCard ? controlValues.cardHeight : controlValues.sceneHeight));
+    const maxCharacters = Math.round(Number(controlValues.maxCharacters)) || 9999;
     if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
       throw new Error('Invalid width/height for ' + (isCard ? 'character card' : 'scene') + '.');
     }
 
     const body = {
       model: controlValues.model,
-      prompt: request.prompt,
+      prompt: request.prompt.slice(0, maxCharacters),
       n: 1,
       size: width + 'x' + height,
     };
