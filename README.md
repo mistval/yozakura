@@ -23,6 +23,7 @@ If you want to run a production build and use the application, run these command
 git clone https://github.com/mistval/yozakura.git
 cd yozakura
 git checkout main
+npm install
 npm run install:all
 npm run build:web
 npm run start --prefix server
@@ -35,6 +36,7 @@ Then go to http://localhost:3001/ in your browser.
 If you want to run Yozakura in dev mode, then after cloning, run:
 
 ```sh
+npm install
 npm run install:all
 npm run dev
 ```
