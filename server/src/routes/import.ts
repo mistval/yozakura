@@ -250,7 +250,7 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
   });
 
   router.post('/import/commit', async (req: Request, res: Response): Promise<void> => {
-    const { sessionId, sqlStatements, imageCopies } = req.body ?? {};
+    const { sqlStatements, imageCopies } = req.body ?? {};
 
     if (!fs.existsSync(stagingDir)) {
       res.status(400).json({ error: 'No active import staging session found' });
