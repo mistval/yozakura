@@ -92,40 +92,133 @@ const OLD_TO_NEW_DEMO_CHARACTER_IDS: Readonly<Record<string, string>> = {
   'demo-marcus-cole': 'e878ec6972a7c9f6e5',
 };
 
-const HEX_32_PATTERN = /(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])/g;
+const HEX_32_ID_PATTERN = /^[0-9a-f]{32}$/;
 
 const rowidSchema = z.object({
   rowid: z.number(),
 });
 
-function collect32HexTokens(text: string, idMap: Map<string, string>): void {
-  for (const match of text.matchAll(HEX_32_PATTERN)) {
-    const token = match[0];
-    if (!idMap.has(token)) {
-      idMap.set(token, deriveDeterministicHex18Id(token));
+function is32HexId(value: unknown): value is string {
+  return typeof value === 'string' && HEX_32_ID_PATTERN.test(value);
+}
+
+function collect32HexId(id: string, idMap: Map<string, string>): void {
+  if (is32HexId(id) && !idMap.has(id)) {
+    idMap.set(id, deriveDeterministicHex18Id(id));
+  }
+}
+
+const TABLE_ID_COLUMNS: Readonly<Record<string, readonly string[]>> = {
+  character: ['id'],
+  scenario: ['id'],
+  scenario_character: ['id', 'scenario_id'],
+  character_relationship: ['id', 'from_id', 'to_id'],
+  conversation: ['id', 'scenario_id'],
+  conversation_participant: ['id', 'character_id', 'conversation_id'],
+  map: ['id'],
+  scenario_character_group: ['id', 'scenario_id'],
+  scenario_character_group_schedule: ['id', 'scenario_id', 'group_id'],
+  scenario_event_log: ['id', 'scenario_id'],
+};
+
+const TABLES_WITH_DATA_COLUMN: readonly string[] = [
+  'character',
+  'scenario',
+  'scenario_character',
+  'character_relationship',
+  'conversation',
+  'map',
+  'scenario_character_group',
+  'scenario_character_group_schedule',
+  'scenario_event_log',
+];
+
+function scanTableIdColumnsFor32Hex(
+  db: Database.Database,
+  tableName: string,
+  idColumns: readonly string[],
+  idMap: Map<string, string>
+): void {
+  const selectStmt = db.prepare(`SELECT ${idColumns.join(', ')} FROM ${tableName}`);
+  for (const row of selectStmt.iterate() as Iterable<Record<string, unknown>>) {
+    for (const col of idColumns) {
+      const val = row[col];
+      if (typeof val === 'string') {
+        collect32HexId(val, idMap);
+      }
     }
   }
 }
 
-function scanRowValuesFor32Hex(row: Record<string, unknown>, idMap: Map<string, string>): void {
-  for (const value of Object.values(row)) {
-    if (typeof value === 'string') {
-      collect32HexTokens(value, idMap);
+function scanObjectFor32HexIds(obj: unknown, idMap: Map<string, string>): void {
+  if (typeof obj !== 'object' || obj === null) {
+    return;
+  }
+
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      scanObjectFor32HexIds(item, idMap);
+    }
+    return;
+  }
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === 'id' || key.endsWith('Id')) {
+      if (typeof value === 'string') {
+        collect32HexId(value, idMap);
+      }
+    } else if (
+      key === 'locationIds' ||
+      key === 'groupIds' ||
+      key === 'participantIds' ||
+      key === 'adjacency'
+    ) {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          if (typeof item === 'string') {
+            collect32HexId(item, idMap);
+          }
+        }
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      scanObjectFor32HexIds(value, idMap);
     }
   }
 }
 
-function scanTableFor32Hex(db: Database.Database, tableName: string, idMap: Map<string, string>): void {
-  const selectStmt = db.prepare(`SELECT * FROM ${tableName}`);
-  for (const row of selectStmt.iterate()) {
-    scanRowValuesFor32Hex(row as Record<string, unknown>, idMap);
+function scanTableDataColumnFor32Hex(
+  db: Database.Database,
+  tableName: string,
+  idMap: Map<string, string>
+): void {
+  const selectStmt = db.prepare(`SELECT data FROM ${tableName}`);
+  for (const row of selectStmt.iterate() as Iterable<{ data: unknown }>) {
+    if (typeof row.data === 'string') {
+      try {
+        const parsed: unknown = JSON.parse(row.data);
+        scanObjectFor32HexIds(parsed, idMap);
+      } catch {
+        // Skip unparseable JSON
+      }
+    }
   }
 }
 
 function scanTurnKeyValueFor32Hex(db: Database.Database, idMap: Map<string, string>): void {
   const selectStmt = db.prepare("SELECT key, data FROM key_value WHERE key LIKE 'scenario_%_turn'");
-  for (const row of selectStmt.iterate()) {
-    scanRowValuesFor32Hex(row as Record<string, unknown>, idMap);
+  for (const row of selectStmt.iterate() as Iterable<{ key: string; data: unknown }>) {
+    const match = row.key.match(/^scenario_([0-9a-f]{32})_turn$/);
+    if (match?.[1]) {
+      collect32HexId(match[1], idMap);
+    }
+    if (typeof row.data === 'string') {
+      try {
+        const parsed: unknown = JSON.parse(row.data);
+        scanObjectFor32HexIds(parsed, idMap);
+      } catch {
+        // Skip unparseable JSON
+      }
+    }
   }
 }
 
@@ -138,7 +231,13 @@ function scanSettingsLlmConfigKeysFor32Hex(db: Database.Database, idMap: Map<str
     return;
   }
 
-  const parsed: unknown = JSON.parse(row.data);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(row.data);
+  } catch {
+    return;
+  }
+
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     return;
   }
@@ -149,7 +248,7 @@ function scanSettingsLlmConfigKeysFor32Hex(db: Database.Database, idMap: Map<str
   }
 
   for (const key of Object.keys(llmConfigs)) {
-    collect32HexTokens(key, idMap);
+    collect32HexId(key, idMap);
   }
 }
 
@@ -307,21 +406,11 @@ export const migration: Migration = {
       idMap.set(oldId, newId);
     }
 
-    const entityTables = [
-      'character',
-      'scenario',
-      'scenario_character',
-      'character_relationship',
-      'conversation',
-      'conversation_participant',
-      'map',
-      'scenario_character_group',
-      'scenario_character_group_schedule',
-      'scenario_event_log',
-    ];
-
-    for (const table of entityTables) {
-      scanTableFor32Hex(db, table, idMap);
+    for (const [table, idColumns] of Object.entries(TABLE_ID_COLUMNS)) {
+      scanTableIdColumnsFor32Hex(db, table, idColumns, idMap);
+      if (TABLES_WITH_DATA_COLUMN.includes(table)) {
+        scanTableDataColumnFor32Hex(db, table, idMap);
+      }
     }
     scanTurnKeyValueFor32Hex(db, idMap);
     scanSettingsLlmConfigKeysFor32Hex(db, idMap);

@@ -304,6 +304,7 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
     // dbUserVersion: 6 has 32-char hex IDs before migration 7 normalizes them
     const oldCharId = '93449930c6a045acbd8c538e3dc96206';
     const normalizedCharId = '8725fc2bda99a82672';
+    const nonIdHexToken = 'abcdef0123456789abcdef0123456789';
     const now = new Date().toISOString();
 
     const manifest = { exportName: 'OlderArchive', dbUserVersion: 6 };
@@ -316,6 +317,7 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
             id: oldCharId,
             firstName: 'Old',
             lastName: 'Format',
+            internalDescription: `Refer to commit hash ${nonIdHexToken} in repo`,
             imagePath: `/api/files/character_cards/${oldCharId}.png`,
           }),
           created_at: now,
@@ -343,6 +345,10 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
       | undefined;
     expect(migratedChar).toBeDefined();
     expect(migratedChar?.id).toBe(normalizedCharId);
+
+    // Non-ID 32-hex tokens in freeform text fields must NOT be mutated
+    const parsedData = JSON.parse(migratedChar!.data);
+    expect(parsedData.internalDescription).toBe(`Refer to commit hash ${nonIdHexToken} in repo`);
 
     // Disk asset in unpackedDir should have been renamed from oldCharId.png to normalizedCharId.png
     const stagingDir = path.join(server.dataDir, 'import_staging');
