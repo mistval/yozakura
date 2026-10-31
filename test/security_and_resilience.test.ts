@@ -14,7 +14,7 @@ import {
   buildExportPayload,
   TreeEntityIds,
 } from '../client/src/components/import_export/exportPayloadBuilder.js';
-import { stageImportArchive, cancelImport } from '../client/src/backend_bridge/import_api.js';
+import { stageImportArchive, cancelImport, commitImport } from '../client/src/backend_bridge/import_api.js';
 import type { WorldMap, Scenario, ScenarioSummary, Character } from '../client/src/engine/types.js';
 
 describe('Integration: Security, Resilience & Staging Lifecycle', () => {
@@ -171,7 +171,7 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
     const stageResult = await stageImportArchive(file);
     expect(stageResult.success).toBe(true);
 
-    const stagingDir = path.join(server.dataDir, 'import_staging');
+    const stagingDir = path.join(server.dataDir, 'temp', 'import_staging');
     expect(fs.existsSync(stagingDir)).toBe(true);
 
     // Cancel import
@@ -366,11 +366,74 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
     expect(parsedData.wardrobes[0].id).not.toBe(oldWardrobeId);
 
     // Disk asset in unpackedDir should have been renamed from oldCharId.png to normalizedCharId.png
-    const stagingDir = path.join(server.dataDir, 'import_staging');
+    const stagingDir = path.join(server.dataDir, 'temp', 'import_staging');
     const oldCardPath = path.join(stagingDir, 'unpacked', 'character_cards', `${oldCharId}.png`);
     const newCardPath = path.join(stagingDir, 'unpacked', 'character_cards', `${normalizedCharId}.png`);
 
     expect(fs.existsSync(oldCardPath)).toBe(false);
     expect(fs.existsSync(newCardPath)).toBe(true);
+  });
+
+  it('fails staging when db_rows.jsonl has a malformed or corrupted line', async () => {
+    server = await createTestServer();
+    server.setActive();
+
+    const manifest = { exportName: 'CorruptedLineExport', dbUserVersion: 7 };
+    const dbRowsLines = [
+      JSON.stringify({ table: 'map', row: { id: '0123456789abcdef01', name: 'Valid', data: '{}' } }),
+      'THIS IS NOT VALID JSON {{{',
+    ].join('\n');
+
+    const zipBuffer = await createZipBuffer([
+      { name: 'manifest.json', content: JSON.stringify(manifest) },
+      { name: 'db_rows.jsonl', content: dbRowsLines },
+    ]);
+
+    const file = new File([new Uint8Array(zipBuffer)], 'CorruptLine.yozakura_export.zip', {
+      type: 'application/zip',
+    });
+
+    const stageResult = await stageImportArchive(file);
+    expect(stageResult.success).toBe(false);
+    if (!stageResult.success) {
+      expect(stageResult.error).toContain('Corrupt export archive');
+    }
+  });
+
+  it('rejects commit when image destination is outside allowedImageDirectories', async () => {
+    server = await createTestServer();
+    server.setActive();
+
+    const manifest = { exportName: 'ImageSecurityExport', dbUserVersion: 7 };
+    const zipBuffer = await createZipBuffer([
+      { name: 'manifest.json', content: JSON.stringify(manifest) },
+      { name: 'character_cards/pic.png', content: Buffer.from('IMAGE_BYTES') },
+    ]);
+
+    const file = new File([new Uint8Array(zipBuffer)], 'ImageSecurity.yozakura_export.zip', {
+      type: 'application/zip',
+    });
+
+    const stageResult = await stageImportArchive(file);
+    expect(stageResult.success).toBe(true);
+    if (!stageResult.success) throw new Error('Stage failed');
+
+    // Attempt to commit copying to forbidden directory (e.g., 'backups/malicious.png' or 'evil_folder')
+    const commitResult = await commitImport({
+      sessionId: stageResult.sessionId,
+      sqlStatements: [],
+      imageCopies: [
+        {
+          zipPath: 'character_cards/pic.png',
+          targetRelPath: 'backups/malicious.png',
+        },
+      ],
+      allowedImageDirectories: ['character_cards', 'scenario'],
+    });
+
+    expect(commitResult.success).toBe(false);
+    if (!commitResult.success) {
+      expect(commitResult.error).toContain('Forbidden image copy destination');
+    }
   });
 });

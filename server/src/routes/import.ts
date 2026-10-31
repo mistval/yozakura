@@ -6,83 +6,61 @@ import path from 'path';
 import crypto from 'crypto';
 import readline from 'readline';
 import { pipeline } from 'stream/promises';
-import yauzl from 'yauzl';
+import extract from 'extract-zip';
+import PQueue from 'p-queue';
+import { z } from 'zod';
 import { guardPathWithinBase } from './pathGuard.js';
 import { runMigrations } from '../migrator.js';
 import { clearPreparedStatementCache } from './db.js';
 import { applyIdMap } from '../id_map.js';
 
-export type ManifestData = {
-  exportName: string;
-  dbUserVersion: number;
-};
+export const manifestDataSchema = z.object({
+  exportName: z.string().min(1),
+  dbUserVersion: z.number().int().nonnegative(),
+});
+export type ManifestData = z.infer<typeof manifestDataSchema>;
 
-export type ImageManifestEntry =
-  | {
-      zipPath: string;
-      kind: 'global_character_card';
-    }
-  | {
-      zipPath: string;
-      kind: 'scenario_character_card' | 'chat_image';
-      scenarioId: string;
-    };
+export const imageManifestEntrySchema = z.discriminatedUnion('kind', [
+  z.object({
+    zipPath: z.string().min(1),
+    kind: z.literal('global_character_card'),
+  }),
+  z.object({
+    zipPath: z.string().min(1),
+    kind: z.enum(['scenario_character_card', 'chat_image']),
+    scenarioId: z.string().min(1),
+  }),
+]);
+export type ImageManifestEntry = z.infer<typeof imageManifestEntrySchema>;
 
-function extractZip(zipPath: string, targetDir: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
-      if (err || !zipfile) {
-        return reject(err ?? new Error('Failed to open zip file'));
-      }
+export const dbRowLineSchema = z.object({
+  table: z.string().min(1),
+  row: z.record(z.string(), z.unknown()),
+});
+export type DbRowLine = z.infer<typeof dbRowLineSchema>;
 
-      zipfile.readEntry();
+export const sqlStatementEntrySchema = z.union([
+  z.string().min(1),
+  z.object({
+    statement: z.string().min(1),
+    params: z.array(z.unknown()).optional().default([]),
+  }),
+]);
+export type SqlStatementEntry = z.infer<typeof sqlStatementEntrySchema>;
 
-      zipfile.on('entry', (entry: yauzl.Entry) => {
-        let destPath: string;
-        try {
-          destPath = guardPathWithinBase(targetDir, entry.fileName);
-        } catch (guardErr) {
-          zipfile.close();
-          return reject(guardErr);
-        }
+export const imageCopyEntrySchema = z.object({
+  zipPath: z.string().min(1),
+  targetRelPath: z.string().min(1),
+});
+export type ImageCopyEntry = z.infer<typeof imageCopyEntrySchema>;
 
-        if (/\/$/.test(entry.fileName)) {
-          // Directory entry
-          fs.mkdirSync(destPath, { recursive: true });
-          zipfile.readEntry();
-        } else {
-          // File entry
-          fs.mkdirSync(path.dirname(destPath), { recursive: true });
-          zipfile.openReadStream(entry, (streamErr, readStream) => {
-            if (streamErr || !readStream) {
-              zipfile.close();
-              return reject(streamErr ?? new Error(`Failed to read zip entry: ${entry.fileName}`));
-            }
-
-            const writeStream = fs.createWriteStream(destPath);
-            readStream.pipe(writeStream);
-
-            writeStream.on('finish', () => {
-              zipfile.readEntry();
-            });
-
-            writeStream.on('error', (writeErr) => {
-              zipfile.close();
-              reject(writeErr);
-            });
-            readStream.on('error', (readErr) => {
-              zipfile.close();
-              reject(readErr);
-            });
-          });
-        }
-      });
-
-      zipfile.on('end', () => resolve());
-      zipfile.on('error', (zipErr) => reject(zipErr));
-    });
-  });
-}
+export const commitRequestBodySchema = z.object({
+  sessionId: z.string().optional(),
+  sqlStatements: z.array(sqlStatementEntrySchema),
+  imageCopies: z.array(imageCopyEntrySchema),
+  allowedImageDirectories: z.array(z.string().min(1)).optional().default(['character_cards', 'scenario']),
+});
+export type CommitRequestBody = z.infer<typeof commitRequestBodySchema>;
 
 export function detachImportStagingIfAttached(db: Database.Database, stagingDir?: string): void {
   const attached = db.pragma('database_list') as { seq: number; name: string; file: string }[];
@@ -102,7 +80,7 @@ export function detachImportStagingIfAttached(db: Database.Database, stagingDir?
 
 export default function importRouter(dataDir: string, db: Database.Database): Router {
   const router = Router();
-  const stagingDir = path.resolve(dataDir, 'import_staging');
+  const stagingDir = path.resolve(dataDir, 'temp', 'import_staging');
 
   router.post('/import/stage', async (req: Request, res: Response): Promise<void> => {
     // 1. Detach prior staging DB and clean up prior staging folder
@@ -115,28 +93,40 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
     const unpackedDir = path.join(stagingDir, 'unpacked');
     fs.mkdirSync(unpackedDir, { recursive: true });
 
-    let stagingDb: Database.Database | null = null;
+    let stagingDb: Database.Database | undefined = undefined;
 
     try {
       // 2. Stream uploaded file directly to disk
       await pipeline(req, fs.createWriteStream(zipFilePath));
 
-      // 3. Extract the archive safely
-      await extractZip(zipFilePath, unpackedDir);
+      // 3. Extract the archive safely using extract-zip
+      await extract(zipFilePath, { dir: path.resolve(unpackedDir) });
 
-      // 4. Validate manifest.json
+      // 4. Validate manifest.json with Zod
       const manifestPath = path.join(unpackedDir, 'manifest.json');
       if (!fs.existsSync(manifestPath)) {
         res.status(400).json({ error: 'Invalid Yozakura export archive: manifest.json is missing' });
         return;
       }
 
-      const manifestContent = fs.readFileSync(manifestPath, 'utf-8');
-      const manifest = JSON.parse(manifestContent) as ManifestData;
-      if (typeof manifest.dbUserVersion !== 'number' || !manifest.exportName) {
-        res.status(400).json({ error: 'Invalid manifest format in export archive' });
+      let manifestRaw: unknown;
+      try {
+        const manifestContent = fs.readFileSync(manifestPath, 'utf-8');
+        manifestRaw = JSON.parse(manifestContent);
+      } catch (jsonErr) {
+        res.status(400).json({ error: 'Corrupt manifest.json in export archive' });
         return;
       }
+
+      const manifestResult = manifestDataSchema.safeParse(manifestRaw);
+      if (!manifestResult.success) {
+        res.status(400).json({
+          error: 'Invalid manifest format in export archive',
+          details: manifestResult.error.format(),
+        });
+        return;
+      }
+      const manifest = manifestResult.data;
 
       const currentDbVersion = Number(db.pragma('user_version', { simple: true }));
       if (manifest.dbUserVersion > currentDbVersion) {
@@ -181,24 +171,17 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
         insertStatementsByTable.set(tableName, stmt);
       }
 
-      // 8. Stream db_rows.jsonl into stagingDb
+      // 8. Stream db_rows.jsonl into stagingDb in batches of 1000 rows
       const dbRowsPath = path.join(unpackedDir, 'db_rows.jsonl');
       if (fs.existsSync(dbRowsPath)) {
         const fileStream = fs.createReadStream(dbRowsPath, { encoding: 'utf-8' });
         const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
-        const rowsToInsert: { table: string; row: Record<string, unknown> }[] = [];
-        for await (const line of rl) {
-          if (!line.trim()) continue;
-          try {
-            rowsToInsert.push(JSON.parse(line));
-          } catch {
-            // Ignore malformed individual lines
-          }
-        }
+        const BATCH_SIZE = 1000;
+        let batch: DbRowLine[] = [];
 
-        const insertAll = stagingDb.transaction(() => {
-          for (const { table, row } of rowsToInsert) {
+        const insertBatch = stagingDb.transaction((rows: DbRowLine[]) => {
+          for (const { table, row } of rows) {
             const stmt = insertStatementsByTable.get(table);
             const cols = tableColumns.get(table);
             if (!stmt || !cols) continue;
@@ -208,7 +191,39 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
           }
         });
 
-        insertAll();
+        for await (const line of rl) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+
+          let rawParsed: unknown;
+          try {
+            rawParsed = JSON.parse(trimmed);
+          } catch (parseErr) {
+            throw new Error(
+              `Corrupt export archive: malformed JSON line in db_rows.jsonl: ${
+                parseErr instanceof Error ? parseErr.message : String(parseErr)
+              }`
+            );
+          }
+
+          const validatedRow = dbRowLineSchema.safeParse(rawParsed);
+          if (!validatedRow.success) {
+            throw new Error(
+              `Corrupt export archive: invalid row structure in db_rows.jsonl: ${validatedRow.error.message}`
+            );
+          }
+
+          batch.push(validatedRow.data);
+          if (batch.length >= BATCH_SIZE) {
+            insertBatch(batch);
+            batch = [];
+          }
+        }
+
+        if (batch.length > 0) {
+          insertBatch(batch);
+          batch = [];
+        }
       }
 
       // Re-enable foreign keys and verify integrity of staged data
@@ -223,7 +238,7 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
 
       // 10. Close standalone handle
       stagingDb.close();
-      stagingDb = null;
+      stagingDb = undefined;
 
       // 11. Early ATTACH to main database connection
       db.exec(`ATTACH DATABASE '${stagingSqlitePath.replace(/'/g, "''")}' AS import_staging`);
@@ -241,6 +256,7 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
         try {
           stagingDb.close();
         } catch {}
+        stagingDb = undefined;
       }
       detachImportStagingIfAttached(db, stagingDir);
       res
@@ -250,7 +266,13 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
   });
 
   router.post('/import/commit', async (req: Request, res: Response): Promise<void> => {
-    const { sqlStatements, imageCopies } = req.body ?? {};
+    const parseResult = commitRequestBodySchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: 'Invalid commit request body', details: parseResult.error.format() });
+      return;
+    }
+
+    const { sqlStatements, imageCopies, allowedImageDirectories } = parseResult.data;
 
     if (!fs.existsSync(stagingDir)) {
       res.status(400).json({ error: 'No active import staging session found' });
@@ -260,16 +282,6 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
     const attached = db.pragma('database_list') as { seq: number; name: string; file: string }[];
     if (!attached.some((d) => d.name === 'import_staging')) {
       res.status(400).json({ error: 'Staging database is not attached' });
-      return;
-    }
-
-    if (!Array.isArray(sqlStatements)) {
-      res.status(400).json({ error: 'sqlStatements must be an array' });
-      return;
-    }
-
-    if (!Array.isArray(imageCopies)) {
-      res.status(400).json({ error: 'imageCopies must be an array' });
       return;
     }
 
@@ -298,12 +310,20 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
         return applyIdMap(val, idMap);
       });
 
-      // 3. Copy & Rename image assets on disk first so failure leaves DB untouched
-      const unpackedDir = path.join(stagingDir, 'unpacked');
-      for (const item of imageCopies) {
-        if (!item || typeof item.zipPath !== 'string' || typeof item.targetRelPath !== 'string') {
-          continue;
+      // 3. Normalize allowedImageDirectories and validate image copy targets
+      const normalizedAllowedDirs = allowedImageDirectories.map((d) => {
+        const norm = path.normalize(d).replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+        if (norm === '..' || norm.startsWith('../') || norm === '') {
+          throw new Error(`Invalid allowed image directory: "${d}"`);
         }
+        return norm;
+      });
+
+      const unpackedDir = path.join(stagingDir, 'unpacked');
+      const copyQueue = new PQueue({ concurrency: 10 });
+      const copyTasks: Promise<void>[] = [];
+
+      for (const item of imageCopies) {
         const sourceAbsPath = guardPathWithinBase(unpackedDir, item.zipPath);
         if (!fs.existsSync(sourceAbsPath)) {
           continue;
@@ -315,18 +335,56 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
           for (const file of files) {
             const fileSrc = path.join(sourceAbsPath, file);
             if (fs.statSync(fileSrc).isFile()) {
-              const mappedRelPath = applyIdMap(`${item.targetRelPath}/${file}`, idMap);
-              const targetAbsPath = guardPathWithinBase(dataDir, mappedRelPath);
-              fs.mkdirSync(path.dirname(targetAbsPath), { recursive: true });
-              fs.copyFileSync(fileSrc, targetAbsPath);
+              const rawRel = `${item.targetRelPath}/${file}`;
+              const mappedRelPath = applyIdMap(rawRel, idMap);
+              const normMappedRel = path.normalize(mappedRelPath).replace(/\\/g, '/').replace(/^\/+/, '');
+
+              const isAllowed = normalizedAllowedDirs.some(
+                (allowed) => normMappedRel === allowed || normMappedRel.startsWith(allowed + '/')
+              );
+              if (!isAllowed) {
+                throw new Error(
+                  `Forbidden image copy destination: "${normMappedRel}" is not within allowed directories (${normalizedAllowedDirs.join(', ')})`
+                );
+              }
+
+              const targetAbsPath = guardPathWithinBase(dataDir, normMappedRel);
+              copyTasks.push(
+                copyQueue.add(async () => {
+                  await fs.promises.mkdir(path.dirname(targetAbsPath), { recursive: true });
+                  await fs.promises.copyFile(fileSrc, targetAbsPath);
+                })
+              );
             }
           }
         } else if (stat.isFile()) {
           const mappedRelPath = applyIdMap(item.targetRelPath, idMap);
-          const targetAbsPath = guardPathWithinBase(dataDir, mappedRelPath);
-          fs.mkdirSync(path.dirname(targetAbsPath), { recursive: true });
-          fs.copyFileSync(sourceAbsPath, targetAbsPath);
+          const normMappedRel = path.normalize(mappedRelPath).replace(/\\/g, '/').replace(/^\/+/, '');
+
+          const isAllowed = normalizedAllowedDirs.some(
+            (allowed) => normMappedRel === allowed || normMappedRel.startsWith(allowed + '/')
+          );
+          if (!isAllowed) {
+            throw new Error(
+              `Forbidden image copy destination: "${normMappedRel}" is not within allowed directories (${normalizedAllowedDirs.join(', ')})`
+            );
+          }
+
+          const targetAbsPath = guardPathWithinBase(dataDir, normMappedRel);
+          copyTasks.push(
+            copyQueue.add(async () => {
+              await fs.promises.mkdir(path.dirname(targetAbsPath), { recursive: true });
+              await fs.promises.copyFile(sourceAbsPath, targetAbsPath);
+            })
+          );
         }
+      }
+
+      try {
+        await Promise.all(copyTasks);
+      } catch (copyErr) {
+        copyQueue.clear();
+        throw copyErr;
       }
 
       // 4. Atomic Multi-Table Copy inside a single transaction

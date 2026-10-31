@@ -4,40 +4,47 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { ZipArchive } from 'archiver';
+import PQueue from 'p-queue';
+import { z } from 'zod';
 import { guardPathWithinBase } from './pathGuard.js';
 
-export type TableExportQuery = {
-  table: string;
-  statement: string;
-  params: unknown[];
-};
+export const tableExportQuerySchema = z.object({
+  table: z.string().min(1),
+  statement: z.string().min(1),
+  params: z.array(z.unknown()),
+});
+export type TableExportQuery = z.infer<typeof tableExportQuerySchema>;
 
-export type ImageCopyDescriptor =
-  | {
-      mode: 'file';
-      sourceRelPath: string;
-      kind: 'global_character_card';
-    }
-  | {
-      mode: 'directory';
-      sourceRelDir: string;
-      kind: 'scenario_character_card' | 'chat_image';
-      scenarioId: string;
-    };
+export const imageCopyDescriptorSchema = z.discriminatedUnion('mode', [
+  z.object({
+    mode: z.literal('file'),
+    sourceRelPath: z.string().min(1),
+    kind: z.string().optional(),
+  }),
+  z.object({
+    mode: z.literal('directory'),
+    sourceRelDir: z.string().min(1),
+    kind: z.string().optional(),
+    scenarioId: z.string().optional(),
+  }),
+]);
+export type ImageCopyDescriptor = z.infer<typeof imageCopyDescriptorSchema>;
 
-export type PrebuiltRow = {
-  table: string;
-  row: Record<string, unknown>;
-};
+export const prebuiltRowSchema = z.object({
+  table: z.string().min(1),
+  row: z.record(z.string(), z.unknown()),
+});
+export type PrebuiltRow = z.infer<typeof prebuiltRowSchema>;
 
-export type ExportRequestBody = {
-  exportName: string;
-  filename: string;
-  overwrite?: boolean;
-  queries?: TableExportQuery[];
-  prebuiltRows?: PrebuiltRow[];
-  imageDescriptors?: ImageCopyDescriptor[];
-};
+export const exportRequestBodySchema = z.object({
+  exportName: z.string().min(1),
+  filename: z.string().min(1),
+  overwrite: z.boolean().optional().default(false),
+  queries: z.array(tableExportQuerySchema).optional().default([]),
+  prebuiltRows: z.array(prebuiltRowSchema).optional().default([]),
+  imageDescriptors: z.array(imageCopyDescriptorSchema).optional().default([]),
+});
+export type ExportRequestBody = z.infer<typeof exportRequestBodySchema>;
 
 export function createZipBuffer(entries: { name: string; content: string | Buffer }[]): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -73,7 +80,12 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
   const router = Router();
 
   router.post('/export', async (req: Request, res: Response): Promise<void> => {
-    const body = req.body as ExportRequestBody;
+    const parseResult = exportRequestBodySchema.safeParse(req.body);
+    if (!parseResult.success) {
+      res.status(400).json({ error: 'Invalid export request body', details: parseResult.error.format() });
+      return;
+    }
+
     const {
       exportName,
       filename,
@@ -81,12 +93,7 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
       queries = [],
       prebuiltRows = [],
       imageDescriptors = [],
-    } = body;
-
-    if (!filename || typeof filename !== 'string') {
-      res.status(400).json({ error: 'filename must be a non-empty string' });
-      return;
-    }
+    } = parseResult.data;
 
     if (!filename.endsWith('.yozakura_export.zip')) {
       res.status(400).json({ error: 'filename must end with .yozakura_export.zip' });
@@ -110,7 +117,9 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
     }
 
     const sessionId = crypto.randomUUID();
-    const workDir = path.resolve(dataDir, `temp_export_${Date.now()}_${sessionId}`);
+    const tempDir = path.resolve(dataDir, 'temp');
+    fs.mkdirSync(tempDir, { recursive: true });
+    const workDir = path.resolve(tempDir, `export_${Date.now()}_${sessionId}`);
     fs.mkdirSync(workDir, { recursive: true });
 
     try {
@@ -151,7 +160,10 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
         });
       });
 
-      // 3. Process imageDescriptors (copy disk files into workDir)
+      // 3. Process imageDescriptors (copy disk files into workDir with concurrency)
+      const copyQueue = new PQueue({ concurrency: 10 });
+      const copyTasks: Promise<void>[] = [];
+
       for (const descriptor of imageDescriptors) {
         if (descriptor.mode === 'file') {
           let srcPath: string;
@@ -164,8 +176,12 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
           if (fs.existsSync(srcPath) && fs.statSync(srcPath).isFile()) {
             const relNormalized = descriptor.sourceRelPath.replace(/\\/g, '/');
             const destPath = path.resolve(workDir, relNormalized);
-            fs.mkdirSync(path.dirname(destPath), { recursive: true });
-            fs.copyFileSync(srcPath, destPath);
+            copyTasks.push(
+              copyQueue.add(async () => {
+                await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
+                await fs.promises.copyFile(srcPath, destPath);
+              })
+            );
           }
         } else if (descriptor.mode === 'directory') {
           let srcDir: string;
@@ -182,12 +198,23 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
               if (fs.statSync(fileSrc).isFile()) {
                 const relNormalized = `${descriptor.sourceRelDir}/${file}`.replace(/\\/g, '/');
                 const destPath = path.resolve(workDir, relNormalized);
-                fs.mkdirSync(path.dirname(destPath), { recursive: true });
-                fs.copyFileSync(fileSrc, destPath);
+                copyTasks.push(
+                  copyQueue.add(async () => {
+                    await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
+                    await fs.promises.copyFile(fileSrc, destPath);
+                  })
+                );
               }
             }
           }
         }
+      }
+
+      try {
+        await Promise.all(copyTasks);
+      } catch (copyErr) {
+        copyQueue.clear();
+        throw copyErr;
       }
 
       // 4. Zip the working directory to targetZipPath

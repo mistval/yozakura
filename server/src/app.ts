@@ -13,7 +13,7 @@ import dbRouter from './routes/db.js';
 import filesRouter from './routes/files.js';
 import proxyRouter from './routes/proxy.js';
 import exportRouter from './routes/export.js';
-import importRouter, { detachImportStagingIfAttached } from './routes/import.js';
+import importRouter from './routes/import.js';
 
 export type CreateAppOptions = {
   dataDir?: string;
@@ -54,6 +54,16 @@ export function createApp(options: CreateAppOptions = {}): Express {
   const db = options.db ?? openDatabase(dataDir);
   runMigrations(db, { dataDir });
 
+  const tempDir = path.resolve(dataDir, 'temp');
+  if (fs.existsSync(tempDir)) {
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch (err) {
+      console.warn('Failed to clean up temp directory on startup:', tempDir, err);
+    }
+  }
+  fs.mkdirSync(tempDir, { recursive: true });
+
   const app = express();
   app.use('/api', proxyRouter());
   app.use(express.json({ limit: '10mb' }));
@@ -66,7 +76,6 @@ export function createApp(options: CreateAppOptions = {}): Express {
   app.use('/api', filesRouter(dataDir));
   app.use('/api', dbRouter(db));
   app.use('/api', exportRouter(dataDir, db));
-  detachImportStagingIfAttached(db, path.resolve(dataDir, 'import_staging'));
   app.use('/api', importRouter(dataDir, db));
 
   app.get('/health', (_req: Request, res: Response) => {

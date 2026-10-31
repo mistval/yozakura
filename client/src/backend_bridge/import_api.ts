@@ -74,6 +74,7 @@ export type ImportCommitPayload = {
     zipPath: string;
     targetRelPath: string;
   }>;
+  allowedImageDirectories?: string[];
 };
 
 export type CommitImportResult =

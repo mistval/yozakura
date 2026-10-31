@@ -457,5 +457,6 @@ export async function prepareStagingAndBuildCommitPayload(
     sessionId,
     sqlStatements,
     imageCopies,
+    allowedImageDirectories: ['character_cards', 'scenario'],
   };
 }

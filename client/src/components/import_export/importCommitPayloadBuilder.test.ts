@@ -72,6 +72,7 @@ describe('importCommitPayloadBuilder', () => {
     });
 
     expect(payload.sessionId).toBe('test-session-123');
+    expect(payload.allowedImageDirectories).toEqual(['character_cards', 'scenario']);
 
     // Check DB queries called to populate _id_map
     expect(dbRunCalls.length).toBeGreaterThan(0);
