@@ -1,5 +1,5 @@
 {
-  "name": "Agent Sandbox",
+  "name": "Antigravity Sandbox",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
   "customizations": {
     "vscode": {
@@ -13,5 +13,8 @@
       }
     }
   },
-  "postCreateCommand": "npm install && npm install --prefix client && npm install --prefix server"
+  "mounts": [
+    "source=antigravity-session-cache,target=/home/node/.gemini,type=volume"
+  ],
+  "postCreateCommand": "sudo chown -R node:node /home/node/.gemini && npm install && npm install --prefix client && npm install --prefix server"
 }
