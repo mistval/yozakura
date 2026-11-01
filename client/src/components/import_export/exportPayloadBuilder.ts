@@ -1,22 +1,17 @@
 import * as Files from '../../backend_bridge/files.js';
+import {
+  buildTableExportQueries,
+  type TableExportQuery,
+} from '../../backend_bridge/export_queries.js';
 import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
 import {
-  TABLE_COLUMNS,
-  STRIP_MEMORIES_PATCH,
-  STRIP_GROUPS_PATCH,
-  STRIP_BOTH_PATCH,
   TreeEntityIds,
   turnPersistenceKey,
   decomposeSelection,
 } from './importExportCommon.js';
 
 export { TreeEntityIds };
-
-export type TableExportQuery = {
-  table: string;
-  statement: string;
-  params: unknown[];
-};
+export type { TableExportQuery };
 
 export type ImageCopyDescriptor =
   | {
@@ -70,7 +65,6 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     globalCharacters,
   } = options;
 
-  const queries: TableExportQuery[] = [];
   const prebuiltRows: PrebuiltRow[] = [];
   const imageDescriptors: ImageCopyDescriptor[] = [];
 
@@ -138,165 +132,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     }
   }
 
-  // Scenario query
-  if (selectedScenarioIds.length > 0) {
-    queries.push({
-      table: 'scenario',
-      statement: `
-        SELECT ${TABLE_COLUMNS.scenario.join(', ')}
-        FROM scenario
-        WHERE id IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [JSON.stringify(selectedScenarioIds)],
-    });
-  }
-
-  // Scenario characters queries
-  const scenCharCols = TABLE_COLUMNS.scenario_character.join(', ');
-  const scenCharPatchedCols = TABLE_COLUMNS.scenario_character
-    .map((c) => (c === 'data' ? 'json_patch(data, ?) AS data' : c))
-    .join(', ');
-
-  if (charScenariosFull.length > 0) {
-    queries.push({
-      table: 'scenario_character',
-      statement: `
-        SELECT ${scenCharCols}
-        FROM scenario_character
-        WHERE scenario_id IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [JSON.stringify(charScenariosFull)],
-    });
-  }
-
-  if (charScenariosStripMemories.length > 0) {
-    queries.push({
-      table: 'scenario_character',
-      statement: `
-        SELECT ${scenCharPatchedCols}
-        FROM scenario_character
-        WHERE scenario_id IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [STRIP_MEMORIES_PATCH, JSON.stringify(charScenariosStripMemories)],
-    });
-  }
-
-  if (charScenariosStripGroups.length > 0) {
-    queries.push({
-      table: 'scenario_character',
-      statement: `
-        SELECT ${scenCharPatchedCols}
-        FROM scenario_character
-        WHERE scenario_id IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [STRIP_GROUPS_PATCH, JSON.stringify(charScenariosStripGroups)],
-    });
-  }
-
-  if (charScenariosStripBoth.length > 0) {
-    queries.push({
-      table: 'scenario_character',
-      statement: `
-        SELECT ${scenCharPatchedCols}
-        FROM scenario_character
-        WHERE scenario_id IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [STRIP_BOTH_PATCH, JSON.stringify(charScenariosStripBoth)],
-    });
-  }
-
-  // Character relationships (memories)
-  if (scenariosWithMemories.length > 0) {
-    queries.push({
-      table: 'character_relationship',
-      statement: `
-        SELECT ${TABLE_COLUMNS.character_relationship.map((c) => `cr.${c}`).join(', ')}
-        FROM character_relationship cr
-        JOIN scenario_character sc ON cr.from_id = sc.id
-        WHERE sc.scenario_id IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [JSON.stringify(scenariosWithMemories)],
-    });
-  }
-
-  // Scenario character groups
-  if (scenariosWithGroups.length > 0) {
-    queries.push({
-      table: 'scenario_character_group',
-      statement: `
-        SELECT ${TABLE_COLUMNS.scenario_character_group.join(', ')}
-        FROM scenario_character_group
-        WHERE scenario_id IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [JSON.stringify(scenariosWithGroups)],
-    });
-  }
-
-  // Group schedules
-  if (scenariosWithSchedules.length > 0) {
-    queries.push({
-      table: 'scenario_character_group_schedule',
-      statement: `
-        SELECT ${TABLE_COLUMNS.scenario_character_group_schedule.join(', ')}
-        FROM scenario_character_group_schedule
-        WHERE scenario_id IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [JSON.stringify(scenariosWithSchedules)],
-    });
-  }
-
-  // Conversations & participants
-  if (scenariosWithConversations.length > 0) {
-    queries.push({
-      table: 'conversation',
-      statement: `
-        SELECT ${TABLE_COLUMNS.conversation.join(', ')}
-        FROM conversation
-        WHERE scenario_id IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [JSON.stringify(scenariosWithConversations)],
-    });
-
-    queries.push({
-      table: 'conversation_participant',
-      statement: `
-        SELECT ${TABLE_COLUMNS.conversation_participant.map((c) => `cp.${c}`).join(', ')}
-        FROM conversation_participant cp
-        JOIN conversation c ON cp.conversation_id = c.id
-        WHERE c.scenario_id IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [JSON.stringify(scenariosWithConversations)],
-    });
-  }
-
-  // Turn key_values
-  if (turnKeys.length > 0) {
-    queries.push({
-      table: 'key_value',
-      statement: `
-        SELECT ${TABLE_COLUMNS.key_value.join(', ')}
-        FROM key_value
-        WHERE key IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [JSON.stringify(turnKeys)],
-    });
-  }
-
-  // 2. Maps
-  const selectedMapIds = decomposed.selectedMapIds;
-  if (selectedMapIds.length > 0) {
-    queries.push({
-      table: 'map',
-      statement: `
-        SELECT ${TABLE_COLUMNS.map.join(', ')}
-        FROM map
-        WHERE id IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [JSON.stringify(selectedMapIds)],
-    });
-  }
-
-  // 3. Global Characters
+  // 2. Global Characters image descriptors
   const selectedGlobalCharIds = decomposed.selectedGlobalCharacterIds;
   for (const charId of selectedGlobalCharIds) {
     const char = globalCharacters.find((c) => c.id === charId);
@@ -311,17 +147,22 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     }
   }
 
-  if (selectedGlobalCharIds.length > 0) {
-    queries.push({
-      table: 'character',
-      statement: `
-        SELECT ${TABLE_COLUMNS.character.join(', ')}
-        FROM character
-        WHERE id IN (SELECT value FROM json_each(?))
-      `.trim(),
-      params: [JSON.stringify(selectedGlobalCharIds)],
-    });
-  }
+  const queries = buildTableExportQueries({
+    selectedScenarioIds,
+    characterPartition: {
+      fullScenarioIds: charScenariosFull,
+      stripMemoriesScenarioIds: charScenariosStripMemories,
+      stripGroupsScenarioIds: charScenariosStripGroups,
+      stripBothScenarioIds: charScenariosStripBoth,
+    },
+    scenariosWithMemories,
+    scenariosWithGroups,
+    scenariosWithSchedules,
+    scenariosWithConversations,
+    turnKeys,
+    selectedMapIds: decomposed.selectedMapIds,
+    selectedGlobalCharacterIds: decomposed.selectedGlobalCharacterIds,
+  });
 
   return {
     exportName: exportName.trim(),

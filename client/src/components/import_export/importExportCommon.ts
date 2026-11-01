@@ -1,20 +1,20 @@
 import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
 import { turnPersistenceKey } from '../../util/id.js';
+import {
+  SQL_UTC_NOW,
+  TABLE_COLUMNS,
+  STRIP_MEMORIES_PATCH,
+  STRIP_GROUPS_PATCH,
+  STRIP_BOTH_PATCH,
+} from '../../backend_bridge/export_queries.js';
 
-export const SQL_UTC_NOW = "CONCAT(datetime('now'), 'Z')";
-
-export const TABLE_COLUMNS = {
-  scenario: ['id', 'created_at', 'updated_at', 'data'],
-  scenario_character: ['id', 'scenario_id', 'created_at', 'updated_at', 'data'],
-  character_relationship: ['id', 'from_id', 'to_id', 'created_at', 'updated_at', 'data'],
-  scenario_character_group: ['id', 'scenario_id', 'created_at', 'updated_at', 'data'],
-  scenario_character_group_schedule: ['id', 'scenario_id', 'group_id', 'created_at', 'updated_at', 'data'],
-  conversation: ['id', 'scenario_id', 'created_at', 'updated_at', 'data'],
-  conversation_participant: ['id', 'conversation_id', 'character_id', 'created_at', 'updated_at'],
-  map: ['id', 'created_at', 'updated_at', 'data'],
-  character: ['id', 'created_at', 'updated_at', 'data'],
-  key_value: ['key', 'created_at', 'updated_at', 'data'],
-} as const;
+export {
+  SQL_UTC_NOW,
+  TABLE_COLUMNS,
+  STRIP_MEMORIES_PATCH,
+  STRIP_GROUPS_PATCH,
+  STRIP_BOTH_PATCH,
+};
 
 export const TreeEntityIds = {
   rootScenarios: () => 'root:scenarios',
@@ -34,22 +34,6 @@ export const TreeEntityIds = {
   character: (charId: string) => `character:${charId}`,
 } as const;
 
-export const STRIP_MEMORIES_PATCH = JSON.stringify({
-  globalMemories: '',
-  rollingConversationSummaries: [],
-  nextConversationWithCharacterId: '',
-});
-
-export const STRIP_GROUPS_PATCH = JSON.stringify({
-  groupIds: [],
-});
-
-export const STRIP_BOTH_PATCH = JSON.stringify({
-  globalMemories: '',
-  rollingConversationSummaries: [],
-  nextConversationWithCharacterId: '',
-  groupIds: [],
-});
 
 export { turnPersistenceKey };
 export const getScenarioTurnKey = turnPersistenceKey;

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestServer, type TestServer } from './harness.js';
-import { TABLE_COLUMNS } from '../client/src/components/import_export/importExportCommon.js';
+import { TABLE_COLUMNS } from '../client/src/backend_bridge/export_queries.js';
 
 describe('Integration: Schema Columns & Drift Guard', () => {
   let server: TestServer;
