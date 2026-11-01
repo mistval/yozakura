@@ -84,10 +84,7 @@ export async function collectDescendantIds(
 /**
  * Finds all ancestor IDs above the given nodeId by traversing parents recorded in childrenMap.
  */
-export function getAncestorIds(
-  nodeId: string,
-  childrenMap: Record<string, TreeNode[]>
-): string[] {
+export function getAncestorIds(nodeId: string, childrenMap: Record<string, TreeNode[]>): string[] {
   const ancestors = new Set<string>();
   const queue = [nodeId];
   while (queue.length > 0) {

@@ -8,13 +8,7 @@ import {
   STRIP_BOTH_PATCH,
 } from '../../backend_bridge/export_queries.js';
 
-export {
-  SQL_UTC_NOW,
-  TABLE_COLUMNS,
-  STRIP_MEMORIES_PATCH,
-  STRIP_GROUPS_PATCH,
-  STRIP_BOTH_PATCH,
-};
+export { SQL_UTC_NOW, TABLE_COLUMNS, STRIP_MEMORIES_PATCH, STRIP_GROUPS_PATCH, STRIP_BOTH_PATCH };
 
 export const TreeEntityIds = {
   rootScenarios: () => 'root:scenarios',
@@ -33,7 +27,6 @@ export const TreeEntityIds = {
   map: (mapId: string) => `map:${mapId}`,
   character: (charId: string) => `character:${charId}`,
 } as const;
-
 
 export { turnPersistenceKey };
 export const getScenarioTurnKey = turnPersistenceKey;

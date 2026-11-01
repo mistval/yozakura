@@ -260,9 +260,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
     } = decomposed;
 
     const hasAnySelection =
-      selectedScenarioIds.length > 0 ||
-      selectedMapIds.length > 0 ||
-      selectedGlobalCharacterIds.length > 0;
+      selectedScenarioIds.length > 0 || selectedMapIds.length > 0 || selectedGlobalCharacterIds.length > 0;
 
     if (!hasAnySelection) {
       setErrorMessage('Please select at least one item to import.');

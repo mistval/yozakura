@@ -144,9 +144,7 @@ export function buildCharacterRelationshipExportQuery(
   };
 }
 
-export function buildScenarioGroupExportQuery(
-  scenarioIdsWithGroups: string[]
-): TableExportQuery | undefined {
+export function buildScenarioGroupExportQuery(scenarioIdsWithGroups: string[]): TableExportQuery | undefined {
   if (scenarioIdsWithGroups.length === 0) return undefined;
   return {
     table: 'scenario_character_group',
@@ -174,9 +172,7 @@ export function buildScenarioGroupScheduleExportQuery(
   };
 }
 
-export function buildConversationExportQueries(
-  scenarioIdsWithConversations: string[]
-): TableExportQuery[] {
+export function buildConversationExportQueries(scenarioIdsWithConversations: string[]): TableExportQuery[] {
   if (scenarioIdsWithConversations.length === 0) return [];
   return [
     {
@@ -272,4 +268,3 @@ export function buildTableExportQueries(params: BuildExportQueriesParams): Table
 
   return queries;
 }
-

@@ -1,14 +1,7 @@
 import * as Files from '../../backend_bridge/files.js';
-import {
-  buildTableExportQueries,
-  type TableExportQuery,
-} from '../../backend_bridge/export_queries.js';
+import { buildTableExportQueries, type TableExportQuery } from '../../backend_bridge/export_queries.js';
 import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
-import {
-  TreeEntityIds,
-  turnPersistenceKey,
-  decomposeSelection,
-} from './importExportCommon.js';
+import { TreeEntityIds, turnPersistenceKey, decomposeSelection } from './importExportCommon.js';
 
 export { TreeEntityIds };
 export type { TableExportQuery };
@@ -56,14 +49,7 @@ export function sanitizeExportFilename(name: string): string {
 }
 
 export function buildExportPayload(options: BuildExportPayloadOptions): ExportPayload {
-  const {
-    exportName,
-    overwrite = false,
-    selectedIds,
-    scenarios,
-    maps,
-    globalCharacters,
-  } = options;
+  const { exportName, overwrite = false, selectedIds, scenarios, maps, globalCharacters } = options;
 
   const prebuiltRows: PrebuiltRow[] = [];
   const imageDescriptors: ImageCopyDescriptor[] = [];

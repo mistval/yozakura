@@ -1,12 +1,7 @@
 import { z } from 'zod';
 import type { DatabaseClient } from './database.js';
 import type { SqlStatementEntry } from './import_api.js';
-import {
-  TABLE_COLUMNS,
-  SQL_UTC_NOW,
-  STRIP_MEMORIES_PATCH,
-  STRIP_GROUPS_PATCH,
-} from './export_queries.js';
+import { TABLE_COLUMNS, SQL_UTC_NOW, STRIP_MEMORIES_PATCH, STRIP_GROUPS_PATCH } from './export_queries.js';
 
 export const SCENARIO_SCOPED_TABLES = [
   'scenario',
@@ -28,9 +23,7 @@ export type PrepareImportStagingParams = {
   copiedGlobalCharIds: string[];
 };
 
-export async function prepareImportStaging(
-  params: PrepareImportStagingParams
-): Promise<Map<string, string>> {
+export async function prepareImportStaging(params: PrepareImportStagingParams): Promise<Map<string, string>> {
   const {
     db,
     exportName,
@@ -138,9 +131,7 @@ export async function prepareImportStaging(
     );
   }
 
-  const scenariosWithoutGroups = selectedScenarioIds.filter(
-    (id) => !selectedScenarioGroupsIds.includes(id)
-  );
+  const scenariosWithoutGroups = selectedScenarioIds.filter((id) => !selectedScenarioGroupsIds.includes(id));
   if (scenariosWithoutGroups.length > 0) {
     await db.dbRun(
       `
@@ -188,7 +179,9 @@ export function buildMapCommitStatement(activeMapIds: string[]): SqlStatementEnt
   };
 }
 
-export function buildGlobalCharacterCommitStatement(activeGlobalCharIds: string[]): SqlStatementEntry | undefined {
+export function buildGlobalCharacterCommitStatement(
+  activeGlobalCharIds: string[]
+): SqlStatementEntry | undefined {
   if (activeGlobalCharIds.length === 0) return undefined;
   return {
     statement: `
@@ -394,9 +387,7 @@ export function buildTurnKeyValueCommitStatement(
   };
 }
 
-export function buildImportCommitStatements(
-  params: BuildImportCommitStatementsParams
-): SqlStatementEntry[] {
+export function buildImportCommitStatements(params: BuildImportCommitStatementsParams): SqlStatementEntry[] {
   const sqlStatements: SqlStatementEntry[] = [];
 
   const mapStmt = buildMapCommitStatement(params.activeMapIds);
@@ -412,9 +403,7 @@ export function buildImportCommitStatements(
     );
     if (scenStmt) sqlStatements.push(scenStmt);
 
-    const scenCharStmt = buildScenarioCharacterCommitStatement(
-      params.selectedScenarioCharactersIds
-    );
+    const scenCharStmt = buildScenarioCharacterCommitStatement(params.selectedScenarioCharactersIds);
     if (scenCharStmt) sqlStatements.push(scenCharStmt);
   }
 
@@ -434,4 +423,3 @@ export function buildImportCommitStatements(
 
   return sqlStatements;
 }
-

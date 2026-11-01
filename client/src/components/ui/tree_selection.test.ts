@@ -150,12 +150,7 @@ describe('tree_selection', () => {
       expect(computeNodeCheckState(mapsRoot, selected, childrenMap)).toBe('none');
 
       // Check map node under scenario
-      selected = await toggleNodeSelection(
-        aliasedMapNode1,
-        selected,
-        childrenMap,
-        async () => []
-      );
+      selected = await toggleNodeSelection(aliasedMapNode1, selected, childrenMap, async () => []);
 
       // Both map references are now checked, and root:maps shows 'all'
       expect(selected.has('map:map_001')).toBe(true);
@@ -226,12 +221,7 @@ describe('tree_selection', () => {
       };
 
       // Select schedules -> should auto-select groups and characters, plus ancestor scenario
-      const selected = await toggleNodeSelection(
-        schedules,
-        new Set<string>(),
-        childrenMap,
-        async () => []
-      );
+      const selected = await toggleNodeSelection(schedules, new Set<string>(), childrenMap, async () => []);
 
       expect(selected.has('schedules')).toBe(true);
       expect(selected.has('groups')).toBe(true);

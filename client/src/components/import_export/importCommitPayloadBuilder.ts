@@ -1,10 +1,7 @@
 import { importStagingDatabase, DatabaseClient } from '../../backend_bridge/database.js';
 import * as Files from '../../backend_bridge/files.js';
 import type { ImportCommitPayload } from '../../backend_bridge/import_api.js';
-import {
-  prepareImportStaging,
-  buildImportCommitStatements,
-} from '../../backend_bridge/import_queries.js';
+import { prepareImportStaging, buildImportCommitStatements } from '../../backend_bridge/import_queries.js';
 import type { Character } from '../../engine/types.js';
 import type { ConflictAction } from './importConflictResolver.js';
 

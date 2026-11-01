@@ -266,9 +266,7 @@ export default function TreeDataViewer({
         </div>
 
         {canExpand && isExpanded && children && (
-          <div className="flex flex-col">
-            {children.map((child) => renderNode(child, depth + 1))}
-          </div>
+          <div className="flex flex-col">{children.map((child) => renderNode(child, depth + 1))}</div>
         )}
       </div>
     );

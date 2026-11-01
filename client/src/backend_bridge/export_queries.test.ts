@@ -58,7 +58,9 @@ describe('export_queries', () => {
   it('individual builders build valid query objects for non-empty inputs', () => {
     expect(buildCharacterRelationshipExportQuery(['scen_1'])?.table).toBe('character_relationship');
     expect(buildScenarioGroupExportQuery(['scen_1'])?.table).toBe('scenario_character_group');
-    expect(buildScenarioGroupScheduleExportQuery(['scen_1'])?.table).toBe('scenario_character_group_schedule');
+    expect(buildScenarioGroupScheduleExportQuery(['scen_1'])?.table).toBe(
+      'scenario_character_group_schedule'
+    );
     expect(buildConversationExportQueries(['scen_1']).map((q) => q.table)).toEqual([
       'conversation',
       'conversation_participant',

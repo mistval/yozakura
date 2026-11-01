@@ -53,11 +53,15 @@ describe('import_queries', () => {
       expect(mapping.get('char_copy')).toBe('new_hex_123');
 
       // Check _id_map creation and clearing
-      expect(dbRunCalls.some((c) => c.statement.includes('CREATE TABLE IF NOT EXISTS import_staging._id_map'))).toBe(true);
+      expect(
+        dbRunCalls.some((c) => c.statement.includes('CREATE TABLE IF NOT EXISTS import_staging._id_map'))
+      ).toBe(true);
       expect(dbRunCalls.some((c) => c.statement.includes('DELETE FROM import_staging._id_map'))).toBe(true);
 
       // Check scenario scoped tables
-      expect(dbRunCalls.some((c) => c.statement.includes('FROM import_staging.scenario_character'))).toBe(true);
+      expect(dbRunCalls.some((c) => c.statement.includes('FROM import_staging.scenario_character'))).toBe(
+        true
+      );
 
       // Check copied map handling
       expect(dbRunCalls.some((c) => c.statement.includes('FROM import_staging.map'))).toBe(true);
@@ -97,21 +101,33 @@ describe('import_queries', () => {
       expect(typeof scenStmt === 'object' && scenStmt.statement).toContain('INSERT INTO main.scenario');
 
       const scenCharStmt = buildScenarioCharacterCommitStatement(['scen_1']);
-      expect(typeof scenCharStmt === 'object' && scenCharStmt.statement).toContain('INSERT INTO main.scenario_character');
+      expect(typeof scenCharStmt === 'object' && scenCharStmt.statement).toContain(
+        'INSERT INTO main.scenario_character'
+      );
 
       const relStmt = buildCharacterRelationshipCommitStatement(['scen_1']);
-      expect(typeof relStmt === 'object' && relStmt.statement).toContain('INSERT INTO main.character_relationship');
+      expect(typeof relStmt === 'object' && relStmt.statement).toContain(
+        'INSERT INTO main.character_relationship'
+      );
 
       const grpStmt = buildScenarioGroupCommitStatement(['scen_1']);
-      expect(typeof grpStmt === 'object' && grpStmt.statement).toContain('INSERT INTO main.scenario_character_group');
+      expect(typeof grpStmt === 'object' && grpStmt.statement).toContain(
+        'INSERT INTO main.scenario_character_group'
+      );
 
       const schedStmt = buildScenarioGroupScheduleCommitStatement(['scen_1']);
-      expect(typeof schedStmt === 'object' && schedStmt.statement).toContain('INSERT INTO main.scenario_character_group_schedule');
+      expect(typeof schedStmt === 'object' && schedStmt.statement).toContain(
+        'INSERT INTO main.scenario_character_group_schedule'
+      );
 
       const convStmts = buildConversationCommitStatements(['scen_1']);
       expect(convStmts).toHaveLength(2);
-      expect(typeof convStmts[0] === 'object' && convStmts[0].statement).toContain('INSERT INTO main.conversation');
-      expect(typeof convStmts[1] === 'object' && convStmts[1].statement).toContain('INSERT INTO main.conversation_participant');
+      expect(typeof convStmts[0] === 'object' && convStmts[0].statement).toContain(
+        'INSERT INTO main.conversation'
+      );
+      expect(typeof convStmts[1] === 'object' && convStmts[1].statement).toContain(
+        'INSERT INTO main.conversation_participant'
+      );
 
       const turnStmt = buildTurnKeyValueCommitStatement(['scen_1']);
       expect(typeof turnStmt === 'object' && turnStmt.statement).toContain('INSERT INTO main.key_value');
@@ -147,4 +163,3 @@ describe('import_queries', () => {
     });
   });
 });
-
