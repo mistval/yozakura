@@ -1,6 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import TreeDataViewer, { type TreeNode } from '../ui/TreeDataViewer.js';
-import { collectDescendantIds } from '../ui/tree_selection.js';
 import { importStagingDatabase, mainDatabase } from '../../backend_bridge/database.js';
 import {
   stageImportArchive,
@@ -42,8 +41,9 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [successMessage, setSuccessMessage] = useState<string | undefined>(undefined);
   const [stagedData, setStagedData] = useState<StagedData | undefined>(undefined);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [pendingConflicts, setPendingConflicts] = useState<EntityConflict[] | undefined>(undefined);
+
+  const lastSelectedIdsRef = useRef<Set<string>>(new Set());
 
   const isBusy = isStaging || isCommitting;
 
@@ -102,29 +102,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
         };
 
         setStagedData(staged);
-
-        // Pre-select ALL present items by default on import via tree roots traversal
-        const treeRoots = buildImportExportTreeRoots({
-          mode: 'import',
-          scenarios,
-          maps,
-          globalCharacters,
-          templateGroupData,
-        });
-
-        const initialSelected = new Set<string>();
-        for (const root of treeRoots) {
-          const ids = await collectDescendantIds(
-            root,
-            root.id,
-            (n) => n.getChildren?.() ?? Promise.resolve([])
-          );
-          for (const id of ids) {
-            initialSelected.add(id);
-          }
-        }
-
-        setSelectedIds(initialSelected);
       } catch (err) {
         setErrorMessage(
           err instanceof Error
@@ -151,40 +128,40 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       setIsStaging(false);
       setStagedData(undefined);
       setSelectedFile(undefined);
-      setSelectedIds(new Set());
       setPendingConflicts(undefined);
     }
   };
 
-  // Selected entities decomposition via centralized helper
-  const decomposed = useMemo(() => {
-    if (!stagedData) return undefined;
-    return decomposeSelection({
+  // Execute commit with given conflict resolutions
+  const executeCommit = async (
+    conflictResolutions: Record<string, ConflictAction>,
+    selectedIds: Set<string>
+  ) => {
+    if (!stagedData) return;
+
+    setIsCommitting(true);
+    setErrorMessage(undefined);
+
+    const decomposed = decomposeSelection({
       selectedIds,
       scenarios: stagedData.scenarios,
       maps: stagedData.maps,
       globalCharacters: stagedData.globalCharacters,
       templateGroupData: stagedData.templateGroupData,
     });
-  }, [stagedData, selectedIds]);
 
-  const selectedScenarioIds = decomposed?.selectedScenarioIds ?? [];
-  const selectedScenarioCharactersIds = decomposed?.selectedScenarioCharactersIds ?? [];
-  const selectedScenarioGroupsIds = decomposed?.selectedScenarioGroupsIds ?? [];
-  const selectedScenarioSchedulesIds = decomposed?.selectedScenarioSchedulesIds ?? [];
-  const selectedScenarioMemoriesIds = decomposed?.selectedScenarioMemoriesIds ?? [];
-  const selectedScenarioConversationsIds = decomposed?.selectedScenarioConversationsIds ?? [];
-  const selectedScenarioTurnIds = decomposed?.selectedScenarioTurnIds ?? [];
-  const selectedMapIds = decomposed?.selectedMapIds ?? [];
-  const selectedGlobalCharacterIds = decomposed?.selectedGlobalCharacterIds ?? [];
-  const selectedTemplateChainIds = decomposed?.selectedTemplateChainIds ?? [];
-
-  // Execute commit with given conflict resolutions
-  const executeCommit = async (conflictResolutions: Record<string, ConflictAction>) => {
-    if (!stagedData) return;
-
-    setIsCommitting(true);
-    setErrorMessage(undefined);
+    const {
+      selectedScenarioIds,
+      selectedScenarioCharactersIds,
+      selectedScenarioGroupsIds,
+      selectedScenarioSchedulesIds,
+      selectedScenarioMemoriesIds,
+      selectedScenarioConversationsIds,
+      selectedScenarioTurnIds,
+      selectedMapIds,
+      selectedGlobalCharacterIds,
+      selectedTemplateChainIds,
+    } = decomposed;
 
     try {
       const payload = await prepareStagingAndBuildCommitPayload({
@@ -262,7 +239,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       );
       setStagedData(undefined);
       setSelectedFile(undefined);
-      setSelectedIds(new Set());
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'Failed to commit import');
     } finally {
@@ -271,8 +247,29 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
   };
 
   // User clicked "Import Selected Data"
-  const handleStartImport = async () => {
+  const handleStartImport = async (selectedIds: Set<string>) => {
     if (!stagedData) return;
+    lastSelectedIdsRef.current = selectedIds;
+
+    const decomposed = decomposeSelection({
+      selectedIds,
+      scenarios: stagedData.scenarios,
+      maps: stagedData.maps,
+      globalCharacters: stagedData.globalCharacters,
+      templateGroupData: stagedData.templateGroupData,
+    });
+
+    const {
+      selectedScenarioIds,
+      selectedScenarioCharactersIds,
+      selectedScenarioGroupsIds,
+      selectedScenarioSchedulesIds,
+      selectedScenarioMemoriesIds,
+      selectedScenarioConversationsIds,
+      selectedMapIds,
+      selectedGlobalCharacterIds,
+      selectedTemplateChainIds,
+    } = decomposed;
 
     const hasAnySelection =
       selectedScenarioIds.length > 0 ||
@@ -330,7 +327,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
     }
 
     // No conflicts, execute commit directly
-    await executeCommit({});
+    await executeCommit({}, selectedIds);
   };
 
   // Build tree roots dynamically based on what actually exists in stagedData
@@ -405,7 +402,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
           conflicts={pendingConflicts}
           onConfirm={(resolutions) => {
             setPendingConflicts(undefined);
-            void executeCommit(resolutions);
+            void executeCommit(resolutions, lastSelectedIdsRef.current);
           }}
           onCancel={() => setPendingConflicts(undefined)}
         />
@@ -443,60 +440,31 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       <div>
         <TreeDataViewer
           roots={roots}
-          selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
+          preselectAll={true}
+          title="Select Items to Import"
           disabled={isBusy}
-          renderControls={(selection) => (
-            <div className="flex items-center justify-between text-xs text-secondary">
-              <div className="text-sm font-medium text-primary mb-2">Select Items to Import</div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => selection.selectAll()}
-                  className="hover:text-primary underline cursor-pointer disabled:opacity-50"
-                  disabled={isBusy}
-                >
-                  Select All
-                </button>
-                <span>|</span>
-                <button
-                  type="button"
-                  onClick={() => selection.clearAll()}
-                  className="hover:text-primary underline cursor-pointer disabled:opacity-50"
-                  disabled={isBusy}
-                >
-                  Clear All
-                </button>
-              </div>
+          renderControls={({ selectedIds, hasSelection }) => (
+            <div className="flex items-center justify-between pt-2 border-t border-border-default">
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={isBusy}
+                className="px-3 py-1.5 text-sm text-secondary hover:text-primary cursor-pointer disabled:opacity-50"
+              >
+                Back
+              </button>
+
+              <button
+                type="button"
+                disabled={isBusy || !hasSelection}
+                onClick={() => void handleStartImport(selectedIds)}
+                className="px-4 py-2 bg-button-emphasized-bg text-button-emphasized-text font-medium rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isCommitting ? 'Importing...' : 'Import Selected Data'}
+              </button>
             </div>
           )}
         />
-      </div>
-
-      {roots.length === 0 && (
-        <div className="p-4 text-center text-sm text-secondary bg-surface-soft rounded border border-border-default">
-          No importable entities found in this archive.
-        </div>
-      )}
-
-      <div className="flex items-center justify-between pt-2 border-t border-border-default">
-        <button
-          type="button"
-          onClick={handleCancel}
-          disabled={isBusy}
-          className="px-3 py-1.5 text-sm text-secondary hover:text-primary cursor-pointer disabled:opacity-50"
-        >
-          Back
-        </button>
-
-        <button
-          type="button"
-          disabled={isBusy || selectedIds.size === 0}
-          onClick={handleStartImport}
-          className="px-4 py-2 bg-button-emphasized-bg text-button-emphasized-text font-medium rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        >
-          {isCommitting ? 'Importing...' : 'Import Selected Data'}
-        </button>
       </div>
     </div>
   );

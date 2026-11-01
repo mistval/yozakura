@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import TreeDataViewer, { type TreeNode } from '../ui/TreeDataViewer.js';
 import ConfirmDialog from '../ui/ConfirmDialog.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
@@ -22,12 +22,13 @@ export type DataExportComponentProps = {
 
 export default function DataExportComponent({ onExportStateChange }: DataExportComponentProps) {
   const [exportName, setExportName] = useState<string>(() => getDefaultExportName());
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [overwriteConfirmOpen, setOverwriteConfirmOpen] = useState<boolean>(false);
   const [exportResult, setExportResult] = useState<ExportResult | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [copied, setCopied] = useState<boolean>(false);
+
+  const lastSelectedIdsRef = useRef<Set<string>>(new Set());
 
   const scenarioSummaries = useScenarioStore((s) => s.scenarioSummaries);
   const maps = useMapStore((s) => s.maps);
@@ -51,7 +52,8 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
   }, [scenarioSummaries, maps, globalCharacters, templateGroupData]);
 
   const executeExport = useCallback(
-    async (overwrite = false) => {
+    async (selectedIds: Set<string>, overwrite = false) => {
+      lastSelectedIdsRef.current = selectedIds;
       setIsExporting(true);
       setErrorMessage(undefined);
       setExportResult(undefined);
@@ -84,7 +86,7 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
         setIsExporting(false);
       }
     },
-    [exportName, selectedIds, scenarioSummaries, maps, globalCharacters, templateGroupData]
+    [exportName, scenarioSummaries, maps, globalCharacters, templateGroupData]
   );
 
   const handleCopyPath = () => {
@@ -114,39 +116,6 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
             disabled={isExporting}
           />
         </div>
-      </div>
-
-      <div>
-        <TreeDataViewer
-          roots={roots}
-          selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
-          disabled={isExporting}
-          renderControls={(selection) => (
-            <div className="flex items-center justify-between text-xs text-secondary">
-              <div className="text-sm font-medium text-primary mb-2">Select Items to Export</div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => selection.selectAll()}
-                  className="hover:text-primary underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
-                  disabled={isExporting}
-                >
-                  Select All
-                </button>
-                <span>|</span>
-                <button
-                  type="button"
-                  onClick={() => selection.clearAll()}
-                  className="hover:text-primary underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
-                  disabled={isExporting}
-                >
-                  Clear All
-                </button>
-              </div>
-            </div>
-          )}
-        />
       </div>
 
       {isExporting && (
@@ -182,15 +151,24 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
         </div>
       )}
 
-      <div className="flex justify-end gap-2 pt-2 border-t border-border-default">
-        <button
-          type="button"
-          onClick={() => executeExport(false)}
-          disabled={isExporting || selectedIds.size === 0}
-          className="px-4 py-2 bg-button-emphasized-bg text-button-emphasized-text font-medium rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-        >
-          {isExporting ? 'Exporting...' : 'Export Selected Data'}
-        </button>
+      <div>
+        <TreeDataViewer
+          roots={roots}
+          title="Select Items to Export"
+          disabled={isExporting}
+          renderControls={({ selectedIds, hasSelection }) => (
+            <div className="flex justify-end gap-2 pt-2 border-t border-border-default">
+              <button
+                type="button"
+                onClick={() => void executeExport(selectedIds, false)}
+                disabled={isExporting || !hasSelection}
+                className="px-4 py-2 bg-button-emphasized-bg text-button-emphasized-text font-medium rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isExporting ? 'Exporting...' : 'Export Selected Data'}
+              </button>
+            </div>
+          )}
+        />
       </div>
 
       <ConfirmDialog
@@ -202,7 +180,7 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
         confirmDisabled={isExporting}
         onConfirm={() => {
           setOverwriteConfirmOpen(false);
-          void executeExport(true);
+          void executeExport(lastSelectedIdsRef.current, true);
         }}
         onClose={() => {
           if (!isExporting) setOverwriteConfirmOpen(false);

@@ -20,8 +20,8 @@ export type TreeSelectionState = {
 
 export type TreeDataViewerProps = {
   roots: TreeNode[];
-  selectedIds: Set<string>;
-  onSelectionChange: (selectedIds: Set<string>) => void;
+  title?: string;
+  preselectAll?: boolean;
   renderControls?: (selection: TreeSelectionState) => ReactNode;
   disabled?: boolean;
   className?: string;
@@ -61,22 +61,19 @@ function TriStateCheckbox({
 
 export default function TreeDataViewer({
   roots,
-  selectedIds,
-  onSelectionChange,
+  title,
   renderControls,
   disabled = false,
   className = '',
+  preselectAll = false,
 }: TreeDataViewerProps) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set());
   const [childrenMap, setChildrenMap] = useState<Record<string, TreeNode[]>>({});
   const [loadingPaths, setLoadingPaths] = useState<Set<string>>(() => new Set());
 
   const childrenMapRef = useRef(childrenMap);
   childrenMapRef.current = childrenMap;
-
-  useEffect(() => {
-    setChildrenMap({});
-  }, [roots]);
 
   // Load children for a given node at path
   const loadChildren = useCallback(async (node: TreeNode, path: string): Promise<TreeNode[]> => {
@@ -100,6 +97,31 @@ export default function TreeDataViewer({
       });
     }
   }, []);
+
+  // Pre-select all items across roots on roots change
+  useEffect(() => {
+    if (!preselectAll) {
+      return;
+    }
+
+    setChildrenMap({});
+    let cancelled = false;
+    void (async () => {
+      const nextSelected = new Set<string>();
+      for (const root of roots) {
+        const ids = await collectDescendantIds(root, root.id, loadChildren);
+        for (const id of ids) {
+          nextSelected.add(id);
+        }
+      }
+      if (!cancelled) {
+        setSelectedIds(nextSelected);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [roots, loadChildren]);
 
   const getNodeCheckState = useCallback(
     (node: TreeNode, path: string): CheckState => {
@@ -133,9 +155,9 @@ export default function TreeDataViewer({
     async (node: TreeNode, path: string) => {
       if (disabled) return;
       const next = await toggleNodeSelection(node, path, selectedIds, childrenMap, loadChildren);
-      onSelectionChange(next);
+      setSelectedIds(next);
     },
-    [childrenMap, disabled, loadChildren, onSelectionChange, selectedIds]
+    [childrenMap, disabled, loadChildren, selectedIds]
   );
 
   // Select all across all roots
@@ -148,14 +170,14 @@ export default function TreeDataViewer({
         nextSelected.add(id);
       }
     }
-    onSelectionChange(nextSelected);
-  }, [disabled, loadChildren, onSelectionChange, roots, selectedIds]);
+    setSelectedIds(nextSelected);
+  }, [disabled, loadChildren, roots, selectedIds]);
 
   // Clear all selections
   const clearAll = useCallback(() => {
     if (disabled) return;
-    onSelectionChange(new Set());
-  }, [disabled, onSelectionChange]);
+    setSelectedIds(new Set());
+  }, [disabled]);
 
   const hasSelection = useMemo(() => selectedIds.size > 0, [selectedIds]);
 
@@ -257,7 +279,30 @@ export default function TreeDataViewer({
 
   return (
     <div className={`flex flex-col ${className}`}>
-      {renderControls && <div className="mb-3">{renderControls(selectionState)}</div>}
+      {(title || roots.length > 0) && (
+        <div className="flex items-center justify-between text-xs text-secondary mb-2">
+          {title && <div className="text-sm font-medium text-primary">{title}</div>}
+          <div className="flex gap-2 ml-auto">
+            <button
+              type="button"
+              onClick={() => void selectAll()}
+              className="hover:text-primary underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+              disabled={disabled}
+            >
+              Select All
+            </button>
+            <span>|</span>
+            <button
+              type="button"
+              onClick={clearAll}
+              className="hover:text-primary underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+              disabled={disabled}
+            >
+              Clear All
+            </button>
+          </div>
+        </div>
+      )}
       <div
         role="tree"
         className={`border border-border-default rounded-sm bg-surface-soft p-2 overflow-y-auto max-h-96 ${
@@ -270,6 +315,7 @@ export default function TreeDataViewer({
           roots.map((root) => renderNode(root, root.id, 0))
         )}
       </div>
+      {renderControls && <div className="mt-4">{renderControls(selectionState)}</div>}
     </div>
   );
 }
