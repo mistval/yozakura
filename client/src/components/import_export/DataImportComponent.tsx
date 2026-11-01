@@ -13,6 +13,8 @@ import { templateGroupDataSchema } from '../../engine/prompt_templates/template_
 import type { ScenarioSummary, WorldMap, Character } from '../../engine/types.js';
 import { detectConflicts, type ConflictAction, type EntityConflict } from './importConflictResolver.js';
 import ImportConflictModal from './ImportConflictModal.js';
+import { getSelectedExecutableCodeItems, type ExecutableCodeItem } from './executableCodeDetection.js';
+import ExecutableCodeWarningModal from './ExecutableCodeWarningModal.js';
 import { validateStagedData } from './importValidation.js';
 import { prepareStagingAndBuildCommitPayload } from './importCommitPayloadBuilder.js';
 import { useMapStore } from '../../state/map_store.js';
@@ -42,6 +44,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
   const [successMessage, setSuccessMessage] = useState<string | undefined>(undefined);
   const [stagedData, setStagedData] = useState<StagedData | undefined>(undefined);
   const [pendingConflicts, setPendingConflicts] = useState<EntityConflict[] | undefined>(undefined);
+  const [pendingExecutableItems, setPendingExecutableItems] = useState<ExecutableCodeItem[] | undefined>(undefined);
 
   const lastSelectedIdsRef = useRef<Set<string>>(new Set());
 
@@ -129,6 +132,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       setStagedData(undefined);
       setSelectedFile(undefined);
       setPendingConflicts(undefined);
+      setPendingExecutableItems(undefined);
     }
   };
 
@@ -246,6 +250,44 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
     }
   };
 
+  const proceedWithConflictsAndCommit = async (selectedIds: Set<string>) => {
+    if (!stagedData) return;
+
+    setIsCommitting(true);
+    setErrorMessage(undefined);
+
+    const decomposed = decomposeSelection({
+      selectedIds,
+      scenarios: stagedData.scenarios,
+      maps: stagedData.maps,
+      globalCharacters: stagedData.globalCharacters,
+      templateGroupData: stagedData.templateGroupData,
+    });
+
+    const { selectedMapIds, selectedGlobalCharacterIds } = decomposed;
+
+    // Conflict Detection
+    const selectedMaps = stagedData.maps.filter((m) => selectedMapIds.includes(m.id));
+    const selectedGlobalChars = stagedData.globalCharacters.filter((c) =>
+      selectedGlobalCharacterIds.includes(c.id)
+    );
+    const conflicts = detectConflicts(
+      selectedMaps,
+      selectedGlobalChars,
+      useMapStore.getState().mapsById,
+      useGlobalCharactersStore.getState().globalCharactersById
+    );
+
+    if (conflicts.length > 0) {
+      setIsCommitting(false);
+      setPendingConflicts(conflicts);
+      return;
+    }
+
+    // No conflicts, execute commit directly
+    await executeCommit({}, selectedIds);
+  };
+
   // User clicked "Import Selected Data"
   const handleStartImport = async (selectedIds: Set<string>) => {
     if (!stagedData) return;
@@ -308,26 +350,20 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       return;
     }
 
-    // 2. Conflict Detection
-    const selectedMaps = stagedData.maps.filter((m) => selectedMapIds.includes(m.id));
-    const selectedGlobalChars = stagedData.globalCharacters.filter((c) =>
-      selectedGlobalCharacterIds.includes(c.id)
-    );
-    const conflicts = detectConflicts(
-      selectedMaps,
-      selectedGlobalChars,
-      useMapStore.getState().mapsById,
-      useGlobalCharactersStore.getState().globalCharactersById
+    // 2. Executable Code Warning
+    const executableItems = getSelectedExecutableCodeItems(
+      stagedData.templateGroupData,
+      selectedTemplateChainIds
     );
 
-    if (conflicts.length > 0) {
+    if (executableItems.length > 0) {
       setIsCommitting(false);
-      setPendingConflicts(conflicts);
+      setPendingExecutableItems(executableItems);
       return;
     }
 
-    // No conflicts, execute commit directly
-    await executeCommit({}, selectedIds);
+    // 3. Conflict Detection & Commit
+    await proceedWithConflictsAndCommit(selectedIds);
   };
 
   // Build tree roots dynamically based on what actually exists in stagedData
@@ -396,6 +432,20 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
   // View 2: Archive Preview Tree
   return (
     <div className="flex flex-col space-y-4">
+      {pendingExecutableItems && (
+        <ExecutableCodeWarningModal
+          open={true}
+          items={pendingExecutableItems}
+          onConfirm={() => {
+            setPendingExecutableItems(undefined);
+            void proceedWithConflictsAndCommit(lastSelectedIdsRef.current);
+          }}
+          onCancel={() => {
+            setPendingExecutableItems(undefined);
+          }}
+        />
+      )}
+
       {pendingConflicts && (
         <ImportConflictModal
           open={true}

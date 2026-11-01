@@ -156,7 +156,7 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                     id: TreeEntityIds.promptChain(chainId),
                     label: chain.title || chainId,
                     subtitle: chain.description,
-                    ...(chain.parserSource
+                    ...(chain.parserSource?.trim()
                       ? { badge: { text: 'Executable Code', variant: 'warning' as const } }
                       : {}),
                   }));
