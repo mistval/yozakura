@@ -68,31 +68,32 @@ export default function TreeDataViewer({
   preselectAll = false,
 }: TreeDataViewerProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set());
+  const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(() => new Set());
   const [childrenMap, setChildrenMap] = useState<Record<string, TreeNode[]>>({});
-  const [loadingPaths, setLoadingPaths] = useState<Set<string>>(() => new Set());
+  const [loadingNodeIds, setLoadingNodeIds] = useState<Set<string>>(() => new Set());
 
   const childrenMapRef = useRef(childrenMap);
   childrenMapRef.current = childrenMap;
 
-  // Load children for a given node at path
-  const loadChildren = useCallback(async (node: TreeNode, path: string): Promise<TreeNode[]> => {
-    if (childrenMapRef.current[path]) {
-      return childrenMapRef.current[path];
+  // Load children for a given node
+  const loadChildren = useCallback(async (node: TreeNode): Promise<TreeNode[]> => {
+    const cached = childrenMapRef.current[node.id];
+    if (cached) {
+      return cached;
     }
     if (!node.getChildren) {
       return [];
     }
 
-    setLoadingPaths((prev) => new Set(prev).add(path));
+    setLoadingNodeIds((prev) => new Set(prev).add(node.id));
     try {
       const children = await node.getChildren();
-      setChildrenMap((prev) => ({ ...prev, [path]: children }));
+      setChildrenMap((prev) => ({ ...prev, [node.id]: children }));
       return children;
     } finally {
-      setLoadingPaths((prev) => {
+      setLoadingNodeIds((prev) => {
         const next = new Set(prev);
-        next.delete(path);
+        next.delete(node.id);
         return next;
       });
     }
@@ -109,7 +110,7 @@ export default function TreeDataViewer({
     void (async () => {
       const nextSelected = new Set<string>();
       for (const root of roots) {
-        const ids = await collectDescendantIds(root, root.id, loadChildren);
+        const ids = await collectDescendantIds(root, loadChildren);
         for (const id of ids) {
           nextSelected.add(id);
         }
@@ -121,43 +122,43 @@ export default function TreeDataViewer({
     return () => {
       cancelled = true;
     };
-  }, [roots, loadChildren]);
+  }, [roots, loadChildren, preselectAll]);
 
   const getNodeCheckState = useCallback(
-    (node: TreeNode, path: string): CheckState => {
-      return computeNodeCheckState(node, path, selectedIds, childrenMap);
+    (node: TreeNode): CheckState => {
+      return computeNodeCheckState(node, selectedIds, childrenMap);
     },
     [childrenMap, selectedIds]
   );
 
   // Toggle node expansion
   const toggleExpand = useCallback(
-    async (node: TreeNode, path: string) => {
+    async (node: TreeNode) => {
       if (disabled || !node.getChildren) return;
 
-      const isExpanded = expandedPaths.has(path);
+      const isExpanded = expandedNodeIds.has(node.id);
       if (isExpanded) {
-        setExpandedPaths((prev) => {
+        setExpandedNodeIds((prev) => {
           const next = new Set(prev);
-          next.delete(path);
+          next.delete(node.id);
           return next;
         });
       } else {
-        setExpandedPaths((prev) => new Set(prev).add(path));
-        await loadChildren(node, path);
+        setExpandedNodeIds((prev) => new Set(prev).add(node.id));
+        await loadChildren(node);
       }
     },
-    [disabled, expandedPaths, loadChildren]
+    [disabled, expandedNodeIds, loadChildren]
   );
 
-  // Toggle checkbox for a node at path
+  // Toggle checkbox for a node
   const handleToggleCheck = useCallback(
-    async (node: TreeNode, path: string) => {
+    async (node: TreeNode) => {
       if (disabled) return;
-      const next = await toggleNodeSelection(node, path, selectedIds, childrenMap, loadChildren);
+      const next = await toggleNodeSelection(node, selectedIds, childrenMap, loadChildren, roots);
       setSelectedIds(next);
     },
-    [childrenMap, disabled, loadChildren, selectedIds]
+    [childrenMap, disabled, loadChildren, roots, selectedIds]
   );
 
   // Select all across all roots
@@ -165,7 +166,7 @@ export default function TreeDataViewer({
     if (disabled) return;
     const nextSelected = new Set(selectedIds);
     for (const root of roots) {
-      const ids = await collectDescendantIds(root, root.id, loadChildren);
+      const ids = await collectDescendantIds(root, loadChildren);
       for (const id of ids) {
         nextSelected.add(id);
       }
@@ -185,18 +186,18 @@ export default function TreeDataViewer({
     return isTreeAllSelected(roots, selectedIds, childrenMap);
   }, [childrenMap, roots, selectedIds]);
 
-  const renderNode = (node: TreeNode, path: string, depth = 0): ReactNode => {
-    const isExpanded = expandedPaths.has(path);
-    const isLoading = loadingPaths.has(path);
-    const checkState = getNodeCheckState(node, path);
-    const children = childrenMap[path];
+  const renderNode = (node: TreeNode, depth = 0): ReactNode => {
+    const isExpanded = expandedNodeIds.has(node.id);
+    const isLoading = loadingNodeIds.has(node.id);
+    const checkState = getNodeCheckState(node);
+    const children = childrenMap[node.id];
     const canExpand = Boolean(node.getChildren);
 
     const badgeText = typeof node.badge === 'string' ? node.badge : node.badge?.text;
     const badgeVariant = typeof node.badge === 'string' ? 'default' : (node.badge?.variant ?? 'default');
 
     return (
-      <div key={path} className="flex flex-col select-none">
+      <div key={node.id} className="flex flex-col select-none">
         <div
           className="flex items-center gap-2 py-1.5 px-2 hover:bg-surface-hover rounded text-sm transition-colors"
           style={{ paddingLeft: `${depth * 1.25 + 0.5}rem` }}
@@ -204,7 +205,7 @@ export default function TreeDataViewer({
           {canExpand ? (
             <button
               type="button"
-              onClick={() => toggleExpand(node, path)}
+              onClick={() => toggleExpand(node)}
               disabled={disabled || isLoading}
               className={`relative w-5 h-5 flex items-center justify-center text-secondary transition-transform ${
                 disabled ? 'cursor-not-allowed opacity-50' : 'hover:text-primary cursor-pointer'
@@ -227,7 +228,7 @@ export default function TreeDataViewer({
 
           <TriStateCheckbox
             state={checkState}
-            onChange={() => handleToggleCheck(node, path)}
+            onChange={() => handleToggleCheck(node)}
             disabled={disabled}
             aria-label={`Select ${node.label}`}
           />
@@ -239,9 +240,9 @@ export default function TreeDataViewer({
             onClick={() => {
               if (disabled) return;
               if (canExpand) {
-                toggleExpand(node, path);
+                toggleExpand(node);
               } else {
-                handleToggleCheck(node, path);
+                handleToggleCheck(node);
               }
             }}
           >
@@ -266,7 +267,7 @@ export default function TreeDataViewer({
 
         {canExpand && isExpanded && children && (
           <div className="flex flex-col">
-            {children.map((child) => renderNode(child, `${path}/${child.id}`, depth + 1))}
+            {children.map((child) => renderNode(child, depth + 1))}
           </div>
         )}
       </div>
@@ -316,7 +317,7 @@ export default function TreeDataViewer({
         {roots.length === 0 ? (
           <div className="p-4 text-center text-sm text-secondary">No items available</div>
         ) : (
-          roots.map((root) => renderNode(root, root.id, 0))
+          roots.map((root) => renderNode(root, 0))
         )}
       </div>
       {renderControls && <div className="mt-4">{renderControls(selectionState)}</div>}

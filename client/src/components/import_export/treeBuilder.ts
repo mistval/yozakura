@@ -32,7 +32,7 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
             getChildren: async () => {
               const children: TreeNode[] = [];
 
-              if (summary.scenario.mapId) {
+              if (summary.mapName) {
                 children.push({
                   id: TreeEntityIds.scenarioMap(scenId, summary.scenario.mapId),
                   label: `Map: ${summary.mapName}`,
@@ -40,25 +40,30 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                 });
               }
 
+              const charactersNodeId = TreeEntityIds.scenarioCharacters(scenId);
+              const characterGroupsId = TreeEntityIds.scenarioGroups(scenId);
+
               children.push(
                 {
-                  id: TreeEntityIds.scenarioCharacters(scenId),
+                  id: charactersNodeId,
                   label: 'Characters',
                   subtitle: 'Character definitions and card images',
                 },
                 {
-                  id: TreeEntityIds.scenarioGroups(scenId),
+                  id: characterGroupsId,
                   label: 'Character Groups',
                   subtitle: 'Zones and groups',
                 },
                 {
                   id: TreeEntityIds.scenarioSchedules(scenId),
                   label: 'Group Schedules',
-                  subtitle: 'Requires Character Groups',
+                  subtitle: '(Requires Character Groups)',
+                  requiredSiblingNodeIds: [characterGroupsId],
                 },
                 {
                   id: TreeEntityIds.scenarioMemories(scenId),
-                  label: 'Memories & Relationships',
+                  label: 'Character Memories & Relationships',
+                  requiredSiblingNodeIds: [charactersNodeId],
                 },
                 {
                   id: TreeEntityIds.scenarioConversations(scenId),
@@ -69,6 +74,7 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                   id: TreeEntityIds.scenarioTurn(scenId),
                   label: 'Current Conversation',
                   subtitle: 'The current conversation (if any)',
+                  requiredSiblingNodeIds: [charactersNodeId],
                 }
               );
 

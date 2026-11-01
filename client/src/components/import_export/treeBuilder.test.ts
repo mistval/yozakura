@@ -139,6 +139,6 @@ describe('buildImportExportTreeRoots', () => {
 
     expect(roots).toHaveLength(1);
     expect(roots[0]!.id).toBe(TreeEntityIds.rootMaps());
-    expect(roots[0]!.subtitle).toBe('(1 in archive)');
+    expect(roots[0]!.subtitle).toBe('(1 available)');
   });
 });
