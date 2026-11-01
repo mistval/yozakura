@@ -174,7 +174,6 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
         [seeded.mapId]: 'skip',
         [seeded.globalCharId]: 'skip',
       },
-      stagedImages: stageResult.images,
     });
 
     const commitResult = await commitImport(commitPayload);
@@ -272,7 +271,6 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
         [seeded.mapId]: 'overwrite',
         [seeded.globalCharId]: 'overwrite',
       },
-      stagedImages: stageResult.images,
     });
 
     const commitResult = await commitImport(commitPayload);
@@ -334,7 +332,6 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
         [seeded.mapId]: 'copy',
         [seeded.globalCharId]: 'overwrite',
       },
-      stagedImages: stageResult.images,
     });
 
     const commitResult = await commitImport(commitPayload);
@@ -421,7 +418,6 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
       conflictResolutions: {
         [seeded.globalCharId]: 'copy',
       },
-      stagedImages: stageResult.images,
     });
 
     const commitResult = await commitImport(commitPayload);

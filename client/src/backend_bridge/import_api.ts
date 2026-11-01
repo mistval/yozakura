@@ -3,23 +3,11 @@ export type StagedManifest = {
   dbUserVersion: number;
 };
 
-export type StagedImageEntry =
-  | {
-      zipPath: string;
-      kind: 'global_character_card';
-    }
-  | {
-      zipPath: string;
-      kind: 'scenario_character_card' | 'chat_image';
-      scenarioId: string;
-    };
-
 export type StageImportResult =
   | {
       success: true;
       sessionId: string;
       manifest: StagedManifest;
-      images: StagedImageEntry[];
     }
   | {
       success: false;
@@ -49,14 +37,12 @@ export async function stageImportArchive(file: File): Promise<StageImportResult>
     ok: boolean;
     sessionId: string;
     manifest: StagedManifest;
-    images: StagedImageEntry[];
   };
 
   return {
     success: true,
     sessionId: data.sessionId,
     manifest: data.manifest,
-    images: data.images,
   };
 }
 
@@ -83,14 +69,12 @@ export async function stagePrepackagedArchive(prepackagedName: string = 'demo'):
     ok: boolean;
     sessionId: string;
     manifest: StagedManifest;
-    images: StagedImageEntry[];
   };
 
   return {
     success: true,
     sessionId: data.sessionId,
     manifest: data.manifest,
-    images: data.images,
   };
 }
 

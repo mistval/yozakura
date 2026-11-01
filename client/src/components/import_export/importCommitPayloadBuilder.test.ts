@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { prepareStagingAndBuildCommitPayload } from './importCommitPayloadBuilder.js';
 import { createImportStagingDatabase, type ISQLTarget } from '../../backend_bridge/database.js';
-import type { StagedImageEntry } from '../../backend_bridge/import_api.js';
 import type { Character } from '../../engine/types.js';
 
 describe('importCommitPayloadBuilder', () => {
@@ -28,32 +27,6 @@ describe('importCommitPayloadBuilder', () => {
     { id: 'char_overwrite', imagePath: '/api/files/character_cards/overwrite_portrait.png' } as Character,
   ];
 
-  const dummyImages: StagedImageEntry[] = [
-    {
-      zipPath: 'character_cards/custom_1.png',
-      kind: 'global_character_card',
-    },
-    {
-      zipPath: 'character_cards/custom_2.png',
-      kind: 'global_character_card',
-    },
-    {
-      zipPath: 'scenario/scen_1/character_cards/scen_char_1.png',
-      kind: 'scenario_character_card',
-      scenarioId: 'scen_1',
-    },
-    {
-      zipPath: 'scenario/scen_1/chat_images/chat_img_1.png',
-      kind: 'chat_image',
-      scenarioId: 'scen_1',
-    },
-    {
-      zipPath: 'scenario/scen_2/chat_images/chat_img_2.png',
-      kind: 'chat_image',
-      scenarioId: 'scen_2',
-    },
-  ];
-
   it('builds commit payload for full scenario import with no conflicts', async () => {
     const stagingDb = createImportStagingDatabase(testSqlTarget);
 
@@ -66,7 +39,6 @@ describe('importCommitPayloadBuilder', () => {
       selectedMapIds: ['map_1'],
       selectedGlobalCharacterIds: ['char_1'],
       conflictResolutions: {},
-      stagedImages: dummyImages,
       stagedGlobalCharacters: dummyGlobalCharacters,
       stagingDb,
     });
@@ -124,10 +96,6 @@ describe('importCommitPayloadBuilder', () => {
         char_skip: 'skip',
         char_overwrite: 'overwrite',
       },
-      stagedImages: [
-        { zipPath: 'character_cards/skip_portrait.png', kind: 'global_character_card' },
-        { zipPath: 'character_cards/overwrite_portrait.png', kind: 'global_character_card' },
-      ],
       stagedGlobalCharacters: dummyGlobalCharacters,
       stagingDb,
     });
@@ -191,12 +159,6 @@ describe('importCommitPayloadBuilder', () => {
       conflictResolutions: {
         char_copy: 'copy',
       },
-      stagedImages: [
-        {
-          zipPath: 'character_cards/copy_portrait.png',
-          kind: 'global_character_card',
-        },
-      ],
       stagedGlobalCharacters: [
         {
           id: 'char_copy',
@@ -238,7 +200,7 @@ describe('importCommitPayloadBuilder', () => {
       selectedMapIds: [],
       selectedGlobalCharacterIds: [],
       conflictResolutions: {},
-      stagedImages: [],
+      
       stagedGlobalCharacters: dummyGlobalCharacters,
       stagingDb,
     });
@@ -272,7 +234,6 @@ describe('importCommitPayloadBuilder', () => {
       selectedMapIds: [],
       selectedGlobalCharacterIds: [],
       conflictResolutions: {},
-      stagedImages: dummyImages,
       stagedGlobalCharacters: dummyGlobalCharacters,
       stagingDb,
     });
@@ -318,7 +279,6 @@ describe('importCommitPayloadBuilder', () => {
       selectedMapIds: [],
       selectedGlobalCharacterIds: [],
       conflictResolutions: {},
-      stagedImages: dummyImages,
       stagedGlobalCharacters: dummyGlobalCharacters,
       stagingDb,
     });
@@ -354,7 +314,6 @@ describe('importCommitPayloadBuilder', () => {
       selectedMapIds: [],
       selectedGlobalCharacterIds: [],
       conflictResolutions: {},
-      stagedImages: [],
       stagedGlobalCharacters: dummyGlobalCharacters,
       stagingDb,
     });
@@ -380,7 +339,7 @@ describe('importCommitPayloadBuilder', () => {
       selectedMapIds: [],
       selectedGlobalCharacterIds: [],
       conflictResolutions: {},
-      stagedImages: [],
+      
       stagedGlobalCharacters: dummyGlobalCharacters,
       stagingDb,
     });

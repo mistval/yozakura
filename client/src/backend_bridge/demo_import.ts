@@ -36,7 +36,6 @@ export async function importDemoMaps(): Promise<void> {
         selectedMapIds: stagedMaps.map((m) => m.id),
         selectedGlobalCharacterIds: [],
         conflictResolutions,
-        stagedImages: stageResult.images,
       });
 
       const commitResult = await commitImport(payload);
@@ -86,7 +85,6 @@ export async function importDemoScenario(): Promise<{ newScenarioId: string }> {
         selectedMapIds: stagedMaps.map((m) => m.id),
         selectedGlobalCharacterIds: [],
         conflictResolutions,
-        stagedImages: stageResult.images,
       });
 
       const idRows = await importStagingDatabase.dbAll(
@@ -141,7 +139,6 @@ export async function importDemoGlobalCharacters(): Promise<void> {
         selectedMapIds: [],
         selectedGlobalCharacterIds: stagedCharacters.map((c) => c.id),
         conflictResolutions,
-        stagedImages: stageResult.images,
         stagedGlobalCharacters: stagedCharacters,
       });
 

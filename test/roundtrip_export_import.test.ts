@@ -130,7 +130,6 @@ describe('Integration: Full Round-Trip Pack, Unpack & ID Remapping', () => {
       selectedMapIds: [seeded.mapId],
       selectedGlobalCharacterIds: [seeded.globalCharId],
       conflictResolutions: {},
-      stagedImages: stageResult.images,
     });
 
     const commitResult = await commitImport(commitPayload);

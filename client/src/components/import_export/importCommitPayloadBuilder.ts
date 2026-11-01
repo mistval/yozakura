@@ -4,7 +4,6 @@ import * as Files from '../../backend_bridge/files.js';
 import type {
   ImportCommitPayload,
   SqlStatementEntry,
-  StagedImageEntry,
 } from '../../backend_bridge/import_api.js';
 import type { Character } from '../../engine/types.js';
 import type { ConflictAction } from './importConflictResolver.js';
@@ -28,7 +27,6 @@ export type BuildCommitPayloadOptions = {
   selectedMapIds: string[];
   selectedGlobalCharacterIds: string[];
   conflictResolutions: Record<string, ConflictAction>;
-  stagedImages?: StagedImageEntry[];
   stagedGlobalCharacters?: Character[];
   stagingDb?: DatabaseClient;
 };

@@ -112,7 +112,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       selectedMapIds: [seeded.mapId],
       selectedGlobalCharacterIds: [seeded.globalCharId],
       conflictResolutions: {},
-      stagedImages: stageResult.images,
     });
 
     const commitResult = await commitImport(commitPayload);
@@ -210,7 +209,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       selectedMapIds: [seeded.mapId],
       selectedGlobalCharacterIds: [seeded.globalCharId],
       conflictResolutions: {},
-      stagedImages: stageResult.images,
     });
 
     const commitResult = await commitImport(commitPayload);
@@ -319,7 +317,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       selectedMapIds: [seeded.mapId],
       selectedGlobalCharacterIds: [seeded.globalCharId],
       conflictResolutions: {},
-      stagedImages: stageResult.images,
     });
 
     const commitResult = await commitImport(commitPayload);
@@ -386,7 +383,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       selectedMapIds: [seeded.mapId],
       selectedGlobalCharacterIds: [seeded.globalCharId],
       conflictResolutions: {},
-      stagedImages: stageResult.images,
     });
 
     const commitResult = await commitImport(commitPayload);
@@ -430,7 +426,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       selectedMapIds: [seeded.mapId],
       selectedGlobalCharacterIds: [seeded.globalCharId],
       conflictResolutions: {},
-      stagedImages: stageResult.images,
     });
 
     const commitResult = await commitImport(commitPayload);
@@ -504,7 +499,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       selectedMapIds: [seeded.mapId],
       selectedGlobalCharacterIds: [seeded.globalCharId],
       conflictResolutions: {},
-      stagedImages: stageResult.images,
     });
 
     const commitResult = await commitImport(commitPayload);

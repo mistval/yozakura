@@ -7,7 +7,6 @@ import {
   cancelImport,
   commitImport,
   type StagedManifest,
-  type StagedImageEntry,
 } from '../../backend_bridge/import_api.js';
 import { decomposeSelection } from './importExportCommon.js';
 import { buildImportExportTreeRoots } from './treeBuilder.js';
@@ -30,7 +29,6 @@ export type DataImportComponentProps = {
 type StagedData = {
   sessionId: string;
   manifest: StagedManifest;
-  images: StagedImageEntry[];
   scenarios: ScenarioSummary[];
   maps: WorldMap[];
   globalCharacters: Character[];
@@ -97,7 +95,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
         const staged: StagedData = {
           sessionId: result.sessionId,
           manifest: result.manifest,
-          images: result.images,
           scenarios,
           maps,
           globalCharacters,
@@ -203,7 +200,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
         selectedMapIds,
         selectedGlobalCharacterIds,
         conflictResolutions,
-        stagedImages: stagedData.images,
         stagedGlobalCharacters: stagedData.globalCharacters,
       });
 
