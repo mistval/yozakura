@@ -371,10 +371,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
             disabled={isBusy}
             className="block w-full text-sm text-secondary file:mr-4 file:py-2 file:px-4 file:rounded file:border file:border-border-default file:text-sm file:font-semibold file:bg-surface file:text-primary hover:file:bg-surface-hover file:cursor-pointer disabled:opacity-50"
           />
-          <div className="text-xs text-secondary mt-1">
-            Select a <code className="text-secondary-strong">.yozakura_export.zip</code> file to inspect and
-            stage.
-          </div>
         </div>
 
         {isStaging && (
@@ -397,7 +393,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
             disabled={!selectedFile || isBusy}
             className="px-4 py-2 bg-button-emphasized-bg text-button-emphasized-text font-medium rounded hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            {isStaging ? 'Inspecting...' : 'Inspect & Stage Archive'}
+            {isStaging ? 'Inspecting...' : 'Inspect Archive'}
           </button>
         </div>
       </div>
@@ -422,11 +418,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       <div className="p-3 bg-surface-subtle border border-border-default rounded flex items-center justify-between">
         <div>
           <div className="font-semibold text-primary text-sm">
-            Staged Archive: <span className="font-mono">{stagedData.manifest.exportName}</span>
-          </div>
-          <div className="text-xs text-secondary">
-            Archive Database Version: {stagedData.manifest.dbUserVersion} | Images bundled:{' '}
-            {stagedData.images.length}
+            Loaded Archive: <span className="font-mono">{stagedData.manifest.exportName}</span>
           </div>
         </div>
         <button
@@ -435,7 +427,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
           disabled={isBusy}
           className="text-xs px-2 py-1 rounded border border-border-default hover:bg-surface-hover text-secondary hover:text-primary cursor-pointer disabled:opacity-50"
         >
-          Cancel &amp; Unstage
+          Cancel
         </button>
       </div>
 
@@ -453,7 +445,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       )}
 
       <div>
-        <div className="text-sm font-medium text-primary mb-2">Select Items to Import</div>
         <TreeDataViewer
           roots={roots}
           selectedIds={selectedIds}
@@ -461,7 +452,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
           disabled={isBusy}
           renderControls={(selection) => (
             <div className="flex items-center justify-between text-xs text-secondary">
-              <span>{selection.selectedIds.size} items selected</span>
+              <div className="text-sm font-medium text-primary mb-2">Select Items to Import</div>
               <div className="flex gap-2">
                 <button
                   type="button"

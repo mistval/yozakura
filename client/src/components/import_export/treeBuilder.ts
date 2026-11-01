@@ -46,8 +46,8 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                   label: 'Characters',
                   subtitle:
                     mode === 'export'
-                      ? 'Scenario character definitions and cards'
-                      : 'Scenario characters and portraits',
+                      ? 'Character definitions and cards'
+                      : 'Characters and portraits',
                 },
                 {
                   id: TreeEntityIds.scenarioGroups(scenId),
@@ -64,7 +64,7 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                   label: 'Memories & Relationships',
                   subtitle:
                     mode === 'export'
-                      ? 'Global memories, relationship graphs and summaries'
+                      ? ''
                       : 'Pairwise memories and relationships',
                 },
                 {
@@ -75,8 +75,8 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                 },
                 {
                   id: TreeEntityIds.scenarioTurn(scenId),
-                  label: 'Active Conversation State',
-                  subtitle: mode === 'export' ? 'Current turn runtime state' : 'Saved turn runtime state',
+                  label: 'Current Conversation',
+                  subtitle: 'The current conversation (if any)',
                 }
               );
 

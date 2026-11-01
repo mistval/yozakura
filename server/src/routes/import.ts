@@ -297,7 +297,6 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
         ok: true,
         sessionId,
         manifest,
-        images: [],
       });
     } catch (error) {
       console.error('Error staging import archive:', error);

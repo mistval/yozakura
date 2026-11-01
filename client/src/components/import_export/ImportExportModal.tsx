@@ -4,10 +4,12 @@ import Tabs, { type TabDefinition } from '../ui/Tabs.js';
 import DataExportComponent from './DataExportComponent.js';
 import DataImportComponent from './DataImportComponent.js';
 
+type ImportExportModalTab = 'export' | 'import';
+
 type ImportExportModalProps = {
   open: boolean;
   onClose: () => void;
-  defaultTab?: 'export' | 'import';
+  defaultTab?: ImportExportModalTab;
 };
 
 export default function ImportExportModal({ open, onClose, defaultTab = 'export' }: ImportExportModalProps) {
@@ -18,8 +20,8 @@ export default function ImportExportModal({ open, onClose, defaultTab = 'export'
   const isBusy = isExporting || isImporting;
 
   const tabs: TabDefinition[] = [
-    { id: 'export', label: 'Export Data' },
-    { id: 'import', label: 'Import Data' },
+    { id: 'export' satisfies ImportExportModalTab, label: 'Export Data' },
+    { id: 'import' satisfies ImportExportModalTab, label: 'Import Data' },
   ];
 
   const handleClose = () => {

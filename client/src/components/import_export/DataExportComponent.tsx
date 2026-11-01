@@ -130,14 +130,9 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
             disabled={isExporting}
           />
         </div>
-        <div className="text-xs text-secondary mt-1">
-          Will be saved to{' '}
-          <code className="text-secondary-strong">&lt;dataDir&gt;/data_exports/{finalZipFilename}</code>
-        </div>
       </div>
 
       <div>
-        <div className="text-sm font-medium text-primary mb-2">Select Items to Export</div>
         <TreeDataViewer
           roots={roots}
           selectedIds={selectedIds}
@@ -145,7 +140,7 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
           disabled={isExporting}
           renderControls={(selection) => (
             <div className="flex items-center justify-between text-xs text-secondary">
-              <span>{selection.selectedIds.size} items selected</span>
+              <div className="text-sm font-medium text-primary mb-2">Select Items to Export</div>
               <div className="flex gap-2">
                 <button
                   type="button"
