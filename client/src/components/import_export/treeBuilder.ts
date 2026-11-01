@@ -14,10 +14,10 @@ export type BuildTreeOptions = {
 export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[] {
   const { mode, scenarios, maps, globalCharacters, templateGroupData } = options;
   const treeRoots: TreeNode[] = [];
-  const countSuffix = mode === 'export' ? 'available' : 'in archive';
+  const countSuffix = 'available';
 
   // 1. Scenarios Root
-  if (mode === 'export' || scenarios.length > 0) {
+  if (scenarios.length > 0) {
     const scenariosRoot: TreeNode = {
       id: TreeEntityIds.rootScenarios(),
       label: 'Scenarios',
@@ -44,10 +44,7 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                 {
                   id: TreeEntityIds.scenarioCharacters(scenId),
                   label: 'Characters',
-                  subtitle:
-                    mode === 'export'
-                      ? 'Character definitions and cards'
-                      : 'Characters and portraits',
+                  subtitle: 'Character definitions and card images',
                 },
                 {
                   id: TreeEntityIds.scenarioGroups(scenId),
@@ -62,16 +59,12 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                 {
                   id: TreeEntityIds.scenarioMemories(scenId),
                   label: 'Memories & Relationships',
-                  subtitle:
-                    mode === 'export'
-                      ? ''
-                      : 'Pairwise memories and relationships',
                 },
                 {
                   id: TreeEntityIds.scenarioConversations(scenId),
                   label: 'Conversation Logs',
                   subtitle:
-                    mode === 'export' ? 'Chat logs, participants and images' : 'Chat logs and participants',
+                    'Chat logs, participants and images',
                 },
                 {
                   id: TreeEntityIds.scenarioTurn(scenId),
@@ -90,7 +83,7 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
   }
 
   // 2. Maps Root
-  if (mode === 'export' || maps.length > 0) {
+  if (maps.length > 0) {
     const mapsRoot: TreeNode = {
       id: TreeEntityIds.rootMaps(),
       label: 'Maps',
@@ -107,7 +100,7 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
   }
 
   // 3. Global Characters Root
-  if (mode === 'export' || globalCharacters.length > 0) {
+  if (globalCharacters.length > 0) {
     const charactersRoot: TreeNode = {
       id: TreeEntityIds.rootCharacters(),
       label: 'Global Characters',
