@@ -63,8 +63,7 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                 {
                   id: TreeEntityIds.scenarioConversations(scenId),
                   label: 'Conversation Logs',
-                  subtitle:
-                    'Chat logs, participants and images',
+                  subtitle: 'Chat logs, participants and images',
                 },
                 {
                   id: TreeEntityIds.scenarioTurn(scenId),

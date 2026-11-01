@@ -338,7 +338,8 @@ export default function ScenarioView() {
           {showNpcPhaseControls && (
             <div>
               <div className="font-semibold mb-1">
-                { isUserTurn &&  `${(perspectiveCharacter.firstName + ' ' + perspectiveCharacter.lastName).trim()}'s turn`}
+                {isUserTurn &&
+                  `${(perspectiveCharacter.firstName + ' ' + perspectiveCharacter.lastName).trim()}'s turn`}
               </div>
               <div className="flex gap-2 flex-wrap">
                 <button

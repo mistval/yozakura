@@ -1,10 +1,7 @@
 import { z } from 'zod';
 import { importStagingDatabase, DatabaseClient } from '../../backend_bridge/database.js';
 import * as Files from '../../backend_bridge/files.js';
-import type {
-  ImportCommitPayload,
-  SqlStatementEntry,
-} from '../../backend_bridge/import_api.js';
+import type { ImportCommitPayload, SqlStatementEntry } from '../../backend_bridge/import_api.js';
 import type { Character } from '../../engine/types.js';
 import type { ConflictAction } from './importConflictResolver.js';
 import {

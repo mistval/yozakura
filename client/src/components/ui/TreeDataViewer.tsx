@@ -214,7 +214,11 @@ export default function TreeDataViewer({
               {isLoading ? (
                 <span className="text-xs animate-spin">⟳</span>
               ) : (
-                <span className={`w-full h-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs inline-block transform ${isExpanded ? 'rotate-90' : ''}`}>{'>'}</span>
+                <span
+                  className={`w-full h-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs inline-block transform ${isExpanded ? 'rotate-90' : ''}`}
+                >
+                  {'>'}
+                </span>
               )}
             </button>
           ) : (

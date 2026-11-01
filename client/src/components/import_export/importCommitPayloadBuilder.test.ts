@@ -200,7 +200,7 @@ describe('importCommitPayloadBuilder', () => {
       selectedMapIds: [],
       selectedGlobalCharacterIds: [],
       conflictResolutions: {},
-      
+
       stagedGlobalCharacters: dummyGlobalCharacters,
       stagingDb,
     });
@@ -339,7 +339,7 @@ describe('importCommitPayloadBuilder', () => {
       selectedMapIds: [],
       selectedGlobalCharacterIds: [],
       conflictResolutions: {},
-      
+
       stagedGlobalCharacters: dummyGlobalCharacters,
       stagingDb,
     });
