@@ -37,7 +37,7 @@ export default function ImportConflictModal({
     >
       <div className="bg-emphasized rounded-sm border border-border-default p-6 w-full max-w-xl max-h-[85vh] flex flex-col space-y-4 shadow-2xl">
         <div className="flex items-center justify-between border-b border-border-default pb-3">
-          <h2 className="text-lg font-semibold text-primary">Resolve Entity Conflicts</h2>
+          <h2 className="text-lg font-semibold text-primary">Resolve Conflicts</h2>
         </div>
 
         <p className="text-sm text-secondary">

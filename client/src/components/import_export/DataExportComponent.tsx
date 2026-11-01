@@ -30,30 +30,14 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
   const [copied, setCopied] = useState<boolean>(false);
 
   const scenarioSummaries = useScenarioStore((s) => s.scenarioSummaries);
-  const scenarioSummariesLoaded = useScenarioStore((s) => s.scenarioSummariesAreLoaded);
   const maps = useMapStore((s) => s.maps);
-  const mapsLoaded = useMapStore((s) => s.mapsAreLoaded);
   const globalCharacters = useGlobalCharactersStore((s) => s.globalCharacters);
-  const globalCharactersLoaded = useGlobalCharactersStore((s) => s.globalCharactersAreLoaded);
   const templateGroupData = useSettingsStore((s) => s.templateGroupData);
 
   // Notify parent of export progress
   useEffect(() => {
     onExportStateChange?.(isExporting);
   }, [isExporting, onExportStateChange]);
-
-  // Ensure stores are populated
-  useEffect(() => {
-    if (!scenarioSummariesLoaded) {
-      void useScenarioStore.getState().refreshScenarioSummaries();
-    }
-    if (!mapsLoaded) {
-      void useMapStore.getState().refreshMaps();
-    }
-    if (!globalCharactersLoaded) {
-      void useGlobalCharactersStore.getState().refresh();
-    }
-  }, [scenarioSummariesLoaded, mapsLoaded, globalCharactersLoaded]);
 
   // Construct tree roots using centralized TreeEntityIds
   const roots = useMemo<TreeNode[]>(() => {
