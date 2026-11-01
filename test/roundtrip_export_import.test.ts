@@ -88,7 +88,6 @@ describe('Integration: Full Round-Trip Pack, Unpack & ID Remapping', () => {
       scenarios: [sourceScenarioSummary],
       maps: [sourceMap],
       globalCharacters: [sourceGlobalChar],
-      templateGroupData: {},
     });
 
     const { zipBuffer } = await exportViaApi(exportPayload);
@@ -113,7 +112,6 @@ describe('Integration: Full Round-Trip Pack, Unpack & ID Remapping', () => {
       selectedScenarioIds: [seeded.scenarioId],
       selectedMapIds: [seeded.mapId],
       selectedGlobalCharacterIds: [seeded.globalCharId],
-      selectedTemplateChainIds: [],
     });
     if (!validation.valid) {
       console.error('Validation errors:', validation.errors);

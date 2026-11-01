@@ -9,19 +9,14 @@ import {
 } from '../../backend_bridge/import_api.js';
 import { decomposeSelection } from './importExportCommon.js';
 import { buildImportExportTreeRoots } from './treeBuilder.js';
-import { templateGroupDataSchema } from '../../engine/prompt_templates/template_types.js';
 import type { ScenarioSummary, WorldMap, Character } from '../../engine/types.js';
 import { detectConflicts, type ConflictAction, type EntityConflict } from './importConflictResolver.js';
 import ImportConflictModal from './ImportConflictModal.js';
-import { getSelectedExecutableCodeItems, type ExecutableCodeItem } from './executableCodeDetection.js';
-import ExecutableCodeWarningModal from './ExecutableCodeWarningModal.js';
 import { validateStagedData } from './importValidation.js';
 import { prepareStagingAndBuildCommitPayload } from './importCommitPayloadBuilder.js';
 import { useMapStore } from '../../state/map_store.js';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
-import { useSettingsStore } from '../../state/settings_store.js';
-import { z } from 'zod';
 
 export type DataImportComponentProps = {
   onImportStateChange?: (isProcessing: boolean) => void;
@@ -33,7 +28,6 @@ type StagedData = {
   scenarios: ScenarioSummary[];
   maps: WorldMap[];
   globalCharacters: Character[];
-  templateGroupData: z.infer<typeof templateGroupDataSchema>;
 };
 
 export default function DataImportComponent({ onImportStateChange }: DataImportComponentProps) {
@@ -44,7 +38,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
   const [successMessage, setSuccessMessage] = useState<string | undefined>(undefined);
   const [stagedData, setStagedData] = useState<StagedData | undefined>(undefined);
   const [pendingConflicts, setPendingConflicts] = useState<EntityConflict[] | undefined>(undefined);
-  const [pendingExecutableItems, setPendingExecutableItems] = useState<ExecutableCodeItem[] | undefined>(undefined);
 
   const lastSelectedIdsRef = useRef<Set<string>>(new Set());
 
@@ -81,19 +74,11 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
         }
 
         // Query importStagingDatabase for staged entities
-        const [scenarios, maps, globalCharacters, settingsRow] = await Promise.all([
+        const [scenarios, maps, globalCharacters] = await Promise.all([
           importStagingDatabase.loadScenarioSummaries().then((s) => mainDatabase.augmentSummaryMetadata(s)),
           importStagingDatabase.loadMaps(),
           importStagingDatabase.loadGlobalCharacters(),
-          importStagingDatabase.loadKeyValue(
-            'settings',
-            z.object({
-              templateGroupData: templateGroupDataSchema.optional(),
-            })
-          ),
         ]);
-
-        const templateGroupData = settingsRow?.templateGroupData ?? {};
 
         const staged: StagedData = {
           sessionId: result.sessionId,
@@ -101,7 +86,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
           scenarios,
           maps,
           globalCharacters,
-          templateGroupData,
         };
 
         setStagedData(staged);
@@ -132,7 +116,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       setStagedData(undefined);
       setSelectedFile(undefined);
       setPendingConflicts(undefined);
-      setPendingExecutableItems(undefined);
     }
   };
 
@@ -151,7 +134,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       scenarios: stagedData.scenarios,
       maps: stagedData.maps,
       globalCharacters: stagedData.globalCharacters,
-      templateGroupData: stagedData.templateGroupData,
     });
 
     const {
@@ -164,7 +146,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       selectedScenarioTurnIds,
       selectedMapIds,
       selectedGlobalCharacterIds,
-      selectedTemplateChainIds,
     } = decomposed;
 
     try {
@@ -188,38 +169,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       if (!result.success) {
         setErrorMessage(result.error);
         return;
-      }
-
-      // Merge selected template chains into useSettingsStore
-      if (selectedTemplateChainIds.length > 0) {
-        const currentTemplateGroupData = useSettingsStore.getState().templateGroupData;
-        const updated = { ...currentTemplateGroupData };
-
-        for (const [groupId, group] of Object.entries(stagedData.templateGroupData)) {
-          const matchingChains: Record<string, (typeof group.templateChains)[string]> = {};
-          for (const [chainId, chain] of Object.entries(group.templateChains)) {
-            if (selectedTemplateChainIds.includes(chainId)) {
-              matchingChains[chainId] = chain;
-            }
-          }
-          if (Object.keys(matchingChains).length > 0) {
-            const existingGroup = updated[groupId] ?? {
-              id: groupId,
-              templateChains: {},
-            };
-            updated[groupId] = {
-              ...existingGroup,
-              templateChains: {
-                ...existingGroup.templateChains,
-                ...matchingChains,
-              },
-            };
-          }
-        }
-
-        useSettingsStore.getState().setSettings({
-          templateGroupData: updated,
-        });
       }
 
       // Refresh stores
@@ -261,7 +210,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       scenarios: stagedData.scenarios,
       maps: stagedData.maps,
       globalCharacters: stagedData.globalCharacters,
-      templateGroupData: stagedData.templateGroupData,
     });
 
     const { selectedMapIds, selectedGlobalCharacterIds } = decomposed;
@@ -298,7 +246,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       scenarios: stagedData.scenarios,
       maps: stagedData.maps,
       globalCharacters: stagedData.globalCharacters,
-      templateGroupData: stagedData.templateGroupData,
     });
 
     const {
@@ -310,14 +257,12 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       selectedScenarioConversationsIds,
       selectedMapIds,
       selectedGlobalCharacterIds,
-      selectedTemplateChainIds,
     } = decomposed;
 
     const hasAnySelection =
       selectedScenarioIds.length > 0 ||
       selectedMapIds.length > 0 ||
-      selectedGlobalCharacterIds.length > 0 ||
-      selectedTemplateChainIds.length > 0;
+      selectedGlobalCharacterIds.length > 0;
 
     if (!hasAnySelection) {
       setErrorMessage('Please select at least one item to import.');
@@ -337,7 +282,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       selectedScenarioConversationsIds,
       selectedMapIds,
       selectedGlobalCharacterIds,
-      selectedTemplateChainIds,
     });
 
     if (!validation.valid) {
@@ -350,19 +294,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       return;
     }
 
-    // 2. Executable Code Warning
-    const executableItems = getSelectedExecutableCodeItems(
-      stagedData.templateGroupData,
-      selectedTemplateChainIds
-    );
-
-    if (executableItems.length > 0) {
-      setIsCommitting(false);
-      setPendingExecutableItems(executableItems);
-      return;
-    }
-
-    // 3. Conflict Detection & Commit
+    // 2. Conflict Detection & Commit
     await proceedWithConflictsAndCommit(selectedIds);
   };
 
@@ -374,7 +306,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       scenarios: stagedData.scenarios,
       maps: stagedData.maps,
       globalCharacters: stagedData.globalCharacters,
-      templateGroupData: stagedData.templateGroupData,
     });
   }, [stagedData]);
 
@@ -432,20 +363,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
   // View 2: Archive Preview Tree
   return (
     <div className="flex flex-col space-y-4">
-      {pendingExecutableItems && (
-        <ExecutableCodeWarningModal
-          open={true}
-          items={pendingExecutableItems}
-          onConfirm={() => {
-            setPendingExecutableItems(undefined);
-            void proceedWithConflictsAndCommit(lastSelectedIdsRef.current);
-          }}
-          onCancel={() => {
-            setPendingExecutableItems(undefined);
-          }}
-        />
-      )}
-
       {pendingConflicts && (
         <ImportConflictModal
           open={true}

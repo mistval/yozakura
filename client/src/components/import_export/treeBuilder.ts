@@ -1,18 +1,16 @@
 import type { TreeNode } from '../ui/TreeDataViewer.js';
 import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
-import type { TemplateGroupData } from '../../engine/prompt_templates/template_types.js';
-import { TreeEntityIds, isTemplateChainModifiedOrCustom } from './exportPayloadBuilder.js';
+import { TreeEntityIds } from './exportPayloadBuilder.js';
 
 export type BuildTreeOptions = {
   mode: 'export' | 'import';
   scenarios: ScenarioSummary[];
   maps: WorldMap[];
   globalCharacters: Character[];
-  templateGroupData: TemplateGroupData;
 };
 
 export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[] {
-  const { mode, scenarios, maps, globalCharacters, templateGroupData } = options;
+  const { scenarios, maps, globalCharacters } = options;
   const treeRoots: TreeNode[] = [];
   const countSuffix = 'available';
 
@@ -118,57 +116,6 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
       },
     };
     treeRoots.push(charactersRoot);
-  }
-
-  // 4. Settings & Prompt Templates Root
-  const isChainApplicable = (groupId: string, chainId: string, chain: unknown) => {
-    if (mode === 'export') {
-      return isTemplateChainModifiedOrCustom(groupId, chainId, chain);
-    }
-    return true;
-  };
-
-  const hasPromptChains = Object.entries(templateGroupData).some(([groupId, g]) =>
-    Object.entries(g.templateChains).some(([chainId, chain]) => isChainApplicable(groupId, chainId, chain))
-  );
-
-  if (hasPromptChains) {
-    const settingsRoot: TreeNode = {
-      id: TreeEntityIds.rootSettings(),
-      label: 'Settings & Prompts',
-      getChildren: async () => [
-        {
-          id: TreeEntityIds.rootPromptTemplates(),
-          label: 'Prompt Templates',
-          getChildren: async () => {
-            const groupNodes: TreeNode[] = [];
-            for (const [groupId, group] of Object.entries(templateGroupData)) {
-              const chainEntries = Object.entries(group.templateChains).filter(([chainId, chain]) =>
-                isChainApplicable(groupId, chainId, chain)
-              );
-              if (chainEntries.length === 0) continue;
-
-              groupNodes.push({
-                id: TreeEntityIds.promptGroup(groupId),
-                label: groupId,
-                getChildren: async () => {
-                  return chainEntries.map(([chainId, chain]) => ({
-                    id: TreeEntityIds.promptChain(chainId),
-                    label: chain.title || chainId,
-                    subtitle: chain.description,
-                    ...(chain.parserSource?.trim()
-                      ? { badge: { text: 'Executable Code', variant: 'warning' as const } }
-                      : {}),
-                  }));
-                },
-              });
-            }
-            return groupNodes;
-          },
-        },
-      ],
-    };
-    treeRoots.push(settingsRoot);
   }
 
   return treeRoots;

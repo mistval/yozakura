@@ -87,7 +87,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       scenarios: [sourceScenarioSummary],
       maps: [sourceMap],
       globalCharacters: [sourceGlobalChar],
-      templateGroupData: {},
     });
 
     const { zipBuffer } = await exportViaApi(exportPayload);
@@ -184,7 +183,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       scenarios: [sourceScenarioSummary],
       maps: [sourceMap],
       globalCharacters: [sourceGlobalChar],
-      templateGroupData: {},
     });
 
     const { zipBuffer } = await exportViaApi(exportPayload);
@@ -282,7 +280,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       scenarios: [sourceScenarioSummary],
       maps: [sourceMap],
       globalCharacters: [sourceGlobalChar],
-      templateGroupData: {},
     });
 
     const { zipBuffer } = await exportViaApi(exportPayload);

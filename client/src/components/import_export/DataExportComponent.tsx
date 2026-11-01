@@ -4,7 +4,6 @@ import ConfirmDialog from '../ui/ConfirmDialog.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useMapStore } from '../../state/map_store.js';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
-import { useSettingsStore } from '../../state/settings_store.js';
 import { buildExportPayload, sanitizeExportFilename } from './exportPayloadBuilder.js';
 import { buildImportExportTreeRoots } from './treeBuilder.js';
 import { requestDataExport, type ExportResult } from '../../backend_bridge/export_api.js';
@@ -33,7 +32,6 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
   const scenarioSummaries = useScenarioStore((s) => s.scenarioSummaries);
   const maps = useMapStore((s) => s.maps);
   const globalCharacters = useGlobalCharactersStore((s) => s.globalCharacters);
-  const templateGroupData = useSettingsStore((s) => s.templateGroupData);
 
   // Notify parent of export progress
   useEffect(() => {
@@ -47,9 +45,8 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
       scenarios: scenarioSummaries,
       maps,
       globalCharacters,
-      templateGroupData,
     });
-  }, [scenarioSummaries, maps, globalCharacters, templateGroupData]);
+  }, [scenarioSummaries, maps, globalCharacters]);
 
   const executeExport = useCallback(
     async (selectedIds: Set<string>, overwrite = false) => {
@@ -66,7 +63,6 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
           scenarios: scenarioSummaries,
           maps,
           globalCharacters,
-          templateGroupData,
         });
 
         const result = await requestDataExport(payload);
@@ -86,7 +82,7 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
         setIsExporting(false);
       }
     },
-    [exportName, scenarioSummaries, maps, globalCharacters, templateGroupData]
+    [exportName, scenarioSummaries, maps, globalCharacters]
   );
 
   const handleCopyPath = () => {

@@ -1,5 +1,4 @@
 import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
-import type { TemplateGroupData } from '../../engine/prompt_templates/template_types.js';
 import { turnPersistenceKey } from '../../util/id.js';
 
 export const SQL_UTC_NOW = "CONCAT(datetime('now'), 'Z')";
@@ -21,8 +20,6 @@ export const TreeEntityIds = {
   rootScenarios: () => 'root:scenarios',
   rootMaps: () => 'root:maps',
   rootCharacters: () => 'root:characters',
-  rootSettings: () => 'root:settings',
-  rootPromptTemplates: () => 'root:prompt_templates',
 
   scenario: (scenId: string) => `scenario:${scenId}`,
   scenarioCharacters: (scenId: string) => `scenario:${scenId}:characters`,
@@ -35,9 +32,6 @@ export const TreeEntityIds = {
 
   map: (mapId: string) => `map:${mapId}`,
   character: (charId: string) => `character:${charId}`,
-
-  promptGroup: (groupId: string) => `prompt_group:${groupId}`,
-  promptChain: (chainId: string) => `prompt_chain:${chainId}`,
 } as const;
 
 export const STRIP_MEMORIES_PATCH = JSON.stringify({
@@ -81,7 +75,6 @@ export type DecomposedSelection = {
   selectedScenarioTurnIds: string[];
   selectedMapIds: string[];
   selectedGlobalCharacterIds: string[];
-  selectedTemplateChainIds: string[];
 };
 
 export type DecomposeSelectionOptions = {
@@ -89,11 +82,10 @@ export type DecomposeSelectionOptions = {
   scenarios: ScenarioSummary[];
   maps: WorldMap[];
   globalCharacters: Character[];
-  templateGroupData: TemplateGroupData;
 };
 
 export function decomposeSelection(options: DecomposeSelectionOptions): DecomposedSelection {
-  const { selectedIds, scenarios, maps, globalCharacters, templateGroupData } = options;
+  const { selectedIds, scenarios, maps, globalCharacters } = options;
 
   const selectedScenarioIds: string[] = [];
   const scenarioDetails = new Map<string, DecomposedScenarioSelection>();
@@ -167,16 +159,6 @@ export function decomposeSelection(options: DecomposeSelectionOptions): Decompos
     }
   }
 
-  // Template Chains
-  const selectedTemplateChainIds: string[] = [];
-  for (const group of Object.values(templateGroupData)) {
-    for (const chainId of Object.keys(group.templateChains)) {
-      if (selectedIds.has(TreeEntityIds.promptChain(chainId))) {
-        selectedTemplateChainIds.push(chainId);
-      }
-    }
-  }
-
   return {
     selectedScenarioIds,
     scenarioDetails,
@@ -188,6 +170,5 @@ export function decomposeSelection(options: DecomposeSelectionOptions): Decompos
     selectedScenarioTurnIds,
     selectedMapIds,
     selectedGlobalCharacterIds,
-    selectedTemplateChainIds,
   };
 }

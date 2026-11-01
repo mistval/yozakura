@@ -1,8 +1,5 @@
-import _ from 'lodash';
 import * as Files from '../../backend_bridge/files.js';
 import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
-import type { TemplateGroupData } from '../../engine/prompt_templates/template_types.js';
-import { DEFAULT_TEMPLATE_GROUP_DATA } from '../../engine/prompt_templates/default_template_group_data.js';
 import {
   TABLE_COLUMNS,
   STRIP_MEMORIES_PATCH,
@@ -14,18 +11,6 @@ import {
 } from './importExportCommon.js';
 
 export { TreeEntityIds };
-
-export function isTemplateChainModifiedOrCustom(
-  groupId: string,
-  chainId: string,
-  chainData: unknown
-): boolean {
-  const defaultGroup = DEFAULT_TEMPLATE_GROUP_DATA[groupId];
-  if (!defaultGroup) return true;
-  const defaultChain = defaultGroup.templateChains[chainId];
-  if (!defaultChain) return true;
-  return !_.isEqual(chainData, defaultChain);
-}
 
 export type TableExportQuery = {
   table: string;
@@ -67,7 +52,6 @@ export type BuildExportPayloadOptions = {
   scenarios: ScenarioSummary[];
   maps: WorldMap[];
   globalCharacters: Character[];
-  templateGroupData: TemplateGroupData;
 };
 
 export function sanitizeExportFilename(name: string): string {
@@ -84,7 +68,6 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     scenarios,
     maps,
     globalCharacters,
-    templateGroupData,
   } = options;
 
   const queries: TableExportQuery[] = [];
@@ -96,7 +79,6 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     scenarios,
     maps,
     globalCharacters,
-    templateGroupData,
   });
 
   // 1. Process Scenarios and their subcategories
@@ -338,35 +320,6 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
         WHERE id IN (SELECT value FROM json_each(?))
       `.trim(),
       params: [JSON.stringify(selectedGlobalCharIds)],
-    });
-  }
-
-  // 4. Prompt Templates (Template Chains) - Only export customized or modified chains
-  const exportedTemplateGroupData: TemplateGroupData = {};
-  for (const [groupId, group] of Object.entries(templateGroupData)) {
-    for (const [chainId, chainData] of Object.entries(group.templateChains)) {
-      if (
-        decomposed.selectedTemplateChainIds.includes(chainId) &&
-        isTemplateChainModifiedOrCustom(groupId, chainId, chainData)
-      ) {
-        if (!exportedTemplateGroupData[groupId]) {
-          exportedTemplateGroupData[groupId] = { templateChains: {} };
-        }
-        exportedTemplateGroupData[groupId].templateChains[chainId] = chainData;
-      }
-    }
-  }
-
-  if (Object.keys(exportedTemplateGroupData).length > 0) {
-    const now = new Date().toISOString();
-    prebuiltRows.push({
-      table: 'key_value',
-      row: {
-        key: 'settings',
-        data: JSON.stringify({ templateGroupData: exportedTemplateGroupData }),
-        created_at: now,
-        updated_at: now,
-      },
     });
   }
 

@@ -91,7 +91,6 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
       scenarios: [sourceScenarioSummary],
       maps: [sourceMap],
       globalCharacters: [sourceGlobalChar],
-      templateGroupData: {},
     });
 
     const { zipBuffer } = await exportViaApi(exportPayload);

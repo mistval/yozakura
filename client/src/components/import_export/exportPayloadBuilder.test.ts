@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildExportPayload, sanitizeExportFilename, TreeEntityIds } from './exportPayloadBuilder.js';
 import type { ScenarioSummary, WorldMap, Character } from '../../engine/types.js';
-import type { TemplateGroupData } from '../../engine/prompt_templates/template_types.js';
 
 describe('exportPayloadBuilder', () => {
   const dummyScenario: ScenarioSummary = {
@@ -73,31 +72,6 @@ describe('exportPayloadBuilder', () => {
     updatedAt: '2026-10-29T10:00:00Z',
   };
 
-  const dummyTemplateGroups: TemplateGroupData = {
-    chat_group: {
-      templateChains: {
-        chain_1: {
-          title: 'Chain 1',
-          description: 'First chain',
-          parserSource: 'console.log("hello");',
-          templates: {
-            t1: {
-              name: 'T1',
-              description: 'Template 1',
-              role: 'user',
-              templateString: 'Hello {{name}}',
-            },
-          },
-        },
-        chain_2: {
-          title: 'Chain 2',
-          description: 'Second chain',
-          templates: {},
-        },
-      },
-    },
-  };
-
   it('sanitizes export filename and guarantees .yozakura_export.zip extension', () => {
     expect(sanitizeExportFilename('My Export')).toBe('My Export.yozakura_export.zip');
     expect(sanitizeExportFilename('Invalid/Name:Test*')).toBe('Invalid_Name_Test_.yozakura_export.zip');
@@ -122,7 +96,6 @@ describe('exportPayloadBuilder', () => {
       scenarios: [dummyScenario],
       maps: [dummyMap],
       globalCharacters: [dummyGlobalCharCustom],
-      templateGroupData: dummyTemplateGroups,
     });
 
     const charQuery = payload.queries.find((q) => q.table === 'scenario_character');
@@ -150,7 +123,6 @@ describe('exportPayloadBuilder', () => {
       scenarios: [dummyScenario],
       maps: [],
       globalCharacters: [],
-      templateGroupData: {},
     });
 
     const charQuery = payload.queries.find((q) => q.table === 'scenario_character');
@@ -178,7 +150,6 @@ describe('exportPayloadBuilder', () => {
       scenarios: [dummyScenario],
       maps: [],
       globalCharacters: [],
-      templateGroupData: {},
     });
 
     const charQuery = payload.queries.find((q) => q.table === 'scenario_character');
@@ -205,7 +176,6 @@ describe('exportPayloadBuilder', () => {
       scenarios: [dummyScenario],
       maps: [],
       globalCharacters: [],
-      templateGroupData: {},
     });
 
     const charQuery = payload.queries.find((q) => q.table === 'scenario_character');
@@ -230,7 +200,6 @@ describe('exportPayloadBuilder', () => {
       scenarios: [dummyScenario],
       maps: [],
       globalCharacters: [],
-      templateGroupData: {},
     });
 
     const kvQuery = payload.queries.find((q) => q.table === 'key_value');
@@ -250,7 +219,6 @@ describe('exportPayloadBuilder', () => {
       scenarios: [],
       maps: [],
       globalCharacters: [dummyGlobalCharCustom, dummyGlobalCharBuiltin],
-      templateGroupData: {},
     });
 
     expect(payload.imageDescriptors).toEqual([
@@ -259,71 +227,6 @@ describe('exportPayloadBuilder', () => {
         sourceRelPath: 'character_cards/custom.png',
       },
     ]);
-  });
-
-  it('serializes only selected template chains into prebuilt settings row', () => {
-    const selectedIds = new Set<string>([TreeEntityIds.promptChain('chain_1')]);
-
-    const payload = buildExportPayload({
-      exportName: 'Test Pack',
-      selectedIds,
-      scenarios: [],
-      maps: [],
-      globalCharacters: [],
-      templateGroupData: dummyTemplateGroups,
-    });
-
-    expect(payload.prebuiltRows.length).toBe(1);
-    const settingsRow = payload.prebuiltRows[0]!;
-    expect(settingsRow.table).toBe('key_value');
-    expect(settingsRow.row.key).toBe('settings');
-
-    const parsedData = JSON.parse(settingsRow.row.data as string);
-    expect(parsedData.templateGroupData.chat_group.templateChains.chain_1).toBeDefined();
-    expect(parsedData.templateGroupData.chat_group.templateChains.chain_2).toBeUndefined();
-  });
-
-  it('excludes unmodified built-in template chains even if selected, but includes modified ones', async () => {
-    const { DEFAULT_TEMPLATE_GROUP_DATA } =
-      await import('../../engine/prompt_templates/default_template_group_data.js');
-    const { RUNTIME_CHAT_TEMPLATES_GROUP_ID } =
-      await import('../../engine/prompt_templates/template_types.js');
-
-    // 1. Unmodified default chain
-    const unmodifiedGroups = JSON.parse(JSON.stringify(DEFAULT_TEMPLATE_GROUP_DATA));
-    const selectedIds = new Set<string>([TreeEntityIds.promptChain('gen_npc_response')]);
-
-    const unmodifiedPayload = buildExportPayload({
-      exportName: 'Test Pack',
-      selectedIds,
-      scenarios: [],
-      maps: [],
-      globalCharacters: [],
-      templateGroupData: unmodifiedGroups,
-    });
-
-    // Unmodified stock chain should not be exported
-    expect(unmodifiedPayload.prebuiltRows.length).toBe(0);
-
-    // 2. Modified default chain
-    const modifiedGroups = JSON.parse(JSON.stringify(DEFAULT_TEMPLATE_GROUP_DATA));
-    modifiedGroups[RUNTIME_CHAT_TEMPLATES_GROUP_ID].templateChains['gen_npc_response'].title =
-      'Custom Modified Title';
-
-    const modifiedPayload = buildExportPayload({
-      exportName: 'Test Pack',
-      selectedIds,
-      scenarios: [],
-      maps: [],
-      globalCharacters: [],
-      templateGroupData: modifiedGroups,
-    });
-
-    expect(modifiedPayload.prebuiltRows.length).toBe(1);
-    const parsedData = JSON.parse(modifiedPayload.prebuiltRows[0]!.row.data as string);
-    expect(
-      parsedData.templateGroupData[RUNTIME_CHAT_TEMPLATES_GROUP_ID].templateChains['gen_npc_response']
-    ).toBeDefined();
   });
 
   it('includes map when selected via scenarioMap even if global map node is unselected', () => {
@@ -338,7 +241,6 @@ describe('exportPayloadBuilder', () => {
       scenarios: [dummyScenario],
       maps: [dummyMap],
       globalCharacters: [],
-      templateGroupData: {},
     });
 
     const mapQuery = payload.queries.find((q) => q.table === 'map');

@@ -160,7 +160,6 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
       scenarios: [sourceScenarioSummary],
       maps: [sourceMap],
       globalCharacters: [sourceGlobalChar],
-      templateGroupData: {},
     });
 
     const { zipBuffer } = await exportViaApi(exportPayload);

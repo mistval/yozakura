@@ -11,8 +11,6 @@ import {
   type StoredConversation,
   type WorldMap,
 } from '../../engine/types.js';
-import { templateGroupDataSchema } from '../../engine/prompt_templates/template_types.js';
-import { DEFAULT_SETTINGS, settingsSchema } from '../../state/settings_store.js';
 import { importStagingDatabase } from '../../backend_bridge/database.js';
 
 export type ValidationResult =
@@ -136,7 +134,6 @@ export async function validateStagedData(options: {
   selectedScenarioConversationsIds?: string[];
   selectedMapIds: string[];
   selectedGlobalCharacterIds: string[];
-  selectedTemplateChainIds: string[];
 }): Promise<ValidationResult> {
   const errors: string[] = [];
 
@@ -245,34 +242,6 @@ export async function validateStagedData(options: {
       }
     } catch (e) {
       errors.push(`Failed to validate scenario ${scenId}: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-
-  // 4. Validate selected Template Chains
-  if (options.selectedTemplateChainIds.length > 0) {
-    try {
-      const stagedSettings = await importStagingDatabase.loadKeyValue(
-        'settings',
-        z.record(z.string(), z.unknown())
-      );
-      if (stagedSettings?.templateGroupData) {
-        const parsedTpl = templateGroupDataSchema.safeParse(stagedSettings.templateGroupData);
-        if (!parsedTpl.success) {
-          errors.push(`Invalid prompt template chains format: ${parsedTpl.error.message}`);
-        } else {
-          // Verify merging onto DEFAULT_SETTINGS satisfies settingsSchema
-          const merged = {
-            ...DEFAULT_SETTINGS,
-            templateGroupData: parsedTpl.data,
-          };
-          const parsedSettings = settingsSchema.safeParse(merged);
-          if (!parsedSettings.success) {
-            errors.push(`Merged settings validation failed: ${parsedSettings.error.message}`);
-          }
-        }
-      }
-    } catch (e) {
-      errors.push(`Failed to read staged template settings: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 

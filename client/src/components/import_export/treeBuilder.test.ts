@@ -2,10 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { buildImportExportTreeRoots } from './treeBuilder.js';
 import { TreeEntityIds } from './exportPayloadBuilder.js';
 import type { ScenarioSummary, WorldMap, Character } from '../../engine/types.js';
-import {
-  RUNTIME_CHAT_TEMPLATES_GROUP_ID,
-  type TemplateGroupData,
-} from '../../engine/prompt_templates/template_types.js';
 
 describe('buildImportExportTreeRoots', () => {
   const dummyScenarios: ScenarioSummary[] = [
@@ -42,33 +38,19 @@ describe('buildImportExportTreeRoots', () => {
     } as any,
   ];
 
-  it('builds export tree roots correctly with custom prompt templates', async () => {
-    const templateGroupData: TemplateGroupData = {
-      [RUNTIME_CHAT_TEMPLATES_GROUP_ID]: {
-        templateChains: {
-          gen_npc_response: {
-            title: 'Custom Title',
-            description: 'Custom description',
-            prompts: [],
-          } as any,
-        },
-      },
-    };
-
+  it('builds tree roots correctly for scenarios, maps, and characters', async () => {
     const roots = buildImportExportTreeRoots({
       mode: 'export',
       scenarios: dummyScenarios,
       maps: dummyMaps,
       globalCharacters: dummyCharacters,
-      templateGroupData,
     });
 
-    expect(roots).toHaveLength(4);
+    expect(roots).toHaveLength(3);
     expect(roots.map((r) => r.id)).toEqual([
       TreeEntityIds.rootScenarios(),
       TreeEntityIds.rootMaps(),
       TreeEntityIds.rootCharacters(),
-      TreeEntityIds.rootSettings(),
     ]);
 
     expect(roots[0]!.subtitle).toBe('(1 available)');
@@ -101,31 +83,6 @@ describe('buildImportExportTreeRoots', () => {
     const charChildren = await roots[2]!.getChildren!();
     expect(charChildren[0]!.id).toBe(TreeEntityIds.character('char_1'));
     expect(charChildren[0]!.label).toBe('Bob Smith');
-
-    // Test prompt templates
-    const settingsChildren = await roots[3]!.getChildren!();
-    expect(settingsChildren[0]!.id).toBe(TreeEntityIds.rootPromptTemplates());
-    const groupChildren = await settingsChildren[0]!.getChildren!();
-    expect(groupChildren[0]!.id).toBe(TreeEntityIds.promptGroup(RUNTIME_CHAT_TEMPLATES_GROUP_ID));
-    const chainChildren = await groupChildren[0]!.getChildren!();
-    expect(chainChildren[0]!.id).toBe(TreeEntityIds.promptChain('gen_npc_response'));
-  });
-
-  it('omits prompt templates in export mode if none are modified', () => {
-    const roots = buildImportExportTreeRoots({
-      mode: 'export',
-      scenarios: dummyScenarios,
-      maps: dummyMaps,
-      globalCharacters: dummyCharacters,
-      templateGroupData: {},
-    });
-
-    expect(roots).toHaveLength(3);
-    expect(roots.map((r) => r.id)).toEqual([
-      TreeEntityIds.rootScenarios(),
-      TreeEntityIds.rootMaps(),
-      TreeEntityIds.rootCharacters(),
-    ]);
   });
 
   it('builds import tree roots filtering empty sections', async () => {
@@ -134,7 +91,6 @@ describe('buildImportExportTreeRoots', () => {
       scenarios: [],
       maps: dummyMaps,
       globalCharacters: [],
-      templateGroupData: {},
     });
 
     expect(roots).toHaveLength(1);
