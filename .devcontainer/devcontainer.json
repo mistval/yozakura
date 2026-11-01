@@ -13,6 +13,7 @@
   },
   "mounts": [
     "source=antigravity-session-cache,target=/home/node/.gemini,type=volume",
+    "source=${localWorkspaceFolderBasename}-data,target=${containerWorkspaceFolder}/data,type=volume",
     "source=${localWorkspaceFolderBasename}-root-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
     "source=${localWorkspaceFolderBasename}-server-node_modules,target=${containerWorkspaceFolder}/server/node_modules,type=volume",
     "source=${localWorkspaceFolderBasename}-client-node_modules,target=${containerWorkspaceFolder}/client/node_modules,type=volume",
