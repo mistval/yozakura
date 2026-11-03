@@ -14,13 +14,6 @@ export default function LunarBackground() {
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-        <filter id="starGlow">
-          <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-          <feMerge>
-            <feMergeNode in="coloredBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
         <style>{`
           .moonCore   { fill: #F4F1E8; }
           .craterDark { fill: #D9D5CB; opacity: 0.65; }
@@ -32,7 +25,7 @@ export default function LunarBackground() {
         `}</style>
       </defs>
 
-      <g filter="url(#starGlow)">
+      <g>
         {/* ── original near-moon stars (top-right quadrant) ── */}
         <circle className="sW" cx="180" cy="-640" r="3" />
         <circle className="sB" cx="420" cy="-710" r="4" />

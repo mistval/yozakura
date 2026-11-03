@@ -18,8 +18,10 @@ vi.mock('../backend_bridge/database.js', () => ({
   }),
   doAsDataRead: mocks.doAsDataRead,
   doAsDataWrite: mocks.doAsDataWrite,
-  loadCharacterRelationshipsByPairs: mocks.loadCharacterRelationshipsByPairs,
-  storeCharacterRelationships: mocks.storeCharacterRelationships,
+  mainDatabase: {
+    loadCharacterRelationshipsByPairs: mocks.loadCharacterRelationshipsByPairs,
+    storeCharacterRelationships: mocks.storeCharacterRelationships,
+  },
 }));
 
 vi.mock('./scenario_store.js', () => {

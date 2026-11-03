@@ -1,0 +1,177 @@
+import _ from 'lodash';
+import { newId } from '../../util/id';
+import { ParallelJobCancellationError, type INewParallelJob, type IParallelJob } from './job_manager_types';
+
+// Supports jobs with limited parallelism per parallelism group, and exclusive parallelism groups
+class ParallelJobManager {
+  private readonly jobsChangedObservers: (() => void)[] = [];
+  private currentJobs = new Map<string, IParallelJob<unknown>>();
+  private concurrencyForGroup = new Map<string, number>();
+
+  public setConcurrencyForGroup(group: string, concurrency: number) {
+    this.concurrencyForGroup.set(group, concurrency);
+    this.tryRunNext();
+  }
+
+  public addObserver(observer: () => void) {
+    this.jobsChangedObservers.push(observer);
+  }
+
+  public getJobs() {
+    return this.currentJobs.values();
+  }
+
+  public enqueue<TResultsType>(newJob: INewParallelJob<TResultsType>) {
+    if (!this.concurrencyForGroup.has(newJob.parallelismGroup)) {
+      throw new Error(`No concurrency set for parallelism group ${newJob.parallelismGroup}`);
+    }
+
+    if (newJob.abortSignal?.aborted) {
+      throw newJob.abortSignal.reason;
+    }
+
+    const job = {
+      ...newJob,
+      id: newId(),
+      state: 'queued',
+      promiseResolvers: Promise.withResolvers<TResultsType>(),
+      abortController: new AbortController(),
+    } satisfies IParallelJob<TResultsType>;
+
+    if (newJob.abortSignal) {
+      newJob.abortSignal.addEventListener(
+        'abort',
+        () => {
+          job.abortController.abort(newJob.abortSignal?.reason);
+          if (job.state === 'queued') {
+            this.currentJobs.delete(job.id);
+            job.promiseResolvers.reject(newJob.abortSignal?.reason);
+            this.notifyObservers();
+          }
+        },
+        { once: true }
+      );
+    }
+
+    this.currentJobs.set(job.id, job as IParallelJob<unknown>);
+    this.notifyObservers();
+    this.tryRunNext();
+    return job.promiseResolvers.promise;
+  }
+
+  public cancelJobsByTag(tag: string) {
+    let didDelete = false;
+    for (const job of this.currentJobs.values()) {
+      if (job.tags?.includes(tag)) {
+        if (job.state === 'queued') {
+          job.promiseResolvers.reject(new ParallelJobCancellationError());
+          this.currentJobs.delete(job.id);
+          didDelete = true;
+        } else {
+          job.abortController.abort(new ParallelJobCancellationError());
+        }
+      }
+    }
+
+    if (didDelete) {
+      this.notifyObservers();
+    }
+  }
+
+  public async allSettledForTag(tag: string): Promise<PromiseSettledResult<unknown>[]> {
+    const results: PromiseSettledResult<unknown>[] = [];
+    while (true) {
+      const matchingJobs = Array.from(this.currentJobs.values()).filter((j) => j.tags?.includes(tag));
+      if (matchingJobs.length === 0) {
+        break;
+      }
+      const settled = await Promise.allSettled(matchingJobs.map((j) => j.promiseResolvers.promise));
+      results.push(...settled);
+    }
+    return results;
+  }
+
+  private notifyObservers() {
+    this.jobsChangedObservers.forEach((o) => {
+      try {
+        o();
+      } catch (err) {
+        console.error('Parallel job observer threw');
+        console.error(err);
+      }
+    });
+  }
+
+  private run(job: IParallelJob<unknown>) {
+    const newJob = {
+      ...job,
+      state: 'running',
+    } satisfies IParallelJob<unknown>;
+
+    const cleanup = () => {
+      this.currentJobs.delete(newJob.id);
+      this.notifyObservers();
+      this.tryRunNext();
+    };
+
+    try {
+      this.currentJobs.set(job.id, newJob);
+      this.notifyObservers();
+
+      newJob
+        .job(newJob.abortController.signal)
+        .then((result) => {
+          cleanup();
+          if (newJob.abortController.signal.aborted) {
+            newJob.promiseResolvers.reject(newJob.abortController.signal.reason);
+          } else {
+            newJob.promiseResolvers.resolve(result);
+          }
+        })
+        .catch((err) => {
+          cleanup();
+          newJob.promiseResolvers.reject(err);
+        });
+    } catch (err) {
+      newJob.promiseResolvers.reject(err);
+      cleanup();
+    }
+  }
+
+  private tryRunNext() {
+    let currentJobs: IParallelJob<unknown>[] = [];
+    let waitingJobs: IParallelJob<unknown>[] = [];
+    let runningJobs: IParallelJob<unknown>[] = [];
+    let runningParallelismGroups = new Set<string>();
+    let runningJobsByParallelismGroup: _.Dictionary<IParallelJob<unknown>[]> = {};
+
+    const recalculateState = () => {
+      currentJobs = Array.from(this.currentJobs.values());
+      waitingJobs = currentJobs.filter((j) => j.state === 'queued');
+      runningJobs = currentJobs.filter((j) => j.state === 'running');
+      runningParallelismGroups = new Set(runningJobs.map((j) => j.parallelismGroup));
+      runningJobsByParallelismGroup = _.groupBy(runningJobs, (j) => j.parallelismGroup);
+    };
+
+    recalculateState();
+
+    for (const job of waitingJobs) {
+      const countRunningForGroup = runningJobsByParallelismGroup[job.parallelismGroup]?.length ?? 0;
+      const groupHasCapacity =
+        countRunningForGroup < (this.concurrencyForGroup.get(job.parallelismGroup) ?? 0);
+      const groupNotExcludedLeft =
+        !job.exclusiveWithParallelismGroups ||
+        !job.exclusiveWithParallelismGroups.some((g) => runningParallelismGroups.has(g));
+      const groupNotExcludedRight = !runningJobs.some((j) =>
+        j.exclusiveWithParallelismGroups?.includes(job.parallelismGroup)
+      );
+
+      if (groupHasCapacity && groupNotExcludedLeft && groupNotExcludedRight) {
+        this.run(job);
+        recalculateState();
+      }
+    }
+  }
+}
+
+export const globalParallelJobManager = new ParallelJobManager();

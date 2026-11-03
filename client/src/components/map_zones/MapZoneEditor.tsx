@@ -1,4 +1,4 @@
-import * as Database from '../../backend_bridge/database.js';
+import { createPersistedObject } from '../../backend_bridge/database.js';
 import { useEffect, useMemo, useState } from 'react';
 import { GraphCanvas } from 'reagraph';
 import { useGraphTheme } from '../../theme/graph_themes.js';
@@ -155,7 +155,7 @@ export default function MapZoneEditor({
   };
 
   const addZone = () => {
-    const newZone = Database.createPersistedObject({
+    const newZone = createPersistedObject({
       name: 'New Zone',
       locationIds: [],
       wardrobeTriggers: [],

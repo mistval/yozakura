@@ -1,6 +1,6 @@
 import * as Api from '../backend_bridge/api';
 import { createProxiedFetch } from '../backend_bridge/proxied_fetch.js';
-import { loadUserTextFileContent } from '../backend_bridge/database.js';
+import { mainDatabase } from '../backend_bridge/database.js';
 import { assertNonNullish } from '../errors/application_error.js';
 import { runWithInteractiveRetry } from './interative_retry.js';
 import type { Character } from './types.js';
@@ -65,7 +65,7 @@ async function dispatchImageGeneration(
         proxiedFetch: createProxiedFetch(options.abortSignal),
         abortSignal: options.abortSignal,
         loadUserTextFile: (controlId, fileId) =>
-          loadUserTextFileContent(
+          mainDatabase.loadUserTextFileContent(
             makeTextFileGroupKey(IMAGE_GENERATION_SECTION_ID, section.selectedScriptId, controlId),
             fileId
           ),

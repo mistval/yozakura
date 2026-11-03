@@ -1,8 +1,8 @@
 import type { z } from 'zod';
-import type { OpenAIChatCompletionRequestMessage } from '../types';
+import type { OpenAIChatCompletionRequestMessage, ParallelPromptJobConfig } from '../types';
 import { PromptTemplate } from './prompt_template';
 import { PromptOutputParser } from './prompt_output_parser';
-import { chatCompletion } from '../llm';
+import { chatCompletion } from '../llm.js';
 import { etaRenderSync } from '../../util/eta';
 import { promptChainDocumentationTemplate } from './prompt_chain_documentation_template';
 import { assertNonNullish } from '../../errors/application_error';
@@ -179,7 +179,10 @@ export class PromptTemplateChain<TContextType extends PromptExecutionContext, TO
 
   public async renderAndExecute(
     promptContext: TContextType,
-    options: { abortSignal?: AbortSignal | undefined } = {}
+    options: {
+      abortSignal?: AbortSignal | undefined;
+      jobConfig?: ParallelPromptJobConfig | undefined;
+    } = {}
   ): Promise<TOutputType> {
     const completionRequestId = createCompletionRequestId();
     const messages = await this.render(promptContext, { completionRequestId });
@@ -190,6 +193,7 @@ export class PromptTemplateChain<TContextType extends PromptExecutionContext, TO
             completionRequestId,
             promptContext,
             abortSignal: options.abortSignal,
+            jobConfig: options.jobConfig,
           })
         : '';
 

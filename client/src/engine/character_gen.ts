@@ -41,11 +41,7 @@ export async function generateCharacterExternalDescription(
 }
 
 export type ExtractCharacterCardField =
-  | 'internalDescription'
-  | 'externalDescription'
-  | 'exampleDialogue'
-  | 'baseAppearanceTags'
-  | 'wardrobes';
+  'internalDescription' | 'externalDescription' | 'exampleDialogue' | 'baseAppearanceTags' | 'wardrobes';
 
 export const ALL_EXTRACT_CHARACTER_CARD_FIELDS: readonly ExtractCharacterCardField[] = [
   'internalDescription',

@@ -45,9 +45,13 @@ jobs:
           npm run typecheck --prefix client
           npm run typecheck --prefix server
           npm run typecheck --prefix docs
+          npm run typecheck:test
 
       - name: Run client tests
         run: npm run test --prefix client -- run
+
+      - name: Run integration tests
+        run: npm run test:integration
 
       - name: Collect changed files for prettier
         id: changed

@@ -17,6 +17,13 @@ import CharacterChatSettings from './chat/character_chat_settings.js';
 import { useUserCharacter } from '../state/scenario_character_store.js';
 import ButtonOptions from './ui/ButtonOptions.js';
 import { chatSceneImageTemplatesGroup } from '../engine/prompt_templates/chat/group.js';
+import {
+  useChatJobs,
+  useIsAwaitingCharacterTextInput,
+  useIsGeneratingImageOrImagePrompt,
+  useIsGeneratingMemories,
+} from '../state/chat_state.js';
+import ChatTopBarStatus from './chat/ChatTopBarStatus.js';
 
 const CHAT_PANE_WIDTH_CLASS_BY_SETTING: Record<ChatPaneWidth, string> = {
   narrow: 'w-full max-w-3xl mx-auto',
@@ -28,22 +35,13 @@ const CHAT_PANE_WIDTH_CLASS_BY_SETTING: Record<ChatPaneWidth, string> = {
 
 export default function ChatPane() {
   const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
-  const groupChatMessageLimit = useSettingsStore((s) => s.groupChatMessageLimit);
-  const richNpcMessageCount = useSettingsStore((s) => s.richNpcMessageCount);
-  const npcChatEndMode = useSettingsStore((s) => s.npcChatEndMode);
-  const intelligentChatEndMaxLength = useSettingsStore((s) => s.intelligentChatEndMaxLength);
-  const intelligentChatEndGroupMaxLength = useSettingsStore((s) => s.intelligentChatEndGroupMaxLength);
   const selectedSceneImageTemplateChainId = useSettingsStore((s) => s.selectedSceneImageTemplateChainId);
+  const generateImagesInParallelWithText = useSettingsStore((s) => s.generateImagesInParallelWithText);
   const setSettings = useSettingsStore((s) => s.setSettings);
   const sceneImageChains = chatSceneImageTemplatesGroup.useChains();
   const transcript = useTurnMachineStore((state) => state.transcript);
   const chatMode = useActiveChatMedium();
   const participants = useActiveChatParticipants();
-  const chatState = useTurnMachineStore((state) => state.chatState);
-  const isAwaitingCharacterInput = useTurnMachineStore(
-    (state) => state.chatState === 'awaiting_character_input'
-  );
-  const processingMemoryStatusInfo = useTurnMachineStore((state) => state.processingMemoryStatusInfo);
   const userCharacter = useUserCharacter();
   const scenario = useScenarioStore((state) => state.activeScenario);
 
@@ -79,16 +77,15 @@ export default function ChatPane() {
   const pendingImagePromptEdit = useScenarioLoopStateStore((state) => state.pendingImagePromptEdit);
   const setPendingImagePromptEdit = useScenarioLoopStateStore((state) => state.setPendingImagePromptEdit);
 
-  const generatingAutoImage = chatState === 'generating_image';
-  const processingMemories = chatState === 'processing_memories';
-  const chatMemoryUpdateStatus = processingMemories ? (processingMemoryStatusInfo ?? '') : '';
+  const chatJobs = useChatJobs();
+  const isGeneratingImage = useIsGeneratingImageOrImagePrompt();
+  const isGeneratingMemories = useIsGeneratingMemories();
+  const isAwaitingCharacterTextInput = useIsAwaitingCharacterTextInput();
+  const canFinishChat = isAwaitingCharacterTextInput && !isGeneratingImage;
+  const canGenerateImages =
+    generateImagesInParallelWithText || (!isGeneratingImage && isAwaitingCharacterTextInput);
 
-  const isGenerating =
-    chatState === 'character_speaking' ||
-    chatState === 'generating_image' ||
-    chatState === 'selecting_speaker' ||
-    chatState === 'judging_conversation_end' ||
-    chatState === 'processing_memories';
+  const isGenerating = chatJobs.length > 0;
 
   const participantById = useMemo(
     () => Object.fromEntries(participants.map((participant) => [participant.id, participant])),
@@ -125,35 +122,6 @@ export default function ChatPane() {
       sceneImageChains[0]
     );
   }, [sceneImageChains, selectedSceneImageTemplateChainId]);
-
-  const topBarStatus = (() => {
-    let messageLimit: number | undefined;
-
-    if (!includesUser) {
-      if (npcChatEndMode === 'intelligent') {
-        messageLimit =
-          participants.length > 2 ? intelligentChatEndGroupMaxLength : intelligentChatEndMaxLength;
-      } else if (participants.length <= 2) {
-        messageLimit = richNpcMessageCount * 2;
-      } else {
-        messageLimit = groupChatMessageLimit;
-      }
-    }
-
-    if (generatingAutoImage) {
-      return 'Generating image...';
-    } else if (chatState === 'selecting_speaker') {
-      return 'Selecting speaker...';
-    } else if (chatState === 'judging_conversation_end') {
-      return 'Deciding whether to end...';
-    } else if (processingMemories) {
-      return chatMemoryUpdateStatus;
-    } else if (!(includesUser || isPaused)) {
-      return `NPC-only chat in progress (${transcript?.countCharacterChatMessages()}/${messageLimit || 10} messages).`;
-    } else {
-      return '';
-    }
-  })();
 
   const primaryNpc = nonUserParticipants[0];
   assertNonNullish(primaryNpc);
@@ -254,7 +222,11 @@ export default function ChatPane() {
 
   const getRunButtonTitle = () => {
     const userIsInitiator = participants[0]?.id === userCharacter.id;
-    if (userIsInitiator && isAwaitingCharacterInput && !transcript.hasCharacterMessages()) {
+    if (userIsInitiator && isAwaitingCharacterTextInput && !transcript.hasCharacterMessages()) {
+      return undefined;
+    }
+
+    if (isGeneratingMemories) {
       return undefined;
     }
 
@@ -270,6 +242,10 @@ export default function ChatPane() {
   };
 
   const getEndChatButtonTitle = () => {
+    if (isGeneratingMemories) {
+      return undefined;
+    }
+
     if (transcript.countCharacterChatMessages() > 1) {
       return 'Finish Chat';
     }
@@ -336,12 +312,13 @@ export default function ChatPane() {
               : 'Group Chat'}
         </h3>
         <div className="flex items-center gap-3">
-          {topBarStatus && <div className="text-sm text-secondary">{topBarStatus}</div>}
-          {!processingMemories && (
+          <ChatTopBarStatus />
+          {!isGeneratingMemories && (
             <button type="button" onClick={() => setShowChatSettings(true)}>
               Chat Settings
             </button>
           )}
+
           {runButtonTitle && (
             <button
               type="button"
@@ -351,14 +328,16 @@ export default function ChatPane() {
               {runButtonTitle}
             </button>
           )}
-          <button
-            type="button"
-            onClick={requestEndChat}
-            disabled={!isAwaitingCharacterInput}
-            className="button-emphasized font-semibold"
-          >
-            {getEndChatButtonTitle()}
-          </button>
+          {getEndChatButtonTitle() && (
+            <button
+              type="button"
+              onClick={requestEndChat}
+              disabled={!canFinishChat}
+              className="button-emphasized font-semibold"
+            >
+              {getEndChatButtonTitle()}
+            </button>
+          )}
         </div>
       </div>
 
@@ -395,7 +374,7 @@ export default function ChatPane() {
                     event.stopPropagation();
                     triggerParticipantSpeak(participant.id);
                   }}
-                  disabled={!isAwaitingCharacterInput}
+                  disabled={!isAwaitingCharacterTextInput}
                   className="text-xs w-full mt-1"
                 >
                   Speak
@@ -437,20 +416,20 @@ export default function ChatPane() {
                       onChange={(event) => setEditingMessageDraft(event.target.value)}
                       rows={3}
                       className="w-full border rounded-sm p-2 bg-inset text-sm"
-                      disabled={!isAwaitingCharacterInput}
+                      disabled={!isAwaitingCharacterTextInput}
                     />
                     <div className="flex justify-end gap-2 text-xs">
                       <button
                         type="button"
                         onClick={() => setEditingMessageId(undefined)}
-                        disabled={!isAwaitingCharacterInput}
+                        disabled={!isAwaitingCharacterTextInput}
                       >
                         Cancel
                       </button>
                       <button
                         type="button"
                         onClick={saveEditingMessageEdit}
-                        disabled={!isAwaitingCharacterInput || !editingMessageDraft.trim()}
+                        disabled={!isAwaitingCharacterTextInput || !editingMessageDraft.trim()}
                       >
                         Save
                       </button>
@@ -462,7 +441,7 @@ export default function ChatPane() {
                   </>
                 )}
 
-                {isAwaitingCharacterInput && !editingMessageId && (
+                {isAwaitingCharacterTextInput && !editingMessageId && (
                   <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs h-6 leading-none">
                     <button
                       type="button"
@@ -470,7 +449,7 @@ export default function ChatPane() {
                         const id = entry.getId();
                         deleteMessage(id);
                       }}
-                      disabled={!isAwaitingCharacterInput}
+                      disabled={!isAwaitingCharacterTextInput}
                       title="Delete message"
                       aria-label="Delete message"
                       className="px-1 h-5 w-5 flex items-center justify-center"
@@ -485,7 +464,7 @@ export default function ChatPane() {
                           const id = entry.getId();
                           submitChatRequestImage(id);
                         }}
-                        disabled={!isAwaitingCharacterInput}
+                        disabled={!canGenerateImages}
                         title="Generate image"
                         aria-label="Generate image"
                         className="px-1 h-5 w-5 flex items-center justify-center"
@@ -502,7 +481,7 @@ export default function ChatPane() {
                             const id = entry.getId();
                             redoMessage(id);
                           }}
-                          disabled={!isAwaitingCharacterInput}
+                          disabled={!isAwaitingCharacterTextInput}
                           title="Retry message"
                           aria-label="Retry message"
                           className="px-1 h-5 w-5 flex items-center justify-center"
@@ -519,7 +498,7 @@ export default function ChatPane() {
                           setEditingMessageId(id);
                           setEditingMessageDraft(entry.getContent());
                         }}
-                        disabled={!isAwaitingCharacterInput}
+                        disabled={!isAwaitingCharacterTextInput}
                         title="Edit message"
                         aria-label="Edit message"
                         className="px-1 h-5 w-5 flex items-center justify-center"
@@ -539,18 +518,18 @@ export default function ChatPane() {
         <textarea
           onChange={(event) => setInputIsNonEmpty(Boolean(event.target.value.trim()))}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey && inputIsNonEmpty && isAwaitingCharacterInput) {
+            if (event.key === 'Enter' && !event.shiftKey && inputIsNonEmpty && isAwaitingCharacterTextInput) {
               event.preventDefault();
               send();
             }
           }}
           ref={inputRef}
-          disabled={!includesUser && !isAwaitingCharacterInput}
+          disabled={!includesUser && !isAwaitingCharacterTextInput}
           placeholder={includesUser ? 'Enter a message' : 'Entering a message will add the user to the chat.'}
           rows={2}
           className="flex-1"
         />
-        {isGenerating ? (
+        {isGenerating && (
           <button
             type="button"
             onClick={() => setUserRequestedGenerationAbort(true)}
@@ -558,8 +537,9 @@ export default function ChatPane() {
           >
             ■
           </button>
-        ) : (
-          <button type="button" onClick={send} disabled={!isAwaitingCharacterInput || !inputIsNonEmpty}>
+        )}
+        {isAwaitingCharacterTextInput && (
+          <button type="button" onClick={send} disabled={!isAwaitingCharacterTextInput || !inputIsNonEmpty}>
             Send
           </button>
         )}
@@ -570,21 +550,21 @@ export default function ChatPane() {
               setUserRequestedPhaseTransition('none');
               submitChatSkipTurn();
             }}
-            disabled={!isAwaitingCharacterInput}
+            disabled={!isAwaitingCharacterTextInput}
           >
             Skip
           </button>
         )}
         <ButtonOptions
           showDropdown={sceneImageChains.length > 1}
-          disabled={!isAwaitingCharacterInput}
+          disabled={!canGenerateImages}
           placement="top-end"
           ariaLabel="Select image template"
           button={
             <button
               type="button"
               onClick={() => submitChatRequestImage(undefined)}
-              disabled={!isAwaitingCharacterInput}
+              disabled={!canGenerateImages}
               title={
                 activeSceneImageChain
                   ? `Generate image (${activeSceneImageChain.settingsBridge.get().title})`

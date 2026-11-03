@@ -12,7 +12,7 @@ import {
   type TranscriptParticipant,
 } from '../types';
 import { assert, assertNonNullish } from '../../errors/application_error';
-import * as Database from '../../backend_bridge/database';
+import { createPersistedObject } from '../../backend_bridge/database';
 import { MemoryRAGHelper, type RagMessageDelegate } from '../memory_rag_helper';
 
 export type TranscriptRagDeps = {
@@ -231,7 +231,7 @@ export class ConversationTranscript {
   ) {}
 
   public serialize(): SerializedConversationTranscript {
-    return Database.createPersistedObject({
+    return createPersistedObject({
       rawMessages: this.getRawMessages().map((m) => chatMessageSchema.parse(m)),
       participants: this.participantInfo,
       ragHelperState: this.ragHelper.serialize(),
@@ -337,14 +337,14 @@ export class ConversationTranscript {
   }
 
   private addJoinMessage(joiner: TranscriptParticipant) {
-    const marker = Database.createPersistedObject({
+    const marker = createPersistedObject({
       messageType: 'system_message',
       systemMessageType: 'join',
       characterId: joiner.id,
       isPrivateToCharacterId: TRANSCRIPT_SYSTEM,
     }) satisfies JoinLeaveSystemMessage;
 
-    const newRawMessage = Database.createPersistedObject({
+    const newRawMessage = createPersistedObject({
       messageType: 'system_message',
       systemMessageType: 'join',
       characterId: joiner.id,
@@ -359,7 +359,7 @@ export class ConversationTranscript {
   }
 
   public addImageMessage(imageUrl: string, opts?: { afterMessageId?: string | undefined }) {
-    const newRawMessage = Database.createPersistedObject({
+    const newRawMessage = createPersistedObject({
       messageType: 'image',
       imageUrl,
     }) satisfies ImageMessage;
@@ -375,7 +375,7 @@ export class ConversationTranscript {
     speaker: TranscriptParticipant,
     opts?: { isStreaming?: boolean }
   ) {
-    const newRawMessage = Database.createPersistedObject({
+    const newRawMessage = createPersistedObject({
       messageType: 'chat_message',
       senderId: speaker.id,
       message,
@@ -459,7 +459,7 @@ export class ConversationTranscript {
     }
 
     const leaveMessage = new ChatMessageWrapper(
-      Database.createPersistedObject({
+      createPersistedObject({
         messageType: 'system_message',
         systemMessageType: 'leave',
         characterId: participant.id,
@@ -468,7 +468,7 @@ export class ConversationTranscript {
     );
 
     const marker = new ChatMessageWrapper(
-      Database.createPersistedObject({
+      createPersistedObject({
         messageType: 'system_message',
         systemMessageType: 'leave',
         characterId: participant.id,

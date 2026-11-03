@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createProxiedFetch } from '../backend_bridge/proxied_fetch.js';
-import { loadUserTextFileContent } from '../backend_bridge/database.js';
+import { mainDatabase } from '../backend_bridge/database.js';
 import type { SettingsScriptHelpers } from '../engine/settings/settings_scripts/settings_script.js';
 import { createSeededRandom } from '../engine/settings/settings_scripts/seeded_random.js';
 import { loadCustomScriptSource } from '../engine/settings/settings_scripts/custom_scripts.js';
@@ -67,7 +67,7 @@ export const useTemporalContextStore = create<TemporalContextStoreState>((set, g
       proxiedFetch: createProxiedFetch(undefined),
       abortSignal: undefined,
       loadUserTextFile: (controlId, fileId) =>
-        loadUserTextFileContent(
+        mainDatabase.loadUserTextFileContent(
           makeTextFileGroupKey(TEMPORAL_CONTEXT_SECTION_ID, section.selectedScriptId, controlId),
           fileId
         ),

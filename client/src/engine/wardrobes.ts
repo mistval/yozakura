@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import * as Database from '../backend_bridge/database.js';
+import { createPersistedObject } from '../backend_bridge/database.js';
 import {
   type Character,
   type MapZone,
@@ -222,7 +222,7 @@ export function createWardrobe(
     autoRevert?: boolean;
   } = {}
 ): Wardrobe {
-  return Database.createPersistedObject({
+  return createPersistedObject({
     text: opts.text ?? '',
     enabled: opts.enabled ?? false,
     tags: opts.tags ?? [],

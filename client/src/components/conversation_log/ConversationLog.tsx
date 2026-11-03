@@ -1,5 +1,5 @@
 import ConversationLogView from './ConversationLogView';
-import * as Database from '../../backend_bridge/database';
+import { doAsDataRead, mainDatabase } from '../../backend_bridge/database';
 import { useEffect, useRef, useState } from 'react';
 import { useStateRef } from '../../hooks/useStateRef.js';
 import type { StoredConversation } from '../../engine/types.js';
@@ -49,8 +49,8 @@ export default function ConversationLog() {
     const run = async () => {
       setLoadingSelectedEntry(true);
       try {
-        const loaded = await Database.doAsDataRead(
-          () => Database.loadConversationById(routeConversationId),
+        const loaded = await doAsDataRead(
+          () => mainDatabase.loadConversationById(routeConversationId),
           'conversation',
           { debouncerKey: routeConversationId }
         );

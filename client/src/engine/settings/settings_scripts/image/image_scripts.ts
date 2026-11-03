@@ -32,8 +32,7 @@ export function evaluateCustomImageScript(source: string): ImageGenerationSettin
 }
 
 export type ResolvedImageScript =
-  | { ok: true; script: ImageGenerationSettingsScript }
-  | { ok: false; error: string };
+  { ok: true; script: ImageGenerationSettingsScript } | { ok: false; error: string };
 
 export function resolveImageScript(selectedScriptId: string, source: string): ResolvedImageScript {
   const builtin = getBuiltinImageScript(selectedScriptId);

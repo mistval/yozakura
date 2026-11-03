@@ -16,7 +16,7 @@ export default function WardrobesSection() {
           </h3>
           <InfoTooltip
             label="Wardrobes"
-            html="Wardrobes are additional appearance descriptions that can be enabled or disabled during conversation. Wardrobes can include clothing, accessories, facial expressions, poses, etc. All enabled wardrobes are concatenated together with the Base Appearance in image generation prompts. You can skip this if you do not plan to use image generation."
+            html="Wardrobes are additional appearance descriptions that can be enabled or disabled during conversation. Wardrobes can include clothing, accessories, facial expressions, poses, etc. All enabled wardrobes are concatenated together with the Base Appearance in image generation prompts. You can skip this if you do not plan to use image generation. When creating a character here, the enabled wardrobes are included in the image prompt to generate a character card image below."
           />
         </div>
       </div>

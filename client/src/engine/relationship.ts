@@ -1,4 +1,4 @@
-import * as Database from '../backend_bridge/database.js';
+import { createPersistedObject } from '../backend_bridge/database.js';
 import { assertNonNullish } from '../errors/application_error.js';
 import { useScenarioCharacterRelationshipStore } from '../state/scenario_character_relationship_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
@@ -14,7 +14,7 @@ export function createRelationship(
   toId: string,
   opts: Partial<CharacterRelationship> = {}
 ): CharacterRelationship {
-  return Database.createPersistedObject({
+  return createPersistedObject({
     fromId,
     toId,
     familiarity: 0,
