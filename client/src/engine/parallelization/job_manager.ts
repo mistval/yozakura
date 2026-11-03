@@ -26,6 +26,10 @@ class ParallelJobManager {
       throw new Error(`No concurrency set for parallelism group ${newJob.parallelismGroup}`);
     }
 
+    if (newJob.abortSignal?.aborted) {
+      throw newJob.abortSignal.reason;
+    }
+
     const job = {
       ...newJob,
       id: newId(),
@@ -33,6 +37,21 @@ class ParallelJobManager {
       promiseResolvers: Promise.withResolvers<TResultsType>(),
       abortController: new AbortController(),
     } satisfies IParallelJob<TResultsType>;
+
+    if (newJob.abortSignal) {
+      newJob.abortSignal.addEventListener(
+        'abort',
+        () => {
+          job.abortController.abort(newJob.abortSignal?.reason);
+          if (job.state === 'queued') {
+            this.currentJobs.delete(job.id);
+            job.promiseResolvers.reject(newJob.abortSignal?.reason);
+            this.notifyObservers();
+          }
+        },
+        { once: true }
+      );
+    }
 
     this.currentJobs.set(job.id, job as IParallelJob<unknown>);
     this.notifyObservers();

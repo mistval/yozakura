@@ -18,6 +18,7 @@ import { useUserCharacter } from '../state/scenario_character_store.js';
 import ButtonOptions from './ui/ButtonOptions.js';
 import { chatSceneImageTemplatesGroup } from '../engine/prompt_templates/chat/group.js';
 import { useChatJobs, useIsAwaitingCharacterTextInput, useIsGeneratingImageOrImagePrompt, useIsGeneratingMemories } from '../state/chat_state.js';
+import ChatTopBarStatus from './chat/ChatTopBarStatus.js';
 
 const CHAT_PANE_WIDTH_CLASS_BY_SETTING: Record<ChatPaneWidth, string> = {
   narrow: 'w-full max-w-3xl mx-auto',
@@ -29,11 +30,6 @@ const CHAT_PANE_WIDTH_CLASS_BY_SETTING: Record<ChatPaneWidth, string> = {
 
 export default function ChatPane() {
   const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
-  const groupChatMessageLimit = useSettingsStore((s) => s.groupChatMessageLimit);
-  const richNpcMessageCount = useSettingsStore((s) => s.richNpcMessageCount);
-  const npcChatEndMode = useSettingsStore((s) => s.npcChatEndMode);
-  const intelligentChatEndMaxLength = useSettingsStore((s) => s.intelligentChatEndMaxLength);
-  const intelligentChatEndGroupMaxLength = useSettingsStore((s) => s.intelligentChatEndGroupMaxLength);
   const selectedSceneImageTemplateChainId = useSettingsStore((s) => s.selectedSceneImageTemplateChainId);
   const generateImagesInParallelWithText = useSettingsStore((s) => s.generateImagesInParallelWithText);
   const setSettings = useSettingsStore((s) => s.setSettings);
@@ -49,19 +45,6 @@ export default function ChatPane() {
   const [settingsCharacterId, setSettingsCharacterId] = useState<string | undefined>(undefined);
   const [editingMessageId, setEditingMessageId] = useState<string | undefined>(undefined);
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
-  const [showWorkingPopover, setShowWorkingPopover] = useState(false);
-  const workingPopoverRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!showWorkingPopover) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (workingPopoverRef.current && !workingPopoverRef.current.contains(e.target as Node)) {
-        setShowWorkingPopover(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showWorkingPopover]);
 
   const transcriptContainerOuterRef = useRef<HTMLDivElement | null>(null);
   const transcriptContainerInnerRef = useRef<HTMLDivElement | null>(null);
@@ -90,9 +73,6 @@ export default function ChatPane() {
   const setPendingImagePromptEdit = useScenarioLoopStateStore((state) => state.setPendingImagePromptEdit);
 
   const chatJobs = useChatJobs();
-  const runningChatJobs = chatJobs.filter((j) => j.state === 'running');
-  const singleRunningJob = runningChatJobs.length === 1 ? runningChatJobs[0] : undefined;
-  const hasMultipleRunningJobs = runningChatJobs.length > 1;
   const isGeneratingImage = useIsGeneratingImageOrImagePrompt();
   const isGeneratingMemories = useIsGeneratingMemories();
   const isAwaitingCharacterTextInput = useIsAwaitingCharacterTextInput();
@@ -136,31 +116,6 @@ export default function ChatPane() {
       sceneImageChains[0]
     );
   }, [sceneImageChains, selectedSceneImageTemplateChainId]);
-
-  const topBarStatusText = (() => {
-    if (singleRunningJob) {
-      return singleRunningJob.name;
-    }
-
-    let messageLimit: number | undefined;
-
-    if (!includesUser) {
-      if (npcChatEndMode === 'intelligent') {
-        messageLimit =
-          participants.length > 2 ? intelligentChatEndGroupMaxLength : intelligentChatEndMaxLength;
-      } else if (participants.length <= 2) {
-        messageLimit = richNpcMessageCount * 2;
-      } else {
-        messageLimit = groupChatMessageLimit;
-      }
-    }
-
-    if (!(includesUser || isPaused)) {
-      return `NPC-only chat in progress (${transcript?.countCharacterChatMessages()}/${messageLimit || 10} messages).`;
-    } else {
-      return '';
-    }
-  })();
 
   const primaryNpc = nonUserParticipants[0];
   assertNonNullish(primaryNpc);
@@ -351,44 +306,7 @@ export default function ChatPane() {
               : 'Group Chat'}
         </h3>
         <div className="flex items-center gap-3">
-          {hasMultipleRunningJobs ? (
-            <div className="relative" ref={workingPopoverRef}>
-              <button
-                type="button"
-                onClick={() => setShowWorkingPopover((prev) => !prev)}
-                className="flex items-center gap-1.5 text-sm text-secondary hover:text-primary cursor-pointer px-2 py-0.5 rounded border border-border-default bg-surface"
-              >
-                <span>{ isGeneratingMemories ? 'Generating memories...' : 'Working...' }</span>
-                <span className="text-xs">{showWorkingPopover ? '▲' : '▼'}</span>
-              </button>
-
-              {showWorkingPopover && (
-                <div className="absolute right-0 top-full mt-1.5 z-50 min-w-56 p-2 rounded shadow-lg border border-border-default bg-surface text-sm space-y-1.5">
-                  <div className="text-xs font-semibold text-secondary uppercase tracking-wider pb-1 border-b border-border-default">
-                    Active Jobs ({chatJobs.length})
-                  </div>
-                  <div className="max-h-60 overflow-y-auto space-y-1">
-                    {chatJobs.map((job) => (
-                      <div key={job.id} className="flex items-center justify-between gap-2 py-0.5">
-                        <span className="truncate">{job.name}</span>
-                        <span
-                          className={`text-xs px-1.5 py-0.5 rounded font-mono ${
-                            job.state === 'running'
-                              ? 'bg-success-bg text-success-text border border-success-border'
-                              : 'bg-surface-subtle text-muted border border-border-default'
-                          }`}
-                        >
-                          {job.state}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : topBarStatusText ? (
-            <div className="text-sm text-secondary">{topBarStatusText}</div>
-          ) : null}
+          <ChatTopBarStatus />
           { !isGeneratingMemories && (<button type="button" onClick={() => setShowChatSettings(true)}>
               Chat Settings
             </button>) }

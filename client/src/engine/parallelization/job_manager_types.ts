@@ -6,6 +6,7 @@ export interface INewParallelJob<TResultsType> {
   job: (abortSignal: AbortSignal) => Promise<TResultsType>;
   tags?: string[] | undefined;
   exclusiveWithParallelismGroups?: string[] | undefined;
+  abortSignal?: AbortSignal | undefined;
 }
 
 export interface IParallelJob<TResultsType> extends INewParallelJob<TResultsType> {

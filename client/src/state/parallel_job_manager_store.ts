@@ -3,18 +3,18 @@ import type { IParallelJob } from '../engine/parallelization/job_manager_types.j
 import { globalParallelJobManager } from '../engine/parallelization/job_manager.js';
 import { useShallow } from 'zustand/react/shallow';
 import { useSettingsStore } from './settings_store.js';
+import type { ParallelPromptJobConfig } from '../engine/types.js';
 
 function syncConcurrencyWithSettings(settings: ReturnType<typeof useSettingsStore.getState>) {
   const configs = Object.values(settings.llmConfigs || {});
   const limitsByGroup = new Map<string, number[]>();
 
   for (const config of configs) {
-    const groupName =
-      config.concurrencyGroupName?.trim() || (config.id === 'base' ? 'default_llm' : undefined);
+    const groupName = config.concurrencyGroupName?.trim();
     if (!groupName) continue;
 
     if (!limitsByGroup.has(groupName)) {
-      limitsByGroup.set(groupName, []);
+      limitsByGroup.set(groupName, [Number.MAX_SAFE_INTEGER]);
     }
     if (config.concurrencyGroupLimit !== undefined && config.concurrencyGroupLimit > 0) {
       limitsByGroup.get(groupName)!.push(config.concurrencyGroupLimit);
@@ -22,11 +22,11 @@ function syncConcurrencyWithSettings(settings: ReturnType<typeof useSettingsStor
   }
 
   if (!limitsByGroup.has('default_llm')) {
-    limitsByGroup.set('default_llm', [2]);
+    limitsByGroup.set('default_llm', [1]);
   }
 
   for (const [groupName, limits] of limitsByGroup) {
-    const minLimit = limits.length > 0 ? Math.min(...limits) : (groupName === 'default_llm' ? 2 : 1);
+    const minLimit = Math.min(...limits);
     globalParallelJobManager.setConcurrencyForGroup(groupName, minLimit);
   }
 
@@ -58,4 +58,16 @@ export const useParallelJobStore = create<{
 
 export function useJobsWithTag(tag: string) {
   return useParallelJobStore(useShallow((s) => s.jobs.filter((j) => j.tags?.includes(tag))));
+}
+
+export function createTextCompletionJobConfig(
+  name: string,
+  tags?: string[] | undefined
+): ParallelPromptJobConfig {
+  const isImageParallel = useSettingsStore.getState().generateImagesInParallelWithText;
+  return {
+    name,
+    tags,
+    exclusiveWithParallelismGroups: !isImageParallel ? ['image_generation'] : undefined,
+  };
 }

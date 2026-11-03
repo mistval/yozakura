@@ -479,3 +479,9 @@ export type ScenarioMovementEvent = z.infer<typeof scenarioMovementEventSchema>;
 export const scenarioEventSchema = z.discriminatedUnion('eventType', [scenarioMovementEventSchema]);
 
 export type ScenarioEvent = z.infer<typeof scenarioEventSchema>;
+
+export interface ParallelPromptJobConfig {
+  name: string;
+  tags?: string[] | undefined;
+  exclusiveWithParallelismGroups?: string[] | undefined;
+}

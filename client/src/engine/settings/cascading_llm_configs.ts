@@ -42,6 +42,49 @@ export function findBaseDefaultsLLMConfig(configs: LLMConfigById) {
   return configs[BASE_DEFAULTS_LLM_CONFIG_ID];
 }
 
+const KNOWN_CLOUD_LLM_HOSTNAMES = [
+  'openrouter.ai',
+  'openai.com',
+  'anthropic.com',
+  'together.xyz',
+  'together.ai',
+  'groq.com',
+  'deepseek.com',
+  'mistral.ai',
+  'perplexity.ai',
+  'googleapis.com',
+  'google.dev',
+  'fireworks.ai',
+  'cohere.ai',
+  'cohere.com',
+  'cerebras.ai',
+  'sambanova.ai',
+  'novita.ai',
+  'siliconflow.cn',
+  'x.ai',
+  'lepton.run',
+  'cloudflare.com',
+  'huggingface.co',
+  'replicate.com',
+];
+
+export function isKnownCloudLlmProvider(url: string): boolean {
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(
+      trimmed.startsWith('http://') || trimmed.startsWith('https://') ? trimmed : `https://${trimmed}`
+    );
+    const host = parsed.hostname.toLowerCase();
+    return KNOWN_CLOUD_LLM_HOSTNAMES.some((known) => host === known || host.endsWith(`.${known}`));
+  } catch {
+    return false;
+  }
+}
+
 export function updateLLMConfigsWithBaseDefaultsConnection(
   configs: LLMConfigById,
   llmUrlInput: string,
@@ -53,6 +96,12 @@ export function updateLLMConfigsWithBaseDefaultsConnection(
   const trimmedModel = llmModelInput.trim();
   const baseConfigEntry = findBaseDefaultsLLMConfig(configs);
   assertNonNullish(baseConfigEntry, 'unable to find base LLM config');
+
+  const shouldAutoSetConcurrency =
+    isKnownCloudLlmProvider(trimmedUrl) &&
+    (baseConfigEntry.concurrencyGroupLimit === 1 || baseConfigEntry.concurrencyGroupLimit === undefined);
+
+  const concurrencyGroupLimit = shouldAutoSetConcurrency ? 3 : baseConfigEntry.concurrencyGroupLimit;
 
   const nextBaseConfig: LLMConfig = {
     ...baseConfigEntry,
@@ -66,6 +115,7 @@ export function updateLLMConfigsWithBaseDefaultsConnection(
     ),
     llmUrl: trimmedUrl || undefined,
     llmAuthToken: trimmedToken || undefined,
+    ...(concurrencyGroupLimit !== undefined ? { concurrencyGroupLimit } : {}),
   };
 
   const nextConfigs: LLMConfigById = {
