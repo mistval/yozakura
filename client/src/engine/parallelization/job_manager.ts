@@ -59,6 +59,19 @@ class ParallelJobManager {
     }
   }
 
+  public async allSettledForTag(tag: string): Promise<PromiseSettledResult<unknown>[]> {
+    const results: PromiseSettledResult<unknown>[] = [];
+    while (true) {
+      const matchingJobs = Array.from(this.currentJobs.values()).filter((j) => j.tags?.includes(tag));
+      if (matchingJobs.length === 0) {
+        break;
+      }
+      const settled = await Promise.allSettled(matchingJobs.map((j) => j.promiseResolvers.promise));
+      results.push(...settled);
+    }
+    return results;
+  }
+
   private notifyObservers() {
     this.jobsChangedObservers.forEach((o) => {
       try {

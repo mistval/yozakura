@@ -59,6 +59,8 @@ export const settingsSchema = z.object({
   selectedSceneImageTemplateChainId: z.string(),
   settingsScripts: settingsScriptsStateSchema,
   editImagePromptsBeforeDispatch: z.boolean(),
+  generateImagesInParallelWithText: z.boolean(),
+  imageGenerationConcurrency: z.number(),
   autoImageRate: z.number(),
   autoImageNpcOnly: z.boolean(),
   autoImageTemplateWeights: z.record(z.string(), z.number()),
@@ -75,7 +77,6 @@ export const settingsSchema = z.object({
   offscreenMentionLimit: z.number(),
   rollingConversationSummaryLimit: z.number(),
   offscreenLearnedInformationLimit: z.number(),
-  tokenStreamingEnabled: z.boolean(),
   showTemplatePasteSafetyWarning: z.boolean(),
   theme: z.enum([
     'system',
@@ -138,6 +139,8 @@ export const DEFAULT_SETTINGS: Settings = {
   selectedSceneImageTemplateChainId: DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID,
   settingsScripts: DEFAULT_SETTINGS_SCRIPTS_STATE,
   editImagePromptsBeforeDispatch: false,
+  generateImagesInParallelWithText: false,
+  imageGenerationConcurrency: 1,
   autoImageRate: 0,
   autoImageNpcOnly: false,
   autoImageTemplateWeights: {
@@ -158,7 +161,6 @@ export const DEFAULT_SETTINGS: Settings = {
   offscreenMentionLimit: 2,
   rollingConversationSummaryLimit: 10,
   offscreenLearnedInformationLimit: 10,
-  tokenStreamingEnabled: true,
   showTemplatePasteSafetyWarning: true,
   theme: 'yozakura',
   mainMenuFtueSeen: false,

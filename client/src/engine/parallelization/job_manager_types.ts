@@ -4,8 +4,8 @@ export interface INewParallelJob<TResultsType> {
   name: string;
   parallelismGroup: string;
   job: (abortSignal: AbortSignal) => Promise<TResultsType>;
-  tags?: string[];
-  exclusiveWithParallelismGroups?: string[];
+  tags?: string[] | undefined;
+  exclusiveWithParallelismGroups?: string[] | undefined;
 }
 
 export interface IParallelJob<TResultsType> extends INewParallelJob<TResultsType> {

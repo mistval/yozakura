@@ -25,11 +25,14 @@ type ConfigRuleContext = {
   promptTemplateGroup: string | undefined;
 } & PromptExecutionContext;
 
-type ResolvedLlmPromptOptions = {
+export type ResolvedLlmPromptOptions = {
   metaOptions: Record<string, unknown>;
   targetUrl?: string;
   authToken?: string;
   responsePreParserSource?: string;
+  tokenStreamingEnabled?: boolean;
+  concurrencyGroupName?: string;
+  concurrencyGroupLimit?: number;
 };
 
 type LlmTransportOptions = {
@@ -69,7 +72,7 @@ function notifyNoMatchingConfig(promptTemplateGroup: string): never {
   throw error;
 }
 
-function resolveLlmPromptOptions(
+export function resolveLlmPromptOptions(
   promptTemplateGroup: string,
   executionContext: PromptExecutionContext
 ): ResolvedLlmPromptOptions {
@@ -80,6 +83,9 @@ function resolveLlmPromptOptions(
   let metaOptions: Record<string, unknown> = {};
   let transport: { targetUrl?: string; authToken?: string } = {};
   let responsePreParserSource: string | undefined;
+  let tokenStreamingEnabled: boolean | undefined;
+  let concurrencyGroupName: string | undefined;
+  let concurrencyGroupLimit: number | undefined;
 
   for (const config of configs) {
     const ruleSource = config.rule?.trim();
@@ -123,6 +129,18 @@ function resolveLlmPromptOptions(
     if (trimmedResponsePreParserSource) {
       responsePreParserSource = trimmedResponsePreParserSource;
     }
+
+    if (config.tokenStreamingEnabled !== undefined) {
+      tokenStreamingEnabled = config.tokenStreamingEnabled;
+    }
+
+    if (config.concurrencyGroupName) {
+      concurrencyGroupName = config.concurrencyGroupName;
+    }
+
+    if (config.concurrencyGroupLimit !== undefined) {
+      concurrencyGroupLimit = config.concurrencyGroupLimit;
+    }
   }
 
   if (matchedCount === 0) {
@@ -133,6 +151,9 @@ function resolveLlmPromptOptions(
     metaOptions,
     ...transport,
     ...(responsePreParserSource ? { responsePreParserSource } : {}),
+    ...(tokenStreamingEnabled !== undefined ? { tokenStreamingEnabled } : {}),
+    ...(concurrencyGroupName ? { concurrencyGroupName } : {}),
+    ...(concurrencyGroupLimit !== undefined ? { concurrencyGroupLimit } : {}),
   };
 }
 
@@ -207,7 +228,7 @@ export async function chatCompletion(
       const transportOptions: LlmTransportOptions = {
         targetUrl: resolvedPromptOptions.targetUrl,
         authToken: resolvedPromptOptions.authToken,
-        ...(useSettingsStore.getState().tokenStreamingEnabled && onTokens ? { onTokens } : {}),
+        ...(resolvedPromptOptions.tokenStreamingEnabled && onTokens ? { onTokens } : {}),
       };
 
       const responseMessage = await Api.llmChat(payload, {

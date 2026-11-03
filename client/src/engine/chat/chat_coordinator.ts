@@ -1,7 +1,8 @@
 import { assert, assertNonNullish } from '../../errors/application_error';
-import { chatCompletion } from '../llm.js';
+import { chatCompletion, resolveLlmPromptOptions } from '../llm.js';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry.js';
 import { generateChatImage } from '../image_gen.js';
+import { globalParallelJobManager } from '../parallelization/job_manager.js';
 import {
   buildChatModeratorContext,
   buildConversationEndJudgeContext,
@@ -47,6 +48,7 @@ import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
 import { rethrowSignalException } from '../scenario_loop/flow_control';
 import type { PromptTemplateChain } from '../prompt_templates/prompt_template_chain.js';
 import type { PromptExecutionContext } from '../prompt_templates/prompt_template_context_fields.js';
+import { ChatJobTags } from '../../state/chat_state';
 
 export class ChatCoordinator {
   public static async prepareChatStart(participantIds: string[]): Promise<StartChatSessionArgs> {
@@ -121,16 +123,23 @@ export class ChatCoordinator {
       historyLength: number;
     }
   ): Promise<ChatEndDecision> {
-    return this.turnMachineStore().doWithState('judging_conversation_end', () => {
-      return withPhaseTransitionGate(
-        async (abortSignal) => {
-          return conversationEndJudgeTemplatesChain.renderAndExecute(
-            await buildConversationEndJudgeContext(fromPerspectiveId, lengthParameters),
-            { abortSignal }
+    const isImageParallel = useSettingsStore.getState().generateImagesInParallelWithText;
+    return globalParallelJobManager.enqueue({
+      name: 'Deciding whether to end',
+      parallelismGroup: 'default_llm',
+      tags: [ChatJobTags.chatJob, ChatJobTags.judgingConversationEnd],
+      exclusiveWithParallelismGroups: !isImageParallel ? ['image_generation'] : undefined,
+      job: async () => {
+          return withPhaseTransitionGate(
+            async (abortSignal) => {
+              return conversationEndJudgeTemplatesChain.renderAndExecute(
+                await buildConversationEndJudgeContext(fromPerspectiveId, lengthParameters),
+                { abortSignal }
+              );
+            },
+            { pauseBehavior: 'abort' }
           );
-        },
-        { pauseBehavior: 'abort' }
-      );
+      },
     });
   }
 
@@ -148,10 +157,6 @@ export class ChatCoordinator {
     }
 
     return this.turnMachineStore().removeChatParticipant(participantId);
-  }
-
-  public static setStateAwaitingCharacterInput() {
-    this.turnMachineStore().setStateAwaitingCharacterInput();
   }
 
   public static setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation | undefined) {
@@ -198,7 +203,11 @@ export class ChatCoordinator {
     this.setTranscript(updatedTranscript);
 
     if (!options.forceSkipAutoImage) {
-      await this.maybeGenerateAutoImageForMessage(newRawMessage);
+      if (useSettingsStore.getState().generateImagesInParallelWithText) {
+        void this.maybeGenerateAutoImageForMessage(newRawMessage);
+      } else {
+        await this.maybeGenerateAutoImageForMessage(newRawMessage);
+      }
     }
   }
 
@@ -238,21 +247,29 @@ export class ChatCoordinator {
       chain?: PromptTemplateChain<PromptExecutionContext, string> | undefined;
     }
   ) {
-    return this.turnMachineStore().doWithState('generating_image_prompt', async () => {
-      return withPhaseTransitionGate(
-        async (abortSignal) => {
-          const primaryCharacter = this.getCharacterById(primaryCharacterId);
-          const sceneImageChain = opts?.chain ?? this.getSelectedSceneImageChain();
-          assertNonNullish(sceneImageChain, 'No scene image chain available');
-          return sceneImageChain.renderAndExecute(
-            await buildFocusedChatTemplateContext(primaryCharacter.id, undefined, {
-              upToMessageId: opts?.upToMessageId,
-            }),
-            { abortSignal }
+    const isImageParallel = useSettingsStore.getState().generateImagesInParallelWithText;
+    return globalParallelJobManager.enqueue({
+      name: 'Generating image prompt',
+      parallelismGroup: 'default_llm',
+      tags: [ChatJobTags.chatJob, ChatJobTags.generatingImagePrompt],
+      exclusiveWithParallelismGroups: !isImageParallel ? ['image_generation'] : undefined,
+      job: async () => {
+
+          return withPhaseTransitionGate(
+            async (abortSignal) => {
+              const primaryCharacter = this.getCharacterById(primaryCharacterId);
+              const sceneImageChain = opts?.chain ?? this.getSelectedSceneImageChain();
+              assertNonNullish(sceneImageChain, 'No scene image chain available');
+              return sceneImageChain.renderAndExecute(
+                await buildFocusedChatTemplateContext(primaryCharacter.id, undefined, {
+                  upToMessageId: opts?.upToMessageId,
+                }),
+                { abortSignal }
+              );
+            },
+            { pauseBehavior: 'ignore' }
           );
-        },
-        { pauseBehavior: 'ignore' }
-      );
+      },
     });
   }
 
@@ -260,23 +277,31 @@ export class ChatCoordinator {
     fullPrompt: string,
     opts?: { afterMessageId?: string | undefined }
   ) {
-    return this.turnMachineStore().doWithState('generating_image', async () => {
-      return withPhaseTransitionGate(
-        async (abortSignal) => {
-          const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
-          const files = await generateChatImage({
-            fullPrompt,
-            saveTo,
-            abortSignal,
-          });
+    const isImageParallel = useSettingsStore.getState().generateImagesInParallelWithText;
+    return globalParallelJobManager.enqueue({
+      name: 'Generating image',
+      parallelismGroup: 'image_generation',
+      tags: [ChatJobTags.chatJob, ChatJobTags.generatingImage],
+      exclusiveWithParallelismGroups: !isImageParallel ? ['default_llm'] : undefined,
+      job: async () => {
 
-          const firstFile = files[0];
-          assertNonNullish(firstFile, 'No file returned from image generation call');
+          return withPhaseTransitionGate(
+            async (abortSignal) => {
+              const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
+              const files = await generateChatImage({
+                fullPrompt,
+                saveTo,
+                abortSignal,
+              });
 
-          this.setTranscript(this.transcript().addImageMessage(firstFile, opts).updatedTranscript);
-        },
-        { pauseBehavior: 'ignore' }
-      );
+              const firstFile = files[0];
+              assertNonNullish(firstFile, 'No file returned from image generation call');
+
+              this.setTranscript(this.transcript().addImageMessage(firstFile, opts).updatedTranscript);
+            },
+            { pauseBehavior: 'ignore' }
+          );
+      },
     });
   }
 
@@ -284,6 +309,8 @@ export class ChatCoordinator {
     const scenario = getRequiredActiveScenario();
 
     if (!noEffect) {
+      await globalParallelJobManager.allSettledForTag(ChatJobTags.chatJob);
+
       const characterStore = useScenarioCharacterStore.getState();
       const relationshipStore = useScenarioCharacterRelationshipStore.getState();
       const characterUpdates: Array<Awaited<ReturnType<typeof generateCharacterEndOfChatUpdates>>> = [];
@@ -294,13 +321,12 @@ export class ChatCoordinator {
         );
         await lockEntitiesForEndOfChatUpdates(npcSpeakers);
 
-        for (const participant of npcSpeakers) {
-          characterUpdates.push(
-            await generateCharacterEndOfChatUpdates(participant, (statusInfo) =>
-              this.setStateProcessingMemories(statusInfo)
-            )
-          );
-        }
+        const updatePromises = npcSpeakers.map((participant) =>
+          generateCharacterEndOfChatUpdates(participant)
+        );
+
+        const settledUpdates = await Promise.all(updatePromises);
+        characterUpdates.push(...settledUpdates);
 
         await Promise.all([characterStore.commitAllChanges(), relationshipStore.commitAllChanges()]);
       } catch (err) {
@@ -356,67 +382,55 @@ export class ChatCoordinator {
       prompts.push(userNudgePrompt);
     }
 
-    const tokenStreamingEnabled = useSettingsStore.getState().tokenStreamingEnabled;
+    const resolvedLlm = resolveLlmPromptOptions('gen_npc_response', promptContext);
+    const isImageParallel = useSettingsStore.getState().generateImagesInParallelWithText;
 
-    return useTurnMachineStore.getState().doWithState('character_speaking', async () => {
-      return withPhaseTransitionGate(
-        async (abortSignal) => {
-          if (!tokenStreamingEnabled) {
-            const response = await chatCompletion(prompts, {
-              promptTemplateGroup: 'gen_npc_response',
-              completionRequestId,
-              promptContext,
-              abortSignal,
-            });
+    const finalMessage = await globalParallelJobManager.enqueue({
+      name: `${speaker.firstName} speaking`,
+      parallelismGroup: resolvedLlm.concurrencyGroupName || 'default_llm',
+      tags: [ChatJobTags.chatJob, ChatJobTags.characterIsSpeaking],
+      exclusiveWithParallelismGroups: !isImageParallel ? ['image_generation'] : undefined,
+      job: async () => {
+          return withPhaseTransitionGate(
+            async (abortSignal) => {
+              const draftMessage = await this.startStreamingNpcDraftMessage(speaker);
 
-            const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
-              completionRequestId,
-            });
+              try {
+                const response = await chatCompletion(prompts, {
+                  promptTemplateGroup: 'gen_npc_response',
+                  promptContext,
+                  completionRequestId,
+                  abortSignal,
+                  onTokens: async (fullText: string) => {
+                    this.setTranscript(
+                      this.transcript().editLatestMessage(fullText, { isStreaming: true }).updatedTranscript
+                    );
+                  },
+                });
 
-            const didPause = !wasPaused && this.isChatPaused();
+                const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
+                  completionRequestId,
+                });
 
-            await this.addCharacterMessage(speaker.id, parsedResponse, { forceSkipAutoImage: didPause });
-            await this.pauseAfterNpcOnlyMessage();
+                // Delete and re-add. Slightly hacky way to trigger auto image and other effects.
+                this.deleteMessageById(draftMessage.id);
 
-            return this.transcript;
-          }
-
-          const draftMessage = await this.startStreamingNpcDraftMessage(speaker);
-
-          try {
-            const response = await chatCompletion(prompts, {
-              promptTemplateGroup: 'gen_npc_response',
-              promptContext,
-              completionRequestId,
-              abortSignal,
-              onTokens: async (fullText: string) => {
-                this.setTranscript(
-                  this.transcript().editLatestMessage(fullText, { isStreaming: true }).updatedTranscript
-                );
-              },
-            });
-
-            const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
-              completionRequestId,
-            });
-
-            const didPause = !wasPaused && this.isChatPaused();
-
-            // Delete and re-add. Slightly hacky way to trigger auto image and other effects.
-            this.deleteMessageById(draftMessage.id);
-            await this.addCharacterMessage(speaker.id, parsedResponse, { forceSkipAutoImage: didPause });
-
-            await this.pauseAfterNpcOnlyMessage();
-
-            return this.transcript;
-          } catch (err) {
-            this.deleteMessageById(draftMessage.id);
-            throw err;
-          }
-        },
-        { pauseBehavior: 'ignore' }
-      );
+                return parsedResponse;
+              } catch (err) {
+                this.deleteMessageById(draftMessage.id);
+                throw err;
+              }
+            },
+            { pauseBehavior: 'ignore' }
+          );
+      },
     });
+
+    const didPause = !wasPaused && this.isChatPaused();
+    await this.addCharacterMessage(speaker.id, finalMessage, { forceSkipAutoImage: didPause });
+    await this.pauseAfterNpcOnlyMessage();
+
+    return this.transcript;
   }
 
   public static getSpeakerSelectionMode(): SpeakerSelectionMode {
@@ -502,28 +516,36 @@ export class ChatCoordinator {
       }
 
       if (selectionMode === 'intelligent') {
-        return useTurnMachineStore.getState().doWithState('selecting_speaker', async () => {
-          return withPhaseTransitionGate(
-            async (abortSignal) => {
-              const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesChain.renderAndExecute(
-                await buildChatModeratorContext(speakerCandidates),
-                { abortSignal }
+        const isImageParallel = useSettingsStore.getState().generateImagesInParallelWithText;
+        return globalParallelJobManager.enqueue({
+          name: 'Selecting speaker',
+          parallelismGroup: 'default_llm',
+          tags: [ChatJobTags.chatJob, ChatJobTags.selectingSpeaker],
+          exclusiveWithParallelismGroups: !isImageParallel ? ['image_generation'] : undefined,
+          job: async () => {
+              return withPhaseTransitionGate(
+                async (abortSignal) => {
+                  const moderatorSelectedSpeakerId =
+                    await moderationNextSpeakerTemplatesChain.renderAndExecute(
+                      await buildChatModeratorContext(speakerCandidates),
+                      { abortSignal }
+                    );
+
+                  if (moderatorSelectedSpeakerId) {
+                    const character = speakerCandidates.find((s) => s.id === moderatorSelectedSpeakerId);
+
+                    if (character) {
+                      return character;
+                    }
+                  }
+
+                  // If moderator didn't select a speaker or selected one not in the chat,
+                  // select randomly.
+                  return getRequiredRandomChoice(speakerCandidates);
+                },
+                { pauseBehavior: 'abort' }
               );
-
-              if (moderatorSelectedSpeakerId) {
-                const character = speakerCandidates.find((s) => s.id === moderatorSelectedSpeakerId);
-
-                if (character) {
-                  return character;
-                }
-              }
-
-              // If moderator didn't select a speaker or selected one not in the chat,
-              // select randomly.
-              return getRequiredRandomChoice(speakerCandidates);
-            },
-            { pauseBehavior: 'abort' }
-          );
+          },
         });
       }
 
@@ -544,10 +566,6 @@ export class ChatCoordinator {
 
   public static countChatMessages() {
     return this.transcript().countCharacterChatMessages();
-  }
-
-  private static setStateProcessingMemories(statusInfo: string) {
-    this.turnMachineStore().setStateProcessingMemories(statusInfo);
   }
 
   private static turnMachineStore() {
@@ -652,7 +670,7 @@ export class ChatCoordinator {
       const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId, {
         chain: selectedChain,
       });
-      await this.generateImageFromPrompt(fullPrompt);
+      await this.generateImageFromPrompt(fullPrompt, { afterMessageId: chatMessage.id });
     } catch (err) {
       rethrowSignalException(err);
 

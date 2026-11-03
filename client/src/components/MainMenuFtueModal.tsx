@@ -29,14 +29,10 @@ const FTUE_AUTH_TOKEN_TOOLTIP_HTML =
 const FTUE_MODEL_TOOLTIP_HTML =
   'If your API accepts a <code>model</code> field in request bodies to specify the model to use, you can set that model here.';
 
-const FTUE_TOKEN_STREAMING_TOOLTIP_HTML =
-  'When enabled, NPC chat responses stream token-by-token while they are being generated. Your API provider must support OpenAI-compatible streaming (SSE). Most providers do support this.';
-
 export default function MainMenuFtueModal() {
   const navigate = useNavigate();
   const location = useLocation();
   const llmConfigs = useSettingsStore((s) => s.llmConfigs);
-  const tokenStreamingEnabled = useSettingsStore((s) => s.tokenStreamingEnabled);
   const mainMenuFtueSeen = useSettingsStore((s) => s.mainMenuFtueSeen);
   const setSettings = useSettingsStore((s) => s.setSettings);
 
@@ -190,24 +186,6 @@ export default function MainMenuFtueModal() {
                 onBlur={saveConnectionDetails}
                 placeholder="deepseek/deepseek-chat"
                 className="w-full rounded-sm border px-3 py-2"
-              />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-medium" htmlFor="ftue-token-streaming-enabled">
-                Token streaming
-              </label>
-              <input
-                id="ftue-token-streaming-enabled"
-                type="checkbox"
-                checked={tokenStreamingEnabled}
-                onChange={(event) => setSettings({ tokenStreamingEnabled: event.target.checked })}
-                className="h-4 w-4!"
-              />
-              <InfoTooltip
-                label="About token streaming"
-                html={FTUE_TOKEN_STREAMING_TOOLTIP_HTML}
-                align="center"
               />
             </div>
 

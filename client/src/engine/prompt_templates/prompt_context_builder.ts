@@ -162,7 +162,7 @@ async function buildChatTemplateContext(
 ): Promise<ConversationExecutionContext> {
   const activeChatStore = useTurnMachineStore.getState();
 
-  if (!activeChatStore.isActive()) {
+  if (activeChatStore.chatState !== 'active') {
     throw new Error('buildChatTemplateContext() should only be called when a chat is active');
   }
 

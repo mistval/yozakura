@@ -30,6 +30,7 @@ import { getUserMovementSuggestion } from '../engine/character_schedule/get_sche
 import { ChatCoordinator } from '../engine/chat/chat_coordinator';
 import { startScenarioLoop } from '../engine/scenario_loop/scenario_loop';
 import { useSettingsStore } from '../state/settings_store';
+import { useIsGeneratingMemories } from '../state/chat_state';
 
 export default function ScenarioView() {
   const navigate = useNavigate();
@@ -63,18 +64,16 @@ export default function ScenarioView() {
   const submitUserChatAction = useScenarioLoopStateStore((state) => state.submitUserChatAction);
   const autoModeEnabled = useScenarioLoopStateStore((state) => state.autoMode);
   const setAutoModeEnabled = useScenarioLoopStateStore((state) => state.setAutoMode);
+  const isGeneratingMemories = useIsGeneratingMemories();
   const setUserRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.setUserRequestedPhaseTransition
-  );
-  const isAwaitingCharacterInput = useTurnMachineStore(
-    (state) => state.chatState === 'awaiting_character_input'
   );
   const isUserTurn =
     currentTurnCharacterId !== undefined && currentTurnCharacterId === scenario?.userCharacterId;
   const npcPhaseBusy =
     currentTurnCharacterId !== undefined && currentTurnCharacterId !== scenario?.userCharacterId;
   const canSubmitUserTurn = isUserTurn && !hasActiveChatSession;
-  const canReturnToMainMenu = canSubmitUserTurn || isAwaitingCharacterInput;
+  const canReturnToMainMenu = canSubmitUserTurn;
   const previousUserIdRef = useRef<string | null>(null);
   const visibleRelationships = useCachedCharacterRelationships();
 
@@ -130,7 +129,7 @@ export default function ScenarioView() {
     ? charactersById[perspectiveCharacter.id]?.locationId
     : undefined;
   const canAddChatParticipant =
-    activeChatState !== 'processing_memories' && (hasActiveChatSession || isUserTurn);
+    !isGeneratingMemories && (hasActiveChatSession || isUserTurn);
 
   const locationById = useMemo(
     () =>

@@ -144,7 +144,6 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
     while (true) {
       try {
         const speakerInput = makeInputInterface(nextSpeaker.id);
-        ChatCoordinator.setStateAwaitingCharacterInput();
         const { input } = await speakerInput.getNextChatInput();
 
         if (input.actionType === 'skip_turn') {
