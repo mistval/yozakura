@@ -128,8 +128,7 @@ export default function ScenarioView() {
   const perspectiveLocationId: string | undefined = perspectiveCharacter
     ? charactersById[perspectiveCharacter.id]?.locationId
     : undefined;
-  const canAddChatParticipant =
-    !isGeneratingMemories && (hasActiveChatSession || isUserTurn);
+  const canAddChatParticipant = !isGeneratingMemories && (hasActiveChatSession || isUserTurn);
 
   const locationById = useMemo(
     () =>

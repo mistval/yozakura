@@ -144,7 +144,9 @@ function ConfigEditor({
       ...(trimmedUrl ? { llmUrl: trimmedUrl } : {}),
       ...(trimmedToken ? { llmAuthToken: trimmedToken } : {}),
       ...(trimmedResponsePreParserSource ? { responsePreParserSource: trimmedResponsePreParserSource } : {}),
-      ...(draft.tokenStreamingEnabled !== undefined ? { tokenStreamingEnabled: draft.tokenStreamingEnabled } : {}),
+      ...(draft.tokenStreamingEnabled !== undefined
+        ? { tokenStreamingEnabled: draft.tokenStreamingEnabled }
+        : {}),
       ...(trimmedConcurrencyGroupName ? { concurrencyGroupName: trimmedConcurrencyGroupName } : {}),
       ...(validLimit !== undefined ? { concurrencyGroupLimit: validLimit } : {}),
     });
@@ -299,9 +301,7 @@ function ConfigEditor({
             label="Token streaming"
             tooltipHtml={settingsTooltips['llm.tokenStreaming']}
             checked={draft.tokenStreamingEnabled ?? true}
-            onChange={(nextChecked) =>
-              setDraft((prev) => ({ ...prev, tokenStreamingEnabled: nextChecked }))
-            }
+            onChange={(nextChecked) => setDraft((prev) => ({ ...prev, tokenStreamingEnabled: nextChecked }))}
           />
 
           <div>

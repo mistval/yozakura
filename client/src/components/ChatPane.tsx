@@ -17,7 +17,12 @@ import CharacterChatSettings from './chat/character_chat_settings.js';
 import { useUserCharacter } from '../state/scenario_character_store.js';
 import ButtonOptions from './ui/ButtonOptions.js';
 import { chatSceneImageTemplatesGroup } from '../engine/prompt_templates/chat/group.js';
-import { useChatJobs, useIsAwaitingCharacterTextInput, useIsGeneratingImageOrImagePrompt, useIsGeneratingMemories } from '../state/chat_state.js';
+import {
+  useChatJobs,
+  useIsAwaitingCharacterTextInput,
+  useIsGeneratingImageOrImagePrompt,
+  useIsGeneratingMemories,
+} from '../state/chat_state.js';
 import ChatTopBarStatus from './chat/ChatTopBarStatus.js';
 
 const CHAT_PANE_WIDTH_CLASS_BY_SETTING: Record<ChatPaneWidth, string> = {
@@ -77,7 +82,8 @@ export default function ChatPane() {
   const isGeneratingMemories = useIsGeneratingMemories();
   const isAwaitingCharacterTextInput = useIsAwaitingCharacterTextInput();
   const canFinishChat = isAwaitingCharacterTextInput && !isGeneratingImage;
-  const canGenerateImages = generateImagesInParallelWithText || (!isGeneratingImage && isAwaitingCharacterTextInput);
+  const canGenerateImages =
+    generateImagesInParallelWithText || (!isGeneratingImage && isAwaitingCharacterTextInput);
 
   const isGenerating = chatJobs.length > 0;
 
@@ -307,10 +313,12 @@ export default function ChatPane() {
         </h3>
         <div className="flex items-center gap-3">
           <ChatTopBarStatus />
-          { !isGeneratingMemories && (<button type="button" onClick={() => setShowChatSettings(true)}>
+          {!isGeneratingMemories && (
+            <button type="button" onClick={() => setShowChatSettings(true)}>
               Chat Settings
-            </button>) }
-            
+            </button>
+          )}
+
           {runButtonTitle && (
             <button
               type="button"
@@ -320,15 +328,16 @@ export default function ChatPane() {
               {runButtonTitle}
             </button>
           )}
-          { getEndChatButtonTitle() && (<button
-            type="button"
-            onClick={requestEndChat}
-            disabled={!canFinishChat}
-            className="button-emphasized font-semibold"
-          >
-            {getEndChatButtonTitle()}
-          </button>) }
-          
+          {getEndChatButtonTitle() && (
+            <button
+              type="button"
+              onClick={requestEndChat}
+              disabled={!canFinishChat}
+              className="button-emphasized font-semibold"
+            >
+              {getEndChatButtonTitle()}
+            </button>
+          )}
         </div>
       </div>
 

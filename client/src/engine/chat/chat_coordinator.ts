@@ -17,7 +17,13 @@ import {
   doAsDataWrite,
   mainDatabase,
 } from '../../backend_bridge/database.js';
-import type { Character, CharacterMessage, ChatMessage, EphemeralLocation, StoredConversation } from '../types';
+import type {
+  Character,
+  CharacterMessage,
+  ChatMessage,
+  EphemeralLocation,
+  StoredConversation,
+} from '../types';
 import { getRequiredActiveScenario } from '../../state/scenario_store.js';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
@@ -383,10 +389,10 @@ export class ChatCoordinator {
             promptContext,
             completionRequestId,
             abortSignal,
-            jobConfig: createTextCompletionJobConfig(
-              `${speaker.firstName} speaking`,
-              [ChatJobTags.chatJob, ChatJobTags.characterIsSpeaking]
-            ),
+            jobConfig: createTextCompletionJobConfig(`${speaker.firstName} speaking`, [
+              ChatJobTags.chatJob,
+              ChatJobTags.characterIsSpeaking,
+            ]),
             onTokens: (fullText: string) => {
               if (!draftMessage) {
                 draftMessage = this.startStreamingNpcDraftMessage(speaker);
@@ -508,17 +514,16 @@ export class ChatCoordinator {
       if (selectionMode === 'intelligent') {
         return withPhaseTransitionGate(
           async (abortSignal) => {
-            const moderatorSelectedSpeakerId =
-              await moderationNextSpeakerTemplatesChain.renderAndExecute(
-                await buildChatModeratorContext(speakerCandidates),
-                {
-                  abortSignal,
-                  jobConfig: createTextCompletionJobConfig('Selecting speaker', [
-                    ChatJobTags.chatJob,
-                    ChatJobTags.selectingSpeaker,
-                  ]),
-                }
-              );
+            const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesChain.renderAndExecute(
+              await buildChatModeratorContext(speakerCandidates),
+              {
+                abortSignal,
+                jobConfig: createTextCompletionJobConfig('Selecting speaker', [
+                  ChatJobTags.chatJob,
+                  ChatJobTags.selectingSpeaker,
+                ]),
+              }
+            );
 
             if (moderatorSelectedSpeakerId) {
               const character = speakerCandidates.find((s) => s.id === moderatorSelectedSpeakerId);

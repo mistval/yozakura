@@ -155,9 +155,7 @@ export async function lockEntitiesForEndOfChatUpdates(npcSpeakers: Character[]) 
   }
 }
 
-export async function generateCharacterEndOfChatUpdates(
-  fromCharacterPerspective: Character,
-) {
+export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective: Character) {
   const { activeScenario } = useScenarioStore.getState();
   const userCharacterId = getRequiredUserCharacterId();
 
@@ -275,15 +273,14 @@ export async function generateCharacterEndOfChatUpdates(
             });
           }
 
-          const newPairwiseMemory =
-            await gatedRenderFunctions.rollingPairwiseMemoryRewriteChainGroup(
-              await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id),
-              {
-                jobConfig: createMemoryJobConfig(
-                  `Updating ${fromCharacterPerspective.firstName}'s memory of ${otherCharacter.firstName}`
-                ),
-              }
-            );
+          const newPairwiseMemory = await gatedRenderFunctions.rollingPairwiseMemoryRewriteChainGroup(
+            await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id),
+            {
+              jobConfig: createMemoryJobConfig(
+                `Updating ${fromCharacterPerspective.firstName}'s memory of ${otherCharacter.firstName}`
+              ),
+            }
+          );
 
           await stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
             memory: newPairwiseMemory,
@@ -352,29 +349,34 @@ export async function generateCharacterEndOfChatUpdates(
         nextConversationGoal: newConversationGoal,
       });
 
-      pairwiseContext = await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id);
-
-      const newMemory = await gatedRenderFunctions.rollingPairwiseMemoryRewriteChainGroup(
-        pairwiseContext,
-        {
-          jobConfig: createMemoryJobConfig(
-            `Updating ${fromCharacterPerspective.firstName}'s memory of ${otherCharacter.firstName}`
-          ),
-        }
+      pairwiseContext = await buildTargetedChatTemplateContext(
+        fromCharacterPerspective.id,
+        otherCharacter.id
       );
+
+      const newMemory = await gatedRenderFunctions.rollingPairwiseMemoryRewriteChainGroup(pairwiseContext, {
+        jobConfig: createMemoryJobConfig(
+          `Updating ${fromCharacterPerspective.firstName}'s memory of ${otherCharacter.firstName}`
+        ),
+      });
 
       await stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
         memory: newMemory,
       });
 
-      pairwiseContext = await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id);
+      pairwiseContext = await buildTargetedChatTemplateContext(
+        fromCharacterPerspective.id,
+        otherCharacter.id
+      );
 
-      const newRelationshipDescriptor =
-        await gatedRenderFunctions.relationshipDescriptorUpdateChainGroup(pairwiseContext, {
+      const newRelationshipDescriptor = await gatedRenderFunctions.relationshipDescriptorUpdateChainGroup(
+        pairwiseContext,
+        {
           jobConfig: createMemoryJobConfig(
             `Updating relationship descriptor ${fromCharacterPerspective.firstName} → ${otherCharacter.firstName}`
           ),
-        });
+        }
+      );
 
       await stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
         descriptor: newRelationshipDescriptor,
@@ -413,18 +415,14 @@ export async function generateCharacterEndOfChatUpdates(
   );
 
   pairwiseUpdates.push(
-    ...pairwiseUpdateResults.filter(
-      (result): result is NonNullable<typeof result> => result !== undefined
-    )
+    ...pairwiseUpdateResults.filter((result): result is NonNullable<typeof result> => result !== undefined)
   );
 
   const oldGlobalMemory = getResolvedCharacter(fromCharacterPerspective.id).globalMemories;
   const newGlobalMemory = await gatedRenderFunctions.rollingGlobalMemoryRewriteChainGroup(
     await buildFocusedChatTemplateContext(fromCharacterPerspective.id),
     {
-      jobConfig: createMemoryJobConfig(
-        `Rewriting global memory for ${fromCharacterPerspective.firstName}`
-      ),
+      jobConfig: createMemoryJobConfig(`Rewriting global memory for ${fromCharacterPerspective.firstName}`),
     }
   );
 
