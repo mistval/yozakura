@@ -6,7 +6,6 @@ import type { Character } from '../engine/types.js';
 import type { ConflictAction } from './import_conflict_resolver.js';
 
 export type BuildCommitPayloadOptions = {
-  sessionId: string;
   exportName: string;
   selectedScenarioIds?: string[];
   selectedScenarioCharactersIds?: string[];
@@ -26,7 +25,6 @@ export async function prepareStagingAndBuildCommitPayload(
   options: BuildCommitPayloadOptions
 ): Promise<ImportCommitPayload> {
   const {
-    sessionId,
     exportName,
     selectedScenarioIds = [],
     selectedScenarioCharactersIds = selectedScenarioIds,
@@ -126,7 +124,6 @@ export async function prepareStagingAndBuildCommitPayload(
   }
 
   return {
-    sessionId,
     sqlStatements,
     imageCopies,
     allowedImageDirectories: ['character_cards', 'scenario'],

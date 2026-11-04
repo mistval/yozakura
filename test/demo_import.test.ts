@@ -28,7 +28,6 @@ describe('Integration: Demo Entities from Export', () => {
     expect(stageResult.success).toBe(true);
     if (!stageResult.success) throw new Error(stageResult.error);
 
-    expect(stageResult.sessionId).toBeDefined();
     expect(stageResult.manifest.dbUserVersion).toBe(8);
 
     // Staging database should contain the demo entities

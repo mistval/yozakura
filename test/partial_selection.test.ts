@@ -103,7 +103,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
     if (!stageResult.success) throw new Error('Stage failed');
 
     const commitPayload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedScenarioIds: [seeded.scenarioId],
       selectedScenarioMemoriesIds: [], // Memories omitted
@@ -199,7 +198,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
     if (!stageResult.success) throw new Error('Stage failed');
 
     const commitPayload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedScenarioIds: [seeded.scenarioId],
       selectedScenarioMemoriesIds: [seeded.scenarioId],
@@ -302,7 +300,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
     if (!stageResult.success) throw new Error('Stage failed');
 
     const commitPayload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedScenarioIds: [seeded.scenarioId],
       selectedScenarioCharactersIds: [seeded.scenarioId],
@@ -368,7 +365,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
     if (!stageResult.success) throw new Error('Stage failed');
 
     const commitPayload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedScenarioIds: [seeded.scenarioId],
       selectedScenarioCharactersIds: [seeded.scenarioId],
@@ -411,7 +407,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
     if (!stageResult.success) throw new Error('Stage failed');
 
     const commitPayload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedScenarioIds: [seeded.scenarioId],
       selectedScenarioCharactersIds: [], // Characters omitted
@@ -484,7 +479,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
     if (!stageResult.success) throw new Error('Stage failed');
 
     const commitPayload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedScenarioIds: [seeded.scenarioId],
       selectedScenarioCharactersIds: [seeded.scenarioId],

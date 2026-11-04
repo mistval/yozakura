@@ -23,7 +23,6 @@ export type DataImportComponentProps = {
 };
 
 type StagedData = {
-  sessionId: string;
   manifest: StagedManifest;
   scenarios: ScenarioSummary[];
   maps: WorldMap[];
@@ -81,7 +80,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
         ]);
 
         const staged: StagedData = {
-          sessionId: result.sessionId,
           manifest: result.manifest,
           scenarios,
           maps,
@@ -131,7 +129,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
 
     try {
       const payload = await prepareStagingAndBuildCommitPayload({
-        sessionId: stagedData.sessionId,
         exportName: stagedData.manifest.exportName,
         ...decomposed,
         conflictResolutions,
@@ -247,7 +244,6 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
   const roots = useMemo<TreeNode[]>(() => {
     if (!stagedData) return [];
     return buildImportExportTreeRoots({
-      mode: 'import',
       scenarios: stagedData.scenarios,
       maps: stagedData.maps,
       globalCharacters: stagedData.globalCharacters,

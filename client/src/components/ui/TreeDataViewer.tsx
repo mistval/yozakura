@@ -193,9 +193,6 @@ export default function TreeDataViewer({
     const children = childrenMap[node.id];
     const canExpand = Boolean(node.getChildren);
 
-    const badgeText = typeof node.badge === 'string' ? node.badge : node.badge?.text;
-    const badgeVariant = typeof node.badge === 'string' ? 'default' : (node.badge?.variant ?? 'default');
-
     return (
       <div key={node.id} className="flex flex-col select-none">
         <div
@@ -249,20 +246,6 @@ export default function TreeDataViewer({
             <span className="font-medium text-primary truncate">{node.label}</span>
             {node.subtitle && <span className="text-xs text-muted truncate">{node.subtitle}</span>}
           </div>
-
-          {badgeText && (
-            <span
-              className={`text-xs px-2 py-0.5 rounded border whitespace-nowrap ${
-                badgeVariant === 'warning'
-                  ? 'bg-warning-bg text-warning-text border-warning-border'
-                  : badgeVariant === 'info'
-                    ? 'bg-surface-soft text-secondary border-border-default'
-                    : 'bg-surface-subtle text-primary border-border-default'
-              }`}
-            >
-              {badgeText}
-            </span>
-          )}
         </div>
 
         {canExpand && isExpanded && children && (

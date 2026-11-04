@@ -120,7 +120,6 @@ describe('Integration: Full Round-Trip Pack, Unpack & ID Remapping', () => {
 
     // 6. Prepare staging & build commit payload
     const commitPayload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedScenarioIds: [seeded.scenarioId],
       selectedScenarioMemoriesIds: [seeded.scenarioId],

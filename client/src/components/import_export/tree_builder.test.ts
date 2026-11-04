@@ -40,7 +40,6 @@ describe('buildImportExportTreeRoots', () => {
 
   it('builds tree roots correctly for scenarios, maps, and characters', async () => {
     const roots = buildImportExportTreeRoots({
-      mode: 'export',
       scenarios: dummyScenarios,
       maps: dummyMaps,
       globalCharacters: dummyCharacters,
@@ -87,7 +86,6 @@ describe('buildImportExportTreeRoots', () => {
 
   it('builds import tree roots filtering empty sections', async () => {
     const roots = buildImportExportTreeRoots({
-      mode: 'import',
       scenarios: [],
       maps: dummyMaps,
       globalCharacters: [],
@@ -100,7 +98,6 @@ describe('buildImportExportTreeRoots', () => {
 
   it('omits Map child node under scenario when the map is not present in maps', async () => {
     const roots = buildImportExportTreeRoots({
-      mode: 'import',
       scenarios: dummyScenarios,
       maps: [],
       globalCharacters: [],

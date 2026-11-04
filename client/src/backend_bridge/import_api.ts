@@ -1,12 +1,28 @@
-export type StagedManifest = {
-  exportName: string;
-  dbUserVersion: number;
-};
+import { z } from 'zod';
+
+export const stagedManifestSchema = z.object({
+  exportName: z.string(),
+  dbUserVersion: z.number(),
+});
+export type StagedManifest = z.infer<typeof stagedManifestSchema>;
+
+const stageSuccessResponseSchema = z.object({
+  ok: z.literal(true),
+  manifest: stagedManifestSchema,
+});
+
+const errorResponseSchema = z.object({
+  error: z.string().optional(),
+});
+
+const commitSuccessResponseSchema = z.object({
+  ok: z.literal(true),
+  backupFilename: z.string().optional(),
+});
 
 export type StageImportResult =
   | {
       success: true;
-      sessionId: string;
       manifest: StagedManifest;
     }
   | {
@@ -24,25 +40,20 @@ export async function stageImportArchive(file: File): Promise<StageImportResult>
   });
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({ error: 'Failed to stage import' }))) as {
-      error?: string;
-    };
+    const json: unknown = await response.json().catch(() => ({}));
+    const parsed = errorResponseSchema.safeParse(json);
     return {
       success: false,
-      error: data.error || `Staging failed with status ${response.status}`,
+      error: (parsed.success && parsed.data.error) || `Staging failed with status ${response.status}`,
     };
   }
 
-  const data = (await response.json()) as {
-    ok: boolean;
-    sessionId: string;
-    manifest: StagedManifest;
-  };
+  const json: unknown = await response.json();
+  const parsed = stageSuccessResponseSchema.parse(json);
 
   return {
     success: true,
-    sessionId: data.sessionId,
-    manifest: data.manifest,
+    manifest: parsed.manifest,
   };
 }
 
@@ -56,25 +67,20 @@ export async function stagePrepackagedArchive(prepackagedName: string = 'demo'):
   });
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({ error: 'Failed to stage prepackaged archive' }))) as {
-      error?: string;
-    };
+    const json: unknown = await response.json().catch(() => ({}));
+    const parsed = errorResponseSchema.safeParse(json);
     return {
       success: false,
-      error: data.error || `Staging failed with status ${response.status}`,
+      error: (parsed.success && parsed.data.error) || `Staging failed with status ${response.status}`,
     };
   }
 
-  const data = (await response.json()) as {
-    ok: boolean;
-    sessionId: string;
-    manifest: StagedManifest;
-  };
+  const json: unknown = await response.json();
+  const parsed = stageSuccessResponseSchema.parse(json);
 
   return {
     success: true,
-    sessionId: data.sessionId,
-    manifest: data.manifest,
+    manifest: parsed.manifest,
   };
 }
 
@@ -86,7 +92,6 @@ export type SqlStatementEntry =
     };
 
 export type ImportCommitPayload = {
-  sessionId: string;
   sqlStatements: SqlStatementEntry[];
   imageCopies: Array<{
     zipPath: string;
@@ -115,23 +120,20 @@ export async function commitImport(payload: ImportCommitPayload): Promise<Commit
   });
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({ error: 'Failed to commit import' }))) as {
-      error?: string;
-    };
+    const json: unknown = await response.json().catch(() => ({}));
+    const parsed = errorResponseSchema.safeParse(json);
     return {
       success: false,
-      error: data.error || `Commit failed with status ${response.status}`,
+      error: (parsed.success && parsed.data.error) || `Commit failed with status ${response.status}`,
     };
   }
 
-  const data = (await response.json()) as {
-    ok: boolean;
-    backupFilename?: string;
-  };
+  const json: unknown = await response.json();
+  const parsed = commitSuccessResponseSchema.parse(json);
 
   return {
     success: true,
-    ...(data.backupFilename ? { backupFilename: data.backupFilename } : {}),
+    ...(parsed.backupFilename ? { backupFilename: parsed.backupFilename } : {}),
   };
 }
 

@@ -19,13 +19,10 @@ export const imageCopyDescriptorSchema = z.discriminatedUnion('mode', [
   z.object({
     mode: z.literal('file'),
     sourceRelPath: z.string().min(1),
-    kind: z.string().optional(),
   }),
   z.object({
     mode: z.literal('directory'),
     sourceRelDir: z.string().min(1),
-    kind: z.string().optional(),
-    scenarioId: z.string().optional(),
   }),
 ]);
 export type ImageCopyDescriptor = z.infer<typeof imageCopyDescriptorSchema>;
@@ -157,7 +154,8 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
           try {
             srcPath = guardPathWithinBase(dataDir, descriptor.sourceRelPath);
           } catch {
-            continue; // Skip invalid or path-traversing paths
+            res.status(400).json({ error: 'Invalid image path in export request' });
+            return;
           }
 
           if (fs.existsSync(srcPath) && fs.statSync(srcPath).isFile()) {
@@ -175,7 +173,8 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
           try {
             srcDir = guardPathWithinBase(dataDir, descriptor.sourceRelDir);
           } catch {
-            continue;
+            res.status(400).json({ error: 'Invalid image directory path in export request' });
+            return;
           }
 
           if (fs.existsSync(srcDir) && fs.statSync(srcDir).isDirectory()) {

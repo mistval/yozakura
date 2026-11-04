@@ -31,7 +31,6 @@ describe('import_commit_payload_builder', () => {
     const stagingDb = createImportStagingDatabase(testSqlTarget);
 
     const payload = await prepareStagingAndBuildCommitPayload({
-      sessionId: 'test-session-123',
       exportName: 'MyExport',
       selectedScenarioIds: ['scen_1'],
       selectedScenarioMemoriesIds: ['scen_1'],
@@ -43,7 +42,6 @@ describe('import_commit_payload_builder', () => {
       stagingDb,
     });
 
-    expect(payload.sessionId).toBe('test-session-123');
     expect(payload.allowedImageDirectories).toEqual(['character_cards', 'scenario']);
 
     // Check DB queries called to populate _id_map
@@ -83,7 +81,6 @@ describe('import_commit_payload_builder', () => {
     const stagingDb = createImportStagingDatabase(testSqlTarget);
 
     const payload = await prepareStagingAndBuildCommitPayload({
-      sessionId: 'test-session-123',
       exportName: 'HolidayArchive',
       selectedScenarioIds: [],
       selectedScenarioMemoriesIds: [],
@@ -149,7 +146,6 @@ describe('import_commit_payload_builder', () => {
     const stagingDb = createImportStagingDatabase(testSqlTarget);
 
     const payload = await prepareStagingAndBuildCommitPayload({
-      sessionId: 'test-session-copy',
       exportName: 'ArchiveCopy',
       selectedScenarioIds: [],
       selectedScenarioMemoriesIds: [],
@@ -190,7 +186,6 @@ describe('import_commit_payload_builder', () => {
     const stagingDb = createImportStagingDatabase(testSqlTarget);
 
     const payload = await prepareStagingAndBuildCommitPayload({
-      sessionId: 'test-session-123',
       exportName: 'PartialExport',
       selectedScenarioIds: ['scen_1'],
       selectedScenarioMemoriesIds: [], // unchecked memories
@@ -221,7 +216,6 @@ describe('import_commit_payload_builder', () => {
     const stagingDb = createImportStagingDatabase(testSqlTarget);
 
     const payload = await prepareStagingAndBuildCommitPayload({
-      sessionId: 'test-session-123',
       exportName: 'PartialExportNoChars',
       selectedScenarioIds: ['scen_1'],
       selectedScenarioCharactersIds: [], // unchecked characters
@@ -265,7 +259,6 @@ describe('import_commit_payload_builder', () => {
     const stagingDb = createImportStagingDatabase(testSqlTarget);
 
     const payload = await prepareStagingAndBuildCommitPayload({
-      sessionId: 'test-session-123',
       exportName: 'PartialExportNoConvs',
       selectedScenarioIds: ['scen_1'],
       selectedScenarioCharactersIds: ['scen_1'],
@@ -300,7 +293,6 @@ describe('import_commit_payload_builder', () => {
     const stagingDb = createImportStagingDatabase(testSqlTarget);
 
     const payload = await prepareStagingAndBuildCommitPayload({
-      sessionId: 'test-session-123',
       exportName: 'PartialExportNoSchedules',
       selectedScenarioIds: ['scen_1'],
       selectedScenarioCharactersIds: ['scen_1'],
@@ -325,7 +317,6 @@ describe('import_commit_payload_builder', () => {
     const stagingDb = createImportStagingDatabase(testSqlTarget);
 
     const payload = await prepareStagingAndBuildCommitPayload({
-      sessionId: 'test-session-123',
       exportName: 'PartialExportNoTurn',
       selectedScenarioIds: ['scen_1'],
       selectedScenarioCharactersIds: ['scen_1'],

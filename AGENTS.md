@@ -11,3 +11,4 @@
 - Keep the backend as ignorant of data shapes as possible. It's just a storage layer.
 - Prefer manual dependency injection over vitest mocking.
 - KISS YAGNI. Don't add unrequested extra functionality/dynamism/flexibility that we don't need right now.
+- Avoid introducing complexity to solve practical non-issues.

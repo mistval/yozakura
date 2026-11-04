@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { ExportPayload } from './export_payload_builder.js';
 import { assertNonNullish } from '../errors/application_error.js';
 
@@ -5,6 +6,19 @@ export type ExportResult =
   | { success: true; filePath: string }
   | { success: false; alreadyExists: true; message: string }
   | { success: false; error: string };
+
+const conflictResponseSchema = z.object({
+  message: z.string().optional(),
+});
+
+const errorResponseSchema = z.object({
+  error: z.string().optional(),
+});
+
+const exportSuccessResponseSchema = z.object({
+  ok: z.literal(true),
+  filePath: z.string(),
+});
 
 export async function requestDataExport(payload: ExportPayload): Promise<ExportResult> {
   const response = await fetch('/api/export', {
@@ -14,11 +28,10 @@ export async function requestDataExport(payload: ExportPayload): Promise<ExportR
   });
 
   if (response.status === 409) {
-    const data = (await response.json()) as {
-      message?: string;
-    };
+    const json: unknown = await response.json().catch(() => ({}));
+    const data = conflictResponseSchema.parse(json);
 
-    assertNonNullish(data.message, 'Unexpected response from shape export endpoint: ' + JSON.stringify(data));
+    assertNonNullish(data.message, 'Unexpected response from shape export endpoint: ' + JSON.stringify(json));
 
     return {
       success: false,
@@ -28,16 +41,16 @@ export async function requestDataExport(payload: ExportPayload): Promise<ExportR
   }
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({ error: 'Export request failed' }))) as {
-      error?: string;
-    };
+    const json: unknown = await response.json().catch(() => ({}));
+    const data = errorResponseSchema.safeParse(json);
     return {
       success: false,
-      error: data.error || `Export failed with status ${response.status}`,
+      error: (data.success && data.data.error) || `Export failed with status ${response.status}`,
     };
   }
 
-  const data = (await response.json()) as { ok: boolean; filePath: string };
+  const json: unknown = await response.json();
+  const data = exportSuccessResponseSchema.parse(json);
   return {
     success: true,
     filePath: data.filePath,

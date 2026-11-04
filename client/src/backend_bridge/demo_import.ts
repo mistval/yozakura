@@ -7,7 +7,7 @@ import { detectConflicts } from './import_conflict_resolver.js';
 import { assertNonNullish } from '../errors/application_error.js';
 
 async function withStagedDemoArchive<T>(
-  fn: (stageResult: { sessionId: string; manifest: StagedManifest }) => Promise<T>
+  fn: (stageResult: { manifest: StagedManifest }) => Promise<T>
 ): Promise<T> {
   return locko.doWithLock('import_session', async () => {
     const stageResult = await stagePrepackagedArchive('demo');
@@ -36,7 +36,6 @@ export async function importDemoMaps(): Promise<void> {
     const conflictResolutions = Object.fromEntries(conflicts.map((c) => [c.id, c.action]));
 
     const payload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedMapIds: stagedMaps.map((m) => m.id),
       conflictResolutions,
@@ -65,7 +64,6 @@ export async function importDemoScenario(): Promise<{ newScenarioId: string }> {
     const conflictResolutions = Object.fromEntries(conflicts.map((c) => [c.id, c.action]));
 
     const payload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedScenarioIds: [demoScenario.id],
       selectedMapIds: stagedMaps.map((m) => m.id),
@@ -101,7 +99,6 @@ export async function importDemoGlobalCharacters(): Promise<void> {
     const conflictResolutions = Object.fromEntries(conflicts.map((c) => [c.id, c.action]));
 
     const payload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedGlobalCharacterIds: stagedCharacters.map((c) => c.id),
       conflictResolutions,

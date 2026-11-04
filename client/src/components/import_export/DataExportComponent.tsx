@@ -41,7 +41,6 @@ export default function DataExportComponent({ onExportStateChange }: DataExportC
   // Construct tree roots using centralized TreeEntityIds
   const roots = useMemo<TreeNode[]>(() => {
     return buildImportExportTreeRoots({
-      mode: 'export',
       scenarios: scenarioSummaries,
       maps,
       globalCharacters,

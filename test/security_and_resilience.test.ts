@@ -418,7 +418,6 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
 
     // Attempt to commit copying to forbidden directory (e.g., 'backups/malicious.png' or 'evil_folder')
     const commitResult = await commitImport({
-      sessionId: stageResult.sessionId,
       sqlStatements: [],
       imageCopies: [
         {

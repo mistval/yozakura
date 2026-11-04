@@ -66,6 +66,16 @@ function once<T extends { id: string }>(loader: () => Promise<T[]>): (page: numb
   return (page: number) => (page === 0 ? loader() : Promise.resolve([]));
 }
 
+function parseJsonRows<T extends { id: string }>(rows: Array<{ id: string; data: string }>): T[] {
+  return rows.map((row) => {
+    const data = JSON.parse(row.data) as Record<string, unknown>;
+    return {
+      id: row.id,
+      ...data,
+    } as unknown as T;
+  });
+}
+
 async function loadPagedRelationships(
   scenId: string,
   page: number
@@ -83,17 +93,7 @@ async function loadPagedRelationships(
     jsonRowSchema
   );
 
-  return rows.map((row) => {
-    try {
-      const data = JSON.parse(row.data);
-      return {
-        id: row.id,
-        ...(typeof data === 'object' && data !== null ? data : {}),
-      };
-    } catch {
-      return { id: row.id };
-    }
-  });
+  return parseJsonRows<CharacterRelationship & { id: string }>(rows);
 }
 
 async function loadPagedConversations(
@@ -112,17 +112,7 @@ async function loadPagedConversations(
     jsonRowSchema
   );
 
-  return rows.map((row) => {
-    try {
-      const data = JSON.parse(row.data);
-      return {
-        id: row.id,
-        ...(typeof data === 'object' && data !== null ? data : {}),
-      };
-    } catch {
-      return { id: row.id };
-    }
-  });
+  return parseJsonRows<StoredConversation & { id: string }>(rows);
 }
 
 export async function validateStagedData(options: {

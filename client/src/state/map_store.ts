@@ -50,6 +50,7 @@ export const useMapStore = create<{
       await get().importDemoMaps();
     } catch (err) {
       console.error('Failed to auto-import demo maps:', err);
+      get().setMaps([]);
     }
   },
 

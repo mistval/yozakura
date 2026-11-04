@@ -20,19 +20,6 @@ export const manifestDataSchema = z.object({
 });
 export type ManifestData = z.infer<typeof manifestDataSchema>;
 
-export const imageManifestEntrySchema = z.discriminatedUnion('kind', [
-  z.object({
-    zipPath: z.string().min(1),
-    kind: z.literal('global_character_card'),
-  }),
-  z.object({
-    zipPath: z.string().min(1),
-    kind: z.enum(['scenario_character_card', 'chat_image']),
-    scenarioId: z.string().min(1),
-  }),
-]);
-export type ImageManifestEntry = z.infer<typeof imageManifestEntrySchema>;
-
 export const dbRowLineSchema = z.object({
   table: z.string().min(1),
   row: z.record(z.string(), z.unknown()),
@@ -55,7 +42,6 @@ export const imageCopyEntrySchema = z.object({
 export type ImageCopyEntry = z.infer<typeof imageCopyEntrySchema>;
 
 export const commitRequestBodySchema = z.object({
-  sessionId: z.string().optional(),
   sqlStatements: z.array(sqlStatementEntrySchema),
   imageCopies: z.array(imageCopyEntrySchema),
   allowedImageDirectories: z.array(z.string().min(1)).optional().default(['character_cards', 'scenario']),
@@ -106,7 +92,6 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
     // 1. Detach prior staging DB and clean up prior staging folder
     detachImportStagingIfAttached(db, stagingDir);
 
-    const sessionId = crypto.randomUUID();
     fs.mkdirSync(stagingDir, { recursive: true });
 
     const zipFilePath = path.join(stagingDir, 'upload.zip');
@@ -295,7 +280,6 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
       // 12. Staging complete
       res.json({
         ok: true,
-        sessionId,
         manifest,
       });
     } catch (error) {

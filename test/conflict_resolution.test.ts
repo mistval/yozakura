@@ -162,7 +162,6 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
     if (!stageResult.success) throw new Error('Stage failed');
 
     const commitPayload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedScenarioIds: [seeded.scenarioId],
       selectedScenarioMemoriesIds: [],
@@ -259,7 +258,6 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
     if (!stageResult.success) throw new Error('Stage failed');
 
     const commitPayload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedScenarioIds: [seeded.scenarioId],
       selectedScenarioMemoriesIds: [],
@@ -320,7 +318,6 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
     if (!stageResult.success) throw new Error('Stage failed');
 
     const commitPayload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedScenarioIds: [seeded.scenarioId],
       selectedScenarioMemoriesIds: [],
@@ -407,7 +404,6 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
     if (!stageResult.success) throw new Error('Stage failed');
 
     const commitPayload = await prepareStagingAndBuildCommitPayload({
-      sessionId: stageResult.sessionId,
       exportName: stageResult.manifest.exportName,
       selectedScenarioIds: [],
       selectedScenarioMemoriesIds: [],

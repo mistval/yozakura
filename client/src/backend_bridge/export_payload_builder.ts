@@ -10,13 +10,10 @@ export type ImageCopyDescriptor =
   | {
       mode: 'file';
       sourceRelPath: string;
-      kind?: string;
     }
   | {
       mode: 'directory';
       sourceRelDir: string;
-      kind?: string;
-      scenarioId?: string;
     };
 
 export type ExportPayload = {

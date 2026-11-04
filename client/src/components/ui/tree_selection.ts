@@ -3,13 +3,6 @@ export type TreeNode = {
   label: string;
   subtitle?: string;
   requiredSiblingNodeIds?: string[];
-  badge?:
-    | {
-        text: string;
-        variant?: 'warning' | 'info' | 'default';
-      }
-    | string
-    | undefined;
   getChildren?: () => Promise<TreeNode[]>;
 };
 

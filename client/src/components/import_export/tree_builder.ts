@@ -3,7 +3,6 @@ import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js
 import { TreeEntityIds } from '../../backend_bridge/export_payload_builder.js';
 
 export type BuildTreeOptions = {
-  mode: 'export' | 'import';
   scenarios: ScenarioSummary[];
   maps: WorldMap[];
   globalCharacters: Character[];
