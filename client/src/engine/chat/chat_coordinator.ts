@@ -53,6 +53,7 @@ import { wait } from '../../util/promise';
 import { getRequiredRandomChoice, weightedRandomChoice } from '../../util/array';
 import { clamp } from '../../util/numeric.js';
 import { rethrowSignalException, SignalException } from '../scenario_loop/flow_control';
+import { persistTurn } from '../scenario_loop/turn_persistence';
 import type { PromptTemplateChain } from '../prompt_templates/prompt_template_chain.js';
 import type { PromptExecutionContext } from '../prompt_templates/prompt_template_context_fields.js';
 import { ChatJobTags } from '../../state/chat_state';
@@ -216,6 +217,46 @@ export class ChatCoordinator {
     return this.buildSceneImageFullPrompt(imageCharacterId, { upToMessageId: afterMessageId });
   }
 
+  public static async requestSceneImage(afterMessageId: string | undefined) {
+    try {
+      const prompt = await this.buildSceneImagePromptForRequest(afterMessageId);
+      if (useSettingsStore.getState().editImagePromptsBeforeDispatch) {
+        useScenarioLoopStateStore.getState().setPendingImagePromptEdit({
+          prompt,
+          afterMessageId,
+        });
+      } else {
+        await this.generateImageFromPrompt(prompt, { afterMessageId });
+      }
+    } catch (err) {
+      if (err instanceof SignalException) {
+        return;
+      }
+      await showNonRetriableErrorCardIfNeeded({
+        error: err,
+        operationType: 'chat_image.request',
+      });
+    }
+  }
+
+  public static async confirmSceneImagePrompt(
+    prompt: string,
+    afterMessageId: string | undefined
+  ) {
+    useScenarioLoopStateStore.getState().setPendingImagePromptEdit(undefined);
+    try {
+      await this.generateImageFromPrompt(prompt, { afterMessageId });
+    } catch (err) {
+      if (err instanceof SignalException) {
+        return;
+      }
+      await showNonRetriableErrorCardIfNeeded({
+        error: err,
+        operationType: 'chat_image.generate',
+      });
+    }
+  }
+
   private static async runNewMessageEffects(
     message: CharacterMessage,
     options: { forceSkipAutoImage?: boolean } = {}
@@ -292,6 +333,7 @@ export class ChatCoordinator {
         assertNonNullish(firstFile, 'No file returned from image generation call');
 
         this.setTranscript(this.transcript().addImageMessage(firstFile, opts).updatedTranscript);
+        persistTurn();
       },
     });
   }
@@ -385,7 +427,7 @@ export class ChatCoordinator {
         ]),
         onTokens: (fullText: string) => {
           this.setTranscript(
-            this.transcript().editLatestMessage(fullText, { isStreaming: true }).updatedTranscript
+            this.transcript().editMessageById(draftMessage.id, fullText, { isStreaming: true }).updatedTranscript
           );
         },
       });
@@ -395,7 +437,7 @@ export class ChatCoordinator {
       });
 
       this.setTranscript(
-        this.transcript().editLatestMessage(parsedResponse).updatedTranscript
+        this.transcript().editMessageById(draftMessage.id, parsedResponse).updatedTranscript
       );
     } catch (err) {
       if (draftMessage) {
@@ -638,6 +680,7 @@ export class ChatCoordinator {
 
       const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId, {
         chain: selectedChain,
+        upToMessageId: chatMessage.id,
       });
       await this.generateImageFromPrompt(fullPrompt, { afterMessageId: chatMessage.id });
     } catch (err) {

@@ -88,12 +88,11 @@ export async function prepareImportStaging(params: PrepareImportStagingParams): 
       [[JSON.stringify(copiedGlobalCharIds)]]
     );
 
-    const renameSuffix = ` (Imported From ${exportName})`;
     await db.dbRun(
       `
         UPDATE import_staging.character
         SET data = json_set(
-          json_set(data, '$.firstName', json_extract(data, '$.firstName') || ?),
+          data,
           '$.imagePath',
           CASE
             WHEN json_extract(data, '$.imagePath') LIKE '/api/files/character_cards/%'
@@ -103,7 +102,7 @@ export async function prepareImportStaging(params: PrepareImportStagingParams): 
         )
         WHERE id IN (SELECT value FROM json_each(?));
       `.trim(),
-      [[renameSuffix, JSON.stringify(copiedGlobalCharIds)]]
+      [[JSON.stringify(copiedGlobalCharIds)]]
     );
 
     const idMapRows = await db.dbAll<{ old_id: string; new_id: string }>(

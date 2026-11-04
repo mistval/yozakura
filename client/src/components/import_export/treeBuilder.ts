@@ -30,7 +30,7 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
             getChildren: async () => {
               const children: TreeNode[] = [];
 
-              if (summary.mapName) {
+              if (summary.mapName && maps.some((m) => m.id === summary.scenario.mapId)) {
                 children.push({
                   id: TreeEntityIds.scenarioMap(scenId, summary.scenario.mapId),
                   label: `Map: ${summary.mapName}`,

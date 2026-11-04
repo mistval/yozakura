@@ -69,7 +69,7 @@ describe('import_queries', () => {
 
       // Check copied character handling
       expect(dbRunCalls.some((c) => c.statement.includes('FROM import_staging.character'))).toBe(true);
-      expect(dbRunCalls.some((c) => c.statement.includes("json_set(data, '$.firstName'"))).toBe(true);
+      expect(dbRunCalls.some((c) => c.statement.includes("json_set(\n          data,\n          '$.imagePath'"))).toBe(true);
 
       // Check stripping
       expect(dbRunCalls.some((c) => c.statement.includes('globalMemories'))).toBe(true);

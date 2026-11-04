@@ -437,7 +437,7 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
     expect(copied!.id).toMatch(/^[0-9a-f]{18}$/);
 
     const copiedData = JSON.parse(copied!.data) as Character;
-    expect(copiedData.firstName).toContain('(Imported From ConflictTest)');
+    expect(copiedData.firstName).toBe('Alice');
     expect(copiedData.imagePath).toBe(`/api/files/character_cards/${copied!.id}.png`);
 
     // Verify disk files: original file is NOT overwritten

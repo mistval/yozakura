@@ -40,27 +40,25 @@ export const useGlobalCharactersStore = create<{
   },
 
   bustImageCache(characterIds: string[]) {
-    if (characterIds.length === 0) return;
-    const idSet = new Set(characterIds);
-    const updated = get().globalCharacters.map((c) => {
-      if (idSet.has(c.id) && Files.isApiFilePath(c.imagePath)) {
-        return {
-          ...c,
-          imagePath: addOrReplaceVersionQueryParam(c.imagePath),
-        };
+    for (const id of characterIds) {
+      const character = get().globalCharactersById[id];
+      if (character && Files.isApiFilePath(character.imagePath)) {
+        void get().saveGlobalCharacter({
+          ...character,
+          imagePath: addOrReplaceVersionQueryParam(character.imagePath),
+        });
       }
-      return c;
-    });
-    get().setGlobalCharacters(updated);
+    }
   },
 
   async saveGlobalCharacter(character: Character, imageFile?: File) {
     assert(get().globalCharactersAreLoaded, 'Global characters not yet loaded');
+    const baseImagePath = Files.getGlobalCharacterImagePath(character.id);
     const withUpdatedFields = {
       ...character,
       updatedAt: new Date().toISOString(),
       imagePath: imageFile
-        ? Files.getGlobalCharacterImagePath(character.id)
+        ? character.imagePath || baseImagePath
         : character.imagePath || '/images/character/default_character.png',
     } satisfies Character;
 
@@ -73,11 +71,9 @@ export const useGlobalCharactersStore = create<{
           return;
         }
 
-        await mainDatabase.storeGlobalCharacters([latestCharacter]);
-
         if (imageFile) {
           await Files.upload(
-            withUpdatedFields.imagePath,
+            baseImagePath,
             imageFile,
             imageFile.type || 'application/octet-stream'
           );
@@ -87,11 +83,14 @@ export const useGlobalCharactersStore = create<{
             return;
           }
 
-          get().saveGlobalCharacter({
+          latestCharacter = {
             ...latestCharacter,
-            imagePath: addOrReplaceVersionQueryParam(latestCharacter.imagePath),
-          });
+            imagePath: addOrReplaceVersionQueryParam(baseImagePath),
+          };
+          get().setGlobalCharacters(concatUniqueById(get().globalCharacters, latestCharacter));
         }
+
+        await mainDatabase.storeGlobalCharacters([latestCharacter]);
       },
       'global_character',
       {

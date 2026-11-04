@@ -166,24 +166,6 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
           nextSpeaker = await ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: deletedMessageSpeakerId });
         } else if (input.actionType === 'edit_message') {
           await ChatCoordinator.editMessageById(input.messageId, input.newContent);
-        } else if (input.actionType === 'request_image') {
-          const prompt = await ChatCoordinator.buildSceneImagePromptForRequest(input.afterMessageId);
-
-          if (useSettingsStore.getState().editImagePromptsBeforeDispatch) {
-            useScenarioLoopStateStore.getState().setPendingImagePromptEdit({
-              prompt,
-              afterMessageId: input.afterMessageId,
-            });
-          } else {
-            await ChatCoordinator.generateImageFromPrompt(prompt, {
-              afterMessageId: input.afterMessageId,
-            });
-          }
-        } else if (input.actionType === 'generate_image') {
-          useScenarioLoopStateStore.getState().setPendingImagePromptEdit(undefined);
-          await ChatCoordinator.generateImageFromPrompt(input.prompt, {
-            afterMessageId: input.afterMessageId,
-          });
         } else {
           assert(false, 'Unknown chat input action');
         }

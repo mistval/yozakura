@@ -97,4 +97,19 @@ describe('buildImportExportTreeRoots', () => {
     expect(roots[0]!.id).toBe(TreeEntityIds.rootMaps());
     expect(roots[0]!.subtitle).toBe('(1 available)');
   });
+
+  it('omits Map child node under scenario when the map is not present in maps', async () => {
+    const roots = buildImportExportTreeRoots({
+      mode: 'import',
+      scenarios: dummyScenarios,
+      maps: [],
+      globalCharacters: [],
+    });
+
+    const scenChildren = await roots[0]!.getChildren!();
+    const scenSubChildren = await scenChildren[0]!.getChildren!();
+    expect(scenSubChildren.map((c) => c.id)).not.toContain(
+      TreeEntityIds.scenarioMap('scen_1', 'map_1')
+    );
+  });
 });

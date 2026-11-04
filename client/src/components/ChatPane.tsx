@@ -64,8 +64,6 @@ export default function ChatPane() {
   const submitChatDeleteMessage = useScenarioLoopStateStore((state) => state.submitChatDeleteMessage);
   const submitChatRedoMessage = useScenarioLoopStateStore((state) => state.submitChatRedoMessage);
   const submitChatEditMessage = useScenarioLoopStateStore((state) => state.submitChatEditMessage);
-  const submitChatRequestImage = useScenarioLoopStateStore((state) => state.submitChatRequestImage);
-  const submitChatGenerateImage = useScenarioLoopStateStore((state) => state.submitChatGenerateImage);
   const userRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.userRequestedPhaseTransition
   );
@@ -163,8 +161,7 @@ export default function ChatPane() {
     }
 
     const { prompt, afterMessageId } = pendingImagePromptEdit;
-    setPendingImagePromptEdit(undefined);
-    submitChatGenerateImage(prompt, afterMessageId);
+    void ChatCoordinator.confirmSceneImagePrompt(prompt, afterMessageId);
   };
 
   const deleteMessage = (id: string) => {
@@ -460,7 +457,7 @@ export default function ChatPane() {
                         type="button"
                         onClick={() => {
                           const id = entry.getId();
-                          submitChatRequestImage(id);
+                          void ChatCoordinator.requestSceneImage(id);
                         }}
                         disabled={!canGenerateImages}
                         title="Generate image"
@@ -561,7 +558,7 @@ export default function ChatPane() {
           button={
             <button
               type="button"
-              onClick={() => submitChatRequestImage(undefined)}
+              onClick={() => void ChatCoordinator.requestSceneImage(undefined)}
               disabled={!canGenerateImages}
               title={
                 activeSceneImageChain

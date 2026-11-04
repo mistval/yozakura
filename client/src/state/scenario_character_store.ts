@@ -131,10 +131,16 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
                   return undefined;
                 }
 
-                return {
+                const updatedCharacter = {
                   ...latestCharacter,
                   imagePath: addOrReplaceVersionQueryParam(latestCharacter.imagePath),
                 };
+                set(
+                  getCharacterDataStructuresFromArray(
+                    concatUniqueByIds(get().scenarioCharacters, [updatedCharacter])
+                  )
+                );
+                return updatedCharacter;
               })
             );
 

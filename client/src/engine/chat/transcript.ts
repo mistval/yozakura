@@ -439,15 +439,6 @@ export class ConversationTranscript {
     };
   }
 
-  public editLatestMessage(newContent: string, opts?: { isStreaming?: true }) {
-    const latestMessage = this.messages[this.messages.length - 1];
-    if (!latestMessage) {
-      throw new Error('Can only edit the latest message if it is a character chat message');
-    }
-
-    return this.editMessageById(latestMessage.message.id, newContent, opts);
-  }
-
   public removeParticipant(participant: TranscriptParticipant) {
     if (!this.hasMessagesFromCharacter(participant.id)) {
       return {

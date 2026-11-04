@@ -168,11 +168,9 @@ describe('importCommitPayloadBuilder', () => {
       stagingDb,
     });
 
-    // Check that dbRun updated character name and imagePath
-    const charUpdateCall = dbRunCalls.find(
-      (call) =>
-        call.statement.includes('UPDATE import_staging.character') &&
-        call.statement.includes("json_set(data, '$.firstName'")
+    // Check that dbRun updated character imagePath
+    const charUpdateCall = dbRunCalls.find((call) =>
+      call.statement.includes('UPDATE import_staging.character')
     );
     expect(charUpdateCall).toBeDefined();
     expect(charUpdateCall!.statement).toContain(
