@@ -30,7 +30,7 @@ import { getUserMovementSuggestion } from '../engine/character_schedule/get_sche
 import { ChatCoordinator } from '../engine/chat/chat_coordinator';
 import { startScenarioLoop } from '../engine/scenario_loop/scenario_loop';
 import { useSettingsStore } from '../state/settings_store';
-import { useIsGeneratingMemories } from '../state/chat_state';
+import { useIsAwaitingCharacterTextInput, useIsGeneratingMemories } from '../state/chat_state';
 
 export default function ScenarioView() {
   const navigate = useNavigate();
@@ -73,7 +73,7 @@ export default function ScenarioView() {
   const npcPhaseBusy =
     currentTurnCharacterId !== undefined && currentTurnCharacterId !== scenario?.userCharacterId;
   const canSubmitUserTurn = isUserTurn && !hasActiveChatSession;
-  const canReturnToMainMenu = canSubmitUserTurn;
+  const canReturnToMainMenu = useIsAwaitingCharacterTextInput();
   const previousUserIdRef = useRef<string | null>(null);
   const visibleRelationships = useCachedCharacterRelationships();
 
@@ -275,7 +275,7 @@ export default function ScenarioView() {
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-3">
         <h1 className="text-2xl font-semibold">Loading...</h1>
-        <button type="button" onClick={() => navigate('/')} disabled={!canSubmitUserTurn}>
+        <button type="button" onClick={() => navigate('/')} disabled={!canReturnToMainMenu}>
           Main Menu
         </button>
       </div>

@@ -196,7 +196,7 @@ export class ChatCoordinator {
     this.setTranscript(updatedTranscript);
   }
 
-  public static async addCharacterMessage(
+  public static addCharacterMessage(
     senderId: string,
     message: string,
     options: { forceSkipAutoImage?: boolean } = {}
@@ -205,14 +205,7 @@ export class ChatCoordinator {
     const { updatedTranscript, newRawMessage } = this.transcript().addCharacterChatMessage(message, sender);
 
     this.setTranscript(updatedTranscript);
-
-    if (!options.forceSkipAutoImage) {
-      if (useSettingsStore.getState().generateImagesInParallelWithText) {
-        void this.maybeGenerateAutoImageForMessage(newRawMessage);
-      } else {
-        await this.maybeGenerateAutoImageForMessage(newRawMessage);
-      }
-    }
+    return this.runNewMessageEffects(newRawMessage, options);
   }
 
   public static hasUserChatMessages() {
@@ -226,6 +219,19 @@ export class ChatCoordinator {
       : (this.transcript().getMostRecentSpeakerId() ?? this.firstNonUserParticipantId());
 
     return this.buildSceneImageFullPrompt(imageCharacterId, { upToMessageId: afterMessageId });
+  }
+
+  private static async runNewMessageEffects(
+    message: CharacterMessage,
+    options: { forceSkipAutoImage?: boolean } = {}
+  ) {
+    if (!options.forceSkipAutoImage) {
+      if (useSettingsStore.getState().generateImagesInParallelWithText) {
+        void this.maybeGenerateAutoImageForMessage(message);
+      } else {
+        await this.maybeGenerateAutoImageForMessage(message);
+      }
+    }
   }
 
   private static firstNonUserParticipantId(): string {
@@ -379,10 +385,9 @@ export class ChatCoordinator {
       prompts.push(userNudgePrompt);
     }
 
-    const finalMessage = await withPhaseTransitionGate(
+    const draftMessage = this.startStreamingNpcDraftMessage(speaker);
+    await withPhaseTransitionGate(
       async (abortSignal) => {
-        let draftMessage: CharacterMessage | undefined;
-
         try {
           const response = await chatCompletion(prompts, {
             promptTemplateGroup: 'gen_npc_response',
@@ -394,9 +399,6 @@ export class ChatCoordinator {
               ChatJobTags.characterIsSpeaking,
             ]),
             onTokens: (fullText: string) => {
-              if (!draftMessage) {
-                draftMessage = this.startStreamingNpcDraftMessage(speaker);
-              }
               this.setTranscript(
                 this.transcript().editLatestMessage(fullText, { isStreaming: true }).updatedTranscript
               );
@@ -407,11 +409,9 @@ export class ChatCoordinator {
             completionRequestId,
           });
 
-          if (draftMessage) {
-            this.deleteMessageById(draftMessage.id);
-          }
-
-          return parsedResponse;
+          this.setTranscript(
+            this.transcript().editLatestMessage(parsedResponse).updatedTranscript
+          );
         } catch (err) {
           if (draftMessage) {
             this.deleteMessageById(draftMessage.id);
@@ -423,7 +423,7 @@ export class ChatCoordinator {
     );
 
     const didPause = !wasPaused && this.isChatPaused();
-    await this.addCharacterMessage(speaker.id, finalMessage, { forceSkipAutoImage: didPause });
+    await this.runNewMessageEffects(draftMessage, { forceSkipAutoImage: didPause });
     await this.pauseAfterNpcOnlyMessage();
 
     return this.transcript;

@@ -379,7 +379,7 @@ export class ConversationTranscript {
       messageType: 'chat_message',
       senderId: speaker.id,
       message,
-    }) satisfies CharacterMessage;
+    }) as CharacterMessage;
 
     // Defer RAG processing until message is finished. Optimization.
     if (!opts?.isStreaming) {

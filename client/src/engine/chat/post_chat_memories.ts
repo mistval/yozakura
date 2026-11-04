@@ -291,7 +291,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
               await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id),
               {
                 jobConfig: createMemoryJobConfig(
-                  `Updating relationship descriptor ${fromCharacterPerspective.firstName} → ${otherCharacter.firstName}`
+                  `Updating relationship descriptor: ${fromCharacterPerspective.firstName} → ${otherCharacter.firstName}`
                 ),
               }
             );
@@ -373,7 +373,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
         pairwiseContext,
         {
           jobConfig: createMemoryJobConfig(
-            `Updating relationship descriptor ${fromCharacterPerspective.firstName} → ${otherCharacter.firstName}`
+            `Updating relationship descriptor: ${fromCharacterPerspective.firstName} → ${otherCharacter.firstName}`
           ),
         }
       );
