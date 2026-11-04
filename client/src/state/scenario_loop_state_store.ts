@@ -16,7 +16,6 @@ type ScenarioLoopStateStoreState = {
   runState: ScenarioLoopRunState;
   runningForScenario: string | undefined;
   userRequestedPhaseTransition: UserRequestedPhaseTransition;
-  userRequestedGenerationAbort: boolean;
   pendingImagePromptEdit: PendingImagePromptEdit | undefined;
   lastTemporalDayIndex: number | undefined;
 
@@ -24,7 +23,6 @@ type ScenarioLoopStateStoreState = {
   setAutoMode: (enabled: boolean) => void;
   setRunState: (runState: ScenarioLoopRunState) => void;
   setUserRequestedPhaseTransition: (value: UserRequestedPhaseTransition) => void;
-  setUserRequestedGenerationAbort: (value: boolean) => void;
   setPendingImagePromptEdit: (value: PendingImagePromptEdit | undefined) => void;
   setLastTemporalDayIndex: (dayIndex: number | undefined) => void;
   resetLoopState: () => void;
@@ -69,7 +67,6 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
   runState: 'idle',
   runningForScenario: undefined,
   userRequestedPhaseTransition: 'none',
-  userRequestedGenerationAbort: false,
   pendingImagePromptEdit: undefined,
   lastTemporalDayIndex: undefined,
 
@@ -87,10 +84,6 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
     set({ userRequestedPhaseTransition: value });
   },
 
-  setUserRequestedGenerationAbort(value: boolean) {
-    set({ userRequestedGenerationAbort: value });
-  },
-
   setPendingImagePromptEdit(value: PendingImagePromptEdit | undefined) {
     set({ pendingImagePromptEdit: value });
   },
@@ -103,7 +96,6 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
     set({
       runState: 'idle',
       userRequestedPhaseTransition: 'none',
-      userRequestedGenerationAbort: false,
       pendingImagePromptEdit: undefined,
       lastTemporalDayIndex: undefined,
     });

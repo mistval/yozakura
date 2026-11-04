@@ -1,12 +1,21 @@
 import _ from 'lodash';
 import { newId } from '../../util/id';
-import { ParallelJobCancellationError, type INewParallelJob, type IParallelJob } from './job_manager_types';
+import {
+  ParallelJobCancellationError,
+  UNCONSTRAINED_PARALLELISM_GROUP,
+  type INewParallelJob,
+  type IParallelJob,
+  type ParallelJobPreQueueMiddleware,
+} from './job_manager_types';
 
 // Supports jobs with limited parallelism per parallelism group, and exclusive parallelism groups
 class ParallelJobManager {
   private readonly jobsChangedObservers: (() => void)[] = [];
+  private readonly preQueueMiddlewares: ParallelJobPreQueueMiddleware[] = [];
   private currentJobs = new Map<string, IParallelJob<unknown>>();
-  private concurrencyForGroup = new Map<string, number>();
+  private concurrencyForGroup = new Map<string, number>([
+    [UNCONSTRAINED_PARALLELISM_GROUP, Number.MAX_SAFE_INTEGER],
+  ]);
 
   public setConcurrencyForGroup(group: string, concurrency: number) {
     this.concurrencyForGroup.set(group, concurrency);
@@ -17,21 +26,32 @@ class ParallelJobManager {
     this.jobsChangedObservers.push(observer);
   }
 
+  public addPreQueueMiddleware(middleware: ParallelJobPreQueueMiddleware) {
+    this.preQueueMiddlewares.push(middleware);
+  }
+
   public getJobs() {
     return this.currentJobs.values();
   }
 
-  public enqueue<TResultsType>(newJob: INewParallelJob<TResultsType>) {
-    if (!this.concurrencyForGroup.has(newJob.parallelismGroup)) {
-      throw new Error(`No concurrency set for parallelism group ${newJob.parallelismGroup}`);
+  public async enqueue<TResultsType>(newJob: INewParallelJob<TResultsType>): Promise<TResultsType> {
+    const parallelismGroup = newJob.parallelismGroup ?? UNCONSTRAINED_PARALLELISM_GROUP;
+
+    if (!this.concurrencyForGroup.has(parallelismGroup)) {
+      throw new Error(`No concurrency set for parallelism group ${parallelismGroup}`);
     }
 
     if (newJob.abortSignal?.aborted) {
       throw newJob.abortSignal.reason;
     }
 
+    for (const middleware of this.preQueueMiddlewares) {
+      middleware(newJob as INewParallelJob<unknown>);
+    }
+
     const job = {
       ...newJob,
+      parallelismGroup,
       id: newId(),
       state: 'queued',
       promiseResolvers: Promise.withResolvers<TResultsType>(),
@@ -43,7 +63,8 @@ class ParallelJobManager {
         'abort',
         () => {
           job.abortController.abort(newJob.abortSignal?.reason);
-          if (job.state === 'queued') {
+          const current = this.currentJobs.get(job.id);
+          if (current?.state === 'queued') {
             this.currentJobs.delete(job.id);
             job.promiseResolvers.reject(newJob.abortSignal?.reason);
             this.notifyObservers();
@@ -59,16 +80,16 @@ class ParallelJobManager {
     return job.promiseResolvers.promise;
   }
 
-  public cancelJobsByTag(tag: string) {
+  public cancelJobsByTag(tag: string, error: Error = new ParallelJobCancellationError()) {
     let didDelete = false;
     for (const job of this.currentJobs.values()) {
       if (job.tags?.includes(tag)) {
         if (job.state === 'queued') {
-          job.promiseResolvers.reject(new ParallelJobCancellationError());
+          job.promiseResolvers.reject(error);
           this.currentJobs.delete(job.id);
           didDelete = true;
         } else {
-          job.abortController.abort(new ParallelJobCancellationError());
+          job.abortController.abort(error);
         }
       }
     }
@@ -130,11 +151,15 @@ class ParallelJobManager {
         })
         .catch((err) => {
           cleanup();
-          newJob.promiseResolvers.reject(err);
+          newJob.promiseResolvers.reject(
+            newJob.abortController.signal.aborted ? newJob.abortController.signal.reason : err
+          );
         });
     } catch (err) {
-      newJob.promiseResolvers.reject(err);
       cleanup();
+      newJob.promiseResolvers.reject(
+        newJob.abortController.signal.aborted ? newJob.abortController.signal.reason : err
+      );
     }
   }
 

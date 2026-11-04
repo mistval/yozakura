@@ -18,6 +18,7 @@ import { useUserCharacter } from '../state/scenario_character_store.js';
 import ButtonOptions from './ui/ButtonOptions.js';
 import { chatSceneImageTemplatesGroup } from '../engine/prompt_templates/chat/group.js';
 import {
+  abortCurrentChatGeneration,
   useChatJobs,
   useIsAwaitingCharacterTextInput,
   useIsGeneratingImageOrImagePrompt,
@@ -70,9 +71,6 @@ export default function ChatPane() {
   );
   const setUserRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.setUserRequestedPhaseTransition
-  );
-  const setUserRequestedGenerationAbort = useScenarioLoopStateStore(
-    (state) => state.setUserRequestedGenerationAbort
   );
   const pendingImagePromptEdit = useScenarioLoopStateStore((state) => state.pendingImagePromptEdit);
   const setPendingImagePromptEdit = useScenarioLoopStateStore((state) => state.setPendingImagePromptEdit);
@@ -532,7 +530,7 @@ export default function ChatPane() {
         {isGenerating && (
           <button
             type="button"
-            onClick={() => setUserRequestedGenerationAbort(true)}
+            onClick={abortCurrentChatGeneration}
             aria-label="Stop generation"
           >
             ■

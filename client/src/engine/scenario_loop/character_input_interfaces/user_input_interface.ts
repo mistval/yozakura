@@ -2,7 +2,9 @@ import { assert, assertNonNullish } from '../../../errors/application_error';
 import { useScenarioCharacterStore } from '../../../state/scenario_character_store';
 import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_store';
 import { useSettingsStore } from '../../../state/settings_store';
-import { withPhaseTransitionGate } from '../../../util/phase_transition_gate';
+import { globalParallelJobManager } from '../../parallelization/job_manager.js';
+import { UNCONSTRAINED_PARALLELISM_GROUP } from '../../parallelization/job_manager_types.js';
+import { ChatJobTags } from '../../../state/chat_state.js';
 import { scenarioLoopPromiseCallbacks } from '../flow_control';
 import type {
   ChatInputResult,
@@ -20,19 +22,25 @@ export class UserInputInterface extends CharacterInputInterface {
   }
 
   public async getNextChatInput(): Promise<ChatInputResult> {
-    const input = await withPhaseTransitionGate(
-      (abortSignal) => {
+    const input = await globalParallelJobManager.enqueue<ChatUserInputAction>({
+      name: 'Awaiting chat input',
+      parallelismGroup: UNCONSTRAINED_PARALLELISM_GROUP,
+      tags: [ChatJobTags.scenarioLoopJob],
+      job: (abortSignal) => {
         const promise = Promise.withResolvers<ChatUserInputAction>();
         scenarioLoopPromiseCallbacks.userChatAction = promise;
 
-        abortSignal.addEventListener('abort', () => {
-          return promise.reject(new Error('Aborted'));
-        });
+        abortSignal.addEventListener(
+          'abort',
+          () => {
+            promise.reject(abortSignal.reason ?? new Error('Aborted'));
+          },
+          { once: true }
+        );
 
         return promise.promise;
       },
-      { pauseBehavior: 'ignore' }
-    );
+    });
 
     return { input };
   }
@@ -56,19 +64,25 @@ export class UserInputInterface extends CharacterInputInterface {
       return { actionType: 'wait' };
     }
 
-    const userAction = await withPhaseTransitionGate(
-      (abortSignal) => {
+    const userAction = await globalParallelJobManager.enqueue<UserTurnAction>({
+      name: 'Awaiting turn action',
+      parallelismGroup: UNCONSTRAINED_PARALLELISM_GROUP,
+      tags: [ChatJobTags.scenarioLoopJob],
+      job: (abortSignal) => {
         const promise = Promise.withResolvers<UserTurnAction>();
         scenarioLoopPromiseCallbacks.userTurnAction = promise;
 
-        abortSignal.addEventListener('abort', () => {
-          return promise.reject(new Error('Aborted'));
-        });
+        abortSignal.addEventListener(
+          'abort',
+          () => {
+            promise.reject(abortSignal.reason ?? new Error('Aborted'));
+          },
+          { once: true }
+        );
 
         return promise.promise;
       },
-      { pauseBehavior: 'ignore' }
-    );
+    });
 
     const userCharacter = useScenarioCharacterStore.getState().getUserCharacter();
     assertNonNullish(userCharacter, 'User character not found');

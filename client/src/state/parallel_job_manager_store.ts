@@ -1,9 +1,21 @@
 import { create } from 'zustand';
 import type { IParallelJob } from '../engine/parallelization/job_manager_types.js';
+import {
+  ChatJobTags,
+  DEFAULT_LLM_PARALLELISM_GROUP,
+  IMAGE_GENERATION_PARALLELISM_GROUP,
+} from '../engine/parallelization/yozakura_job_manager_types.js';
 import { globalParallelJobManager } from '../engine/parallelization/job_manager.js';
 import { useShallow } from 'zustand/react/shallow';
 import { useSettingsStore } from './settings_store.js';
 import type { ParallelPromptJobConfig } from '../engine/types.js';
+import { useScenarioLoopStateStore } from './scenario_loop_state_store.js';
+import { useScenarioStore } from './scenario_store.js';
+import {
+  ScenarioLoopAbortSignalException,
+  UserPauseSignalException,
+  UserStopSignalException,
+} from '../engine/scenario_loop/flow_control.js';
 
 function syncConcurrencyWithSettings(settings: ReturnType<typeof useSettingsStore.getState>) {
   const configs = Object.values(settings.llmConfigs || {});
@@ -21,8 +33,8 @@ function syncConcurrencyWithSettings(settings: ReturnType<typeof useSettingsStor
     }
   }
 
-  if (!limitsByGroup.has('default_llm')) {
-    limitsByGroup.set('default_llm', [1]);
+  if (!limitsByGroup.has(DEFAULT_LLM_PARALLELISM_GROUP)) {
+    limitsByGroup.set(DEFAULT_LLM_PARALLELISM_GROUP, [1]);
   }
 
   for (const [groupName, limits] of limitsByGroup) {
@@ -33,13 +45,51 @@ function syncConcurrencyWithSettings(settings: ReturnType<typeof useSettingsStor
   const imageConcurrency = settings.generateImagesInParallelWithText
     ? Math.max(1, settings.imageGenerationConcurrency || 1)
     : 1;
-  globalParallelJobManager.setConcurrencyForGroup('image_generation', imageConcurrency);
+  globalParallelJobManager.setConcurrencyForGroup(IMAGE_GENERATION_PARALLELISM_GROUP, imageConcurrency);
 }
 
 // Initial sync and reactive subscription
 syncConcurrencyWithSettings(useSettingsStore.getState());
 useSettingsStore.subscribe((state) => {
   syncConcurrencyWithSettings(state);
+});
+
+globalParallelJobManager.addPreQueueMiddleware((job) => {
+  const tags = job.tags ?? [];
+  const loopState = useScenarioLoopStateStore.getState();
+
+  if (tags.includes(ChatJobTags.abortOnPause) && loopState.userRequestedPhaseTransition === 'paused') {
+    throw new UserPauseSignalException();
+  }
+
+  if (tags.includes(ChatJobTags.scenarioLoopJob) && loopState.userRequestedPhaseTransition === 'stopped') {
+    throw new UserStopSignalException();
+  }
+});
+
+useScenarioLoopStateStore.subscribe((state) => {
+  if (state.userRequestedPhaseTransition === 'stopped') {
+    globalParallelJobManager.cancelJobsByTag(
+      ChatJobTags.scenarioLoopJob,
+      new UserStopSignalException()
+    );
+  }
+
+  if (state.userRequestedPhaseTransition === 'paused') {
+    globalParallelJobManager.cancelJobsByTag(
+      ChatJobTags.abortOnPause,
+      new UserPauseSignalException()
+    );
+  }
+});
+
+useScenarioStore.subscribe((newState, prevState) => {
+  if (newState.activeScenario?.id !== prevState.activeScenario?.id) {
+    globalParallelJobManager.cancelJobsByTag(
+      ChatJobTags.scenarioLoopJob,
+      new ScenarioLoopAbortSignalException()
+    );
+  }
 });
 
 export const useParallelJobStore = create<{
@@ -65,9 +115,13 @@ export function createTextCompletionJobConfig(
   tags?: string[] | undefined
 ): ParallelPromptJobConfig {
   const isImageParallel = useSettingsStore.getState().generateImagesInParallelWithText;
+  const tagSet = new Set(tags);
+  if (tagSet.has(ChatJobTags.chatJob)) {
+    tagSet.add(ChatJobTags.scenarioLoopJob);
+  }
   return {
     name,
-    tags,
-    exclusiveWithParallelismGroups: !isImageParallel ? ['image_generation'] : undefined,
+    tags: Array.from(tagSet),
+    exclusiveWithParallelismGroups: !isImageParallel ? [IMAGE_GENERATION_PARALLELISM_GROUP] : undefined,
   };
 }

@@ -1,16 +1,18 @@
 import type { IParallelJob } from '../engine/parallelization/job_manager_types';
+import { ChatJobTags } from '../engine/parallelization/yozakura_job_manager_types.js';
+import { globalParallelJobManager } from '../engine/parallelization/job_manager.js';
+import { UserAbortCurrentGenerationSignalException } from '../engine/scenario_loop/flow_control.js';
 import { useJobsWithTag } from './parallel_job_manager_store';
 import { useSettingsStore } from './settings_store';
 
-export const ChatJobTags = {
-  chatJob: 'chat_job',
-  processingMemories: 'processing_memories',
-  characterIsSpeaking: 'character_speaking',
-  selectingSpeaker: 'selecting_speaker',
-  judgingConversationEnd: 'judging_conversation_end',
-  generatingImage: 'generating_image',
-  generatingImagePrompt: 'generating_image_prompt',
-};
+export { ChatJobTags };
+
+export function abortCurrentChatGeneration() {
+  globalParallelJobManager.cancelJobsByTag(
+    ChatJobTags.chatJob,
+    new UserAbortCurrentGenerationSignalException()
+  );
+}
 
 function hasTag(job: IParallelJob<unknown>, tag: string) {
   return job.tags?.includes(tag);

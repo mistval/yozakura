@@ -8,6 +8,7 @@ import { useTemplateRenderLogStore } from '../state/template_render_log_store.js
 import { getErrorMessage } from '../errors/error_util.js';
 import type { PromptExecutionContext } from './prompt_templates/prompt_template_context_fields';
 import { globalParallelJobManager } from './parallelization/job_manager.js';
+import { DEFAULT_LLM_PARALLELISM_GROUP } from './parallelization/yozakura_job_manager_types.js';
 
 type ResponsePreParser = (response: string) => string;
 
@@ -217,7 +218,7 @@ export async function chatCompletion(
     ...llmOptions
   } = options;
   let resolvedPromptOptions = resolveLlmPromptOptions(promptTemplateGroup, promptContext);
-  const parallelismGroup = resolvedPromptOptions.concurrencyGroupName?.trim() || 'default_llm';
+  const parallelismGroup = resolvedPromptOptions.concurrencyGroupName?.trim() || DEFAULT_LLM_PARALLELISM_GROUP;
   const jobName = jobConfig?.name ?? promptTemplateGroup;
 
   return globalParallelJobManager.enqueue({

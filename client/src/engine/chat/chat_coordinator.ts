@@ -3,6 +3,7 @@ import { chatCompletion } from '../llm.js';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry.js';
 import { generateChatImage } from '../image_gen.js';
 import { globalParallelJobManager } from '../parallelization/job_manager.js';
+import { IMAGE_GENERATION_PARALLELISM_GROUP } from '../parallelization/yozakura_job_manager_types.js';
 import { createTextCompletionJobConfig } from '../../state/parallel_job_manager_store.js';
 import {
   buildChatModeratorContext,
@@ -51,8 +52,7 @@ import {
 import { wait } from '../../util/promise';
 import { getRequiredRandomChoice, weightedRandomChoice } from '../../util/array';
 import { clamp } from '../../util/numeric.js';
-import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
-import { rethrowSignalException } from '../scenario_loop/flow_control';
+import { rethrowSignalException, SignalException } from '../scenario_loop/flow_control';
 import type { PromptTemplateChain } from '../prompt_templates/prompt_template_chain.js';
 import type { PromptExecutionContext } from '../prompt_templates/prompt_template_context_fields.js';
 import { ChatJobTags } from '../../state/chat_state';
@@ -121,7 +121,7 @@ export class ChatCoordinator {
     return decision === 'stop';
   }
 
-  private static runConversationEndJudge(
+  private static async runConversationEndJudge(
     fromPerspectiveId: string,
     lengthParameters: {
       targetLength: number;
@@ -130,20 +130,15 @@ export class ChatCoordinator {
       historyLength: number;
     }
   ): Promise<ChatEndDecision> {
-    return withPhaseTransitionGate(
-      async (abortSignal) => {
-        return conversationEndJudgeTemplatesChain.renderAndExecute(
-          await buildConversationEndJudgeContext(fromPerspectiveId, lengthParameters),
-          {
-            abortSignal,
-            jobConfig: createTextCompletionJobConfig('Deciding whether to end', [
-              ChatJobTags.chatJob,
-              ChatJobTags.judgingConversationEnd,
-            ]),
-          }
-        );
-      },
-      { pauseBehavior: 'abort' }
+    return conversationEndJudgeTemplatesChain.renderAndExecute(
+      await buildConversationEndJudgeContext(fromPerspectiveId, lengthParameters),
+      {
+        jobConfig: createTextCompletionJobConfig('Deciding whether to end', [
+          ChatJobTags.chatJob,
+          ChatJobTags.judgingConversationEnd,
+          ChatJobTags.abortOnPause,
+        ]),
+      }
     );
   }
 
@@ -227,7 +222,11 @@ export class ChatCoordinator {
   ) {
     if (!options.forceSkipAutoImage) {
       if (useSettingsStore.getState().generateImagesInParallelWithText) {
-        void this.maybeGenerateAutoImageForMessage(message);
+        void this.maybeGenerateAutoImageForMessage(message).catch((err) => {
+          if (!(err instanceof SignalException)) {
+            console.error('Auto image generation error', err);
+          }
+        });
       } else {
         await this.maybeGenerateAutoImageForMessage(message);
       }
@@ -257,25 +256,19 @@ export class ChatCoordinator {
       chain?: PromptTemplateChain<PromptExecutionContext, string> | undefined;
     }
   ) {
-    return withPhaseTransitionGate(
-      async (abortSignal) => {
-        const primaryCharacter = this.getCharacterById(primaryCharacterId);
-        const sceneImageChain = opts?.chain ?? this.getSelectedSceneImageChain();
-        assertNonNullish(sceneImageChain, 'No scene image chain available');
-        return sceneImageChain.renderAndExecute(
-          await buildFocusedChatTemplateContext(primaryCharacter.id, undefined, {
-            upToMessageId: opts?.upToMessageId,
-          }),
-          {
-            abortSignal,
-            jobConfig: createTextCompletionJobConfig('Generating image prompt', [
-              ChatJobTags.chatJob,
-              ChatJobTags.generatingImagePrompt,
-            ]),
-          }
-        );
-      },
-      { pauseBehavior: 'ignore' }
+    const primaryCharacter = this.getCharacterById(primaryCharacterId);
+    const sceneImageChain = opts?.chain ?? this.getSelectedSceneImageChain();
+    assertNonNullish(sceneImageChain, 'No scene image chain available');
+    return sceneImageChain.renderAndExecute(
+      await buildFocusedChatTemplateContext(primaryCharacter.id, undefined, {
+        upToMessageId: opts?.upToMessageId,
+      }),
+      {
+        jobConfig: createTextCompletionJobConfig('Generating image prompt', [
+          ChatJobTags.chatJob,
+          ChatJobTags.generatingImagePrompt,
+        ]),
+      }
     );
   }
 
@@ -285,25 +278,20 @@ export class ChatCoordinator {
   ) {
     return globalParallelJobManager.enqueue({
       name: 'Generating image',
-      parallelismGroup: 'image_generation',
-      tags: [ChatJobTags.chatJob, ChatJobTags.generatingImage],
-      job: async () => {
-        return withPhaseTransitionGate(
-          async (abortSignal) => {
-            const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
-            const files = await generateChatImage({
-              fullPrompt,
-              saveTo,
-              abortSignal,
-            });
+      parallelismGroup: IMAGE_GENERATION_PARALLELISM_GROUP,
+      tags: [ChatJobTags.chatJob, ChatJobTags.generatingImage, ChatJobTags.scenarioLoopJob],
+      job: async (abortSignal) => {
+        const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
+        const files = await generateChatImage({
+          fullPrompt,
+          saveTo,
+          abortSignal,
+        });
 
-            const firstFile = files[0];
-            assertNonNullish(firstFile, 'No file returned from image generation call');
+        const firstFile = files[0];
+        assertNonNullish(firstFile, 'No file returned from image generation call');
 
-            this.setTranscript(this.transcript().addImageMessage(firstFile, opts).updatedTranscript);
-          },
-          { pauseBehavior: 'ignore' }
-        );
+        this.setTranscript(this.transcript().addImageMessage(firstFile, opts).updatedTranscript);
       },
     });
   }
@@ -386,41 +374,35 @@ export class ChatCoordinator {
     }
 
     const draftMessage = this.startStreamingNpcDraftMessage(speaker);
-    await withPhaseTransitionGate(
-      async (abortSignal) => {
-        try {
-          const response = await chatCompletion(prompts, {
-            promptTemplateGroup: 'gen_npc_response',
-            promptContext,
-            completionRequestId,
-            abortSignal,
-            jobConfig: createTextCompletionJobConfig(`${speaker.firstName} speaking`, [
-              ChatJobTags.chatJob,
-              ChatJobTags.characterIsSpeaking,
-            ]),
-            onTokens: (fullText: string) => {
-              this.setTranscript(
-                this.transcript().editLatestMessage(fullText, { isStreaming: true }).updatedTranscript
-              );
-            },
-          });
-
-          const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
-            completionRequestId,
-          });
-
+    try {
+      const response = await chatCompletion(prompts, {
+        promptTemplateGroup: 'gen_npc_response',
+        promptContext,
+        completionRequestId,
+        jobConfig: createTextCompletionJobConfig(`${speaker.firstName} speaking`, [
+          ChatJobTags.chatJob,
+          ChatJobTags.characterIsSpeaking,
+        ]),
+        onTokens: (fullText: string) => {
           this.setTranscript(
-            this.transcript().editLatestMessage(parsedResponse).updatedTranscript
+            this.transcript().editLatestMessage(fullText, { isStreaming: true }).updatedTranscript
           );
-        } catch (err) {
-          if (draftMessage) {
-            this.deleteMessageById(draftMessage.id);
-          }
-          throw err;
-        }
-      },
-      { pauseBehavior: 'ignore' }
-    );
+        },
+      });
+
+      const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
+        completionRequestId,
+      });
+
+      this.setTranscript(
+        this.transcript().editLatestMessage(parsedResponse).updatedTranscript
+      );
+    } catch (err) {
+      if (draftMessage) {
+        this.deleteMessageById(draftMessage.id);
+      }
+      throw err;
+    }
 
     const didPause = !wasPaused && this.isChatPaused();
     await this.runNewMessageEffects(draftMessage, { forceSkipAutoImage: didPause });
@@ -512,33 +494,28 @@ export class ChatCoordinator {
       }
 
       if (selectionMode === 'intelligent') {
-        return withPhaseTransitionGate(
-          async (abortSignal) => {
-            const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesChain.renderAndExecute(
-              await buildChatModeratorContext(speakerCandidates),
-              {
-                abortSignal,
-                jobConfig: createTextCompletionJobConfig('Selecting speaker', [
-                  ChatJobTags.chatJob,
-                  ChatJobTags.selectingSpeaker,
-                ]),
-              }
-            );
-
-            if (moderatorSelectedSpeakerId) {
-              const character = speakerCandidates.find((s) => s.id === moderatorSelectedSpeakerId);
-
-              if (character) {
-                return character;
-              }
-            }
-
-            // If moderator didn't select a speaker or selected one not in the chat,
-            // select randomly.
-            return getRequiredRandomChoice(speakerCandidates);
-          },
-          { pauseBehavior: 'abort' }
+        const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesChain.renderAndExecute(
+          await buildChatModeratorContext(speakerCandidates),
+          {
+            jobConfig: createTextCompletionJobConfig('Selecting speaker', [
+              ChatJobTags.chatJob,
+              ChatJobTags.selectingSpeaker,
+              ChatJobTags.abortOnPause,
+            ]),
+          }
         );
+
+        if (moderatorSelectedSpeakerId) {
+          const character = speakerCandidates.find((s) => s.id === moderatorSelectedSpeakerId);
+
+          if (character) {
+            return character;
+          }
+        }
+
+        // If moderator didn't select a speaker or selected one not in the chat,
+        // select randomly.
+        return getRequiredRandomChoice(speakerCandidates);
       }
 
       assert(

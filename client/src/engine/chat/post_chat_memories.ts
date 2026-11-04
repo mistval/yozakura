@@ -12,7 +12,6 @@ import { useSettingsStore } from '../../state/settings_store';
 import { DEFERRED_SYNC } from '../../state/ephemeral_state_helper';
 import { trimNewestByCreatedAt } from '../../util/array';
 import { newId } from '../../util/id';
-import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
 import {
   conversationRollingSummaryChain,
   nextConversationGoalUpdatesChain,
@@ -41,41 +40,6 @@ import type {
   StoredConversation,
 } from '../types';
 import { ChatJobTags } from '../../state/chat_state';
-
-// Create a version of a function that is surrounded by withPhaseTransitionGate and passes
-// through the abortSignal
-function createGatedRenderFunction<
-  TTemplateRenderer extends {
-    renderAndExecute: (
-      firstArg: any,
-      options?: { abortSignal?: AbortSignal | undefined; jobConfig?: ParallelPromptJobConfig | undefined }
-    ) => Promise<any>;
-  },
->(templateRenderer: TTemplateRenderer) {
-  return (
-    firstArg: Parameters<TTemplateRenderer['renderAndExecute']>[0],
-    options?: { jobConfig?: ParallelPromptJobConfig | undefined }
-  ): Promise<Awaited<ReturnType<TTemplateRenderer['renderAndExecute']>>> => {
-    return withPhaseTransitionGate(
-      (abortSignal) => {
-        return templateRenderer.renderAndExecute(firstArg, { abortSignal, ...options });
-      },
-      { pauseBehavior: 'abort' }
-    );
-  };
-}
-
-const gatedRenderFunctions = {
-  conversationRollingSummaryChainGroup: createGatedRenderFunction(conversationRollingSummaryChain),
-  offscreenMemoryExtractionChainGroup: createGatedRenderFunction(offscreenMemoryExtractionChain),
-  offscreenMemoryUpdateConversationGoalChainGroup: createGatedRenderFunction(
-    offscreenMemoryUpdateConversationGoalChain
-  ),
-  rollingPairwiseMemoryRewriteChainGroup: createGatedRenderFunction(rollingPairwiseMemoryRewriteChain),
-  nextConversationGoalUpdatesChainGroup: createGatedRenderFunction(nextConversationGoalUpdatesChain),
-  relationshipDescriptorUpdateChainGroup: createGatedRenderFunction(relationshipDescriptorUpdateChain),
-  rollingGlobalMemoryRewriteChainGroup: createGatedRenderFunction(rollingGlobalMemoryRewriteChain),
-};
 
 function getResolvedCharacter(characterId: string): Character {
   return useScenarioCharacterStore.getState().getRequiredCharacterById(characterId);
@@ -180,10 +144,14 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
     .getCharactersByIds(coPresentSpeakerIds.concat(offscreenOnlyIds));
 
   const createMemoryJobConfig = (name: string): ParallelPromptJobConfig =>
-    createTextCompletionJobConfig(name, [ChatJobTags.chatJob, ChatJobTags.processingMemories]);
+    createTextCompletionJobConfig(name, [
+      ChatJobTags.chatJob,
+      ChatJobTags.processingMemories,
+      ChatJobTags.abortOnPause,
+    ]);
 
   // Summarize the conversation from fromCharacterPerspective's point of view
-  const conversationSummaryResultText = await gatedRenderFunctions.conversationRollingSummaryChainGroup(
+  const conversationSummaryResultText = await conversationRollingSummaryChain.renderAndExecute(
     await buildFocusedChatTemplateContext(fromCharacterPerspective.id),
     {
       jobConfig: createMemoryJobConfig(`Summarizing interaction for ${fromCharacterPerspective.firstName}`),
@@ -229,7 +197,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
       let newLearnedInformation: OffscreenLearnedInformation | undefined;
 
       if (isOffscreenMention) {
-        const extractedInformation = await gatedRenderFunctions.offscreenMemoryExtractionChainGroup(
+        const extractedInformation = await offscreenMemoryExtractionChain.renderAndExecute(
           await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id),
           {
             jobConfig: createMemoryJobConfig(
@@ -254,7 +222,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
           );
 
           const replacementConversationGoal =
-            await gatedRenderFunctions.offscreenMemoryUpdateConversationGoalChainGroup(
+            await offscreenMemoryUpdateConversationGoalChain.renderAndExecute(
               await buildOffscreenMemoryUpdateConversationGoalContext(
                 fromCharacterPerspective.id,
                 otherCharacter.id,
@@ -273,7 +241,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
             });
           }
 
-          const newPairwiseMemory = await gatedRenderFunctions.rollingPairwiseMemoryRewriteChainGroup(
+          const newPairwiseMemory = await rollingPairwiseMemoryRewriteChain.renderAndExecute(
             await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id),
             {
               jobConfig: createMemoryJobConfig(
@@ -287,7 +255,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
           });
 
           const updatedRelationshipDescriptor =
-            await gatedRenderFunctions.relationshipDescriptorUpdateChainGroup(
+            await relationshipDescriptorUpdateChain.renderAndExecute(
               await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id),
               {
                 jobConfig: createMemoryJobConfig(
@@ -336,7 +304,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
         otherCharacter.id
       );
 
-      const newConversationGoal = await gatedRenderFunctions.nextConversationGoalUpdatesChainGroup(
+      const newConversationGoal = await nextConversationGoalUpdatesChain.renderAndExecute(
         pairwiseContext,
         {
           jobConfig: createMemoryJobConfig(
@@ -354,7 +322,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
         otherCharacter.id
       );
 
-      const newMemory = await gatedRenderFunctions.rollingPairwiseMemoryRewriteChainGroup(pairwiseContext, {
+      const newMemory = await rollingPairwiseMemoryRewriteChain.renderAndExecute(pairwiseContext, {
         jobConfig: createMemoryJobConfig(
           `Updating ${fromCharacterPerspective.firstName}'s memory of ${otherCharacter.firstName}`
         ),
@@ -369,7 +337,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
         otherCharacter.id
       );
 
-      const newRelationshipDescriptor = await gatedRenderFunctions.relationshipDescriptorUpdateChainGroup(
+      const newRelationshipDescriptor = await relationshipDescriptorUpdateChain.renderAndExecute(
         pairwiseContext,
         {
           jobConfig: createMemoryJobConfig(
@@ -419,7 +387,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
   );
 
   const oldGlobalMemory = getResolvedCharacter(fromCharacterPerspective.id).globalMemories;
-  const newGlobalMemory = await gatedRenderFunctions.rollingGlobalMemoryRewriteChainGroup(
+  const newGlobalMemory = await rollingGlobalMemoryRewriteChain.renderAndExecute(
     await buildFocusedChatTemplateContext(fromCharacterPerspective.id),
     {
       jobConfig: createMemoryJobConfig(`Rewriting global memory for ${fromCharacterPerspective.firstName}`),
