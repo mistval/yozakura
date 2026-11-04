@@ -32,9 +32,7 @@ export function useIsGeneratingImageOrImagePrompt() {
 
 export function useIsGeneratingMemories() {
   const chatJobs = useChatJobs();
-  const isGeneratingMemories = chatJobs.some((j) => j.tags?.includes(ChatJobTags.processingMemories));
-
-  return isGeneratingMemories;
+  return chatJobs.some((j) => hasTag(j, ChatJobTags.processingMemories));
 }
 
 export function useIsAwaitingCharacterTextInput() {

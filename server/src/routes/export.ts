@@ -30,18 +30,11 @@ export const imageCopyDescriptorSchema = z.discriminatedUnion('mode', [
 ]);
 export type ImageCopyDescriptor = z.infer<typeof imageCopyDescriptorSchema>;
 
-export const prebuiltRowSchema = z.object({
-  table: z.string().min(1),
-  row: z.record(z.string(), z.unknown()),
-});
-export type PrebuiltRow = z.infer<typeof prebuiltRowSchema>;
-
 export const exportRequestBodySchema = z.object({
   exportName: z.string().min(1),
   filename: z.string().min(1),
   overwrite: z.boolean().optional().default(false),
   queries: z.array(tableExportQuerySchema).optional().default([]),
-  prebuiltRows: z.array(prebuiltRowSchema).optional().default([]),
   imageDescriptors: z.array(imageCopyDescriptorSchema).optional().default([]),
 });
 export type ExportRequestBody = z.infer<typeof exportRequestBodySchema>;
@@ -91,7 +84,6 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
       filename,
       overwrite = false,
       queries = [],
-      prebuiltRows = [],
       imageDescriptors = [],
     } = parseResult.data;
 
@@ -146,11 +138,6 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
           const entry = JSON.stringify({ table: query.table, row });
           dbRowsStream.write(`${entry}\n`);
         }
-      }
-
-      for (const prebuilt of prebuiltRows) {
-        const entry = JSON.stringify({ table: prebuilt.table, row: prebuilt.row });
-        dbRowsStream.write(`${entry}\n`);
       }
 
       await new Promise<void>((resolve, reject) => {

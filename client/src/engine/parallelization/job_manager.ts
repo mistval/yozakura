@@ -123,43 +123,30 @@ class ParallelJobManager {
     });
   }
 
-  private run(job: IParallelJob<unknown>) {
+  private async run(job: IParallelJob<unknown>) {
     const newJob = {
       ...job,
       state: 'running',
     } satisfies IParallelJob<unknown>;
 
-    const cleanup = () => {
-      this.currentJobs.delete(newJob.id);
-      this.notifyObservers();
-      this.tryRunNext();
-    };
+    this.currentJobs.set(job.id, newJob);
+    this.notifyObservers();
 
     try {
-      this.currentJobs.set(job.id, newJob);
-      this.notifyObservers();
-
-      newJob
-        .job(newJob.abortController.signal)
-        .then((result) => {
-          cleanup();
-          if (newJob.abortController.signal.aborted) {
-            newJob.promiseResolvers.reject(newJob.abortController.signal.reason);
-          } else {
-            newJob.promiseResolvers.resolve(result);
-          }
-        })
-        .catch((err) => {
-          cleanup();
-          newJob.promiseResolvers.reject(
-            newJob.abortController.signal.aborted ? newJob.abortController.signal.reason : err
-          );
-        });
+      const result = await newJob.job(newJob.abortController.signal);
+      if (newJob.abortController.signal.aborted) {
+        newJob.promiseResolvers.reject(newJob.abortController.signal.reason);
+      } else {
+        newJob.promiseResolvers.resolve(result);
+      }
     } catch (err) {
-      cleanup();
       newJob.promiseResolvers.reject(
         newJob.abortController.signal.aborted ? newJob.abortController.signal.reason : err
       );
+    } finally {
+      this.currentJobs.delete(newJob.id);
+      this.notifyObservers();
+      this.tryRunNext();
     }
   }
 

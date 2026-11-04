@@ -8,16 +8,16 @@ import type { ConflictAction } from './import_conflict_resolver.js';
 export type BuildCommitPayloadOptions = {
   sessionId: string;
   exportName: string;
-  selectedScenarioIds: string[];
+  selectedScenarioIds?: string[];
   selectedScenarioCharactersIds?: string[];
-  selectedScenarioGroupsIds: string[];
+  selectedScenarioGroupsIds?: string[];
   selectedScenarioSchedulesIds?: string[];
-  selectedScenarioMemoriesIds: string[];
+  selectedScenarioMemoriesIds?: string[];
   selectedScenarioConversationsIds?: string[];
   selectedScenarioTurnIds?: string[];
-  selectedMapIds: string[];
-  selectedGlobalCharacterIds: string[];
-  conflictResolutions: Record<string, ConflictAction>;
+  selectedMapIds?: string[];
+  selectedGlobalCharacterIds?: string[];
+  conflictResolutions?: Record<string, ConflictAction>;
   stagedGlobalCharacters?: Character[];
   stagingDb?: DatabaseClient;
 };
@@ -28,16 +28,16 @@ export async function prepareStagingAndBuildCommitPayload(
   const {
     sessionId,
     exportName,
-    selectedScenarioIds,
+    selectedScenarioIds = [],
     selectedScenarioCharactersIds = selectedScenarioIds,
-    selectedScenarioGroupsIds,
+    selectedScenarioGroupsIds = selectedScenarioIds,
     selectedScenarioSchedulesIds = selectedScenarioGroupsIds,
-    selectedScenarioMemoriesIds,
+    selectedScenarioMemoriesIds = selectedScenarioIds,
     selectedScenarioConversationsIds = selectedScenarioIds,
     selectedScenarioTurnIds = selectedScenarioIds,
-    selectedMapIds,
-    selectedGlobalCharacterIds,
-    conflictResolutions,
+    selectedMapIds = [],
+    selectedGlobalCharacterIds = [],
+    conflictResolutions = {},
     stagedGlobalCharacters,
     stagingDb,
   } = options;

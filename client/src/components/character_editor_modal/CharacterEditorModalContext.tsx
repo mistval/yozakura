@@ -61,7 +61,6 @@ type CharacterEditorModalContextValue = {
   generateImage: () => Promise<void>;
   exportCard: () => Promise<void>;
   save: () => Promise<void>;
-  saveToGlobal: () => Promise<void>;
   saveAsScenarioAndGlobal: () => Promise<void>;
   remove: () => Promise<void>;
   handleUploadedCardFile: (file: File) => Promise<void>;
@@ -386,7 +385,7 @@ export function CharacterEditorModalProvider({
     }, 0);
   };
 
-  const save = async () => {
+  const performSave = async (opts?: { alsoSaveGlobal?: boolean }) => {
     const sanitizedCharacter = {
       ...character,
       firstName: character.firstName.trim(),
@@ -395,7 +394,18 @@ export function CharacterEditorModalProvider({
 
     await runWithField('save', async () => {
       if (isGlobalMode) {
-        useGlobalCharactersStore.getState().saveGlobalCharacter(sanitizedCharacter, selectedImageFile);
+        void useGlobalCharactersStore.getState().saveGlobalCharacter(sanitizedCharacter, selectedImageFile);
+      } else if (opts?.alsoSaveGlobal) {
+        const savedGlobal = await useGlobalCharactersStore
+          .getState()
+          .saveScenarioCharacterAsGlobal(sanitizedCharacter, selectedImageFile);
+        saveScenarioCharacter(
+          {
+            ...sanitizedCharacter,
+            globalCharacterId: savedGlobal.id,
+          },
+          selectedImageFile
+        );
       } else {
         saveScenarioCharacter(sanitizedCharacter, selectedImageFile);
       }
@@ -404,42 +414,9 @@ export function CharacterEditorModalProvider({
     });
   };
 
-  const saveToGlobal = async () => {
-    const sanitizedCharacter = {
-      ...character,
-      firstName: character.firstName.trim(),
-      lastName: character.lastName.trim(),
-    };
+  const save = () => performSave();
 
-    await runWithField('saveToGlobal', async () => {
-      const savedGlobal = await useGlobalCharactersStore
-        .getState()
-        .saveScenarioCharacterAsGlobal(sanitizedCharacter, selectedImageFile);
-      setCharacterField('globalCharacterId', savedGlobal.id);
-    });
-  };
-
-  const saveAsScenarioAndGlobal = async () => {
-    const sanitizedCharacter = {
-      ...character,
-      firstName: character.firstName.trim(),
-      lastName: character.lastName.trim(),
-    };
-
-    await runWithField('save', async () => {
-      const savedGlobal = await useGlobalCharactersStore
-        .getState()
-        .saveScenarioCharacterAsGlobal(sanitizedCharacter, selectedImageFile);
-      saveScenarioCharacter(
-        {
-          ...sanitizedCharacter,
-          globalCharacterId: savedGlobal.id,
-        },
-        selectedImageFile
-      );
-      onClose();
-    });
-  };
+  const saveAsScenarioAndGlobal = () => performSave({ alsoSaveGlobal: true });
 
   const remove = async () => {
     await runWithField('delete', async () => {
@@ -601,7 +578,6 @@ export function CharacterEditorModalProvider({
     generateImage: generateImageField,
     exportCard,
     save,
-    saveToGlobal,
     saveAsScenarioAndGlobal,
     remove,
     handleUploadedCardFile,

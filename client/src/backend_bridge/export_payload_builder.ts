@@ -19,17 +19,11 @@ export type ImageCopyDescriptor =
       scenarioId?: string;
     };
 
-export type PrebuiltRow = {
-  table: string;
-  row: Record<string, unknown>;
-};
-
 export type ExportPayload = {
   exportName: string;
   filename: string;
   overwrite: boolean;
   queries: TableExportQuery[];
-  prebuiltRows: PrebuiltRow[];
   imageDescriptors: ImageCopyDescriptor[];
 };
 
@@ -51,7 +45,6 @@ export function sanitizeExportFilename(name: string): string {
 export function buildExportPayload(options: BuildExportPayloadOptions): ExportPayload {
   const { exportName, overwrite = false, selectedIds, scenarios, maps, globalCharacters } = options;
 
-  const prebuiltRows: PrebuiltRow[] = [];
   const imageDescriptors: ImageCopyDescriptor[] = [];
 
   const decomposed = decomposeSelection({
@@ -61,66 +54,43 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     globalCharacters,
   });
 
-  // 1. Process Scenarios and their subcategories
-  const selectedScenarioIds = decomposed.selectedScenarioIds;
-  const scenariosWithMemories: string[] = [];
-  const scenariosWithConversations: string[] = [];
-  const scenariosWithGroups: string[] = [];
-  const scenariosWithSchedules: string[] = [];
-  const turnKeys: string[] = [];
+  const memoriesSet = new Set(decomposed.selectedScenarioMemoriesIds);
+  const groupsSet = new Set(decomposed.selectedScenarioGroupsIds);
 
   const charScenariosFull: string[] = [];
   const charScenariosStripMemories: string[] = [];
   const charScenariosStripGroups: string[] = [];
   const charScenariosStripBoth: string[] = [];
 
-  for (const scenId of selectedScenarioIds) {
-    const details = decomposed.scenarioDetails.get(scenId)!;
-    if (details.hasCharacters) {
-      if (details.hasMemories && details.hasGroups) {
-        charScenariosFull.push(scenId);
-      } else if (!details.hasMemories && details.hasGroups) {
-        charScenariosStripMemories.push(scenId);
-      } else if (details.hasMemories && !details.hasGroups) {
-        charScenariosStripGroups.push(scenId);
-      } else {
-        charScenariosStripBoth.push(scenId);
-      }
+  for (const scenId of decomposed.selectedScenarioCharactersIds) {
+    const hasMemories = memoriesSet.has(scenId);
+    const hasGroups = groupsSet.has(scenId);
 
-      imageDescriptors.push({
-        mode: 'directory',
-        sourceRelDir: `scenario/${scenId}/character_cards`,
-      });
+    if (hasMemories && hasGroups) {
+      charScenariosFull.push(scenId);
+    } else if (!hasMemories && hasGroups) {
+      charScenariosStripMemories.push(scenId);
+    } else if (hasMemories && !hasGroups) {
+      charScenariosStripGroups.push(scenId);
+    } else {
+      charScenariosStripBoth.push(scenId);
     }
 
-    if (details.hasMemories) {
-      scenariosWithMemories.push(scenId);
-    }
-
-    if (details.hasGroups) {
-      scenariosWithGroups.push(scenId);
-    }
-
-    if (details.hasSchedules) {
-      scenariosWithSchedules.push(scenId);
-    }
-
-    if (details.hasConversations) {
-      scenariosWithConversations.push(scenId);
-      imageDescriptors.push({
-        mode: 'directory',
-        sourceRelDir: `scenario/${scenId}/chat_images`,
-      });
-    }
-
-    if (details.hasTurn) {
-      turnKeys.push(turnPersistenceKey(scenId));
-    }
+    imageDescriptors.push({
+      mode: 'directory',
+      sourceRelDir: `scenario/${scenId}/character_cards`,
+    });
   }
 
-  // 2. Global Characters image descriptors
-  const selectedGlobalCharIds = decomposed.selectedGlobalCharacterIds;
-  for (const charId of selectedGlobalCharIds) {
+  for (const scenId of decomposed.selectedScenarioConversationsIds) {
+    imageDescriptors.push({
+      mode: 'directory',
+      sourceRelDir: `scenario/${scenId}/chat_images`,
+    });
+  }
+
+  // Global Characters image descriptors
+  for (const charId of decomposed.selectedGlobalCharacterIds) {
     const char = globalCharacters.find((c) => c.id === charId);
     if (char && Files.isApiFilePath(char.imagePath)) {
       const cleanPath = Files.extractApiFileRelativePath(char.imagePath);
@@ -134,18 +104,18 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
   }
 
   const queries = buildTableExportQueries({
-    selectedScenarioIds,
+    selectedScenarioIds: decomposed.selectedScenarioIds,
     characterPartition: {
       fullScenarioIds: charScenariosFull,
       stripMemoriesScenarioIds: charScenariosStripMemories,
       stripGroupsScenarioIds: charScenariosStripGroups,
       stripBothScenarioIds: charScenariosStripBoth,
     },
-    scenariosWithMemories,
-    scenariosWithGroups,
-    scenariosWithSchedules,
-    scenariosWithConversations,
-    turnKeys,
+    scenariosWithMemories: decomposed.selectedScenarioMemoriesIds,
+    scenariosWithGroups: decomposed.selectedScenarioGroupsIds,
+    scenariosWithSchedules: decomposed.selectedScenarioSchedulesIds,
+    scenariosWithConversations: decomposed.selectedScenarioConversationsIds,
+    turnKeys: decomposed.selectedScenarioTurnIds.map(turnPersistenceKey),
     selectedMapIds: decomposed.selectedMapIds,
     selectedGlobalCharacterIds: decomposed.selectedGlobalCharacterIds,
   });
@@ -155,7 +125,6 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     filename: sanitizeExportFilename(exportName),
     overwrite,
     queries,
-    prebuiltRows,
     imageDescriptors,
   };
 }

@@ -63,7 +63,6 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
       filename: 'OverwriteTest.yozakura_export.zip',
       overwrite: false,
       queries: [],
-      prebuiltRows: [],
       imageDescriptors: [],
     };
 

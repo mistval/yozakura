@@ -29,21 +29,9 @@ export const TreeEntityIds = {
 } as const;
 
 export { turnPersistenceKey };
-export const getScenarioTurnKey = turnPersistenceKey;
-
-export type DecomposedScenarioSelection = {
-  scenarioId: string;
-  hasCharacters: boolean;
-  hasGroups: boolean;
-  hasSchedules: boolean;
-  hasMemories: boolean;
-  hasConversations: boolean;
-  hasTurn: boolean;
-};
 
 export type DecomposedSelection = {
   selectedScenarioIds: string[];
-  scenarioDetails: Map<string, DecomposedScenarioSelection>;
   selectedScenarioCharactersIds: string[];
   selectedScenarioGroupsIds: string[];
   selectedScenarioSchedulesIds: string[];
@@ -65,7 +53,6 @@ export function decomposeSelection(options: DecomposeSelectionOptions): Decompos
   const { selectedIds, scenarios, maps, globalCharacters } = options;
 
   const selectedScenarioIds: string[] = [];
-  const scenarioDetails = new Map<string, DecomposedScenarioSelection>();
   const selectedScenarioCharactersIds: string[] = [];
   const selectedScenarioGroupsIds: string[] = [];
   const selectedScenarioSchedulesIds: string[] = [];
@@ -81,32 +68,12 @@ export function decomposeSelection(options: DecomposeSelectionOptions): Decompos
 
     selectedScenarioIds.push(scenId);
 
-    const rawCharacters = selectedIds.has(TreeEntityIds.scenarioCharacters(scenId));
-    const rawGroups = selectedIds.has(TreeEntityIds.scenarioGroups(scenId));
-    const rawSchedules = selectedIds.has(TreeEntityIds.scenarioSchedules(scenId));
-    const rawMemories = selectedIds.has(TreeEntityIds.scenarioMemories(scenId));
-    const rawConversations = selectedIds.has(TreeEntityIds.scenarioConversations(scenId));
-    const rawTurn = selectedIds.has(TreeEntityIds.scenarioTurn(scenId));
-
-    // Apply dependency rules:
-    // - Memories and turn state require scenario characters (prevents FK violations)
-    // - Schedules require character groups
-    const hasCharacters = rawCharacters;
-    const hasGroups = rawGroups;
-    const hasSchedules = hasGroups && rawSchedules;
-    const hasMemories = hasCharacters && rawMemories;
-    const hasConversations = rawConversations;
-    const hasTurn = hasCharacters && rawTurn;
-
-    scenarioDetails.set(scenId, {
-      scenarioId: scenId,
-      hasCharacters,
-      hasGroups,
-      hasSchedules,
-      hasMemories,
-      hasConversations,
-      hasTurn,
-    });
+    const hasCharacters = selectedIds.has(TreeEntityIds.scenarioCharacters(scenId));
+    const hasGroups = selectedIds.has(TreeEntityIds.scenarioGroups(scenId));
+    const hasSchedules = hasGroups && selectedIds.has(TreeEntityIds.scenarioSchedules(scenId));
+    const hasMemories = hasCharacters && selectedIds.has(TreeEntityIds.scenarioMemories(scenId));
+    const hasConversations = selectedIds.has(TreeEntityIds.scenarioConversations(scenId));
+    const hasTurn = hasCharacters && selectedIds.has(TreeEntityIds.scenarioTurn(scenId));
 
     if (hasCharacters) selectedScenarioCharactersIds.push(scenId);
     if (hasGroups) selectedScenarioGroupsIds.push(scenId);
@@ -138,7 +105,6 @@ export function decomposeSelection(options: DecomposeSelectionOptions): Decompos
 
   return {
     selectedScenarioIds,
-    scenarioDetails,
     selectedScenarioCharactersIds,
     selectedScenarioGroupsIds,
     selectedScenarioSchedulesIds,

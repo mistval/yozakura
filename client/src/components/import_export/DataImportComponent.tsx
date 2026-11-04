@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import TreeDataViewer, { type TreeNode } from '../ui/TreeDataViewer.js';
 import { importStagingDatabase, mainDatabase } from '../../backend_bridge/database.js';
 import {
@@ -7,7 +7,7 @@ import {
   commitImport,
   type StagedManifest,
 } from '../../backend_bridge/import_api.js';
-import { decomposeSelection } from '../../backend_bridge/import_export_common.js';
+import { decomposeSelection, type DecomposedSelection } from '../../backend_bridge/import_export_common.js';
 import { buildImportExportTreeRoots } from './tree_builder.js';
 import type { ScenarioSummary, WorldMap, Character } from '../../engine/types.js';
 import { detectConflicts, type ConflictAction, type EntityConflict } from '../../backend_bridge/import_conflict_resolver.js';
@@ -37,9 +37,9 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
   const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined);
   const [successMessage, setSuccessMessage] = useState<string | undefined>(undefined);
   const [stagedData, setStagedData] = useState<StagedData | undefined>(undefined);
-  const [pendingConflicts, setPendingConflicts] = useState<EntityConflict[] | undefined>(undefined);
-
-  const lastSelectedIdsRef = useRef<Set<string>>(new Set());
+  const [pendingConflictState, setPendingConflictState] = useState<
+    { conflicts: EntityConflict[]; decomposed: DecomposedSelection } | undefined
+  >(undefined);
 
   const isBusy = isStaging || isCommitting;
 
@@ -115,52 +115,25 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       setIsStaging(false);
       setStagedData(undefined);
       setSelectedFile(undefined);
-      setPendingConflicts(undefined);
+      setPendingConflictState(undefined);
     }
   };
 
   // Execute commit with given conflict resolutions
   const executeCommit = async (
     conflictResolutions: Record<string, ConflictAction>,
-    selectedIds: Set<string>
+    decomposed: DecomposedSelection
   ) => {
     if (!stagedData) return;
 
     setIsCommitting(true);
     setErrorMessage(undefined);
 
-    const decomposed = decomposeSelection({
-      selectedIds,
-      scenarios: stagedData.scenarios,
-      maps: stagedData.maps,
-      globalCharacters: stagedData.globalCharacters,
-    });
-
-    const {
-      selectedScenarioIds,
-      selectedScenarioCharactersIds,
-      selectedScenarioGroupsIds,
-      selectedScenarioSchedulesIds,
-      selectedScenarioMemoriesIds,
-      selectedScenarioConversationsIds,
-      selectedScenarioTurnIds,
-      selectedMapIds,
-      selectedGlobalCharacterIds,
-    } = decomposed;
-
     try {
       const payload = await prepareStagingAndBuildCommitPayload({
         sessionId: stagedData.sessionId,
         exportName: stagedData.manifest.exportName,
-        selectedScenarioIds,
-        selectedScenarioCharactersIds,
-        selectedScenarioGroupsIds,
-        selectedScenarioSchedulesIds,
-        selectedScenarioMemoriesIds,
-        selectedScenarioConversationsIds,
-        selectedScenarioTurnIds,
-        selectedMapIds,
-        selectedGlobalCharacterIds,
+        ...decomposed,
         conflictResolutions,
         stagedGlobalCharacters: stagedData.globalCharacters,
       });
@@ -178,7 +151,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
         useScenarioStore.getState().refreshScenarioSummaries(),
       ]);
 
-      const overwrittenGlobalCharIds = selectedGlobalCharacterIds.filter(
+      const overwrittenGlobalCharIds = decomposed.selectedGlobalCharacterIds.filter(
         (id) => conflictResolutions[id] === 'overwrite'
       );
       if (overwrittenGlobalCharIds.length > 0) {
@@ -199,18 +172,11 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
     }
   };
 
-  const proceedWithConflictsAndCommit = async (selectedIds: Set<string>) => {
+  const proceedWithConflictsAndCommit = async (decomposed: DecomposedSelection) => {
     if (!stagedData) return;
 
     setIsCommitting(true);
     setErrorMessage(undefined);
-
-    const decomposed = decomposeSelection({
-      selectedIds,
-      scenarios: stagedData.scenarios,
-      maps: stagedData.maps,
-      globalCharacters: stagedData.globalCharacters,
-    });
 
     const { selectedMapIds, selectedGlobalCharacterIds } = decomposed;
 
@@ -228,18 +194,17 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
 
     if (conflicts.length > 0) {
       setIsCommitting(false);
-      setPendingConflicts(conflicts);
+      setPendingConflictState({ conflicts, decomposed });
       return;
     }
 
     // No conflicts, execute commit directly
-    await executeCommit({}, selectedIds);
+    await executeCommit({}, decomposed);
   };
 
   // User clicked "Import Selected Data"
   const handleStartImport = async (selectedIds: Set<string>) => {
     if (!stagedData) return;
-    lastSelectedIdsRef.current = selectedIds;
 
     const decomposed = decomposeSelection({
       selectedIds,
@@ -248,19 +213,10 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
       globalCharacters: stagedData.globalCharacters,
     });
 
-    const {
-      selectedScenarioIds,
-      selectedScenarioCharactersIds,
-      selectedScenarioGroupsIds,
-      selectedScenarioSchedulesIds,
-      selectedScenarioMemoriesIds,
-      selectedScenarioConversationsIds,
-      selectedMapIds,
-      selectedGlobalCharacterIds,
-    } = decomposed;
-
     const hasAnySelection =
-      selectedScenarioIds.length > 0 || selectedMapIds.length > 0 || selectedGlobalCharacterIds.length > 0;
+      decomposed.selectedScenarioIds.length > 0 ||
+      decomposed.selectedMapIds.length > 0 ||
+      decomposed.selectedGlobalCharacterIds.length > 0;
 
     if (!hasAnySelection) {
       setErrorMessage('Please select at least one item to import.');
@@ -271,16 +227,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
     setErrorMessage(undefined);
 
     // 1. Paged Zod Validation
-    const validation = await validateStagedData({
-      selectedScenarioIds,
-      selectedScenarioCharactersIds,
-      selectedScenarioGroupsIds,
-      selectedScenarioSchedulesIds,
-      selectedScenarioMemoriesIds,
-      selectedScenarioConversationsIds,
-      selectedMapIds,
-      selectedGlobalCharacterIds,
-    });
+    const validation = await validateStagedData(decomposed);
 
     if (!validation.valid) {
       setIsCommitting(false);
@@ -293,7 +240,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
     }
 
     // 2. Conflict Detection & Commit
-    await proceedWithConflictsAndCommit(selectedIds);
+    await proceedWithConflictsAndCommit(decomposed);
   };
 
   // Build tree roots dynamically based on what actually exists in stagedData
@@ -361,15 +308,16 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
   // View 2: Archive Preview Tree
   return (
     <div className="flex flex-col space-y-4">
-      {pendingConflicts && (
+      {pendingConflictState && (
         <ImportConflictModal
           open={true}
-          conflicts={pendingConflicts}
+          conflicts={pendingConflictState.conflicts}
           onConfirm={(resolutions) => {
-            setPendingConflicts(undefined);
-            void executeCommit(resolutions, lastSelectedIdsRef.current);
+            const { decomposed } = pendingConflictState;
+            setPendingConflictState(undefined);
+            void executeCommit(resolutions, decomposed);
           }}
-          onCancel={() => setPendingConflicts(undefined)}
+          onCancel={() => setPendingConflictState(undefined)}
         />
       )}
 
