@@ -1,7 +1,7 @@
-import * as Files from '../../backend_bridge/files.js';
-import { buildTableExportQueries, type TableExportQuery } from '../../backend_bridge/export_queries.js';
-import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
-import { TreeEntityIds, turnPersistenceKey, decomposeSelection } from './importExportCommon.js';
+import * as Files from './files.js';
+import { buildTableExportQueries, type TableExportQuery } from './export_queries.js';
+import type { Character, ScenarioSummary, WorldMap } from '../engine/types.js';
+import { TreeEntityIds, turnPersistenceKey, decomposeSelection } from './import_export_common.js';
 
 export { TreeEntityIds };
 export type { TableExportQuery };

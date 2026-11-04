@@ -15,8 +15,7 @@ import {
   serializedConversationTranscriptSchema,
   wardrobeSchema,
 } from '../engine/types.js';
-import { ConversationTranscript } from '../engine/chat/transcript.js';
-import { buildTranscriptRagDeps } from '../engine/chat/transcript_rag_deps.js';
+import { ConversationTranscript, type TranscriptRagDeps } from '../engine/chat/transcript.js';
 import type { ContextResolvers } from '../engine/prompt_templates/prompt_template_context_fields.js';
 import type { OmitFunctions } from '../util/types.js';
 import { getRequiredActiveScenario, getRequiredUserCharacterId, useScenarioStore } from './scenario_store.js';
@@ -29,12 +28,15 @@ import {
   selectZoneForWardrobeTriggers,
 } from '../engine/wardrobes.js';
 
-export type ChatState = 'inactive' | 'active';
+export type ChatState =
+  | 'inactive'
+  | 'active';
 
 export type StartChatSessionArgs = {
   participantIds: string[];
   initiatorId: string;
   gossipTargetCharacterId: string | undefined;
+  ragDeps: TranscriptRagDeps;
 };
 
 export const persistedActiveChatSchema = z.object({
@@ -90,7 +92,7 @@ type BaseTurnMachineStoreState = {
   deactivateChat: () => void;
   reset: () => void;
   serialize: () => SerializedTurn | undefined;
-  hydrate: (snapshot: SerializedTurn) => void;
+  hydrate: (snapshot: SerializedTurn, ragDeps: TranscriptRagDeps) => void;
   setEphemeralLocation: (setter: (prev: EphemeralLocation) => EphemeralLocation | undefined) => void;
   userIsParticipant: () => boolean;
   userIsInitiator: () => boolean;
@@ -377,7 +379,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       initiatorId: args.initiatorId,
       gossipTargetCharacterId: args.gossipTargetCharacterId,
       chatState: 'active',
-      transcript: ConversationTranscript.new(buildTranscriptRagDeps()),
+      transcript: ConversationTranscript.new(args.ragDeps),
       preConversationWardrobeSnapshotByCharacterId: Object.fromEntries(
         participants.map((p) => [p.id, p.wardrobes])
       ),
@@ -426,7 +428,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     };
   },
 
-  hydrate(snapshot) {
+  hydrate(snapshot, ragDeps) {
     const base = {
       ...inactiveChatTurnMachineState,
       turnMachineState: snapshot.turnMachineState,
@@ -444,7 +446,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       ...base,
       ...chatFields,
       chatState: 'active',
-      transcript: ConversationTranscript.deserialize(serializedTranscript, buildTranscriptRagDeps()),
+      transcript: ConversationTranscript.deserialize(serializedTranscript, ragDeps),
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 

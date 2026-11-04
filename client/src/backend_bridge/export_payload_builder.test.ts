@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { buildExportPayload, sanitizeExportFilename, TreeEntityIds } from './exportPayloadBuilder.js';
-import type { ScenarioSummary, WorldMap, Character } from '../../engine/types.js';
+import { buildExportPayload, sanitizeExportFilename, TreeEntityIds } from './export_payload_builder.js';
+import type { ScenarioSummary, WorldMap, Character } from '../engine/types.js';
 
-describe('exportPayloadBuilder', () => {
+describe('export_payload_builder', () => {
   const dummyScenario: ScenarioSummary = {
     mapId: 'map_001',
     scenario: {

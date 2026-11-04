@@ -86,17 +86,6 @@ async function dispatchImageGeneration(
   });
 }
 
-function getCharacterWardrobeTags(character: Pick<Character, 'wardrobes'>): string {
-  return character.wardrobes
-    .filter((wardrobe) => wardrobe.enabled)
-    .map((wardrobe) => wardrobe.text)
-    .join(', ');
-}
-
-export function buildAppearanceTags(character: Character): string {
-  return [character.baseAppearanceTags, getCharacterWardrobeTags(character)].join(',');
-}
-
 export async function generateCharacterCard(
   character: Character,
   options: { abortSignal?: AbortSignal | undefined } = {}

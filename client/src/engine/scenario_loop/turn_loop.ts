@@ -215,12 +215,14 @@ async function applySimpleTurnMove(characterId: string, move: TurnMove): Promise
 
   if (move.actionType === 'chat') {
     const participants = useScenarioCharacterStore.getState().getCharactersByIds(move.participantIds);
-    const updatedRelationships = await buildSimpleInteractionRelationshipUpdates({ participants });
+    const relationshipStore = useScenarioCharacterRelationshipStore.getState();
+    const updatedRelationships = await buildSimpleInteractionRelationshipUpdates({
+      participants,
+      getCharacterRelationship: relationshipStore.getCharacterRelationship,
+    });
 
     await Promise.all(
-      updatedRelationships.map((r) =>
-        useScenarioCharacterRelationshipStore.getState().saveRelationshipFields(r, r)
-      )
+      updatedRelationships.map((r) => relationshipStore.saveRelationshipFields(r, r))
     );
 
     return { noEffect: true };

@@ -30,6 +30,7 @@ import { useScenarioCharacterRelationshipStore } from '../../state/scenario_char
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { ConversationTranscript } from './transcript';
+import { buildTranscriptRagDeps } from './transcript_rag_deps';
 import {
   getActiveChatMedium,
   getActiveChatParticipants,
@@ -75,6 +76,7 @@ export class ChatCoordinator {
       participantIds,
       initiatorId: firstParticipant.id,
       gossipTargetCharacterId,
+      ragDeps: buildTranscriptRagDeps(),
     };
   }
 

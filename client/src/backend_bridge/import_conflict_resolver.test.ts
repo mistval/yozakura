@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { detectConflicts } from './importConflictResolver.js';
-import type { WorldMap, Character } from '../../engine/types.js';
+import { detectConflicts } from './import_conflict_resolver.js';
+import type { WorldMap, Character } from '../engine/types.js';
 
-describe('importConflictResolver', () => {
+describe('import_conflict_resolver', () => {
   const dummyMap1 = {
     id: '000000000000000001',
     name: 'Existing Map',

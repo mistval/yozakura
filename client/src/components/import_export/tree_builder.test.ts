@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildImportExportTreeRoots } from './treeBuilder.js';
-import { TreeEntityIds } from './exportPayloadBuilder.js';
+import { buildImportExportTreeRoots } from './tree_builder.js';
+import { TreeEntityIds } from '../../backend_bridge/export_payload_builder.js';
 import type { ScenarioSummary, WorldMap, Character } from '../../engine/types.js';
 
 describe('buildImportExportTreeRoots', () => {

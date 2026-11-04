@@ -2,8 +2,8 @@ import locko from 'locko';
 import { z } from 'zod';
 import { stagePrepackagedArchive, commitImport, cancelImport } from './import_api.js';
 import { importStagingDatabase, mainDatabase } from './database.js';
-import { prepareStagingAndBuildCommitPayload } from '../components/import_export/importCommitPayloadBuilder.js';
-import { detectConflicts } from '../components/import_export/importConflictResolver.js';
+import { prepareStagingAndBuildCommitPayload } from './import_commit_payload_builder.js';
+import { detectConflicts } from './import_conflict_resolver.js';
 import { assertNonNullish } from '../errors/application_error.js';
 
 export async function importDemoMaps(): Promise<void> {

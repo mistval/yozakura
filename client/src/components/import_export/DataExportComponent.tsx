@@ -4,8 +4,8 @@ import ConfirmDialog from '../ui/ConfirmDialog.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useMapStore } from '../../state/map_store.js';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
-import { buildExportPayload, sanitizeExportFilename } from './exportPayloadBuilder.js';
-import { buildImportExportTreeRoots } from './treeBuilder.js';
+import { buildExportPayload, sanitizeExportFilename } from '../../backend_bridge/export_payload_builder.js';
+import { buildImportExportTreeRoots } from './tree_builder.js';
 import { requestDataExport, type ExportResult } from '../../backend_bridge/export_api.js';
 
 function getDefaultExportName(): string {

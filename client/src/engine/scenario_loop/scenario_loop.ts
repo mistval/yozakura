@@ -1,4 +1,5 @@
 import { useTurnMachineStore } from '../../state/turn_machine_store';
+import { buildTranscriptRagDeps } from '../chat/transcript_rag_deps';
 import {
   useScenarioCharacterStore,
   whenScenarioCharactersLoaded,
@@ -63,7 +64,7 @@ export async function startScenarioLoop() {
         );
         useTurnMachineStore.getState().reset();
       } else {
-        useTurnMachineStore.getState().hydrate(restored);
+        useTurnMachineStore.getState().hydrate(restored, buildTranscriptRagDeps());
 
         if (shouldPauseOnHydrate(useTurnMachineStore.getState())) {
           useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');

@@ -1,9 +1,9 @@
-import { importStagingDatabase, DatabaseClient } from '../../backend_bridge/database.js';
-import * as Files from '../../backend_bridge/files.js';
-import type { ImportCommitPayload } from '../../backend_bridge/import_api.js';
-import { prepareImportStaging, buildImportCommitStatements } from '../../backend_bridge/import_queries.js';
-import type { Character } from '../../engine/types.js';
-import type { ConflictAction } from './importConflictResolver.js';
+import { importStagingDatabase, DatabaseClient } from './database.js';
+import * as Files from './files.js';
+import type { ImportCommitPayload } from './import_api.js';
+import { prepareImportStaging, buildImportCommitStatements } from './import_queries.js';
+import type { Character } from '../engine/types.js';
+import type { ConflictAction } from './import_conflict_resolver.js';
 
 export type BuildCommitPayloadOptions = {
   sessionId: string;

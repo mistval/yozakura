@@ -12,9 +12,9 @@ import {
 import {
   buildExportPayload,
   TreeEntityIds,
-} from '../client/src/components/import_export/exportPayloadBuilder.js';
+} from '../client/src/backend_bridge/export_payload_builder.js';
 import { stageImportArchive, commitImport } from '../client/src/backend_bridge/import_api.js';
-import { prepareStagingAndBuildCommitPayload } from '../client/src/components/import_export/importCommitPayloadBuilder.js';
+import { prepareStagingAndBuildCommitPayload } from '../client/src/backend_bridge/import_commit_payload_builder.js';
 import type { WorldMap, Scenario, ScenarioSummary, Character } from '../client/src/engine/types.js';
 
 describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)', () => {

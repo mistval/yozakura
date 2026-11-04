@@ -10,8 +10,8 @@ import {
   type CharacterRelationship,
   type StoredConversation,
   type WorldMap,
-} from '../../engine/types.js';
-import { importStagingDatabase } from '../../backend_bridge/database.js';
+} from '../engine/types.js';
+import { importStagingDatabase } from './database.js';
 
 export type ValidationResult =
   | {

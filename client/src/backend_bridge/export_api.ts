@@ -1,4 +1,4 @@
-import type { ExportPayload } from '../components/import_export/exportPayloadBuilder.js';
+import type { ExportPayload } from './export_payload_builder.js';
 import { assertNonNullish } from '../errors/application_error.js';
 
 export type ExportResult =

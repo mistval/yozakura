@@ -7,13 +7,13 @@ import {
   commitImport,
   type StagedManifest,
 } from '../../backend_bridge/import_api.js';
-import { decomposeSelection } from './importExportCommon.js';
-import { buildImportExportTreeRoots } from './treeBuilder.js';
+import { decomposeSelection } from '../../backend_bridge/import_export_common.js';
+import { buildImportExportTreeRoots } from './tree_builder.js';
 import type { ScenarioSummary, WorldMap, Character } from '../../engine/types.js';
-import { detectConflicts, type ConflictAction, type EntityConflict } from './importConflictResolver.js';
+import { detectConflicts, type ConflictAction, type EntityConflict } from '../../backend_bridge/import_conflict_resolver.js';
 import ImportConflictModal from './ImportConflictModal.js';
-import { validateStagedData } from './importValidation.js';
-import { prepareStagingAndBuildCommitPayload } from './importCommitPayloadBuilder.js';
+import { validateStagedData } from '../../backend_bridge/import_validation.js';
+import { prepareStagingAndBuildCommitPayload } from '../../backend_bridge/import_commit_payload_builder.js';
 import { useMapStore } from '../../state/map_store.js';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
 import { useScenarioStore } from '../../state/scenario_store.js';

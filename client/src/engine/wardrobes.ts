@@ -301,3 +301,14 @@ export function applyPostConversationWardrobeAutoRevert(
 
   return updatedCharacters;
 }
+
+function getCharacterWardrobeTags(character: Pick<Character, 'wardrobes'>): string {
+  return character.wardrobes
+    .filter((wardrobe) => wardrobe.enabled)
+    .map((wardrobe) => wardrobe.text)
+    .join(', ');
+}
+
+export function buildAppearanceTags(character: Character): string {
+  return [character.baseAppearanceTags, getCharacterWardrobeTags(character)].join(',');
+}

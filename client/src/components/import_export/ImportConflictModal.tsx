@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Modal from '../ui/Modal.js';
-import type { ConflictAction, EntityConflict } from './importConflictResolver.js';
+import type { ConflictAction, EntityConflict } from '../../backend_bridge/import_conflict_resolver.js';
 
 type ImportConflictModalProps = {
   open: boolean;

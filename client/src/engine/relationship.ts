@@ -1,6 +1,5 @@
 import { createPersistedObject } from '../backend_bridge/database.js';
 import { assertNonNullish } from '../errors/application_error.js';
-import { useScenarioCharacterRelationshipStore } from '../state/scenario_character_relationship_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import { useSettingsStore } from '../state/settings_store.js';
 import type { Character, CharacterRelationship, CharacterRelationships } from './types.js';
@@ -119,11 +118,14 @@ export function familiarityRelativeWeight(familiarity: number, familiarityWeight
   return 1 + familiarityWeightMultiplier * Math.log(1 + familiarity);
 }
 
-export async function buildSimpleInteractionRelationshipUpdates(params: { participants: Character[] }) {
+export async function buildSimpleInteractionRelationshipUpdates(params: {
+  participants: Character[];
+  getCharacterRelationship: (fromId: string, toId: string) => Promise<CharacterRelationship>;
+}) {
   const userCharacterId = useScenarioStore.getState().activeScenario?.userCharacterId;
   assertNonNullish(userCharacterId, 'No user character');
 
-  const { participants } = params;
+  const { participants, getCharacterRelationship } = params;
   const initiator = participants[0];
   assertNonNullish(initiator, 'Simple interaction missing initiator participant');
 
@@ -139,8 +141,8 @@ export async function buildSimpleInteractionRelationshipUpdates(params: { partic
       const others = participants.slice(i + 1);
       return others.map(async (p2) => {
         const updatedRelationships = applyInteractionFamiliarityOutcome(
-          await useScenarioCharacterRelationshipStore.getState().getCharacterRelationship(p1.id, p2.id),
-          await useScenarioCharacterRelationshipStore.getState().getCharacterRelationship(p2.id, p1.id),
+          await getCharacterRelationship(p1.id, p2.id),
+          await getCharacterRelationship(p2.id, p1.id),
           p1.id === userCharacterId || p2.id === userCharacterId,
           userFamiliarityInteractionMultiplier
         );

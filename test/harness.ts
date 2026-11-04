@@ -4,7 +4,7 @@ import os from 'os';
 import crypto from 'crypto';
 import type Database from 'better-sqlite3';
 import { startServer } from '../server/src/app.js';
-import type { ExportPayload } from '../client/src/components/import_export/exportPayloadBuilder.js';
+import type { ExportPayload } from '../client/src/backend_bridge/export_payload_builder.js';
 
 let activeServerUrl: string | null = null;
 const originalFetch = globalThis.fetch;

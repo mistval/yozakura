@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { prepareStagingAndBuildCommitPayload } from './importCommitPayloadBuilder.js';
-import { createImportStagingDatabase, type ISQLTarget } from '../../backend_bridge/database.js';
-import type { Character } from '../../engine/types.js';
+import { prepareStagingAndBuildCommitPayload } from './import_commit_payload_builder.js';
+import { createImportStagingDatabase, type ISQLTarget } from './database.js';
+import type { Character } from '../engine/types.js';
 
-describe('importCommitPayloadBuilder', () => {
+describe('import_commit_payload_builder', () => {
   let dbRunCalls: Array<{ statement: string; params: unknown[][] }>;
   let testSqlTarget: ISQLTarget;
 

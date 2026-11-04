@@ -1,4 +1,4 @@
-import type { WorldMap, Character } from '../../engine/types.js';
+import type { WorldMap, Character } from '../engine/types.js';
 
 export type ConflictAction = 'skip' | 'overwrite' | 'copy';
 

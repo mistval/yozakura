@@ -1,12 +1,12 @@
-import type { Character, ScenarioSummary, WorldMap } from '../../engine/types.js';
-import { turnPersistenceKey } from '../../util/id.js';
+import type { Character, ScenarioSummary, WorldMap } from '../engine/types.js';
+import { turnPersistenceKey } from '../util/id.js';
 import {
   SQL_UTC_NOW,
   TABLE_COLUMNS,
   STRIP_MEMORIES_PATCH,
   STRIP_GROUPS_PATCH,
   STRIP_BOTH_PATCH,
-} from '../../backend_bridge/export_queries.js';
+} from './export_queries.js';
 
 export { SQL_UTC_NOW, TABLE_COLUMNS, STRIP_MEMORIES_PATCH, STRIP_GROUPS_PATCH, STRIP_BOTH_PATCH };
 
