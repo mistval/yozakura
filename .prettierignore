@@ -11,3 +11,5 @@ venv
 data/
 *.png
 demo_data
+.husky
+.prettierignore
