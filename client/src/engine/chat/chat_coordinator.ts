@@ -357,6 +357,7 @@ export class ChatCoordinator {
 
         const settledUpdates = await Promise.all(updatePromises);
         characterUpdates.push(...settledUpdates);
+        useTurnMachineStore.getState().setDidFinishMemoryGeneration();
 
         await globalParallelJobManager.waitAllForTag(ChatJobTags.chatJob);
 

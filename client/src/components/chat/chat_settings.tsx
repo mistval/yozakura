@@ -8,7 +8,7 @@ import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import type { ChangeEvent } from 'react';
-import { useIsAwaitingCharacterTextInput } from '../../state/chat_state.js';
+import { useUserCanInputChat } from '../../state/chat_state.js';
 
 interface ChatSettingsProps {
   open: boolean;
@@ -22,7 +22,7 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
   const chatInstructions = useTurnMachineStore((s) => s.chatInstructions);
   const initiatorLocation = useChatInitiatorLocation();
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
-  const canEndChat = useIsAwaitingCharacterTextInput();
+  const canEndChat = useUserCanInputChat();
 
   const updateSpeakerSelectionMode = (nextMode: SpeakerSelectionMode) => {
     setSettings({ speakerSelectionMode: nextMode });

@@ -66,28 +66,26 @@ export default function ImageGenerationSettingsSection() {
             onChange={(nextChecked) => setSettings({ generateImagesInParallelWithText: nextChecked })}
           />
 
-          {generateImagesInParallelWithText && (
-            <div>
-              <SettingFieldLabel
-                text="Image generation concurrency"
-                htmlFor="image-concurrency"
-                tooltipHtml={settingsTooltips['image.concurrency']}
-              />
-              <input
-                id="image-concurrency"
-                type="number"
-                min={1}
-                value={imageGenerationConcurrency}
-                onChange={(event) => {
-                  const val = parseInt(event.target.value, 10);
-                  if (!Number.isNaN(val) && val >= 1) {
-                    setSettings({ imageGenerationConcurrency: val });
-                  }
-                }}
-                className="rounded-input"
-              />
-            </div>
-          )}
+          <div>
+            <SettingFieldLabel
+              text="Image generation concurrency"
+              htmlFor="image-concurrency"
+              tooltipHtml={settingsTooltips['image.concurrency']}
+            />
+            <input
+              id="image-concurrency"
+              type="number"
+              min={1}
+              value={imageGenerationConcurrency}
+              onChange={(event) => {
+                const val = parseInt(event.target.value, 10);
+                if (!Number.isNaN(val) && val >= 1) {
+                  setSettings({ imageGenerationConcurrency: val });
+                }
+              }}
+              className="rounded-input"
+            />
+          </div>
         </div>
 
         <div>

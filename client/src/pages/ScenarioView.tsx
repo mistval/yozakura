@@ -30,7 +30,7 @@ import { getUserMovementSuggestion } from '../engine/character_schedule/get_sche
 import { ChatCoordinator } from '../engine/chat/chat_coordinator';
 import { startScenarioLoop } from '../engine/scenario_loop/scenario_loop';
 import { useSettingsStore } from '../state/settings_store';
-import { useIsAwaitingCharacterTextInput, useIsGeneratingMemories } from '../state/chat_state';
+import { useUserCanInputChat, useIsGeneratingMemories } from '../state/chat_state';
 
 export default function ScenarioView() {
   const navigate = useNavigate();
@@ -73,7 +73,7 @@ export default function ScenarioView() {
   const npcPhaseBusy =
     currentTurnCharacterId !== undefined && currentTurnCharacterId !== scenario?.userCharacterId;
   const canSubmitUserTurn = isUserTurn && !hasActiveChatSession;
-  const canReturnToMainMenu = useIsAwaitingCharacterTextInput() || !hasActiveChatSession;
+  const canReturnToMainMenu = useUserCanInputChat() || !hasActiveChatSession;
   const previousUserIdRef = useRef<string | null>(null);
   const visibleRelationships = useCachedCharacterRelationships();
 

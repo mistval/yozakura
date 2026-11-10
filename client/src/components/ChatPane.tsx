@@ -20,7 +20,7 @@ import { chatSceneImageTemplatesGroup } from '../engine/prompt_templates/chat/gr
 import {
   abortCurrentChatGeneration,
   useChatJobs,
-  useIsAwaitingCharacterTextInput,
+  useUserCanInputChat,
   useCurrentImageGenerationJobs,
   useIsGeneratingMemories,
 } from '../state/chat_state.js';
@@ -76,14 +76,12 @@ export default function ChatPane() {
   const chatJobs = useChatJobs();
   const imageGenerationJobs = useCurrentImageGenerationJobs();
   const isGeneratingMemories = useIsGeneratingMemories();
-  const isAwaitingCharacterTextInput = useIsAwaitingCharacterTextInput();
+  const userCanInputChat = useUserCanInputChat();
   const isAtMaxImageCapacity =
     useSettingsStore((s) => s.imageGenerationConcurrency) <= imageGenerationJobs.length;
   const canFinishChat = chatJobs.length === 0;
   const canGenerateImages =
-    !isGeneratingMemories &&
-    !isAtMaxImageCapacity &&
-    (generateImagesInParallelWithText || isAwaitingCharacterTextInput);
+    !isGeneratingMemories && !isAtMaxImageCapacity && (generateImagesInParallelWithText || userCanInputChat);
 
   const isGenerating = chatJobs.length > 0;
 
@@ -221,7 +219,7 @@ export default function ChatPane() {
 
   const getRunButtonTitle = () => {
     const userIsInitiator = participants[0]?.id === userCharacter.id;
-    if (userIsInitiator && isAwaitingCharacterTextInput && !transcript.hasCharacterMessages()) {
+    if (userIsInitiator && userCanInputChat && !transcript.hasCharacterMessages()) {
       return undefined;
     }
 
@@ -373,7 +371,7 @@ export default function ChatPane() {
                     event.stopPropagation();
                     triggerParticipantSpeak(participant.id);
                   }}
-                  disabled={!isAwaitingCharacterTextInput}
+                  disabled={!userCanInputChat}
                   className="text-xs w-full mt-1"
                 >
                   Speak
@@ -415,20 +413,20 @@ export default function ChatPane() {
                       onChange={(event) => setEditingMessageDraft(event.target.value)}
                       rows={3}
                       className="w-full border rounded-sm p-2 bg-inset text-sm"
-                      disabled={!isAwaitingCharacterTextInput}
+                      disabled={!userCanInputChat}
                     />
                     <div className="flex justify-end gap-2 text-xs">
                       <button
                         type="button"
                         onClick={() => setEditingMessageId(undefined)}
-                        disabled={!isAwaitingCharacterTextInput}
+                        disabled={!userCanInputChat}
                       >
                         Cancel
                       </button>
                       <button
                         type="button"
                         onClick={saveEditingMessageEdit}
-                        disabled={!isAwaitingCharacterTextInput || !editingMessageDraft.trim()}
+                        disabled={!userCanInputChat || !editingMessageDraft.trim()}
                       >
                         Save
                       </button>
@@ -440,7 +438,7 @@ export default function ChatPane() {
                   </>
                 )}
 
-                {isAwaitingCharacterTextInput && !editingMessageId && (
+                {userCanInputChat && !editingMessageId && (
                   <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs h-6 leading-none">
                     <button
                       type="button"
@@ -448,7 +446,6 @@ export default function ChatPane() {
                         const id = entry.getId();
                         deleteMessage(id);
                       }}
-                      disabled={!isAwaitingCharacterTextInput}
                       title="Delete message"
                       aria-label="Delete message"
                       className="px-1 h-5 w-5 flex items-center justify-center"
@@ -480,7 +477,6 @@ export default function ChatPane() {
                             const id = entry.getId();
                             redoMessage(id);
                           }}
-                          disabled={!isAwaitingCharacterTextInput}
                           title="Retry message"
                           aria-label="Retry message"
                           className="px-1 h-5 w-5 flex items-center justify-center"
@@ -497,7 +493,6 @@ export default function ChatPane() {
                           setEditingMessageId(id);
                           setEditingMessageDraft(entry.getContent());
                         }}
-                        disabled={!isAwaitingCharacterTextInput}
                         title="Edit message"
                         aria-label="Edit message"
                         className="px-1 h-5 w-5 flex items-center justify-center"
@@ -517,13 +512,13 @@ export default function ChatPane() {
         <textarea
           onChange={(event) => setInputIsNonEmpty(Boolean(event.target.value.trim()))}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey && inputIsNonEmpty && isAwaitingCharacterTextInput) {
+            if (event.key === 'Enter' && !event.shiftKey && inputIsNonEmpty && userCanInputChat) {
               event.preventDefault();
               send();
             }
           }}
           ref={inputRef}
-          disabled={!includesUser && !isAwaitingCharacterTextInput}
+          disabled={!includesUser && !userCanInputChat}
           placeholder={includesUser ? 'Enter a message' : 'Entering a message will add the user to the chat.'}
           rows={2}
           className="flex-1"
@@ -533,8 +528,8 @@ export default function ChatPane() {
             ■
           </button>
         )}
-        {isAwaitingCharacterTextInput && (
-          <button type="button" onClick={send} disabled={!isAwaitingCharacterTextInput || !inputIsNonEmpty}>
+        {userCanInputChat && (
+          <button type="button" onClick={send} disabled={!userCanInputChat || !inputIsNonEmpty}>
             Send
           </button>
         )}
@@ -545,7 +540,7 @@ export default function ChatPane() {
               setUserRequestedPhaseTransition('none');
               submitChatSkipTurn();
             }}
-            disabled={!isAwaitingCharacterTextInput}
+            disabled={!userCanInputChat}
           >
             Skip
           </button>

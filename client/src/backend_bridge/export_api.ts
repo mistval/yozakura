@@ -28,7 +28,7 @@ export async function requestDataExport(payload: ExportPayload): Promise<ExportR
   });
 
   if (response.status === 409) {
-    const json: unknown = await response.json().catch(() => ({}));
+    const json: unknown = await response.json();
     const data = conflictResponseSchema.parse(json);
 
     assertNonNullish(data.message, 'Unexpected response from shape export endpoint: ' + JSON.stringify(json));
@@ -41,7 +41,7 @@ export async function requestDataExport(payload: ExportPayload): Promise<ExportR
   }
 
   if (!response.ok) {
-    const json: unknown = await response.json().catch(() => ({}));
+    const json: unknown = await response.json();
     const data = errorResponseSchema.safeParse(json);
     return {
       success: false,

@@ -40,7 +40,7 @@ export async function stageImportArchive(file: File): Promise<StageImportResult>
   });
 
   if (!response.ok) {
-    const json: unknown = await response.json().catch(() => ({}));
+    const json: unknown = await response.json();
     const parsed = errorResponseSchema.safeParse(json);
     return {
       success: false,
@@ -67,7 +67,7 @@ export async function stagePrepackagedArchive(prepackagedName: string = 'demo'):
   });
 
   if (!response.ok) {
-    const json: unknown = await response.json().catch(() => ({}));
+    const json: unknown = await response.json();
     const parsed = errorResponseSchema.safeParse(json);
     return {
       success: false,
@@ -120,7 +120,7 @@ export async function commitImport(payload: ImportCommitPayload): Promise<Commit
   });
 
   if (!response.ok) {
-    const json: unknown = await response.json().catch(() => ({}));
+    const json: unknown = await response.json();
     const parsed = errorResponseSchema.safeParse(json);
     return {
       success: false,

@@ -4,6 +4,7 @@ import { globalParallelJobManager } from '../engine/parallelization/job_manager.
 import { UserAbortCurrentGenerationSignalException } from '../engine/scenario_loop/flow_control.js';
 import { useJobsWithTag } from './parallel_job_manager_store';
 import { useSettingsStore } from './settings_store';
+import { useTurnMachineStore } from './turn_machine_store';
 
 export { ChatJobTags };
 
@@ -31,10 +32,11 @@ export function useCurrentImageGenerationJobs() {
 
 export function useIsGeneratingMemories() {
   const chatJobs = useChatJobs();
-  return chatJobs.some((j) => hasTag(j, ChatJobTags.processingMemories));
+  const finishedGeneratingMemories = useTurnMachineStore((t) => t.didFinishMemoryGeneration);
+  return finishedGeneratingMemories || chatJobs.some((j) => hasTag(j, ChatJobTags.processingMemories));
 }
 
-export function useIsAwaitingCharacterTextInput() {
+export function useUserCanInputChat() {
   const chatJobs = useChatJobs();
   const generateImagesInParallelWithText = useSettingsStore((s) => s.generateImagesInParallelWithText);
   const isGeneratingImage = useCurrentImageGenerationJobs();
@@ -45,6 +47,6 @@ export function useIsAwaitingCharacterTextInput() {
     !chatJobs.some((j) => hasTag(j, ChatJobTags.characterIsSpeaking)) &&
     !chatJobs.some((j) => hasTag(j, ChatJobTags.selectingSpeaker)) &&
     !chatJobs.some((j) => hasTag(j, ChatJobTags.judgingConversationEnd)) &&
-    (generateImagesInParallelWithText || !isGeneratingImage)
+    (!isGeneratingImage || generateImagesInParallelWithText)
   );
 }
