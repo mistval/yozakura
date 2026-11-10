@@ -201,7 +201,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
           await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id),
           {
             jobConfig: createMemoryJobConfig(
-              `Extracting memories of ${otherCharacter.firstName} for ${fromCharacterPerspective.firstName}`
+              `Extracting memories: ${fromCharacterPerspective.firstName} → ${otherCharacter.firstName}`
             ),
           }
         );
@@ -230,7 +230,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
               ),
               {
                 jobConfig: createMemoryJobConfig(
-                  `Updating ${fromCharacterPerspective.firstName}'s goal towards ${otherCharacter.firstName}`
+                  `Updating goal: ${fromCharacterPerspective.firstName} → ${otherCharacter.firstName}`
                 ),
               }
             );
@@ -245,7 +245,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
             await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id),
             {
               jobConfig: createMemoryJobConfig(
-                `Updating ${fromCharacterPerspective.firstName}'s memory of ${otherCharacter.firstName}`
+                `Updating pairwise memory: ${fromCharacterPerspective.firstName} → ${otherCharacter.firstName}`
               ),
             }
           );
@@ -305,7 +305,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
 
       const newConversationGoal = await nextConversationGoalUpdatesChain.renderAndExecute(pairwiseContext, {
         jobConfig: createMemoryJobConfig(
-          `Updating ${fromCharacterPerspective.firstName}'s goal towards ${otherCharacter.firstName}`
+          `Updating goal: ${fromCharacterPerspective.firstName} → ${otherCharacter.firstName}`
         ),
       });
 
@@ -320,7 +320,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
 
       const newMemory = await rollingPairwiseMemoryRewriteChain.renderAndExecute(pairwiseContext, {
         jobConfig: createMemoryJobConfig(
-          `Updating ${fromCharacterPerspective.firstName}'s memory of ${otherCharacter.firstName}`
+          `Updating pairwise memory: ${fromCharacterPerspective.firstName} → ${otherCharacter.firstName}`
         ),
       });
 
@@ -386,7 +386,7 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
   const newGlobalMemory = await rollingGlobalMemoryRewriteChain.renderAndExecute(
     await buildFocusedChatTemplateContext(fromCharacterPerspective.id),
     {
-      jobConfig: createMemoryJobConfig(`Rewriting global memory for ${fromCharacterPerspective.firstName}`),
+      jobConfig: createMemoryJobConfig(`Updating global memory for ${fromCharacterPerspective.firstName}`),
     }
   );
 
