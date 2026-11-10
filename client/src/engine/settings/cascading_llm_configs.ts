@@ -101,7 +101,7 @@ export function updateLLMConfigsWithBaseDefaultsConnection(
     isKnownCloudLlmProvider(trimmedUrl) &&
     (baseConfigEntry.concurrencyGroupLimit === 1 || baseConfigEntry.concurrencyGroupLimit === undefined);
 
-  const concurrencyGroupLimit = shouldAutoSetConcurrency ? 3 : baseConfigEntry.concurrencyGroupLimit;
+  const concurrencyGroupLimit = shouldAutoSetConcurrency ? 6 : baseConfigEntry.concurrencyGroupLimit;
 
   const nextBaseConfig: LLMConfig = {
     ...baseConfigEntry,
