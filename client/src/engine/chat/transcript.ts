@@ -364,8 +364,23 @@ export class ConversationTranscript {
       imageUrl,
     }) satisfies ImageMessage;
 
+    // If there are any image messages following the afterMessageId,
+    // we put the new image after those.
+    let coercedAfterMessageId = opts?.afterMessageId;
+    if (coercedAfterMessageId) {
+      for (let i = 0; i < this.messages.length; ++i) {
+        if (this.messages[i]?.getId() === opts?.afterMessageId) {
+          let nextMessageIdx = i + 1;
+          while (nextMessageIdx < this.messages.length && this.messages[nextMessageIdx]?.isImageMessage()) {
+            coercedAfterMessageId = this.messages[nextMessageIdx]?.getId();
+            ++nextMessageIdx;
+          }
+        }
+      }
+    }
+
     return {
-      ...this.addMessage(newRawMessage, undefined, opts),
+      ...this.addMessage(newRawMessage, undefined, { ...opts, afterMessageId: coercedAfterMessageId }),
       newRawMessage,
     };
   }
@@ -511,6 +526,11 @@ export class ConversationTranscript {
 
   public getMostRecentMessage() {
     return this.messages[this.messages.length - 1];
+  }
+
+  public getMostRecentChatMessage() {
+    const message = this.messages.findLast(m => m.isCharacterChatMessage());
+    return message?.asCharacterChatMessage();
   }
 
   public getMostRecentSpeakerId() {

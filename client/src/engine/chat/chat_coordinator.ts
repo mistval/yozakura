@@ -344,8 +344,6 @@ export class ChatCoordinator {
     const scenario = getRequiredActiveScenario();
 
     if (!noEffect) {
-      await globalParallelJobManager.allSettledForTag(ChatJobTags.chatJob);
-
       const characterStore = useScenarioCharacterStore.getState();
       const relationshipStore = useScenarioCharacterRelationshipStore.getState();
       const characterUpdates: Array<Awaited<ReturnType<typeof generateCharacterEndOfChatUpdates>>> = [];
@@ -363,7 +361,7 @@ export class ChatCoordinator {
         const settledUpdates = await Promise.all(updatePromises);
         characterUpdates.push(...settledUpdates);
 
-        await Promise.all([characterStore.commitAllChanges(), relationshipStore.commitAllChanges()]);
+        await Promise.all([characterStore.commitAllChanges(), relationshipStore.commitAllChanges(), globalParallelJobManager.waitAllForTag(ChatJobTags.chatJob)]);
       } catch (err) {
         await Promise.all([
           characterStore.discardPendingChanges(),

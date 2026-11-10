@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useChatJobs, useIsGeneratingMemories } from '../../state/chat_state.js';
-import { useActiveChatParticipants, useTurnMachineStore } from '../../state/turn_machine_store.js';
-import { useUserCharacter } from '../../state/scenario_character_store.js';
-import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
-import { useSettingsStore } from '../../state/settings_store.js';
-import type { Character } from '../../engine/types.js';
 
 export default function ChatTopBarStatus() {
   const [showWorkingPopover, setShowWorkingPopover] = useState(false);
@@ -12,30 +7,10 @@ export default function ChatTopBarStatus() {
 
   const chatJobs = useChatJobs();
   const isGeneratingMemories = useIsGeneratingMemories();
-  const transcript = useTurnMachineStore((state) => state.transcript);
-  const participants = useActiveChatParticipants();
-  const userCharacter = useUserCharacter();
-  const userRequestedPhaseTransition = useScenarioLoopStateStore(
-    (state) => state.userRequestedPhaseTransition
-  );
-
-  const npcChatEndMode = useSettingsStore((state) => state.npcChatEndMode);
-  const intelligentChatEndMaxLength = useSettingsStore((state) => state.intelligentChatEndMaxLength);
-  const intelligentChatEndGroupMaxLength = useSettingsStore(
-    (state) => state.intelligentChatEndGroupMaxLength
-  );
-  const richNpcMessageCount = useSettingsStore((state) => state.richNpcMessageCount);
-  const groupChatMessageLimit = useSettingsStore((state) => state.groupChatMessageLimit);
-
   const runningChatJobs = chatJobs.filter((j) => j.state === 'running');
   const singleRunningJob = runningChatJobs.length === 1 ? runningChatJobs[0] : undefined;
-  const hasMultipleRunningJobs = runningChatJobs.length > 1;
+  const hasMultipleRunningJobs = chatJobs.length > 1;
 
-  const isPaused = userRequestedPhaseTransition === 'paused';
-  const includesUser = useMemo(
-    () => (userCharacter ? participants.some((p: Character) => p.id === userCharacter.id) : false),
-    [participants, userCharacter]
-  );
 
   useEffect(() => {
     if (!showWorkingPopover) return;
@@ -65,35 +40,9 @@ export default function ChatTopBarStatus() {
       return singleRunningJob.name;
     }
 
-    let messageLimit: number | undefined;
-
-    if (!includesUser) {
-      if (npcChatEndMode === 'intelligent') {
-        messageLimit =
-          participants.length > 2 ? intelligentChatEndGroupMaxLength : intelligentChatEndMaxLength;
-      } else if (participants.length <= 2) {
-        messageLimit = richNpcMessageCount * 2;
-      } else {
-        messageLimit = groupChatMessageLimit;
-      }
-    }
-
-    if (!(includesUser || isPaused)) {
-      return `NPC-only chat in progress (${transcript?.countCharacterChatMessages()}/${messageLimit || 10} messages).`;
-    }
-
     return '';
   }, [
     singleRunningJob,
-    includesUser,
-    isPaused,
-    npcChatEndMode,
-    participants.length,
-    intelligentChatEndGroupMaxLength,
-    intelligentChatEndMaxLength,
-    richNpcMessageCount,
-    groupChatMessageLimit,
-    transcript,
   ]);
 
   if (hasMultipleRunningJobs) {

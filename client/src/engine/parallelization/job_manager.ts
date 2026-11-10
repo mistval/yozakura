@@ -112,6 +112,16 @@ class ParallelJobManager {
     return results;
   }
 
+  public async waitAllForTag(tag: string) {
+    const settledResults = await globalParallelJobManager.allSettledForTag(tag);
+          for (const result of settledResults) {
+            if (result.status === 'rejected') {
+              throw result.reason;
+            }
+          }
+     
+  }
+
   private notifyObservers() {
     this.jobsChangedObservers.forEach((o) => {
       try {

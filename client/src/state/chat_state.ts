@@ -22,12 +22,9 @@ export function useChatJobs() {
   return useJobsWithTag(ChatJobTags.chatJob);
 }
 
-export function useIsGeneratingImageOrImagePrompt() {
+export function useCurrentImageGenerationJobs() {
   const chatJobs = useChatJobs();
-  return (
-    chatJobs.some((j) => hasTag(j, ChatJobTags.generatingImage)) ||
-    chatJobs.some((j) => hasTag(j, ChatJobTags.generatingImagePrompt))
-  );
+  return chatJobs.filter(j => hasTag(j, ChatJobTags.generatingImage) || hasTag(j, ChatJobTags.generatingImagePrompt));
 }
 
 export function useIsGeneratingMemories() {
@@ -38,13 +35,14 @@ export function useIsGeneratingMemories() {
 export function useIsAwaitingCharacterTextInput() {
   const chatJobs = useChatJobs();
   const generateImagesInParallelWithText = useSettingsStore((s) => s.generateImagesInParallelWithText);
-  const isGeneratingImage = useIsGeneratingImageOrImagePrompt();
+  const isGeneratingImage = useCurrentImageGenerationJobs();
+  const isGeneratingMemories = useIsGeneratingMemories();
 
   return (
+    !isGeneratingMemories &&
     !chatJobs.some((j) => hasTag(j, ChatJobTags.characterIsSpeaking)) &&
     !chatJobs.some((j) => hasTag(j, ChatJobTags.selectingSpeaker)) &&
     !chatJobs.some((j) => hasTag(j, ChatJobTags.judgingConversationEnd)) &&
-    !chatJobs.some((j) => hasTag(j, ChatJobTags.processingMemories)) &&
     (generateImagesInParallelWithText || !isGeneratingImage)
   );
 }

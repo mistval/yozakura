@@ -21,7 +21,7 @@ import {
   abortCurrentChatGeneration,
   useChatJobs,
   useIsAwaitingCharacterTextInput,
-  useIsGeneratingImageOrImagePrompt,
+  useCurrentImageGenerationJobs,
   useIsGeneratingMemories,
 } from '../state/chat_state.js';
 import ChatTopBarStatus from './chat/ChatTopBarStatus.js';
@@ -74,12 +74,13 @@ export default function ChatPane() {
   const setPendingImagePromptEdit = useScenarioLoopStateStore((state) => state.setPendingImagePromptEdit);
 
   const chatJobs = useChatJobs();
-  const isGeneratingImage = useIsGeneratingImageOrImagePrompt();
+  const imageGenerationJobs = useCurrentImageGenerationJobs();
   const isGeneratingMemories = useIsGeneratingMemories();
   const isAwaitingCharacterTextInput = useIsAwaitingCharacterTextInput();
-  const canFinishChat = isAwaitingCharacterTextInput && !isGeneratingImage;
-  const canGenerateImages =
-    generateImagesInParallelWithText || (!isGeneratingImage && isAwaitingCharacterTextInput);
+  const isAtMaxImageCapacity = useSettingsStore(s => s.imageGenerationConcurrency) <= imageGenerationJobs.length;
+  const canFinishChat = chatJobs.length === 0;
+  const canGenerateImages = !isGeneratingMemories && !isAtMaxImageCapacity && (
+    generateImagesInParallelWithText || isAwaitingCharacterTextInput);
 
   const isGenerating = chatJobs.length > 0;
 
@@ -558,7 +559,7 @@ export default function ChatPane() {
           button={
             <button
               type="button"
-              onClick={() => void ChatCoordinator.requestSceneImage(undefined)}
+              onClick={() => void ChatCoordinator.requestSceneImage(transcript.getMostRecentChatMessage()?.id)}
               disabled={!canGenerateImages}
               title={
                 activeSceneImageChain
