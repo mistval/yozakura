@@ -73,7 +73,7 @@ export default function ScenarioView() {
   const npcPhaseBusy =
     currentTurnCharacterId !== undefined && currentTurnCharacterId !== scenario?.userCharacterId;
   const canSubmitUserTurn = isUserTurn && !hasActiveChatSession;
-  const canReturnToMainMenu = useIsAwaitingCharacterTextInput();
+  const canReturnToMainMenu = useIsAwaitingCharacterTextInput() || !hasActiveChatSession;
   const previousUserIdRef = useRef<string | null>(null);
   const visibleRelationships = useCachedCharacterRelationships();
 
