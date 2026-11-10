@@ -358,11 +358,9 @@ export class ChatCoordinator {
         const settledUpdates = await Promise.all(updatePromises);
         characterUpdates.push(...settledUpdates);
 
-        await Promise.all([
-          characterStore.commitAllChanges(),
-          relationshipStore.commitAllChanges(),
-          globalParallelJobManager.waitAllForTag(ChatJobTags.chatJob),
-        ]);
+        await globalParallelJobManager.waitAllForTag(ChatJobTags.chatJob);
+
+        await Promise.all([characterStore.commitAllChanges(), relationshipStore.commitAllChanges()]);
       } catch (err) {
         await Promise.all([
           characterStore.discardPendingChanges(),
