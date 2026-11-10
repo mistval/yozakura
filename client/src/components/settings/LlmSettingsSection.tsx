@@ -13,6 +13,7 @@ import { newId } from '../../util/id.js';
 import { readModelFromMetaOptions, writeModelToMetaOptions } from './meta_options_model.js';
 import DeleteButton from '../ui/DeleteButton.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
+import { useQueryParam } from '../../util/queryParams.js';
 
 type ConfigDraft = LLMOptionsGroup;
 const DEFAULT_LLM_META_OPTIONS_SOURCE = JSON.stringify(LLM_DEFAULTS, null, 2);
@@ -225,34 +226,6 @@ function ConfigEditor({
 
       <div>
         <SettingFieldLabel
-          text="Rule (optional)"
-          htmlFor={`llm-config-rule-${config.id}`}
-          tooltipHtml={settingsTooltips['llm.rule']}
-        />
-        <input
-          id={`llm-config-rule-${config.id}`}
-          value={draft.rule}
-          onChange={(event) =>
-            setDraft((prev) => ({ ...prev, rule: event.target.value }) satisfies typeof prev)
-          }
-          placeholder="context.promptTemplateGroup === 'gen_intelligent_next_speaker_select'"
-          className="rounded-input"
-          onPaste={(event) => {
-            onPasteWithWarning(event, {
-              value: draft.rule,
-              applyValue: (val) => {
-                setDraft((prev) => ({ ...prev, rule: val }) satisfies typeof prev);
-              },
-            });
-          }}
-        />
-        <div className="text-xs text-muted mt-1">
-          e.g. context.promptTemplateGroup === 'gen_intelligent_next_speaker_select'
-        </div>
-      </div>
-
-      <div>
-        <SettingFieldLabel
           text="Model (optional)"
           htmlFor={`llm-config-model-${config.id}`}
           tooltipHtml={settingsTooltips['llm.model']}
@@ -277,25 +250,52 @@ function ConfigEditor({
         />
       </div>
 
-      <div>
-        <SettingFieldLabel
-          text="LLM Meta Options (JSON)"
-          htmlFor={`llm-config-meta-${config.id}`}
-          tooltipHtml={settingsTooltips['llm.metaOptions']}
-        />
-        <textarea
-          id={`llm-config-meta-${config.id}`}
-          rows={10}
-          value={draft.llmMetaOptionsSource}
-          onChange={(event) =>
-            setDraft((prev) => ({ ...prev, llmMetaOptionsSource: event.target.value }) satisfies typeof prev)
-          }
-          className="rounded-input font-mono text-sm"
-        />
-      </div>
+      <SpoilerSection title="Advanced Settings" revealedQueryParam="llmoptionsadvanced">
+        <div>
+          <SettingFieldLabel
+            text="LLM Meta Options (JSON)"
+            htmlFor={`llm-config-meta-${config.id}`}
+            tooltipHtml={settingsTooltips['llm.metaOptions']}
+          />
+          <textarea
+            id={`llm-config-meta-${config.id}`}
+            rows={10}
+            value={draft.llmMetaOptionsSource}
+            onChange={(event) =>
+              setDraft(
+                (prev) => ({ ...prev, llmMetaOptionsSource: event.target.value }) satisfies typeof prev
+              )
+            }
+            className="rounded-input font-mono text-sm"
+          />
+        </div>
 
-      <SpoilerSection title="Advanced Settings">
-        <div className="space-y-3">
+        <div>
+          <SettingFieldLabel
+            text="Rule (optional)"
+            htmlFor={`llm-config-rule-${config.id}`}
+            tooltipHtml={settingsTooltips['llm.rule']}
+          />
+          <input
+            id={`llm-config-rule-${config.id}`}
+            value={draft.rule}
+            onChange={(event) =>
+              setDraft((prev) => ({ ...prev, rule: event.target.value }) satisfies typeof prev)
+            }
+            placeholder="context.promptTemplateGroup === 'gen_intelligent_next_speaker_select'"
+            className="rounded-input"
+            onPaste={(event) => {
+              onPasteWithWarning(event, {
+                value: draft.rule,
+                applyValue: (val) => {
+                  setDraft((prev) => ({ ...prev, rule: val }) satisfies typeof prev);
+                },
+              });
+            }}
+          />
+        </div>
+
+        <div className="space-y-3 mt-3">
           <CheckboxSettingRow
             id={`llm-token-streaming-${config.id}`}
             label="Token streaming"
@@ -303,41 +303,42 @@ function ConfigEditor({
             checked={draft.tokenStreamingEnabled ?? true}
             onChange={(nextChecked) => setDraft((prev) => ({ ...prev, tokenStreamingEnabled: nextChecked }))}
           />
+          <div className="flex gap-3">
+            <div className="w-full">
+              <SettingFieldLabel
+                text="Concurrency Group Name (optional)"
+                htmlFor={`llm-config-concurrency-group-${config.id}`}
+                tooltipHtml={settingsTooltips['llm.concurrencyGroupName']}
+              />
+              <input
+                id={`llm-config-concurrency-group-${config.id}`}
+                value={draft.concurrencyGroupName}
+                onChange={(event) =>
+                  setDraft((prev) => ({ ...prev, concurrencyGroupName: event.target.value }))
+                }
+                placeholder="default_llm"
+                className="rounded-input"
+              />
+            </div>
 
-          <div>
-            <SettingFieldLabel
-              text="Concurrency Group Name (optional)"
-              htmlFor={`llm-config-concurrency-group-${config.id}`}
-              tooltipHtml={settingsTooltips['llm.concurrencyGroupName']}
-            />
-            <input
-              id={`llm-config-concurrency-group-${config.id}`}
-              value={draft.concurrencyGroupName}
-              onChange={(event) =>
-                setDraft((prev) => ({ ...prev, concurrencyGroupName: event.target.value }))
-              }
-              placeholder="default_llm"
-              className="rounded-input"
-            />
-          </div>
-
-          <div>
-            <SettingFieldLabel
-              text="Concurrency Group Limit (optional)"
-              htmlFor={`llm-config-concurrency-limit-${config.id}`}
-              tooltipHtml={settingsTooltips['llm.concurrencyGroupLimit']}
-            />
-            <input
-              id={`llm-config-concurrency-limit-${config.id}`}
-              type="number"
-              min={1}
-              value={draft.concurrencyGroupLimit}
-              onChange={(event) =>
-                setDraft((prev) => ({ ...prev, concurrencyGroupLimit: event.target.value }))
-              }
-              placeholder="2"
-              className="rounded-input"
-            />
+            <div className="w-full">
+              <SettingFieldLabel
+                text="Concurrency Group Limit (optional)"
+                htmlFor={`llm-config-concurrency-limit-${config.id}`}
+                tooltipHtml={settingsTooltips['llm.concurrencyGroupLimit']}
+              />
+              <input
+                id={`llm-config-concurrency-limit-${config.id}`}
+                type="number"
+                min={1}
+                value={draft.concurrencyGroupLimit}
+                onChange={(event) =>
+                  setDraft((prev) => ({ ...prev, concurrencyGroupLimit: event.target.value }))
+                }
+                placeholder="2"
+                className="rounded-input"
+              />
+            </div>
           </div>
 
           <div>
@@ -403,7 +404,7 @@ export default function LlmSettingsSection() {
   const llmConfigs = useSettingsStore((s) => s.llmConfigs);
   const setSettings = useSettingsStore((s) => s.setSettings);
   const modalScroll = useModalScroll();
-  const [editingId, setEditingId] = useState<string | undefined>(undefined);
+  const [editingId, setEditingId] = useQueryParam('llmoptionsid');
 
   const configs: LLMOptionsGroup[] = Object.values(llmConfigs || {});
   const hasMultipleConfigs = configs.length > 1;
