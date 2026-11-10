@@ -51,7 +51,9 @@ jobs:
         run: npm run test --prefix client -- run
 
       - name: Run integration tests
-        run: npm run test:integration
+        run: |
+          npm run pack:demo --prefix server
+          npm run test:integration
 
       - name: Collect changed files for prettier
         id: changed
