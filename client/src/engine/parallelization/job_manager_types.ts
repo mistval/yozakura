@@ -7,7 +7,8 @@ export interface INewParallelJob<TResultsType> {
   parallelismGroup?: string | undefined;
   job: (abortSignal: AbortSignal) => Promise<TResultsType>;
   tags?: readonly string[] | string[] | undefined;
-  exclusiveWithParallelismGroups?: string[] | undefined;
+  exclusiveWithTags?: readonly string[] | string[] | undefined;
+  onStart?: (() => void) | undefined;
   abortSignal?: AbortSignal | undefined;
 }
 

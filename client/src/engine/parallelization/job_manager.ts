@@ -9,7 +9,7 @@ import {
 } from './job_manager_types';
 
 // Supports jobs with limited parallelism per parallelism group, and exclusive parallelism groups
-class ParallelJobManager {
+export class ParallelJobManager {
   private readonly jobsChangedObservers: (() => void)[] = [];
   private readonly preQueueMiddlewares: ParallelJobPreQueueMiddleware[] = [];
   private currentJobs = new Map<string, IParallelJob<unknown>>();
@@ -140,6 +140,7 @@ class ParallelJobManager {
 
     this.currentJobs.set(job.id, newJob);
     this.notifyObservers();
+    newJob.onStart?.();
 
     try {
       const result = await newJob.job(newJob.abortController.signal);
@@ -163,15 +164,15 @@ class ParallelJobManager {
     let currentJobs: IParallelJob<unknown>[] = [];
     let waitingJobs: IParallelJob<unknown>[] = [];
     let runningJobs: IParallelJob<unknown>[] = [];
-    let runningParallelismGroups = new Set<string>();
     let runningJobsByParallelismGroup: _.Dictionary<IParallelJob<unknown>[]> = {};
+    let runningTags = new Set<string>();
 
     const recalculateState = () => {
       currentJobs = Array.from(this.currentJobs.values());
       waitingJobs = currentJobs.filter((j) => j.state === 'queued');
       runningJobs = currentJobs.filter((j) => j.state === 'running');
-      runningParallelismGroups = new Set(runningJobs.map((j) => j.parallelismGroup));
       runningJobsByParallelismGroup = _.groupBy(runningJobs, (j) => j.parallelismGroup);
+      runningTags = new Set(runningJobs.flatMap((j) => j.tags ?? []));
     };
 
     recalculateState();
@@ -181,10 +182,9 @@ class ParallelJobManager {
       const groupHasCapacity =
         countRunningForGroup < (this.concurrencyForGroup.get(job.parallelismGroup) ?? 0);
       const groupNotExcludedLeft =
-        !job.exclusiveWithParallelismGroups ||
-        !job.exclusiveWithParallelismGroups.some((g) => runningParallelismGroups.has(g));
+        !job.exclusiveWithTags || !job.exclusiveWithTags.some((t) => runningTags.has(t));
       const groupNotExcludedRight = !runningJobs.some((j) =>
-        j.exclusiveWithParallelismGroups?.includes(job.parallelismGroup)
+        j.exclusiveWithTags?.some((t) => job.tags?.includes(t))
       );
 
       if (groupHasCapacity && groupNotExcludedLeft && groupNotExcludedRight) {

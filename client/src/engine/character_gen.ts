@@ -8,7 +8,7 @@ import {
   type SillyTavernCardPayload,
   type DetectedCardMetadata,
 } from './character_card_metadata.js';
-import { type Character } from './types.js';
+import { type Character, type ParallelPromptJobConfig } from './types.js';
 import { createWardrobe, DAILY_AUTOSELECT_TAG_PREFIX, formatPrefixedTag } from './wardrobes.js';
 import {
   baseAppearanceGenerationTemplateChain,
@@ -31,13 +31,29 @@ export async function generateCharacterInternalDescription(
   );
 }
 
+export type GenerateFieldOptions = {
+  abortSignal?: AbortSignal | undefined;
+  jobConfig?: ParallelPromptJobConfig | undefined;
+};
+
+function toFieldOptions(options?: AbortSignal | GenerateFieldOptions): {
+  abortSignal?: AbortSignal | undefined;
+  jobConfig?: ParallelPromptJobConfig | undefined;
+} {
+  if (options instanceof AbortSignal) {
+    return { abortSignal: options };
+  }
+  return options ?? {};
+}
+
 export async function generateCharacterExternalDescription(
   character: Character,
-  abortSignal?: AbortSignal
+  options?: AbortSignal | GenerateFieldOptions
 ): Promise<string> {
-  return externalDescriptionGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
-    abortSignal,
-  });
+  return externalDescriptionGenerationTemplateChain.renderAndExecute(
+    buildCharacterEditorContext(character),
+    toFieldOptions(options)
+  );
 }
 
 export type ExtractCharacterCardField =
@@ -71,68 +87,113 @@ export async function extractCharacterCard(
   const fields = options?.fields ?? ALL_EXTRACT_CHARACTER_CARD_FIELDS;
   const shouldExtract = (field: ExtractCharacterCardField) => fields.includes(field);
 
+  const charTag = `extract_character_${newId()}`;
+  const makeJobConfig = (name: string): ParallelPromptJobConfig => ({
+    name,
+    tags: [charTag],
+    exclusiveWithTags: [charTag],
+    onStart: () => onStep?.(name),
+  });
+
+  const tasks: Promise<void>[] = [];
+
   if (shouldExtract('internalDescription')) {
-    onStep?.('Extracting description');
-    const description = await extractCharacterDescriptionTemplateChain.renderAndExecute(
-      buildCharacterEditorContext(character),
-      { abortSignal: signal }
+    tasks.push(
+      (async () => {
+        const description = await extractCharacterDescriptionTemplateChain.renderAndExecute(
+          buildCharacterEditorContext(character),
+          { abortSignal: signal, jobConfig: makeJobConfig('Extracting description') }
+        );
+        onFieldGenerated?.('internalDescription', description);
+      })()
     );
-    onFieldGenerated?.('internalDescription', description);
   }
 
   if (shouldExtract('externalDescription')) {
-    onStep?.('Generating external description');
-    const externalDescription = await generateCharacterExternalDescription(character, signal);
-    onFieldGenerated?.('externalDescription', externalDescription);
+    tasks.push(
+      (async () => {
+        const externalDescription = await generateCharacterExternalDescription(character, {
+          abortSignal: signal,
+          jobConfig: makeJobConfig('Generating external description'),
+        });
+        onFieldGenerated?.('externalDescription', externalDescription);
+      })()
+    );
   }
 
   if (shouldExtract('exampleDialogue')) {
-    onStep?.('Generating example dialogue');
-    const exampleDialogue = await generateExampleDialogue(character, signal);
-    onFieldGenerated?.('exampleDialogue', exampleDialogue);
+    tasks.push(
+      (async () => {
+        const exampleDialogue = await generateExampleDialogue(character, {
+          abortSignal: signal,
+          jobConfig: makeJobConfig('Generating example dialogue'),
+        });
+        onFieldGenerated?.('exampleDialogue', exampleDialogue);
+      })()
+    );
   }
 
   if (shouldExtract('baseAppearanceTags')) {
-    onStep?.('Generating appearance');
-    const baseAppearanceTags = await generateBaseAppearanceTags(character, signal);
-    onFieldGenerated?.('baseAppearanceTags', baseAppearanceTags);
+    tasks.push(
+      (async () => {
+        const baseAppearanceTags = await generateBaseAppearanceTags(character, {
+          abortSignal: signal,
+          jobConfig: makeJobConfig('Generating appearance'),
+        });
+        onFieldGenerated?.('baseAppearanceTags', baseAppearanceTags);
+      })()
+    );
   }
 
   if (shouldExtract('wardrobes')) {
-    onStep?.('Generating wardrobe');
-    const wardrobeText = await generateWardrobe(character, signal);
-    onFieldGenerated?.('wardrobes', [
-      createWardrobe({
-        text: wardrobeText,
-        tags: [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')],
-        enabled: true,
-      }),
-    ]);
+    tasks.push(
+      (async () => {
+        const wardrobeText = await generateWardrobe(character, {
+          abortSignal: signal,
+          jobConfig: makeJobConfig('Generating wardrobe'),
+        });
+        onFieldGenerated?.('wardrobes', [
+          createWardrobe({
+            text: wardrobeText,
+            tags: [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')],
+            enabled: true,
+          }),
+        ]);
+      })()
+    );
   }
+
+  await Promise.all(tasks);
 }
 
 export async function generateExampleDialogue(
   character: Character,
-  abortSignal?: AbortSignal
+  options?: AbortSignal | GenerateFieldOptions
 ): Promise<string> {
-  return exampleDialogueTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
-    abortSignal,
-  });
+  return exampleDialogueTemplateChain.renderAndExecute(
+    buildCharacterEditorContext(character),
+    toFieldOptions(options)
+  );
 }
 
 export async function generateBaseAppearanceTags(
   character: Character,
-  abortSignal?: AbortSignal
+  options?: AbortSignal | GenerateFieldOptions
 ): Promise<string> {
-  return baseAppearanceGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
-    abortSignal,
-  });
+  return baseAppearanceGenerationTemplateChain.renderAndExecute(
+    buildCharacterEditorContext(character),
+    toFieldOptions(options)
+  );
 }
 
-export async function generateWardrobe(character: Character, abortSignal?: AbortSignal): Promise<string> {
-  return wardrobeGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
-    abortSignal,
-  });
+export async function generateWardrobe(
+  character: Character,
+  options?: AbortSignal | GenerateFieldOptions
+): Promise<string> {
+  return wardrobeGenerationTemplateChain.renderAndExecute(
+    buildCharacterEditorContext(character),
+    toFieldOptions(options)
+  );
 }
 
 export function createBlankCharacter(): Character {

@@ -116,6 +116,6 @@ export function createTextCompletionJobConfig(
   return {
     name,
     tags: Array.from(tagSet),
-    exclusiveWithParallelismGroups: !isImageParallel ? [IMAGE_GENERATION_PARALLELISM_GROUP] : undefined,
+    exclusiveWithTags: !isImageParallel ? [ChatJobTags.generatingImage] : undefined,
   };
 }

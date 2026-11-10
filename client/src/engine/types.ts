@@ -483,5 +483,6 @@ export type ScenarioEvent = z.infer<typeof scenarioEventSchema>;
 export interface ParallelPromptJobConfig {
   name: string;
   tags?: string[] | undefined;
-  exclusiveWithParallelismGroups?: string[] | undefined;
+  exclusiveWithTags?: string[] | undefined;
+  onStart?: (() => void) | undefined;
 }

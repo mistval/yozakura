@@ -1,17 +1,11 @@
 import { useMemo, useRef, useState } from 'react';
 import Modal from './ui/Modal';
-import InfoTooltip from './ui/InfoTooltip';
 import type { CardImportMode } from '../engine/character_gen';
 import {
   useBulkCharacterImport,
   type BulkImportItem,
   type BulkImportItemStatus,
 } from '../hooks/useBulkCharacterImport';
-
-const BATCH_SIZE_TOOLTIP =
-  'How many characters to convert at the same time. Each conversion makes several LLM requests, so ' +
-  'higher values import faster but put more load on your LLM provider and may hit rate limits. ' +
-  'Leave at <strong>1</strong> if unsure.';
 
 const STATUS_ICON: Record<BulkImportItemStatus, string> = {
   pending: '·',
@@ -30,7 +24,6 @@ export default function BulkImportCharactersModal({ open, onClose }: { open: boo
   const { items, phase, run, cancel, reset } = useBulkCharacterImport();
 
   const [mode, setMode] = useState<CardImportMode>('convert');
-  const [batchSize, setBatchSize] = useState<number>(1);
   const [skipExisting, setSkipExisting] = useState<boolean>(true);
   const [files, setFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState<boolean>(false);
@@ -80,7 +73,7 @@ export default function BulkImportCharactersModal({ open, onClose }: { open: boo
 
   const startImport = () => {
     if (files.length === 0) return;
-    void run({ files, mode, batchSize: Math.max(1, batchSize), skipExisting });
+    void run({ files, mode, skipExisting });
   };
 
   return (
@@ -121,28 +114,6 @@ export default function BulkImportCharactersModal({ open, onClose }: { open: boo
                   </span>
                 </span>
               </label>
-
-              {mode === 'convert' && (
-                <div className="flex items-center gap-2 pl-7">
-                  <label htmlFor="bulk-import-batch-size" className="text-xs text-muted">
-                    Batch size
-                  </label>
-                  <InfoTooltip label="About batch size" html={BATCH_SIZE_TOOLTIP} />
-                  <input
-                    id="bulk-import-batch-size"
-                    type="number"
-                    min={1}
-                    className="w-16!"
-                    value={String(batchSize)}
-                    onChange={(event) => {
-                      const next = Number(event.target.value);
-                      if (Number.isFinite(next)) {
-                        setBatchSize(Math.max(1, Math.floor(next)));
-                      }
-                    }}
-                  />
-                </div>
-              )}
 
               <label className="flex gap-3 items-start cursor-pointer">
                 <input

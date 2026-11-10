@@ -226,7 +226,8 @@ export async function chatCompletion(
     name: jobName,
     parallelismGroup,
     tags: jobConfig?.tags,
-    exclusiveWithParallelismGroups: jobConfig?.exclusiveWithParallelismGroups,
+    exclusiveWithTags: jobConfig?.exclusiveWithTags,
+    onStart: jobConfig?.onStart,
     abortSignal,
     job: async (jobAbortSignal) => {
       return runWithInteractiveRetry<string>({

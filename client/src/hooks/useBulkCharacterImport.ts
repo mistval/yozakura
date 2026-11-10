@@ -24,7 +24,6 @@ export type BulkImportPhase = 'idle' | 'running' | 'cancelling' | 'done';
 export type BulkImportRunOptions = {
   files: File[];
   mode: CardImportMode;
-  batchSize: number;
   skipExisting: boolean;
 };
 
@@ -61,7 +60,7 @@ export function useBulkCharacterImport() {
     );
   }, []);
 
-  const run = useCallback(async ({ files, mode, batchSize, skipExisting }: BulkImportRunOptions) => {
+  const run = useCallback(async ({ files, mode, skipExisting }: BulkImportRunOptions) => {
     cancelledRef.current = false;
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -88,7 +87,15 @@ export function useBulkCharacterImport() {
         .globalCharacters.map((character) => nameKey(character.firstName, character.lastName))
     );
 
-    const importFile = async (file: File, index: number) => {
+    const detectedFiles = await Promise.all(
+      files.map(async (file, index) => ({
+        file,
+        index,
+        detected: await detectCharacterCardMetadata(file),
+      }))
+    );
+
+    const importTasks = detectedFiles.map(async ({ file, index, detected }) => {
       const id = `${index}-${file.name}`;
 
       if (cancelledRef.current) {
@@ -96,41 +103,45 @@ export function useBulkCharacterImport() {
         return;
       }
 
-      updateItem(id, { status: 'importing' });
+      const name = getImportedCardName(detected);
+
+      if (!name) {
+        updateItem(id, { status: 'failed', detail: 'No character data found in this image.' });
+        return;
+      }
+
+      const key = nameKey(name.firstName, name.lastName);
+      const shownName = displayName(name.firstName, name.lastName);
+      updateItem(id, { characterName: shownName });
+
+      if (skipExisting && usedNameKeys.has(key)) {
+        updateItem(id, { status: 'skipped', detail: 'A character with this name already exists.' });
+        return;
+      }
+
+      usedNameKeys.add(key);
+
+      if (detected.kind === 'yozakura' || mode === 'raw') {
+        updateItem(id, { status: 'importing' });
+      }
 
       try {
-        const detected = await detectCharacterCardMetadata(file);
-        const name = getImportedCardName(detected);
-
-        if (!name) {
-          updateItem(id, { status: 'failed', detail: 'No character data found in this image.' });
-          return;
-        }
-
-        const key = nameKey(name.firstName, name.lastName);
-        const shownName = displayName(name.firstName, name.lastName);
-        updateItem(id, { characterName: shownName });
-
-        if (skipExisting && usedNameKeys.has(key)) {
-          updateItem(id, { status: 'skipped', detail: 'A character with this name already exists.' });
-          return;
-        }
-
         const character = await buildImportedCardCharacter(detected, mode, {
           abortSignal: controller.signal,
-          onStep: (step) => updateItem(id, { step }),
+          onStep: (step) => updateItem(id, { status: 'importing', step }),
         });
 
         if (!character) {
+          usedNameKeys.delete(key);
           updateItem(id, { status: 'failed', detail: 'Could not build a character from this card.' });
           return;
         }
 
         await useGlobalCharactersStore.getState().saveGlobalCharacter(character, file);
-        usedNameKeys.add(key);
 
         updateItem(id, { status: 'done', characterName: shownName, step: undefined });
       } catch (error) {
+        usedNameKeys.delete(key);
         if (cancelledRef.current || isAbortError(error)) {
           updateItem(id, { status: 'cancelled', step: undefined });
         } else {
@@ -138,9 +149,9 @@ export function useBulkCharacterImport() {
           cancel();
         }
       }
-    };
+    });
 
-    await runConcurrent(files, mode === 'convert' ? batchSize : 1, importFile, () => cancelledRef.current);
+    await Promise.all(importTasks);
 
     setItems((prev) =>
       prev.map((item) => (item.status === 'pending' ? { ...item, status: 'cancelled' } : item))
@@ -150,32 +161,4 @@ export function useBulkCharacterImport() {
   }, []);
 
   return { items, phase, run, cancel, reset };
-}
-
-async function runConcurrent<T>(
-  items: T[],
-  concurrency: number,
-  worker: (item: T, index: number) => Promise<void>,
-  shouldStop: () => boolean
-): Promise<void> {
-  let cursor = 0;
-  const effectiveConcurrency = Math.max(1, Math.min(concurrency, items.length));
-
-  const runWorker = async (): Promise<void> => {
-    while (true) {
-      if (shouldStop()) {
-        return;
-      }
-
-      const index = cursor;
-      cursor += 1;
-      if (index >= items.length) {
-        return;
-      }
-
-      await worker(items[index]!, index);
-    }
-  };
-
-  await Promise.all(Array.from({ length: effectiveConcurrency }, () => runWorker()));
 }
