@@ -28,9 +28,7 @@ import {
   selectZoneForWardrobeTriggers,
 } from '../engine/wardrobes.js';
 
-export type ChatState =
-  | 'inactive'
-  | 'active';
+export type ChatState = 'inactive' | 'active';
 
 export type StartChatSessionArgs = {
   participantIds: string[];

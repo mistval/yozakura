@@ -70,11 +70,7 @@ export const useGlobalCharactersStore = create<{
         }
 
         if (imageFile) {
-          await Files.upload(
-            baseImagePath,
-            imageFile,
-            imageFile.type || 'application/octet-stream'
-          );
+          await Files.upload(baseImagePath, imageFile, imageFile.type || 'application/octet-stream');
 
           latestCharacter = get().globalCharactersById[withUpdatedFields.id];
           if (!latestCharacter) {

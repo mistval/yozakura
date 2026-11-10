@@ -24,7 +24,9 @@ export function useChatJobs() {
 
 export function useCurrentImageGenerationJobs() {
   const chatJobs = useChatJobs();
-  return chatJobs.filter(j => hasTag(j, ChatJobTags.generatingImage) || hasTag(j, ChatJobTags.generatingImagePrompt));
+  return chatJobs.filter(
+    (j) => hasTag(j, ChatJobTags.generatingImage) || hasTag(j, ChatJobTags.generatingImagePrompt)
+  );
 }
 
 export function useIsGeneratingMemories() {

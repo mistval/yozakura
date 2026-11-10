@@ -105,8 +105,6 @@ describe('buildImportExportTreeRoots', () => {
 
     const scenChildren = await roots[0]!.getChildren!();
     const scenSubChildren = await scenChildren[0]!.getChildren!();
-    expect(scenSubChildren.map((c) => c.id)).not.toContain(
-      TreeEntityIds.scenarioMap('scen_1', 'map_1')
-    );
+    expect(scenSubChildren.map((c) => c.id)).not.toContain(TreeEntityIds.scenarioMap('scen_1', 'map_1'));
   });
 });

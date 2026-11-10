@@ -11,7 +11,6 @@ export default function ChatTopBarStatus() {
   const singleRunningJob = runningChatJobs.length === 1 ? runningChatJobs[0] : undefined;
   const hasMultipleRunningJobs = chatJobs.length > 1;
 
-
   useEffect(() => {
     if (!showWorkingPopover) return;
 
@@ -41,9 +40,7 @@ export default function ChatTopBarStatus() {
     }
 
     return '';
-  }, [
-    singleRunningJob,
-  ]);
+  }, [singleRunningJob]);
 
   if (hasMultipleRunningJobs) {
     return (

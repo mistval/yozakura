@@ -10,7 +10,11 @@ import {
 import { decomposeSelection, type DecomposedSelection } from '../../backend_bridge/import_export_common.js';
 import { buildImportExportTreeRoots } from './tree_builder.js';
 import type { ScenarioSummary, WorldMap, Character } from '../../engine/types.js';
-import { detectConflicts, type ConflictAction, type EntityConflict } from '../../backend_bridge/import_conflict_resolver.js';
+import {
+  detectConflicts,
+  type ConflictAction,
+  type EntityConflict,
+} from '../../backend_bridge/import_conflict_resolver.js';
 import ImportConflictModal from './ImportConflictModal.js';
 import { validateStagedData } from '../../backend_bridge/import_validation.js';
 import { prepareStagingAndBuildCommitPayload } from '../../backend_bridge/import_commit_payload_builder.js';

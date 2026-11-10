@@ -218,7 +218,8 @@ export async function chatCompletion(
     ...llmOptions
   } = options;
   let resolvedPromptOptions = resolveLlmPromptOptions(promptTemplateGroup, promptContext);
-  const parallelismGroup = resolvedPromptOptions.concurrencyGroupName?.trim() || DEFAULT_LLM_PARALLELISM_GROUP;
+  const parallelismGroup =
+    resolvedPromptOptions.concurrencyGroupName?.trim() || DEFAULT_LLM_PARALLELISM_GROUP;
   const jobName = jobConfig?.name ?? promptTemplateGroup;
 
   return globalParallelJobManager.enqueue({

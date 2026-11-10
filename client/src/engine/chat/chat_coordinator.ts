@@ -241,10 +241,7 @@ export class ChatCoordinator {
     }
   }
 
-  public static async confirmSceneImagePrompt(
-    prompt: string,
-    afterMessageId: string | undefined
-  ) {
+  public static async confirmSceneImagePrompt(prompt: string, afterMessageId: string | undefined) {
     useScenarioLoopStateStore.getState().setPendingImagePromptEdit(undefined);
     try {
       await this.generateImageFromPrompt(prompt, { afterMessageId });
@@ -361,7 +358,11 @@ export class ChatCoordinator {
         const settledUpdates = await Promise.all(updatePromises);
         characterUpdates.push(...settledUpdates);
 
-        await Promise.all([characterStore.commitAllChanges(), relationshipStore.commitAllChanges(), globalParallelJobManager.waitAllForTag(ChatJobTags.chatJob)]);
+        await Promise.all([
+          characterStore.commitAllChanges(),
+          relationshipStore.commitAllChanges(),
+          globalParallelJobManager.waitAllForTag(ChatJobTags.chatJob),
+        ]);
       } catch (err) {
         await Promise.all([
           characterStore.discardPendingChanges(),
@@ -427,7 +428,8 @@ export class ChatCoordinator {
         ]),
         onTokens: (fullText: string) => {
           this.setTranscript(
-            this.transcript().editMessageById(draftMessage.id, fullText, { isStreaming: true }).updatedTranscript
+            this.transcript().editMessageById(draftMessage.id, fullText, { isStreaming: true })
+              .updatedTranscript
           );
         },
       });

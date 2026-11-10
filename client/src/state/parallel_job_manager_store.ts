@@ -69,17 +69,11 @@ globalParallelJobManager.addPreQueueMiddleware((job) => {
 
 useScenarioLoopStateStore.subscribe((state) => {
   if (state.userRequestedPhaseTransition === 'stopped') {
-    globalParallelJobManager.cancelJobsByTag(
-      ChatJobTags.scenarioLoopJob,
-      new UserStopSignalException()
-    );
+    globalParallelJobManager.cancelJobsByTag(ChatJobTags.scenarioLoopJob, new UserStopSignalException());
   }
 
   if (state.userRequestedPhaseTransition === 'paused') {
-    globalParallelJobManager.cancelJobsByTag(
-      ChatJobTags.abortOnPause,
-      new UserPauseSignalException()
-    );
+    globalParallelJobManager.cancelJobsByTag(ChatJobTags.abortOnPause, new UserPauseSignalException());
   }
 });
 

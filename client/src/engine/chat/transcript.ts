@@ -529,7 +529,7 @@ export class ConversationTranscript {
   }
 
   public getMostRecentChatMessage() {
-    const message = this.messages.findLast(m => m.isCharacterChatMessage());
+    const message = this.messages.findLast((m) => m.isCharacterChatMessage());
     return message?.asCharacterChatMessage();
   }
 

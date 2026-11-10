@@ -221,9 +221,7 @@ async function applySimpleTurnMove(characterId: string, move: TurnMove): Promise
       getCharacterRelationship: relationshipStore.getCharacterRelationship,
     });
 
-    await Promise.all(
-      updatedRelationships.map((r) => relationshipStore.saveRelationshipFields(r, r))
-    );
+    await Promise.all(updatedRelationships.map((r) => relationshipStore.saveRelationshipFields(r, r)));
 
     return { noEffect: true };
   }

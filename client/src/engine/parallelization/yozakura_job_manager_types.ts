@@ -14,4 +14,3 @@ export const ChatJobTags = {
 } as const;
 
 export type ChatJobTag = (typeof ChatJobTags)[keyof typeof ChatJobTags];
-

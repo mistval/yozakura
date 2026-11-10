@@ -76,13 +76,7 @@ export default function exportRouter(dataDir: string, db: Database.Database): Ro
       return;
     }
 
-    const {
-      exportName,
-      filename,
-      overwrite = false,
-      queries = [],
-      imageDescriptors = [],
-    } = parseResult.data;
+    const { exportName, filename, overwrite = false, queries = [], imageDescriptors = [] } = parseResult.data;
 
     if (!filename.endsWith('.yozakura_export.zip')) {
       res.status(400).json({ error: 'filename must end with .yozakura_export.zip' });

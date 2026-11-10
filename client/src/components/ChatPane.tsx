@@ -77,10 +77,13 @@ export default function ChatPane() {
   const imageGenerationJobs = useCurrentImageGenerationJobs();
   const isGeneratingMemories = useIsGeneratingMemories();
   const isAwaitingCharacterTextInput = useIsAwaitingCharacterTextInput();
-  const isAtMaxImageCapacity = useSettingsStore(s => s.imageGenerationConcurrency) <= imageGenerationJobs.length;
+  const isAtMaxImageCapacity =
+    useSettingsStore((s) => s.imageGenerationConcurrency) <= imageGenerationJobs.length;
   const canFinishChat = chatJobs.length === 0;
-  const canGenerateImages = !isGeneratingMemories && !isAtMaxImageCapacity && (
-    generateImagesInParallelWithText || isAwaitingCharacterTextInput);
+  const canGenerateImages =
+    !isGeneratingMemories &&
+    !isAtMaxImageCapacity &&
+    (generateImagesInParallelWithText || isAwaitingCharacterTextInput);
 
   const isGenerating = chatJobs.length > 0;
 
@@ -526,11 +529,7 @@ export default function ChatPane() {
           className="flex-1"
         />
         {isGenerating && (
-          <button
-            type="button"
-            onClick={abortCurrentChatGeneration}
-            aria-label="Stop generation"
-          >
+          <button type="button" onClick={abortCurrentChatGeneration} aria-label="Stop generation">
             ■
           </button>
         )}
@@ -559,7 +558,9 @@ export default function ChatPane() {
           button={
             <button
               type="button"
-              onClick={() => void ChatCoordinator.requestSceneImage(transcript.getMostRecentChatMessage()?.id)}
+              onClick={() =>
+                void ChatCoordinator.requestSceneImage(transcript.getMostRecentChatMessage()?.id)
+              }
               disabled={!canGenerateImages}
               title={
                 activeSceneImageChain

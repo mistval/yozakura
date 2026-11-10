@@ -254,15 +254,14 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
             memory: newPairwiseMemory,
           });
 
-          const updatedRelationshipDescriptor =
-            await relationshipDescriptorUpdateChain.renderAndExecute(
-              await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id),
-              {
-                jobConfig: createMemoryJobConfig(
-                  `Updating relationship descriptor: ${fromCharacterPerspective.firstName} → ${otherCharacter.firstName}`
-                ),
-              }
-            );
+          const updatedRelationshipDescriptor = await relationshipDescriptorUpdateChain.renderAndExecute(
+            await buildTargetedChatTemplateContext(fromCharacterPerspective.id, otherCharacter.id),
+            {
+              jobConfig: createMemoryJobConfig(
+                `Updating relationship descriptor: ${fromCharacterPerspective.firstName} → ${otherCharacter.firstName}`
+              ),
+            }
+          );
 
           await stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
             descriptor: updatedRelationshipDescriptor,
@@ -304,14 +303,11 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
         otherCharacter.id
       );
 
-      const newConversationGoal = await nextConversationGoalUpdatesChain.renderAndExecute(
-        pairwiseContext,
-        {
-          jobConfig: createMemoryJobConfig(
-            `Updating ${fromCharacterPerspective.firstName}'s goal towards ${otherCharacter.firstName}`
-          ),
-        }
-      );
+      const newConversationGoal = await nextConversationGoalUpdatesChain.renderAndExecute(pairwiseContext, {
+        jobConfig: createMemoryJobConfig(
+          `Updating ${fromCharacterPerspective.firstName}'s goal towards ${otherCharacter.firstName}`
+        ),
+      });
 
       await stageRelationshipFields(fromCharacterPerspective.id, otherCharacter.id, {
         nextConversationGoal: newConversationGoal,
