@@ -66,6 +66,7 @@ const KNOWN_CLOUD_LLM_HOSTNAMES = [
   'cloudflare.com',
   'huggingface.co',
   'replicate.com',
+  'nano-gpt.com',
 ];
 
 export function isKnownCloudLlmProvider(url: string): boolean {
