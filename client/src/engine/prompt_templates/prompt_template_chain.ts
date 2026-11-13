@@ -28,11 +28,11 @@ export type PromptTemplateChainTemplateEntry<TContextType extends object> = {
 };
 
 type PromptTemplateChainRenderOptions = {
-  completionRequestId?: string;
+  completionRequestId?: string | undefined;
 };
 
 type PromptTemplateChainParseOptions = {
-  completionRequestId?: string;
+  completionRequestId?: string | undefined;
 };
 
 function createCompletionRequestId(): string {
@@ -180,24 +180,26 @@ export class PromptTemplateChain<TContextType extends PromptExecutionContext, TO
   public async renderAndExecute(
     promptContext: TContextType,
     options: {
-      abortSignal?: AbortSignal | undefined;
       jobConfig?: ParallelPromptJobConfig | undefined;
     } = {}
   ): Promise<TOutputType> {
     const completionRequestId = createCompletionRequestId();
-    const messages = await this.render(promptContext, { completionRequestId });
+    const messages = await this.render(promptContext, {
+      completionRequestId,
+    });
     const response =
       messages.length > 0
         ? await chatCompletion(messages, {
             promptTemplateGroup: this.templateChainId,
             completionRequestId,
             promptContext,
-            abortSignal: options.abortSignal,
             jobConfig: options.jobConfig,
           })
         : '';
 
-    return this.parse(response, promptContext, { completionRequestId });
+    return this.parse(response, promptContext, {
+      completionRequestId,
+    });
   }
 
   public getDocumentation() {

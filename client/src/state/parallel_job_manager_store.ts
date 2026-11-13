@@ -14,7 +14,6 @@ import { useScenarioStore } from './scenario_store.js';
 import {
   ScenarioLoopAbortSignalException,
   UserPauseSignalException,
-  UserStopSignalException,
 } from '../engine/scenario_loop/flow_control.js';
 
 function syncConcurrencyWithSettings(settings: ReturnType<typeof useSettingsStore.getState>) {
@@ -61,17 +60,9 @@ globalParallelJobManager.addPreQueueMiddleware((job) => {
   if (tags.includes(ChatJobTags.abortOnPause) && loopState.userRequestedPhaseTransition === 'paused') {
     throw new UserPauseSignalException();
   }
-
-  if (tags.includes(ChatJobTags.scenarioLoopJob) && loopState.userRequestedPhaseTransition === 'stopped') {
-    throw new UserStopSignalException();
-  }
 });
 
 useScenarioLoopStateStore.subscribe((state) => {
-  if (state.userRequestedPhaseTransition === 'stopped') {
-    globalParallelJobManager.cancelJobsByTag(ChatJobTags.scenarioLoopJob, new UserStopSignalException());
-  }
-
   if (state.userRequestedPhaseTransition === 'paused') {
     globalParallelJobManager.cancelJobsByTag(ChatJobTags.abortOnPause, new UserPauseSignalException());
   }
@@ -79,10 +70,7 @@ useScenarioLoopStateStore.subscribe((state) => {
 
 useScenarioStore.subscribe((newState, prevState) => {
   if (newState.activeScenario?.id !== prevState.activeScenario?.id) {
-    globalParallelJobManager.cancelJobsByTag(
-      ChatJobTags.scenarioLoopJob,
-      new ScenarioLoopAbortSignalException()
-    );
+    globalParallelJobManager.cancelAllJobs(new ScenarioLoopAbortSignalException());
   }
 });
 
@@ -91,12 +79,12 @@ export const useParallelJobStore = create<{
 }>((set) => {
   globalParallelJobManager.addObserver(() => {
     set({
-      jobs: Array.from(globalParallelJobManager.getJobs()),
+      jobs: globalParallelJobManager.getJobs(),
     });
   });
 
   return {
-    jobs: Array.from(globalParallelJobManager.getJobs()),
+    jobs: globalParallelJobManager.getJobs(),
   };
 });
 
@@ -111,9 +99,7 @@ export function createTextCompletionJobConfig(
 ): ParallelPromptJobConfig {
   const isImageParallel = useSettingsStore.getState().generateImagesInParallelWithText;
   const tagSet = new Set(tags);
-  if (tagSet.has(ChatJobTags.chatJob)) {
-    tagSet.add(ChatJobTags.scenarioLoopJob);
-  }
+
   return {
     name,
     tags: Array.from(tagSet),

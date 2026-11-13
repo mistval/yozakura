@@ -31,6 +31,8 @@ import { ChatCoordinator } from '../engine/chat/chat_coordinator';
 import { startScenarioLoop } from '../engine/scenario_loop/scenario_loop';
 import { useSettingsStore } from '../state/settings_store';
 import { useUserCanInputChat, useIsChatFinalizing } from '../state/chat_state';
+import { globalParallelJobManager } from '../engine/parallelization/job_manager';
+import { UserStopSignalException } from '../engine/scenario_loop/flow_control';
 
 export default function ScenarioView() {
   const navigate = useNavigate();
@@ -65,9 +67,6 @@ export default function ScenarioView() {
   const autoModeEnabled = useScenarioLoopStateStore((state) => state.autoMode);
   const setAutoModeEnabled = useScenarioLoopStateStore((state) => state.setAutoMode);
   const isFinalizingChat = useIsChatFinalizing();
-  const setUserRequestedPhaseTransition = useScenarioLoopStateStore(
-    (state) => state.setUserRequestedPhaseTransition
-  );
   const isUserTurn =
     currentTurnCharacterId !== undefined && currentTurnCharacterId === scenario?.userCharacterId;
   const npcPhaseBusy =
@@ -343,7 +342,7 @@ export default function ScenarioView() {
                 <button
                   type="button"
                   className="border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover"
-                  onClick={() => setUserRequestedPhaseTransition('stopped')}
+                  onClick={() => globalParallelJobManager.cancelAllJobs(new UserStopSignalException())}
                 >
                   ■ Stop
                 </button>

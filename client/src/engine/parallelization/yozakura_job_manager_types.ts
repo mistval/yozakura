@@ -3,7 +3,6 @@ export const IMAGE_GENERATION_PARALLELISM_GROUP = 'image_generation';
 
 export const ChatJobTags = {
   chatJob: 'chat_job',
-  scenarioLoopJob: 'scenario_loop_job',
   abortOnPause: 'abort_on_pause',
   processingMemories: 'processing_memories',
   characterIsSpeaking: 'character_speaking',

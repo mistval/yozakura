@@ -23,6 +23,11 @@ import {
 import type { ImagePromptType } from './settings/settings_scripts/image/image_script_types';
 import { characterCardImagePromptTemplateChain } from './prompt_templates/character_generation/group.js';
 import { buildCharacterEditorContext } from './prompt_templates/prompt_context_builder.js';
+import { globalParallelJobManager } from './parallelization/job_manager.js';
+import {
+  ChatJobTags,
+  IMAGE_GENERATION_PARALLELISM_GROUP,
+} from './parallelization/yozakura_job_manager_types.js';
 
 const IMAGE_GENERATION_RETRY_HINT = 'The image provider might be unavailable or misconfigured.';
 
@@ -38,63 +43,65 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 async function dispatchImageGeneration(
   prompt: string,
   promptType: ImagePromptType,
-  options: { abortSignal?: AbortSignal | undefined } = {}
+  options: { tags?: string[] | undefined } = {}
 ): Promise<Blob> {
-  return runWithInteractiveRetry({
-    operationType: 'api.generate_image',
-    hint: IMAGE_GENERATION_RETRY_HINT,
-    run: async () => {
-      const section = getSettingsScriptSection(IMAGE_GENERATION_SECTION_ID);
-      const source = getBuiltinImageScript(section.selectedScriptId)
-        ? ''
-        : ((await loadCustomScriptSource(IMAGE_GENERATION_SECTION_ID, section.selectedScriptId)) ?? '');
-      const resolved = resolveImageScript(section.selectedScriptId, source);
-      if (!resolved.ok) {
-        throw new Error(resolved.error);
-      }
+  return globalParallelJobManager.enqueue({
+    name: 'Generating image',
+    parallelismGroup: IMAGE_GENERATION_PARALLELISM_GROUP,
+    tags: [ChatJobTags.generatingImage, ...(options.tags ?? [])],
+    job: async (abortSignal) =>
+      runWithInteractiveRetry({
+        operationType: 'api.generate_image',
+        abortSignal,
+        hint: IMAGE_GENERATION_RETRY_HINT,
+        run: async () => {
+          const section = getSettingsScriptSection(IMAGE_GENERATION_SECTION_ID);
+          const source = getBuiltinImageScript(section.selectedScriptId)
+            ? ''
+            : ((await loadCustomScriptSource(IMAGE_GENERATION_SECTION_ID, section.selectedScriptId)) ?? '');
+          const resolved = resolveImageScript(section.selectedScriptId, source);
+          if (!resolved.ok) {
+            throw new Error(resolved.error);
+          }
 
-      const stored = section.controlValues[section.selectedScriptId];
-      const controls = resolveControls(resolved.script.controls, {
-        controlValues: stored ?? {},
-        buttonData: {},
-      });
+          const stored = section.controlValues[section.selectedScriptId];
+          const controls = resolveControls(resolved.script.controls, {
+            controlValues: stored ?? {},
+            buttonData: {},
+          });
 
-      const controlValues = resolveControlValues(controls, stored);
+          const controlValues = resolveControlValues(controls, stored);
 
-      const helpers: SettingsScriptHelpers = {
-        proxiedFetch: createProxiedFetch(options.abortSignal),
-        abortSignal: options.abortSignal,
-        loadUserTextFile: (controlId, fileId) =>
-          mainDatabase.loadUserTextFileContent(
-            makeTextFileGroupKey(IMAGE_GENERATION_SECTION_ID, section.selectedScriptId, controlId),
-            fileId
-          ),
-        createSeededRandom,
-      };
+          const helpers: SettingsScriptHelpers = {
+            proxiedFetch: createProxiedFetch(abortSignal),
+            abortSignal,
+            loadUserTextFile: (controlId, fileId) =>
+              mainDatabase.loadUserTextFileContent(
+                makeTextFileGroupKey(IMAGE_GENERATION_SECTION_ID, section.selectedScriptId, controlId),
+                fileId
+              ),
+            createSeededRandom,
+          };
 
-      const results = await resolved.script.generateImages(
-        controlValues,
-        { prompt, context: { promptType } },
-        helpers
-      );
-      const firstStream = results[0]?.readableStream;
-      assertNonNullish(firstStream, 'Image generation returned no image data.');
+          const results = await resolved.script.generateImages(
+            controlValues,
+            { prompt, context: { promptType } },
+            helpers
+          );
+          const firstStream = results[0]?.readableStream;
+          assertNonNullish(firstStream, 'Image generation returned no image data.');
 
-      const bytes = await new Response(firstStream).arrayBuffer();
-      return new Blob([bytes], { type: 'image/png' });
-    },
+          const bytes = await new Response(firstStream).arrayBuffer();
+          return new Blob([bytes], { type: 'image/png' });
+        },
+      }),
   });
 }
 
-export async function generateCharacterCard(
-  character: Character,
-  options: { abortSignal?: AbortSignal | undefined } = {}
-): Promise<string> {
+export async function generateCharacterCard(character: Character): Promise<string> {
   const context = buildCharacterEditorContext(character);
-  const prompt = await characterCardImagePromptTemplateChain.renderAndExecute(context, {
-    abortSignal: options.abortSignal,
-  });
-  const blob = await dispatchImageGeneration(prompt, 'character_card', options);
+  const prompt = await characterCardImagePromptTemplateChain.renderAndExecute(context);
+  const blob = await dispatchImageGeneration(prompt, 'character_card');
 
   return blobToDataUrl(blob);
 }
@@ -102,13 +109,11 @@ export async function generateCharacterCard(
 export async function generateChatImage({
   fullPrompt,
   saveTo,
-  abortSignal,
 }: {
   fullPrompt: string;
   saveTo: string;
-  abortSignal?: AbortSignal;
 }): Promise<string[]> {
-  const blob = await dispatchImageGeneration(fullPrompt, 'scene', { abortSignal });
+  const blob = await dispatchImageGeneration(fullPrompt, 'scene', { tags: [ChatJobTags.chatJob] });
   const filePath = `/api/files/${saveTo}`;
   await Api.putFile(filePath, blob, 'image/png');
 

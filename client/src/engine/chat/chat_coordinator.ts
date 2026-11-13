@@ -3,7 +3,6 @@ import { chatCompletion } from '../llm.js';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry.js';
 import { generateChatImage } from '../image_gen.js';
 import { globalParallelJobManager } from '../parallelization/job_manager.js';
-import { IMAGE_GENERATION_PARALLELISM_GROUP } from '../parallelization/yozakura_job_manager_types.js';
 import { createTextCompletionJobConfig } from '../../state/parallel_job_manager_store.js';
 import {
   buildChatModeratorContext,
@@ -316,25 +315,17 @@ export class ChatCoordinator {
     fullPrompt: string,
     opts?: { afterMessageId?: string | undefined }
   ) {
-    return globalParallelJobManager.enqueue({
-      name: 'Generating image',
-      parallelismGroup: IMAGE_GENERATION_PARALLELISM_GROUP,
-      tags: [ChatJobTags.chatJob, ChatJobTags.generatingImage, ChatJobTags.scenarioLoopJob],
-      job: async (abortSignal) => {
-        const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
-        const files = await generateChatImage({
-          fullPrompt,
-          saveTo,
-          abortSignal,
-        });
-
-        const firstFile = files[0];
-        assertNonNullish(firstFile, 'No file returned from image generation call');
-
-        this.setTranscript(this.transcript().addImageMessage(firstFile, opts).updatedTranscript);
-        persistTurn();
-      },
+    const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
+    const files = await generateChatImage({
+      fullPrompt,
+      saveTo,
     });
+
+    const firstFile = files[0];
+    assertNonNullish(firstFile, 'No file returned from image generation call');
+
+    this.setTranscript(this.transcript().addImageMessage(firstFile, opts).updatedTranscript);
+    persistTurn();
   }
 
   public static async endActiveChat(noEffect: boolean) {
@@ -571,6 +562,8 @@ export class ChatCoordinator {
         'Reached end of selectNextSpeaker function unexpectedly. Unknown speaker selection strategy?'
       );
     } catch (err) {
+      rethrowSignalException(err);
+
       await showNonRetriableErrorCardIfNeeded({
         error: err,
         operationType: 'select_next_speaker',
@@ -618,7 +611,11 @@ export class ChatCoordinator {
       return;
     }
 
-    await wait(delaySeconds * 1000);
+    await globalParallelJobManager.enqueue({
+      name: 'Waiting between messages',
+      tags: [ChatJobTags.abortOnPause],
+      job: (abortSignal) => wait(delaySeconds * 1000, abortSignal),
+    });
   }
 
   private static getPastTenseLabel() {

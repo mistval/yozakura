@@ -19,7 +19,6 @@ type ChatCompletionOptions = {
   promptTemplateGroup: string;
   onTokens?: (fullText: string) => void | undefined;
   completionRequestId: string;
-  abortSignal?: AbortSignal | undefined;
   jobConfig?: ParallelPromptJobConfig | undefined;
   [key: string]: unknown;
 };
@@ -210,15 +209,8 @@ export async function chatCompletion(
   messages: PromptMessage[],
   options: ChatCompletionOptions
 ): Promise<string> {
-  const {
-    promptTemplateGroup,
-    onTokens,
-    completionRequestId,
-    promptContext,
-    abortSignal,
-    jobConfig,
-    ...llmOptions
-  } = options;
+  const { promptTemplateGroup, onTokens, completionRequestId, promptContext, jobConfig, ...llmOptions } =
+    options;
   let resolvedPromptOptions = resolveLlmPromptOptions(promptTemplateGroup, promptContext);
   const parallelismGroup =
     resolvedPromptOptions.concurrencyGroupName?.trim() || DEFAULT_LLM_PARALLELISM_GROUP;
@@ -230,10 +222,10 @@ export async function chatCompletion(
     tags: jobConfig?.tags,
     exclusiveWithTags: jobConfig?.exclusiveWithTags,
     onStart: jobConfig?.onStart,
-    abortSignal,
     job: async (jobAbortSignal) => {
       return runWithInteractiveRetry<string>({
         operationType: 'api.llm_completion',
+        abortSignal: jobAbortSignal,
         maxRetries: Number.POSITIVE_INFINITY,
         run: async () => {
           // Resolve them again in case user edited config to fix an error

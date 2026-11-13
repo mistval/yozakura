@@ -7,7 +7,7 @@ import type {
 } from '../engine/scenario_loop/types';
 import { scenarioLoopPromiseCallbacks } from '../engine/scenario_loop/flow_control';
 
-export type UserRequestedPhaseTransition = 'none' | 'paused' | 'stopped';
+export type UserRequestedPhaseTransition = 'none' | 'paused';
 
 export type PendingImagePromptEdit = { prompt: string; afterMessageId: string | undefined };
 

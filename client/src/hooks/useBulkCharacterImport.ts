@@ -6,6 +6,8 @@ import {
   type CardImportMode,
 } from '../engine/character_gen.js';
 import { useGlobalCharactersStore } from '../state/global_character_store.js';
+import { globalParallelJobManager } from '../engine/parallelization/job_manager.js';
+import { ParallelJobCancellationError } from '../engine/parallelization/job_manager_types.js';
 import { getErrorMessage } from '../errors/error_util.js';
 
 export type BulkImportItemStatus = 'pending' | 'importing' | 'done' | 'skipped' | 'failed' | 'cancelled';
@@ -35,15 +37,10 @@ function displayName(firstName: string, lastName: string): string {
   return [firstName, lastName].filter(Boolean).join(' ').trim();
 }
 
-function isAbortError(error: unknown): boolean {
-  return error instanceof DOMException && error.name === 'AbortError';
-}
-
 export function useBulkCharacterImport() {
   const [items, setItems] = useState<BulkImportItem[]>([]);
   const [phase, setPhase] = useState<BulkImportPhase>('idle');
   const cancelledRef = useRef(false);
-  const controllerRef = useRef<AbortController | null>(null);
 
   const reset = useCallback(() => {
     cancelledRef.current = false;
@@ -53,7 +50,7 @@ export function useBulkCharacterImport() {
 
   const cancel = useCallback(() => {
     cancelledRef.current = true;
-    controllerRef.current?.abort();
+    globalParallelJobManager.cancelAllJobs();
     setPhase((prev) => (prev === 'running' ? 'cancelling' : prev));
     setItems((prev) =>
       prev.map((item) => (item.status === 'pending' ? { ...item, status: 'cancelled' } : item))
@@ -62,8 +59,6 @@ export function useBulkCharacterImport() {
 
   const run = useCallback(async ({ files, mode, skipExisting }: BulkImportRunOptions) => {
     cancelledRef.current = false;
-    const controller = new AbortController();
-    controllerRef.current = controller;
     setPhase('running');
 
     const updateItem = (id: string, patch: Partial<BulkImportItem>) => {
@@ -127,7 +122,6 @@ export function useBulkCharacterImport() {
 
       try {
         const character = await buildImportedCardCharacter(detected, mode, {
-          abortSignal: controller.signal,
           onStep: (step) => updateItem(id, { status: 'importing', step }),
         });
 
@@ -142,7 +136,7 @@ export function useBulkCharacterImport() {
         updateItem(id, { status: 'done', characterName: shownName, step: undefined });
       } catch (error) {
         usedNameKeys.delete(key);
-        if (cancelledRef.current || isAbortError(error)) {
+        if (cancelledRef.current || error instanceof ParallelJobCancellationError) {
           updateItem(id, { status: 'cancelled', step: undefined });
         } else {
           updateItem(id, { status: 'failed', detail: getErrorMessage(error), step: undefined });

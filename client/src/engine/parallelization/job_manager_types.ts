@@ -9,7 +9,6 @@ export interface INewParallelJob<TResultsType> {
   tags?: readonly string[] | string[] | undefined;
   exclusiveWithTags?: readonly string[] | string[] | undefined;
   onStart?: (() => void) | undefined;
-  abortSignal?: AbortSignal | undefined;
 }
 
 export interface IParallelJob<TResultsType> extends INewParallelJob<TResultsType> {

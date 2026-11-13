@@ -4,7 +4,6 @@ import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_st
 import { useSettingsStore } from '../../../state/settings_store';
 import { globalParallelJobManager } from '../../parallelization/job_manager.js';
 import { UNCONSTRAINED_PARALLELISM_GROUP } from '../../parallelization/job_manager_types.js';
-import { ChatJobTags } from '../../../state/chat_state.js';
 import { scenarioLoopPromiseCallbacks } from '../flow_control';
 import type {
   ChatInputResult,
@@ -25,7 +24,6 @@ export class UserInputInterface extends CharacterInputInterface {
     const input = await globalParallelJobManager.enqueue<ChatUserInputAction>({
       name: 'Awaiting chat input',
       parallelismGroup: UNCONSTRAINED_PARALLELISM_GROUP,
-      tags: [ChatJobTags.scenarioLoopJob],
       job: (abortSignal) => {
         const promise = Promise.withResolvers<ChatUserInputAction>();
         scenarioLoopPromiseCallbacks.userChatAction = promise;
@@ -67,7 +65,6 @@ export class UserInputInterface extends CharacterInputInterface {
     const userAction = await globalParallelJobManager.enqueue<UserTurnAction>({
       name: 'Awaiting turn action',
       parallelismGroup: UNCONSTRAINED_PARALLELISM_GROUP,
-      tags: [ChatJobTags.scenarioLoopJob],
       job: (abortSignal) => {
         const promise = Promise.withResolvers<UserTurnAction>();
         scenarioLoopPromiseCallbacks.userTurnAction = promise;

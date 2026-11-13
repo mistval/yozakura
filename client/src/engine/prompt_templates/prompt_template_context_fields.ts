@@ -204,12 +204,17 @@ Alice and Charlie chatted online about their weekend plans. Charlie mentioned th
       description:
         "Why the focused character is at, or heading toward, a location. Undefined if there's no known reason. status 'in_designated_zone' means they are where their character schedule wants them; 'moving_towards_designated_zone' means they are en route, with targetLocationName naming the target location. reason is the optional author-written justification for why the character is scheduled to be in the named location.",
     }),
+  abortSignal: z.any().optional().meta({
+    description:
+      'An AbortSignal for the current template render or output parser execution. If signaled, any async process happening inside the template or parser is expected to be aborted or abandoned immediately and the execution should throw.',
+  }),
 });
 
 const globalExecutionContextSchema = contextSchemaFields
   .pick({
     settings: true,
     globalWritableContext: true,
+    abortSignal: true,
   })
   .meta({
     description: 'This is the context that is available to every single prompt in Yozakura.',
