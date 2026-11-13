@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useChatJobs, useIsGeneratingMemories } from '../../state/chat_state.js';
+import { useChatJobs, useIsChatFinalizing } from '../../state/chat_state.js';
 
 export default function ChatTopBarStatus() {
   const [showWorkingPopover, setShowWorkingPopover] = useState(false);
   const workingPopoverRef = useRef<HTMLDivElement | null>(null);
 
   const chatJobs = useChatJobs();
-  const isGeneratingMemories = useIsGeneratingMemories();
+  const isFinalizingChat = useIsChatFinalizing();
   const runningChatJobs = chatJobs.filter((j) => j.state === 'running');
   const singleRunningJob = runningChatJobs.length === 1 ? runningChatJobs[0] : undefined;
   const hasMultipleRunningJobs = chatJobs.length > 1;
@@ -50,7 +50,7 @@ export default function ChatTopBarStatus() {
           onClick={() => setShowWorkingPopover((prev) => !prev)}
           className="flex items-center gap-1.5 text-sm text-secondary hover:text-primary cursor-pointer px-2 py-0.5 rounded border border-border-default bg-inset hover:bg-surface-hover shadow-xs"
         >
-          <span>{isGeneratingMemories ? 'Generating memories...' : 'Working...'}</span>
+          <span>{isFinalizingChat ? 'Generating memories...' : 'Working...'}</span>
           <span className="text-xs">{showWorkingPopover ? '▲' : '▼'}</span>
         </button>
 

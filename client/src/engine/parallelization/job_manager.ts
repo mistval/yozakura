@@ -99,10 +99,15 @@ export class ParallelJobManager {
     }
   }
 
-  public async allSettledForTag(tag: string): Promise<PromiseSettledResult<unknown>[]> {
+  public async allSettledForTag(
+    tag: string,
+    exclusiveTags: string[] = []
+  ): Promise<PromiseSettledResult<unknown>[]> {
     const results: PromiseSettledResult<unknown>[] = [];
     while (true) {
-      const matchingJobs = Array.from(this.currentJobs.values()).filter((j) => j.tags?.includes(tag));
+      const matchingJobs = Array.from(this.currentJobs.values())
+        .filter((j) => j.tags?.includes(tag))
+        .filter((j) => !j.tags?.some((t) => exclusiveTags.includes(t)));
       if (matchingJobs.length === 0) {
         break;
       }
@@ -112,8 +117,8 @@ export class ParallelJobManager {
     return results;
   }
 
-  public async waitAllForTag(tag: string) {
-    const settledResults = await globalParallelJobManager.allSettledForTag(tag);
+  public async waitAllForTag(tag: string, exclusiveTags: string[] = []) {
+    const settledResults = await globalParallelJobManager.allSettledForTag(tag, exclusiveTags);
     for (const result of settledResults) {
       if (result.status === 'rejected') {
         throw result.reason;

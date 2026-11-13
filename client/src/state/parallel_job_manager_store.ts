@@ -100,8 +100,9 @@ export const useParallelJobStore = create<{
   };
 });
 
-export function useJobsWithTag(tag: string) {
-  return useParallelJobStore(useShallow((s) => s.jobs.filter((j) => j.tags?.includes(tag))));
+export function useJobsWithTags(tags: string | string[]) {
+  const tagSet = new Set(Array.isArray(tags) ? tags : [tags]);
+  return useParallelJobStore(useShallow((s) => s.jobs.filter((j) => j.tags?.some((t) => tagSet.has(t)))));
 }
 
 export function createTextCompletionJobConfig(

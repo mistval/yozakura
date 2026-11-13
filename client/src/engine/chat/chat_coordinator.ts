@@ -357,9 +357,14 @@ export class ChatCoordinator {
 
         const settledUpdates = await Promise.all(updatePromises);
         characterUpdates.push(...settledUpdates);
-        useTurnMachineStore.getState().setDidFinishMemoryGeneration();
 
-        await globalParallelJobManager.waitAllForTag(ChatJobTags.chatJob);
+        await globalParallelJobManager.enqueue({
+          name: 'Waiting for image jobs to finish',
+          tags: [ChatJobTags.chatJob, ChatJobTags.abortOnPause, ChatJobTags.finalizingChat],
+          job: async () => {
+            await globalParallelJobManager.waitAllForTag(ChatJobTags.chatJob, [ChatJobTags.finalizingChat]);
+          },
+        });
 
         await Promise.all([characterStore.commitAllChanges(), relationshipStore.commitAllChanges()]);
       } catch (err) {

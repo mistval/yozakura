@@ -21,8 +21,8 @@ import {
   abortCurrentChatGeneration,
   useChatJobs,
   useUserCanInputChat,
-  useCurrentImageGenerationJobs,
-  useIsGeneratingMemories,
+  useImageGenerationJobs,
+  useIsChatFinalizing,
 } from '../state/chat_state.js';
 import ChatTopBarStatus from './chat/ChatTopBarStatus.js';
 
@@ -74,14 +74,14 @@ export default function ChatPane() {
   const setPendingImagePromptEdit = useScenarioLoopStateStore((state) => state.setPendingImagePromptEdit);
 
   const chatJobs = useChatJobs();
-  const imageGenerationJobs = useCurrentImageGenerationJobs();
-  const isGeneratingMemories = useIsGeneratingMemories();
+  const imageGenerationJobs = useImageGenerationJobs();
+  const isFinalizingChat = useIsChatFinalizing();
   const userCanInputChat = useUserCanInputChat();
   const isAtMaxImageCapacity =
     useSettingsStore((s) => s.imageGenerationConcurrency) <= imageGenerationJobs.length;
   const canFinishChat = chatJobs.length === 0;
   const canGenerateImages =
-    !isGeneratingMemories && !isAtMaxImageCapacity && (generateImagesInParallelWithText || userCanInputChat);
+    !isFinalizingChat && !isAtMaxImageCapacity && (generateImagesInParallelWithText || userCanInputChat);
 
   const isGenerating = chatJobs.length > 0;
 
@@ -223,7 +223,7 @@ export default function ChatPane() {
       return undefined;
     }
 
-    if (isGeneratingMemories) {
+    if (isFinalizingChat) {
       return undefined;
     }
 
@@ -239,7 +239,7 @@ export default function ChatPane() {
   };
 
   const getEndChatButtonTitle = () => {
-    if (isGeneratingMemories) {
+    if (isFinalizingChat) {
       return undefined;
     }
 
@@ -310,7 +310,7 @@ export default function ChatPane() {
         </h3>
         <div className="flex items-center gap-3">
           <ChatTopBarStatus />
-          {!isGeneratingMemories && (
+          {!isFinalizingChat && (
             <button type="button" onClick={() => setShowChatSettings(true)}>
               Chat Settings
             </button>

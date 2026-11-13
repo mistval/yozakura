@@ -77,9 +77,7 @@ type BaseTurnMachineStoreState = {
   initiatorId: string | undefined;
   chatInstructions: string;
   chatInstructionsByCharacterId: Record<string, string>;
-  didFinishMemoryGeneration: boolean;
 
-  setDidFinishMemoryGeneration: () => void;
   setTranscript: (transcript: ConversationTranscript) => void;
   startNewTurn: (opts?: { userMovesFirst?: boolean | undefined }) => void;
   currentCharacterId: () => string | undefined;
@@ -136,7 +134,6 @@ const inactiveChatTurnMachineState: InactiveChatFields = {
   initiatorId: undefined,
   chatInstructions: '',
   chatInstructionsByCharacterId: {},
-  didFinishMemoryGeneration: false,
 };
 
 function getRequiredCharacterById(characterId: string): Character {
@@ -336,10 +333,6 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
         get().pendingTurnCharacterIds.filter((id) => id !== characterId)
       ),
     } satisfies Partial<BaseTurnMachineStoreState>);
-  },
-
-  setDidFinishMemoryGeneration() {
-    set({ didFinishMemoryGeneration: true });
   },
 
   finishCurrentCharacter() {

@@ -11,6 +11,7 @@ export const ChatJobTags = {
   judgingConversationEnd: 'judging_conversation_end',
   generatingImage: 'generating_image',
   generatingImagePrompt: 'generating_image_prompt',
+  finalizingChat: 'finalizing_chat',
 } as const;
 
 export type ChatJobTag = (typeof ChatJobTags)[keyof typeof ChatJobTags];

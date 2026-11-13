@@ -1,10 +1,8 @@
-import type { IParallelJob } from '../engine/parallelization/job_manager_types';
 import { ChatJobTags } from '../engine/parallelization/yozakura_job_manager_types.js';
 import { globalParallelJobManager } from '../engine/parallelization/job_manager.js';
 import { UserAbortCurrentGenerationSignalException } from '../engine/scenario_loop/flow_control.js';
-import { useJobsWithTag } from './parallel_job_manager_store';
+import { useJobsWithTags } from './parallel_job_manager_store';
 import { useSettingsStore } from './settings_store';
-import { useTurnMachineStore } from './turn_machine_store';
 
 export { ChatJobTags };
 
@@ -15,38 +13,37 @@ export function abortCurrentChatGeneration() {
   );
 }
 
-function hasTag(job: IParallelJob<unknown>, tag: string) {
-  return job.tags?.includes(tag);
-}
-
 export function useChatJobs() {
-  return useJobsWithTag(ChatJobTags.chatJob);
+  return useJobsWithTags(ChatJobTags.chatJob);
 }
 
-export function useCurrentImageGenerationJobs() {
-  const chatJobs = useChatJobs();
-  return chatJobs.filter(
-    (j) => hasTag(j, ChatJobTags.generatingImage) || hasTag(j, ChatJobTags.generatingImagePrompt)
-  );
+export function useImageGenerationJobs() {
+  return useJobsWithTags([ChatJobTags.generatingImage, ChatJobTags.generatingImagePrompt]);
 }
 
-export function useIsGeneratingMemories() {
-  const chatJobs = useChatJobs();
-  const finishedGeneratingMemories = useTurnMachineStore((t) => t.didFinishMemoryGeneration);
-  return finishedGeneratingMemories || chatJobs.some((j) => hasTag(j, ChatJobTags.processingMemories));
+export function useMemoryGenerationJobs() {
+  return useJobsWithTags(ChatJobTags.processingMemories);
+}
+
+export function useIsChatFinalizing() {
+  return useJobsWithTags([ChatJobTags.processingMemories, ChatJobTags.finalizingChat]).length > 0;
+}
+
+export function useJobWithTagExists(tag: string) {
+  return useJobsWithTags(tag).length > 0;
 }
 
 export function useUserCanInputChat() {
-  const chatJobs = useChatJobs();
   const generateImagesInParallelWithText = useSettingsStore((s) => s.generateImagesInParallelWithText);
-  const isGeneratingImage = useCurrentImageGenerationJobs();
-  const isGeneratingMemories = useIsGeneratingMemories();
+  const imageGenerationJobs = useImageGenerationJobs();
 
-  return (
-    !isGeneratingMemories &&
-    !chatJobs.some((j) => hasTag(j, ChatJobTags.characterIsSpeaking)) &&
-    !chatJobs.some((j) => hasTag(j, ChatJobTags.selectingSpeaker)) &&
-    !chatJobs.some((j) => hasTag(j, ChatJobTags.judgingConversationEnd)) &&
-    (!isGeneratingImage || generateImagesInParallelWithText)
-  );
+  const negativeConditions = [
+    useIsChatFinalizing(),
+    useJobWithTagExists(ChatJobTags.characterIsSpeaking),
+    useJobWithTagExists(ChatJobTags.selectingSpeaker),
+    useJobWithTagExists(ChatJobTags.judgingConversationEnd),
+    imageGenerationJobs.length > 0 && !generateImagesInParallelWithText,
+  ];
+
+  return !negativeConditions.includes(true);
 }
