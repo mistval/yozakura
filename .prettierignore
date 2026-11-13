@@ -13,3 +13,4 @@ data/
 demo_data
 .husky
 .prettierignore
+Dockerfile
