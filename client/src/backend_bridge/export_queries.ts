@@ -1,3 +1,5 @@
+import type { Character } from '../engine/types';
+
 export const TABLE_COLUMNS = {
   scenario: ['id', 'created_at', 'updated_at', 'data'],
   scenario_character: ['id', 'scenario_id', 'created_at', 'updated_at', 'data'],
@@ -17,18 +19,24 @@ export const STRIP_MEMORIES_PATCH = JSON.stringify({
   globalMemories: '',
   rollingConversationSummaries: [],
   nextConversationWithCharacterId: '',
-});
+} satisfies Pick<
+  Character,
+  'globalMemories' | 'rollingConversationSummaries' | 'nextConversationWithCharacterId'
+>);
 
 export const STRIP_GROUPS_PATCH = JSON.stringify({
   groupIds: [],
-});
+} satisfies Pick<Character, 'groupIds'>);
 
 export const STRIP_BOTH_PATCH = JSON.stringify({
   globalMemories: '',
   rollingConversationSummaries: [],
   nextConversationWithCharacterId: '',
   groupIds: [],
-});
+} satisfies Pick<
+  Character,
+  'globalMemories' | 'rollingConversationSummaries' | 'nextConversationWithCharacterId' | 'groupIds'
+>);
 
 export type TableExportQuery = {
   table: string;
