@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import * as Database from '../backend_bridge/database.js';
+import { doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database.js';
 import {
   type CharacterPair,
   type CharacterRelationship,
@@ -61,8 +61,8 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
           );
         },
 
-        deleteStoreState(_entities: CharacterRelationship[]) {
-          assert(false, 'Character relationship deletion is not implemented.');
+        deleteStoreState(entities: CharacterRelationship[]) {
+          relationshipCache.deleteMany(entities.map((entity) => relationshipKey(entity.fromId, entity.toId)));
         },
 
         async setDatabaseState(entities: CharacterRelationship[]) {
@@ -71,7 +71,7 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
               ? relationshipKey(entities[0]!.fromId, entities[0]!.toId)
               : 'scenario_character_relationship.all';
 
-          await Database.doAsDataWrite(
+          await doAsDataWrite(
             async () => {
               const latestEntities = entities.map((entity) => {
                 const key = relationshipKey(entity.fromId, entity.toId);
@@ -82,7 +82,7 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
                 return latest;
               });
 
-              await Database.storeCharacterRelationships(latestEntities);
+              await mainDatabase.storeCharacterRelationships(latestEntities);
             },
             'scenario_character_relationship',
             { debouncerKey }
@@ -93,20 +93,16 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
           assert(false, 'Character relationship deletion is not implemented.');
         },
 
-        async refreshStoreStateFromDatabase(entities: CharacterRelationship[]) {
-          const refreshed = await Database.doAsDataRead(
+        getEntitiesFromDatabase(entities: CharacterRelationship[]) {
+          return doAsDataRead(
             () =>
-              Database.loadCharacterRelationshipsByPairs(
+              mainDatabase.loadCharacterRelationshipsByPairs(
                 entities.map((entity) => ({
                   fromId: entity.fromId,
                   toId: entity.toId,
                 }))
               ),
             'character_relationship'
-          );
-
-          relationshipCache.setMany(
-            refreshed.map((entity) => [relationshipKey(entity.fromId, entity.toId), entity])
           );
         },
       },
@@ -140,8 +136,8 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
       }
 
       if (misses.length > 0) {
-        const fetchedPairs = await Database.doAsDataRead(async () => {
-          return Database.loadCharacterRelationshipsByPairs(misses);
+        const fetchedPairs = await doAsDataRead(async () => {
+          return mainDatabase.loadCharacterRelationshipsByPairs(misses);
         }, 'character_relationship');
 
         const fetchedByKey = Object.fromEntries(

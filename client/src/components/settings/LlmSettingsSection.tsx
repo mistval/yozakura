@@ -1,9 +1,9 @@
 import { useState } from 'react';
+import z from 'zod';
 import { useSettingsModal } from './SettingsModalContext.js';
 import { LLM_DEFAULTS } from '../../engine/settings/llm_defaults.js';
 import { useSettingsStore, type LLMOptionsGroup } from '../../state/settings_store.js';
 import { useModalScroll } from '../ui/Modal.js';
-import CheckboxSettingRow from './ui/CheckboxSettingRow.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
 import { settingsTooltips } from './settings_tooltips.js';
 import { getErrorMessage } from '../../errors/error_util.js';
@@ -12,9 +12,13 @@ import { useTextareaPasteWarningGate } from './pasteWarning/useTextareaPasteWarn
 import { newId } from '../../util/id.js';
 import { readModelFromMetaOptions, writeModelToMetaOptions } from './meta_options_model.js';
 import DeleteButton from '../ui/DeleteButton.js';
+import { SpoilerSection } from '../ui/SpoilerSection.js';
+import { useQueryParam } from '../../util/queryParams.js';
 
 type ConfigDraft = LLMOptionsGroup;
 const DEFAULT_LLM_META_OPTIONS_SOURCE = JSON.stringify(LLM_DEFAULTS, null, 2);
+const tokenStreamingSelectSchema = z.enum(['inherit', 'enabled', 'disabled']);
+type TokenStreamingSelectValue = z.infer<typeof tokenStreamingSelectSchema>;
 
 function maskToken(token: string) {
   if (token.length <= 8) return '••••••••';
@@ -63,6 +67,7 @@ function ConfigEditor({
   onSave: (config: ConfigDraft) => void;
   onCancel: () => void;
 }) {
+  const initialTokenStreaming: TokenStreamingSelectValue = config.tokenStreamingEnabled ?? 'inherit';
   const [draft, setDraft] = useState({
     ...config,
     name: config.name || '',
@@ -71,6 +76,9 @@ function ConfigEditor({
     responsePreParserSource: config.responsePreParserSource || '',
     rule: config.rule || '',
     llmMetaOptionsSource: config.llmMetaOptions || DEFAULT_LLM_META_OPTIONS_SOURCE,
+    tokenStreamingEnabled: initialTokenStreaming,
+    concurrencyGroupName: config.concurrencyGroupName || '',
+    concurrencyGroupLimit: config.concurrencyGroupLimit?.toString() || '',
   });
 
   const [showToken, setShowToken] = useState(false);
@@ -112,6 +120,9 @@ function ConfigEditor({
     const trimmedUrl = draft.llmUrl.trim();
     const trimmedToken = draft.llmAuthToken.trim();
     const trimmedResponsePreParserSource = draft.responsePreParserSource.trim();
+    const trimmedConcurrencyGroupName = draft.concurrencyGroupName.trim();
+    const parsedLimit = parseInt(draft.concurrencyGroupLimit.trim(), 10);
+    const validLimit = !Number.isNaN(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined;
 
     if (trimmedResponsePreParserSource) {
       let maybeParser: unknown;
@@ -137,6 +148,11 @@ function ConfigEditor({
       ...(trimmedUrl ? { llmUrl: trimmedUrl } : {}),
       ...(trimmedToken ? { llmAuthToken: trimmedToken } : {}),
       ...(trimmedResponsePreParserSource ? { responsePreParserSource: trimmedResponsePreParserSource } : {}),
+      ...(draft.tokenStreamingEnabled !== 'inherit'
+        ? { tokenStreamingEnabled: draft.tokenStreamingEnabled }
+        : {}),
+      ...(trimmedConcurrencyGroupName ? { concurrencyGroupName: trimmedConcurrencyGroupName } : {}),
+      ...(validLimit !== undefined ? { concurrencyGroupLimit: validLimit } : {}),
     });
   };
 
@@ -213,34 +229,6 @@ function ConfigEditor({
 
       <div>
         <SettingFieldLabel
-          text="Rule (optional)"
-          htmlFor={`llm-config-rule-${config.id}`}
-          tooltipHtml={settingsTooltips['llm.rule']}
-        />
-        <input
-          id={`llm-config-rule-${config.id}`}
-          value={draft.rule}
-          onChange={(event) =>
-            setDraft((prev) => ({ ...prev, rule: event.target.value }) satisfies typeof prev)
-          }
-          placeholder="context.promptTemplateGroup === 'gen_intelligent_next_speaker_select'"
-          className="rounded-input"
-          onPaste={(event) => {
-            onPasteWithWarning(event, {
-              value: draft.rule,
-              applyValue: (val) => {
-                setDraft((prev) => ({ ...prev, rule: val }) satisfies typeof prev);
-              },
-            });
-          }}
-        />
-        <div className="text-xs text-muted mt-1">
-          e.g. context.promptTemplateGroup === 'gen_intelligent_next_speaker_select'
-        </div>
-      </div>
-
-      <div>
-        <SettingFieldLabel
           text="Model (optional)"
           htmlFor={`llm-config-model-${config.id}`}
           tooltipHtml={settingsTooltips['llm.model']}
@@ -265,52 +253,145 @@ function ConfigEditor({
         />
       </div>
 
-      <div>
-        <SettingFieldLabel
-          text="LLM Meta Options (JSON)"
-          htmlFor={`llm-config-meta-${config.id}`}
-          tooltipHtml={settingsTooltips['llm.metaOptions']}
-        />
-        <textarea
-          id={`llm-config-meta-${config.id}`}
-          rows={10}
-          value={draft.llmMetaOptionsSource}
-          onChange={(event) =>
-            setDraft((prev) => ({ ...prev, llmMetaOptionsSource: event.target.value }) satisfies typeof prev)
-          }
-          className="rounded-input font-mono text-sm"
-        />
-      </div>
-
-      <div>
-        <SettingFieldLabel
-          text="Response Pre-parser (optional)"
-          htmlFor={`llm-config-response-pre-parser-${config.id}`}
-          tooltipHtml={settingsTooltips['llm.responsePreParser']}
-        />
-        <textarea
-          id={`llm-config-response-pre-parser-${config.id}`}
-          rows={8}
-          value={draft.responsePreParserSource}
-          onChange={(event) =>
-            setDraft(
-              (prev) => ({ ...prev, responsePreParserSource: event.target.value }) satisfies typeof prev
-            )
-          }
-          className="rounded-input font-mono text-sm"
-          onPaste={(event) => {
-            onPasteWithWarning(event, {
-              value: draft.responsePreParserSource,
-              applyValue: (val) => {
-                setDraft((prev) => ({ ...prev, responsePreParserSource: val }) satisfies typeof prev);
-              },
-            });
-          }}
-        />
-        <div className="text-xs text-muted mt-1">
-          Must evaluate to <code>(response) =&gt; string</code>. Leave blank to inherit.
+      <SpoilerSection title="Advanced Settings" revealedQueryParam="llmoptionsadvanced">
+        <div>
+          <SettingFieldLabel
+            text="LLM Meta Options (JSON)"
+            htmlFor={`llm-config-meta-${config.id}`}
+            tooltipHtml={settingsTooltips['llm.metaOptions']}
+          />
+          <textarea
+            id={`llm-config-meta-${config.id}`}
+            rows={10}
+            value={draft.llmMetaOptionsSource}
+            onChange={(event) =>
+              setDraft(
+                (prev) => ({ ...prev, llmMetaOptionsSource: event.target.value }) satisfies typeof prev
+              )
+            }
+            className="rounded-input font-mono text-sm"
+          />
         </div>
-      </div>
+
+        <div>
+          <SettingFieldLabel
+            text="Rule (optional)"
+            htmlFor={`llm-config-rule-${config.id}`}
+            tooltipHtml={settingsTooltips['llm.rule']}
+          />
+          <input
+            id={`llm-config-rule-${config.id}`}
+            value={draft.rule}
+            onChange={(event) =>
+              setDraft((prev) => ({ ...prev, rule: event.target.value }) satisfies typeof prev)
+            }
+            placeholder="context.promptTemplateGroup === 'gen_intelligent_next_speaker_select'"
+            className="rounded-input"
+            onPaste={(event) => {
+              onPasteWithWarning(event, {
+                value: draft.rule,
+                applyValue: (val) => {
+                  setDraft((prev) => ({ ...prev, rule: val }) satisfies typeof prev);
+                },
+              });
+            }}
+          />
+        </div>
+
+        <div className="space-y-3 mt-3">
+          <div>
+            <SettingFieldLabel
+              text="Token streaming"
+              htmlFor={`llm-token-streaming-${config.id}`}
+              tooltipHtml={settingsTooltips['llm.tokenStreaming']}
+            />
+            <select
+              id={`llm-token-streaming-${config.id}`}
+              value={draft.tokenStreamingEnabled}
+              onChange={(event) => {
+                const parsed = tokenStreamingSelectSchema.safeParse(event.target.value);
+                if (!parsed.success) {
+                  return;
+                }
+
+                setDraft((prev) => ({ ...prev, tokenStreamingEnabled: parsed.data }));
+              }}
+              className="rounded-input"
+            >
+              <option value="inherit">Inherit</option>
+              <option value="enabled">Enabled</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </div>
+          <div className="flex gap-3">
+            <div className="w-full">
+              <SettingFieldLabel
+                text="Concurrency Group Name (optional)"
+                htmlFor={`llm-config-concurrency-group-${config.id}`}
+                tooltipHtml={settingsTooltips['llm.concurrencyGroupName']}
+              />
+              <input
+                id={`llm-config-concurrency-group-${config.id}`}
+                value={draft.concurrencyGroupName}
+                onChange={(event) =>
+                  setDraft((prev) => ({ ...prev, concurrencyGroupName: event.target.value }))
+                }
+                placeholder="default_llm"
+                className="rounded-input"
+              />
+            </div>
+
+            <div className="w-full">
+              <SettingFieldLabel
+                text="Concurrency Group Limit (optional)"
+                htmlFor={`llm-config-concurrency-limit-${config.id}`}
+                tooltipHtml={settingsTooltips['llm.concurrencyGroupLimit']}
+              />
+              <input
+                id={`llm-config-concurrency-limit-${config.id}`}
+                type="number"
+                min={1}
+                value={draft.concurrencyGroupLimit}
+                onChange={(event) =>
+                  setDraft((prev) => ({ ...prev, concurrencyGroupLimit: event.target.value }))
+                }
+                placeholder="2"
+                className="rounded-input"
+              />
+            </div>
+          </div>
+
+          <div>
+            <SettingFieldLabel
+              text="Response Pre-parser (optional)"
+              htmlFor={`llm-config-response-pre-parser-${config.id}`}
+              tooltipHtml={settingsTooltips['llm.responsePreParser']}
+            />
+            <textarea
+              id={`llm-config-response-pre-parser-${config.id}`}
+              rows={8}
+              value={draft.responsePreParserSource}
+              onChange={(event) =>
+                setDraft(
+                  (prev) => ({ ...prev, responsePreParserSource: event.target.value }) satisfies typeof prev
+                )
+              }
+              className="rounded-input font-mono text-sm"
+              onPaste={(event) => {
+                onPasteWithWarning(event, {
+                  value: draft.responsePreParserSource,
+                  applyValue: (val) => {
+                    setDraft((prev) => ({ ...prev, responsePreParserSource: val }) satisfies typeof prev);
+                  },
+                });
+              }}
+            />
+            <div className="text-xs text-muted mt-1">
+              Must evaluate to <code>(response) =&gt; string</code>. Leave blank to inherit.
+            </div>
+          </div>
+        </div>
+      </SpoilerSection>
 
       {saveError && <div className="error-card">{saveError}</div>}
       {connectionTestError && <div className="error-card">{connectionTestError}</div>}
@@ -341,10 +422,9 @@ function ConfigEditor({
 export default function LlmSettingsSection() {
   const { setSettingsSection } = useSettingsModal();
   const llmConfigs = useSettingsStore((s) => s.llmConfigs);
-  const tokenStreamingEnabled = useSettingsStore((s) => s.tokenStreamingEnabled);
   const setSettings = useSettingsStore((s) => s.setSettings);
   const modalScroll = useModalScroll();
-  const [editingId, setEditingId] = useState<string | undefined>(undefined);
+  const [editingId, setEditingId] = useQueryParam('llmoptionsid');
 
   const configs: LLMOptionsGroup[] = Object.values(llmConfigs || {});
   const hasMultipleConfigs = configs.length > 1;
@@ -393,14 +473,6 @@ export default function LlmSettingsSection() {
       </div>
 
       <div className="bordered-section">
-        <CheckboxSettingRow
-          id="llm-token-streaming"
-          label="Token streaming"
-          tooltipHtml={settingsTooltips['llm.tokenStreaming']}
-          checked={tokenStreamingEnabled}
-          onChange={(nextChecked) => setSettings({ tokenStreamingEnabled: nextChecked })}
-        />
-
         <div className="flex justify-between items-center">
           <h3 className="font-medium">LLM Prompt Options</h3>
           <button type="button" onClick={addConfig} className="px-3 py-1 border rounded-sm">
@@ -439,6 +511,20 @@ export default function LlmSettingsSection() {
                       <div className="text-sm text-muted">
                         Meta Options: {formatMetaOptionsPreview(config.llmMetaOptions)}
                       </div>
+                      {config.concurrencyGroupName && (
+                        <div className="text-sm text-muted">
+                          Concurrency: {config.concurrencyGroupName}{' '}
+                          {config.concurrencyGroupLimit ? `(Limit: ${config.concurrencyGroupLimit})` : ''}
+                        </div>
+                      )}
+                      <div className="text-sm text-muted">
+                        Token Streaming:{' '}
+                        {config.tokenStreamingEnabled === 'enabled'
+                          ? 'Enabled'
+                          : config.tokenStreamingEnabled === 'disabled'
+                            ? 'Disabled'
+                            : '(inherit)'}
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <button
@@ -475,6 +561,7 @@ export default function LlmSettingsSection() {
                         !config.llmUrl &&
                         !config.llmAuthToken &&
                         !config.responsePreParserSource &&
+                        !config.tokenStreamingEnabled &&
                         !hasMetaOptions
                       ) {
                         removeConfig(config.id);

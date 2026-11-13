@@ -18,12 +18,16 @@ const allSchema = z.object({
   parameterGroups: z.array(z.array(z.unknown())),
 });
 
+const preparedStatementCache = new LRUCache<string, Database.Statement>({
+  max: 1000,
+});
+
+export function clearPreparedStatementCache(): void {
+  preparedStatementCache.clear();
+}
+
 export default function dbRouter(db: Database.Database): Router {
   const router = express.Router();
-
-  const preparedStatementCache = new LRUCache<string, Database.Statement>({
-    max: 1000,
-  });
 
   function getPreparedStatement(statementText: string): Database.Statement {
     const cached = preparedStatementCache.get(statementText);

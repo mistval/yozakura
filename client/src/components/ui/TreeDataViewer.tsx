@@ -1,0 +1,307 @@
+import { useState, useCallback, useRef, useEffect, useMemo, type ReactNode } from 'react';
+import {
+  type TreeNode,
+  type CheckState,
+  computeNodeCheckState,
+  collectDescendantIds,
+  toggleNodeSelection,
+  isTreeAllSelected,
+} from './tree_selection.js';
+
+export type { TreeNode, CheckState };
+
+export type TreeSelectionState = {
+  selectedIds: Set<string>;
+  selectAll: () => Promise<void>;
+  clearAll: () => void;
+  isAllSelected: boolean;
+  hasSelection: boolean;
+};
+
+export type TreeDataViewerProps = {
+  roots: TreeNode[];
+  title?: string;
+  preselectAll?: boolean;
+  renderControls?: (selection: TreeSelectionState) => ReactNode;
+  disabled?: boolean;
+  className?: string;
+};
+
+function TriStateCheckbox({
+  state,
+  onChange,
+  disabled,
+  'aria-label': ariaLabel,
+}: {
+  state: CheckState;
+  onChange: () => void;
+  disabled?: boolean;
+  'aria-label'?: string;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.indeterminate = state === 'some';
+    }
+  }, [state]);
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={state === 'all'}
+      onChange={onChange}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      className="cursor-pointer h-4 w-4 rounded border-border-default text-primary focus:ring-focus-ring"
+    />
+  );
+}
+
+export default function TreeDataViewer({
+  roots,
+  title,
+  renderControls,
+  disabled = false,
+  className = '',
+  preselectAll = false,
+}: TreeDataViewerProps) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(() => new Set());
+  const [childrenMap, setChildrenMap] = useState<Record<string, TreeNode[]>>({});
+  const [loadingNodeIds, setLoadingNodeIds] = useState<Set<string>>(() => new Set());
+
+  const childrenMapRef = useRef(childrenMap);
+  childrenMapRef.current = childrenMap;
+
+  // Load children for a given node
+  const loadChildren = useCallback(async (node: TreeNode): Promise<TreeNode[]> => {
+    const cached = childrenMapRef.current[node.id];
+    if (cached) {
+      return cached;
+    }
+    if (!node.getChildren) {
+      return [];
+    }
+
+    setLoadingNodeIds((prev) => new Set(prev).add(node.id));
+    try {
+      const children = await node.getChildren();
+      setChildrenMap((prev) => ({ ...prev, [node.id]: children }));
+      return children;
+    } finally {
+      setLoadingNodeIds((prev) => {
+        const next = new Set(prev);
+        next.delete(node.id);
+        return next;
+      });
+    }
+  }, []);
+
+  // Pre-select all items across roots on roots change
+  useEffect(() => {
+    if (!preselectAll) {
+      return;
+    }
+
+    setChildrenMap({});
+    let cancelled = false;
+    void (async () => {
+      const nextSelected = new Set<string>();
+      for (const root of roots) {
+        const ids = await collectDescendantIds(root, loadChildren);
+        for (const id of ids) {
+          nextSelected.add(id);
+        }
+      }
+      if (!cancelled) {
+        setSelectedIds(nextSelected);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [roots, loadChildren, preselectAll]);
+
+  const getNodeCheckState = useCallback(
+    (node: TreeNode): CheckState => {
+      return computeNodeCheckState(node, selectedIds, childrenMap);
+    },
+    [childrenMap, selectedIds]
+  );
+
+  // Toggle node expansion
+  const toggleExpand = useCallback(
+    async (node: TreeNode) => {
+      if (disabled || !node.getChildren) return;
+
+      const isExpanded = expandedNodeIds.has(node.id);
+      if (isExpanded) {
+        setExpandedNodeIds((prev) => {
+          const next = new Set(prev);
+          next.delete(node.id);
+          return next;
+        });
+      } else {
+        setExpandedNodeIds((prev) => new Set(prev).add(node.id));
+        await loadChildren(node);
+      }
+    },
+    [disabled, expandedNodeIds, loadChildren]
+  );
+
+  // Toggle checkbox for a node
+  const handleToggleCheck = useCallback(
+    async (node: TreeNode) => {
+      if (disabled) return;
+      const next = await toggleNodeSelection(node, selectedIds, childrenMap, loadChildren, roots);
+      setSelectedIds(next);
+    },
+    [childrenMap, disabled, loadChildren, roots, selectedIds]
+  );
+
+  // Select all across all roots
+  const selectAll = useCallback(async () => {
+    if (disabled) return;
+    const nextSelected = new Set(selectedIds);
+    for (const root of roots) {
+      const ids = await collectDescendantIds(root, loadChildren);
+      for (const id of ids) {
+        nextSelected.add(id);
+      }
+    }
+    setSelectedIds(nextSelected);
+  }, [disabled, loadChildren, roots, selectedIds]);
+
+  // Clear all selections
+  const clearAll = useCallback(() => {
+    if (disabled) return;
+    setSelectedIds(new Set());
+  }, [disabled]);
+
+  const hasSelection = useMemo(() => selectedIds.size > 0, [selectedIds]);
+
+  const isAllSelected = useMemo(() => {
+    return isTreeAllSelected(roots, selectedIds, childrenMap);
+  }, [childrenMap, roots, selectedIds]);
+
+  const renderNode = (node: TreeNode, depth = 0): ReactNode => {
+    const isExpanded = expandedNodeIds.has(node.id);
+    const isLoading = loadingNodeIds.has(node.id);
+    const checkState = getNodeCheckState(node);
+    const children = childrenMap[node.id];
+    const canExpand = Boolean(node.getChildren);
+
+    return (
+      <div key={node.id} className="flex flex-col select-none">
+        <div
+          className="flex items-center gap-2 py-1.5 px-2 hover:bg-surface-hover rounded text-sm transition-colors"
+          style={{ paddingLeft: `${depth * 1.25 + 0.5}rem` }}
+        >
+          {canExpand ? (
+            <button
+              type="button"
+              onClick={() => toggleExpand(node)}
+              disabled={disabled || isLoading}
+              className={`relative w-5 h-5 flex items-center justify-center text-secondary transition-transform ${
+                disabled ? 'cursor-not-allowed opacity-50' : 'hover:text-primary cursor-pointer'
+              }`}
+              aria-label={isExpanded ? 'Collapse' : 'Expand'}
+            >
+              {isLoading ? (
+                <span className="text-xs animate-spin">⟳</span>
+              ) : (
+                <span
+                  className={`w-full h-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-xs inline-block transform ${isExpanded ? 'rotate-90' : ''}`}
+                >
+                  {'>'}
+                </span>
+              )}
+            </button>
+          ) : (
+            <span className="w-5 h-5" />
+          )}
+
+          <TriStateCheckbox
+            state={checkState}
+            onChange={() => handleToggleCheck(node)}
+            disabled={disabled}
+            aria-label={`Select ${node.label}`}
+          />
+
+          <div
+            className={`flex flex-1 items-baseline gap-2 min-w-0 ${
+              disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+            }`}
+            onClick={() => {
+              if (disabled) return;
+              if (canExpand) {
+                toggleExpand(node);
+              } else {
+                handleToggleCheck(node);
+              }
+            }}
+          >
+            <span className="font-medium text-primary truncate">{node.label}</span>
+            {node.subtitle && <span className="text-xs text-muted truncate">{node.subtitle}</span>}
+          </div>
+        </div>
+
+        {canExpand && isExpanded && children && (
+          <div className="flex flex-col">{children.map((child) => renderNode(child, depth + 1))}</div>
+        )}
+      </div>
+    );
+  };
+
+  const selectionState: TreeSelectionState = {
+    selectedIds,
+    selectAll,
+    clearAll,
+    isAllSelected,
+    hasSelection,
+  };
+
+  return (
+    <div className={`flex flex-col ${className}`}>
+      {(title || roots.length > 0) && (
+        <div className="flex items-center justify-between text-xs text-secondary mb-2">
+          {title && <div className="text-sm font-medium text-primary">{title}</div>}
+          <div className="flex gap-2 ml-auto">
+            <button
+              type="button"
+              onClick={() => void selectAll()}
+              className="hover:text-primary underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+              disabled={disabled}
+            >
+              Select All
+            </button>
+            <span>|</span>
+            <button
+              type="button"
+              onClick={clearAll}
+              className="hover:text-primary underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+              disabled={disabled}
+            >
+              Clear All
+            </button>
+          </div>
+        </div>
+      )}
+      <div
+        role="tree"
+        className={`border border-border-default rounded-sm bg-surface-soft p-2 overflow-y-auto max-h-96 ${
+          disabled ? 'opacity-60 cursor-not-allowed select-none' : ''
+        }`}
+      >
+        {roots.length === 0 ? (
+          <div className="p-4 text-center text-sm text-secondary">No items available</div>
+        ) : (
+          roots.map((root) => renderNode(root, 0))
+        )}
+      </div>
+      {renderControls && <div className="mt-4">{renderControls(selectionState)}</div>}
+    </div>
+  );
+}

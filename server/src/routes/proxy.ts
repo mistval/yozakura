@@ -58,8 +58,8 @@ export default function proxyRouter(): Router {
         headers: new Headers(requestHeaders),
         signal: upstreamAbortController.signal,
         dispatcher: new Agent({
-          headersTimeout: Number.MAX_SAFE_INTEGER,
-          bodyTimeout: Number.MAX_SAFE_INTEGER,
+          headersTimeout: 2147483647,
+          bodyTimeout: 2147483647,
         }),
       };
 

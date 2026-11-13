@@ -96,6 +96,21 @@ export class ReactiveLRUCache<K extends {}, V extends {}> {
     return deleted;
   }
 
+  public deleteMany(keys: Iterable<K>): boolean {
+    let changed = false;
+    for (const key of keys) {
+      if (this.lru.delete(key)) {
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      this.rebuildSnapshot();
+      this.notify();
+    }
+    return changed;
+  }
+
   public clear(): void {
     if (this.lru.size === 0) {
       return;

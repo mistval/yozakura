@@ -17,7 +17,7 @@ import {
   type LLMConfig,
 } from '../engine/settings/cascading_llm_configs.js';
 import _ from 'lodash';
-import * as Database from '../backend_bridge/database.js';
+import { doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database.js';
 import { templateGroupDataSchema } from '../engine/prompt_templates/template_types.js';
 import { DEFAULT_TEMPLATE_GROUP_DATA } from '../engine/prompt_templates/default_template_group_data.js';
 import {
@@ -35,7 +35,7 @@ export type NpcChatEndMode = z.infer<typeof npcChatEndModeSchema>;
 const chatPaneWidthSchema = z.enum(['narrow', 'medium', 'wide', 'extra_wide', 'unconstrained']);
 export type ChatPaneWidth = z.infer<typeof chatPaneWidthSchema>;
 
-const settingsSchema = z.object({
+export const settingsSchema = z.object({
   llmConfigs: z.record(z.string(), llmConfigSchema),
   richNpcInteractionRate: z.number(),
   richNpcMessageCount: z.number(),
@@ -59,6 +59,8 @@ const settingsSchema = z.object({
   selectedSceneImageTemplateChainId: z.string(),
   settingsScripts: settingsScriptsStateSchema,
   editImagePromptsBeforeDispatch: z.boolean(),
+  generateImagesInParallelWithText: z.boolean(),
+  imageGenerationConcurrency: z.number(),
   autoImageRate: z.number(),
   autoImageNpcOnly: z.boolean(),
   autoImageTemplateWeights: z.record(z.string(), z.number()),
@@ -75,7 +77,6 @@ const settingsSchema = z.object({
   offscreenMentionLimit: z.number(),
   rollingConversationSummaryLimit: z.number(),
   offscreenLearnedInformationLimit: z.number(),
-  tokenStreamingEnabled: z.boolean(),
   showTemplatePasteSafetyWarning: z.boolean(),
   theme: z.enum([
     'system',
@@ -114,7 +115,7 @@ type SettingsStoreState = Settings & {
   resetSettings: () => void;
 };
 
-const DEFAULT_SETTINGS: Settings = {
+export const DEFAULT_SETTINGS: Settings = {
   llmConfigs: DEFAULT_LLM_CONFIGS,
   richNpcInteractionRate: 0.3,
   richNpcMessageCount: 6,
@@ -138,12 +139,14 @@ const DEFAULT_SETTINGS: Settings = {
   selectedSceneImageTemplateChainId: DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID,
   settingsScripts: DEFAULT_SETTINGS_SCRIPTS_STATE,
   editImagePromptsBeforeDispatch: false,
+  generateImagesInParallelWithText: false,
+  imageGenerationConcurrency: 1,
   autoImageRate: 0,
   autoImageNpcOnly: false,
   autoImageTemplateWeights: {
-    [DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID]: 25,
+    [DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,
     [SPEAKER_CLOSE_UP_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,
-    [SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,
+    [SCENERY_CHAT_SCENE_IMAGE_CHAIN_ID]: 25,
   },
   groupChatMessageLimit: 20,
   npcChatEndMode: 'fixed',
@@ -158,7 +161,6 @@ const DEFAULT_SETTINGS: Settings = {
   offscreenMentionLimit: 2,
   rollingConversationSummaryLimit: 10,
   offscreenLearnedInformationLimit: 10,
-  tokenStreamingEnabled: true,
   showTemplatePasteSafetyWarning: true,
   theme: 'yozakura',
   mainMenuFtueSeen: false,
@@ -192,9 +194,9 @@ const SETTINGS_KV_KEY = 'settings';
 const overridesStorageSchema = z.record(z.string(), z.unknown());
 
 function persistSettingsOverrides(overrides: SettingsOverrides) {
-  void Database.doAsDataWrite(
+  void doAsDataWrite(
     async () => {
-      await Database.storeKeyValue(
+      await mainDatabase.storeKeyValue(
         SETTINGS_KV_KEY,
         overrides as Record<string, unknown>,
         overridesStorageSchema
@@ -224,9 +226,9 @@ export const useSettingsStore = create<SettingsStoreState>((set, get) => ({
   },
   resetSettings: () => {
     set(DEFAULT_SETTINGS);
-    void Database.doAsDataWrite(
+    void doAsDataWrite(
       async () => {
-        await Database.deleteKeyValue(SETTINGS_KV_KEY);
+        await mainDatabase.deleteKeyValue(SETTINGS_KV_KEY);
       },
       'settings',
       { debouncerKey: SETTINGS_KV_KEY }
@@ -235,8 +237,8 @@ export const useSettingsStore = create<SettingsStoreState>((set, get) => ({
 }));
 
 async function loadOverridesFromBackend(): Promise<SettingsOverrides> {
-  const stored = await Database.doAsDataRead(
-    () => Database.loadKeyValue(SETTINGS_KV_KEY, overridesStorageSchema),
+  const stored = await doAsDataRead(
+    () => mainDatabase.loadKeyValue(SETTINGS_KV_KEY, overridesStorageSchema),
     'settings',
     { debouncerKey: SETTINGS_KV_KEY }
   );

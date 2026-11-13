@@ -18,6 +18,8 @@ RUN npm ci --prefix server
 
 COPY server/index.ts server/tsconfig.json ./server/
 COPY server/src ./server/src
+COPY server/scripts ./server/scripts
+COPY server/demo_data ./server/demo_data
 RUN npm run build --prefix server
 
 COPY --from=web-builder /app/client/dist ./client/dist

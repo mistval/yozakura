@@ -23,8 +23,8 @@ If you want to run a production build and use the application, run these command
 git clone https://github.com/mistval/yozakura.git
 cd yozakura
 git checkout main
-npm install --prefix client
-npm install --prefix server
+npm install
+npm run install:all
 npm run build:web
 npm run start --prefix server
 ```
@@ -37,14 +37,15 @@ If you want to run Yozakura in dev mode, then after cloning, run:
 
 ```sh
 npm install
-npm install --prefix client
-npm install --prefix server
+npm run install:all
 npm run dev
 ```
 
 This runs the server and the client concurrently with hot reloading.
 
 That should be all you need to do to get it running. Navigate to [http://localhost:5173/](http://localhost:5173/) in your browser to see the app.
+
+Alternatively, there is also a VS Code Dev Container that you can run via VS Code's Dev Container extension. This is especially good for running agentic coding sessions in a safe sandbox, and the included config is tuned for Google Antigravity. The dev container includes all dependencies for Yozakura, but if you run `npm run dev` inside of it and have issues with hot reloading, then consider running `npm run dev` _outside_ of the container instead. That will require also running the above install commands outside of the container as the node_modules are not shared between container and host (while the source code files are).
 
 ## Debugging in VS Code
 

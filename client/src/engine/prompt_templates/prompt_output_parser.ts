@@ -1,4 +1,6 @@
 import type z from 'zod';
+import { globalParallelJobManager } from '../parallelization/job_manager';
+import { UNCONSTRAINED_PARALLELISM_GROUP } from '../parallelization/job_manager_types';
 import type { SettingsBridge } from '../settings/settings_bridge';
 
 export class PromptOutputParser<TContextType extends object, TParserResult> {
@@ -22,12 +24,23 @@ export class PromptOutputParser<TContextType extends object, TParserResult> {
   }
 
   public async parse(input: string, context: TContextType): Promise<TParserResult> {
-    const parserSource = this.getParserSource();
+    return globalParallelJobManager.enqueue({
+      name: 'Parse prompt output',
+      parallelismGroup: UNCONSTRAINED_PARALLELISM_GROUP,
+      job: async (jobAbortSignal) => {
+        jobAbortSignal.throwIfAborted();
 
-    const parserFactory = new Function(`return (${parserSource});`);
-    const parser = parserFactory();
-    const parserResult = await parser(input, context);
+        const parserSource = this.getParserSource();
+        const parserFactory = new Function(`return (${parserSource});`);
+        const parser = parserFactory();
+        const parserContext = {
+          ...context,
+          abortSignal: jobAbortSignal,
+        };
+        const parserResult = await parser(input, parserContext);
 
-    return this.parserOutputSchema.parse(parserResult);
+        return this.parserOutputSchema.parse(parserResult);
+      },
+    });
   }
 }

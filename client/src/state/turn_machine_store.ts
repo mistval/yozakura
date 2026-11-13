@@ -15,8 +15,7 @@ import {
   serializedConversationTranscriptSchema,
   wardrobeSchema,
 } from '../engine/types.js';
-import { ConversationTranscript } from '../engine/chat/transcript.js';
-import { buildTranscriptRagDeps } from '../engine/chat/transcript_rag_deps.js';
+import { ConversationTranscript, type TranscriptRagDeps } from '../engine/chat/transcript.js';
 import type { ContextResolvers } from '../engine/prompt_templates/prompt_template_context_fields.js';
 import type { OmitFunctions } from '../util/types.js';
 import { getRequiredActiveScenario, getRequiredUserCharacterId, useScenarioStore } from './scenario_store.js';
@@ -29,19 +28,13 @@ import {
   selectZoneForWardrobeTriggers,
 } from '../engine/wardrobes.js';
 
-export type ChatState =
-  | 'inactive'
-  | 'generating_image'
-  | 'processing_memories'
-  | 'character_speaking'
-  | 'awaiting_character_input'
-  | 'selecting_speaker'
-  | 'judging_conversation_end';
+export type ChatState = 'inactive' | 'active';
 
 export type StartChatSessionArgs = {
   participantIds: string[];
   initiatorId: string;
   gossipTargetCharacterId: string | undefined;
+  ragDeps: TranscriptRagDeps;
 };
 
 export const persistedActiveChatSchema = z.object({
@@ -75,7 +68,6 @@ type BaseTurnMachineStoreState = {
   chatsSoFar: Record<string, { withIds: string[] }[]>;
 
   chatState: ChatState;
-  processingMemoryStatusInfo: string | undefined;
   participantIds: string[];
   removedParticipantIds: string[];
   gossipTargetCharacterId: string | undefined;
@@ -86,7 +78,6 @@ type BaseTurnMachineStoreState = {
   chatInstructions: string;
   chatInstructionsByCharacterId: Record<string, string>;
 
-  isActive: () => boolean;
   setTranscript: (transcript: ConversationTranscript) => void;
   startNewTurn: (opts?: { userMovesFirst?: boolean | undefined }) => void;
   currentCharacterId: () => string | undefined;
@@ -99,7 +90,7 @@ type BaseTurnMachineStoreState = {
   deactivateChat: () => void;
   reset: () => void;
   serialize: () => SerializedTurn | undefined;
-  hydrate: (snapshot: SerializedTurn) => void;
+  hydrate: (snapshot: SerializedTurn, ragDeps: TranscriptRagDeps) => void;
   setEphemeralLocation: (setter: (prev: EphemeralLocation) => EphemeralLocation | undefined) => void;
   userIsParticipant: () => boolean;
   userIsInitiator: () => boolean;
@@ -108,10 +99,6 @@ type BaseTurnMachineStoreState = {
   removeChatParticipant: (participantId: string) => void;
   setChatInstructions: (instructions: string) => void;
   setCharacterChatInstructions: (characterId: string, instructions: string) => void;
-  setStateProcessingMemories: (info: string) => void;
-  setStateAwaitingCharacterInput: () => void;
-  setStateCharacterSpeaking: () => void;
-  doWithState: <T>(chatState: ChatState, action: () => Promise<T>) => Promise<T>;
   getChatCharacterLocation: (
     charId: string,
     getCharacterById?: (id: string) => Character,
@@ -139,7 +126,6 @@ type InactiveChatFields = Omit<
 const inactiveChatTurnMachineState: InactiveChatFields = {
   chatState: 'inactive',
   removedParticipantIds: [],
-  processingMemoryStatusInfo: undefined,
   participantIds: [],
   gossipTargetCharacterId: undefined,
   transcript: undefined,
@@ -309,10 +295,6 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
   pendingTurnCharacterIds: [],
   chatsSoFar: {},
 
-  isActive() {
-    return get().chatState !== 'inactive';
-  },
-
   startNewTurn(opts: { userMovesFirst?: boolean | undefined } = {}) {
     const allCharacterIds = useScenarioCharacterStore.getState().scenarioCharacters.map((c) => c.id);
     const userCharacterId = getRequiredUserCharacterId();
@@ -394,8 +376,8 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       participantIds: args.participantIds,
       initiatorId: args.initiatorId,
       gossipTargetCharacterId: args.gossipTargetCharacterId,
-      chatState: 'awaiting_character_input',
-      transcript: ConversationTranscript.new(buildTranscriptRagDeps()),
+      chatState: 'active',
+      transcript: ConversationTranscript.new(args.ragDeps),
       preConversationWardrobeSnapshotByCharacterId: Object.fromEntries(
         participants.map((p) => [p.id, p.wardrobes])
       ),
@@ -444,7 +426,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     };
   },
 
-  hydrate(snapshot) {
+  hydrate(snapshot, ragDeps) {
     const base = {
       ...inactiveChatTurnMachineState,
       turnMachineState: snapshot.turnMachineState,
@@ -461,46 +443,9 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     set({
       ...base,
       ...chatFields,
-      chatState: 'awaiting_character_input',
-      transcript: ConversationTranscript.deserialize(serializedTranscript, buildTranscriptRagDeps()),
+      chatState: 'active',
+      transcript: ConversationTranscript.deserialize(serializedTranscript, ragDeps),
     } satisfies Partial<BaseTurnMachineStoreState>);
-  },
-
-  setStateProcessingMemories(statusInfo: string) {
-    set({
-      chatState: 'processing_memories',
-      processingMemoryStatusInfo: statusInfo,
-    } satisfies Partial<BaseTurnMachineStoreState>);
-  },
-
-  setStateAwaitingCharacterInput() {
-    set({
-      chatState: 'awaiting_character_input',
-      processingMemoryStatusInfo: undefined,
-    } satisfies Partial<BaseTurnMachineStoreState>);
-  },
-
-  setStateCharacterSpeaking() {
-    set({
-      chatState: 'character_speaking',
-      processingMemoryStatusInfo: undefined,
-    } satisfies Partial<BaseTurnMachineStoreState>);
-  },
-
-  async doWithState<T>(chatState: ChatState, action: () => Promise<T>) {
-    const toRestore = {
-      chatState: get().chatState,
-    };
-
-    set({
-      chatState,
-    } satisfies Partial<BaseTurnMachineStoreState>);
-
-    try {
-      return await action();
-    } finally {
-      set(toRestore);
-    }
   },
 
   userIsParticipant() {

@@ -8,7 +8,7 @@ import {
   type SillyTavernCardPayload,
   type DetectedCardMetadata,
 } from './character_card_metadata.js';
-import { type Character } from './types.js';
+import { type Character, type ParallelPromptJobConfig } from './types.js';
 import { createWardrobe, DAILY_AUTOSELECT_TAG_PREFIX, formatPrefixedTag } from './wardrobes.js';
 import {
   baseAppearanceGenerationTemplateChain,
@@ -21,31 +21,26 @@ import {
 import { newId } from '../util/id.js';
 import { buildCharacterEditorContext } from './prompt_templates/prompt_context_builder.js';
 
-export async function generateCharacterInternalDescription(
-  character: Character,
-  abortSignal?: AbortSignal
-): Promise<string> {
-  return characterDescriptionGenerationTemplateChain.renderAndExecute(
-    buildCharacterEditorContext(character),
-    { abortSignal }
-  );
+export async function generateCharacterInternalDescription(character: Character): Promise<string> {
+  return characterDescriptionGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character));
 }
+
+export type GenerateFieldOptions = {
+  jobConfig?: ParallelPromptJobConfig | undefined;
+};
 
 export async function generateCharacterExternalDescription(
   character: Character,
-  abortSignal?: AbortSignal
+  options?: GenerateFieldOptions
 ): Promise<string> {
-  return externalDescriptionGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
-    abortSignal,
-  });
+  return externalDescriptionGenerationTemplateChain.renderAndExecute(
+    buildCharacterEditorContext(character),
+    options
+  );
 }
 
 export type ExtractCharacterCardField =
-  | 'internalDescription'
-  | 'externalDescription'
-  | 'exampleDialogue'
-  | 'baseAppearanceTags'
-  | 'wardrobes';
+  'internalDescription' | 'externalDescription' | 'exampleDialogue' | 'baseAppearanceTags' | 'wardrobes';
 
 export const ALL_EXTRACT_CHARACTER_CARD_FIELDS: readonly ExtractCharacterCardField[] = [
   'internalDescription',
@@ -56,7 +51,6 @@ export const ALL_EXTRACT_CHARACTER_CARD_FIELDS: readonly ExtractCharacterCardFie
 ] as const;
 
 export type ExtractCharacterCardOptions = {
-  abortSignal?: AbortSignal;
   onStep?: (step: string) => void;
   fields?: ExtractCharacterCardField[];
 };
@@ -70,73 +64,107 @@ export async function extractCharacterCard(
     throw new Error('Character firstName and description must be non-empty');
   }
 
-  const signal = options?.abortSignal;
   const onStep = options?.onStep;
   const fields = options?.fields ?? ALL_EXTRACT_CHARACTER_CARD_FIELDS;
   const shouldExtract = (field: ExtractCharacterCardField) => fields.includes(field);
 
+  const charTag = `extract_character_${newId()}`;
+  const makeJobConfig = (name: string): ParallelPromptJobConfig => ({
+    name,
+    tags: [charTag],
+    exclusiveWithTags: [charTag],
+    onStart: () => onStep?.(name),
+  });
+
+  const tasks: Promise<void>[] = [];
+
   if (shouldExtract('internalDescription')) {
-    onStep?.('Extracting description');
-    const description = await extractCharacterDescriptionTemplateChain.renderAndExecute(
-      buildCharacterEditorContext(character),
-      { abortSignal: signal }
+    tasks.push(
+      (async () => {
+        const description = await extractCharacterDescriptionTemplateChain.renderAndExecute(
+          buildCharacterEditorContext(character),
+          { jobConfig: makeJobConfig('Extracting description') }
+        );
+        onFieldGenerated?.('internalDescription', description);
+      })()
     );
-    onFieldGenerated?.('internalDescription', description);
   }
 
   if (shouldExtract('externalDescription')) {
-    onStep?.('Generating external description');
-    const externalDescription = await generateCharacterExternalDescription(character, signal);
-    onFieldGenerated?.('externalDescription', externalDescription);
+    tasks.push(
+      (async () => {
+        const externalDescription = await generateCharacterExternalDescription(character, {
+          jobConfig: makeJobConfig('Generating external description'),
+        });
+        onFieldGenerated?.('externalDescription', externalDescription);
+      })()
+    );
   }
 
   if (shouldExtract('exampleDialogue')) {
-    onStep?.('Generating example dialogue');
-    const exampleDialogue = await generateExampleDialogue(character, signal);
-    onFieldGenerated?.('exampleDialogue', exampleDialogue);
+    tasks.push(
+      (async () => {
+        const exampleDialogue = await generateExampleDialogue(character, {
+          jobConfig: makeJobConfig('Generating example dialogue'),
+        });
+        onFieldGenerated?.('exampleDialogue', exampleDialogue);
+      })()
+    );
   }
 
   if (shouldExtract('baseAppearanceTags')) {
-    onStep?.('Generating appearance');
-    const baseAppearanceTags = await generateBaseAppearanceTags(character, signal);
-    onFieldGenerated?.('baseAppearanceTags', baseAppearanceTags);
+    tasks.push(
+      (async () => {
+        const baseAppearanceTags = await generateBaseAppearanceTags(character, {
+          jobConfig: makeJobConfig('Generating appearance'),
+        });
+        onFieldGenerated?.('baseAppearanceTags', baseAppearanceTags);
+      })()
+    );
   }
 
   if (shouldExtract('wardrobes')) {
-    onStep?.('Generating wardrobe');
-    const wardrobeText = await generateWardrobe(character, signal);
-    onFieldGenerated?.('wardrobes', [
-      createWardrobe({
-        text: wardrobeText,
-        tags: [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')],
-        enabled: true,
-      }),
-    ]);
+    tasks.push(
+      (async () => {
+        const wardrobeText = await generateWardrobe(character, {
+          jobConfig: makeJobConfig('Generating wardrobe'),
+        });
+        onFieldGenerated?.('wardrobes', [
+          createWardrobe({
+            text: wardrobeText,
+            tags: [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')],
+            enabled: true,
+          }),
+        ]);
+      })()
+    );
   }
+
+  await Promise.all(tasks);
 }
 
 export async function generateExampleDialogue(
   character: Character,
-  abortSignal?: AbortSignal
+  options?: GenerateFieldOptions
 ): Promise<string> {
-  return exampleDialogueTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
-    abortSignal,
-  });
+  return exampleDialogueTemplateChain.renderAndExecute(buildCharacterEditorContext(character), options);
 }
 
 export async function generateBaseAppearanceTags(
   character: Character,
-  abortSignal?: AbortSignal
+  options?: GenerateFieldOptions
 ): Promise<string> {
-  return baseAppearanceGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
-    abortSignal,
-  });
+  return baseAppearanceGenerationTemplateChain.renderAndExecute(
+    buildCharacterEditorContext(character),
+    options
+  );
 }
 
-export async function generateWardrobe(character: Character, abortSignal?: AbortSignal): Promise<string> {
-  return wardrobeGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), {
-    abortSignal,
-  });
+export async function generateWardrobe(
+  character: Character,
+  options?: GenerateFieldOptions
+): Promise<string> {
+  return wardrobeGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character), options);
 }
 
 export function createBlankCharacter(): Character {
@@ -231,7 +259,6 @@ export function getImportedCardName(
 }
 
 type BuildImportedCardCharacterOptions = {
-  abortSignal?: AbortSignal;
   onStep?: (step: string) => void;
 };
 

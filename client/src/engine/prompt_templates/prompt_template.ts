@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import { runWithInteractiveRetry } from '../interative_retry';
+import { globalParallelJobManager } from '../parallelization/job_manager';
 import { etaRender } from '../../util/eta';
 import { useTemplateRenderLogStore } from '../../state/template_render_log_store';
 import type { SettingsBridge } from '../settings/settings_bridge';
@@ -47,28 +48,37 @@ export class PromptTemplate<TContextType extends object> {
   }
 
   public async render(context: TContextType, options?: PromptTemplateRenderOptions): Promise<string> {
-    return runWithInteractiveRetry<string>({
-      operationType: `template.render.${this.templateId}`,
-      maxRetries: Number.POSITIVE_INFINITY,
-      hint: TEMPLATE_RENDER_RETRY_HINT,
-      run: async () => {
-        const parsedContext = this.contextSchema.parse(context);
-        const templateString = this.getTemplateString();
-        const rendered = await etaRender(templateString, parsedContext);
+    return globalParallelJobManager.enqueue({
+      name: `Render template: ${this.templateName}`,
+      job: async (jobAbortSignal) => {
+        return runWithInteractiveRetry<string>({
+          operationType: `template.render.${this.templateId}`,
+          abortSignal: jobAbortSignal,
+          maxRetries: Number.POSITIVE_INFINITY,
+          hint: TEMPLATE_RENDER_RETRY_HINT,
+          run: async () => {
+            const parsedContext = this.contextSchema.parse({
+              ...context,
+              abortSignal: jobAbortSignal,
+            });
+            const templateString = this.getTemplateString();
+            const rendered = await etaRender(templateString, parsedContext);
 
-        if (options?.completionRequestId) {
-          useTemplateRenderLogStore.getState().postTemplateRender({
-            completionRequestId: options.completionRequestId,
-            template: {
-              templateId: this.templateId,
-              templateName: this.templateName,
-              role: this.role,
-              renderedOutput: rendered,
-            },
-          });
-        }
+            if (options?.completionRequestId) {
+              useTemplateRenderLogStore.getState().postTemplateRender({
+                completionRequestId: options.completionRequestId,
+                template: {
+                  templateId: this.templateId,
+                  templateName: this.templateName,
+                  role: this.role,
+                  renderedOutput: rendered,
+                },
+              });
+            }
 
-        return rendered;
+            return rendered;
+          },
+        });
       },
     });
   }

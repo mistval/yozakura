@@ -19,6 +19,7 @@ import { useScenarioStore } from '../state/scenario_store.js';
 import { useMapStore } from '../state/map_store.js';
 import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
+import { useGlobalCharactersStore } from '../state/global_character_store.js';
 import {
   useCachedCharacterRelationships,
   useScenarioCharacterRelationshipStore,
@@ -29,12 +30,19 @@ import { getUserMovementSuggestion } from '../engine/character_schedule/get_sche
 import { ChatCoordinator } from '../engine/chat/chat_coordinator';
 import { startScenarioLoop } from '../engine/scenario_loop/scenario_loop';
 import { useSettingsStore } from '../state/settings_store';
+import { useUserCanInputChat, useIsChatFinalizing } from '../state/chat_state';
+import { globalParallelJobManager } from '../engine/parallelization/job_manager';
+import { UserStopSignalException } from '../engine/scenario_loop/flow_control';
 
 export default function ScenarioView() {
   const navigate = useNavigate();
   const { scenarioId } = useParams<{ scenarioId: string }>();
   const scenario = useScenarioStore((state) => state.activeScenario);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
+  const scenarioCharactersAreLoaded = useScenarioCharacterStore((s) => s.scenarioCharactersAreLoaded);
+  const scenarioCharacters = useScenarioCharacterStore((s) => s.scenarioCharacters);
+  const globalCharactersAreLoaded = useGlobalCharactersStore((s) => s.globalCharactersAreLoaded);
+  const globalCharacters = useGlobalCharactersStore((s) => s.globalCharacters);
   const activeMap = useScenarioStore((state) => state.activeScenarioMap);
   const noMapsExist = useMapStore((s) => s.mapsAreLoaded && s.maps.length === 0);
   const loadScenarioState = useScenarioStore((state) => state.refreshScenario);
@@ -58,14 +66,13 @@ export default function ScenarioView() {
   const submitUserChatAction = useScenarioLoopStateStore((state) => state.submitUserChatAction);
   const autoModeEnabled = useScenarioLoopStateStore((state) => state.autoMode);
   const setAutoModeEnabled = useScenarioLoopStateStore((state) => state.setAutoMode);
-  const setUserRequestedPhaseTransition = useScenarioLoopStateStore(
-    (state) => state.setUserRequestedPhaseTransition
-  );
+  const isFinalizingChat = useIsChatFinalizing();
   const isUserTurn =
     currentTurnCharacterId !== undefined && currentTurnCharacterId === scenario?.userCharacterId;
   const npcPhaseBusy =
     currentTurnCharacterId !== undefined && currentTurnCharacterId !== scenario?.userCharacterId;
   const canSubmitUserTurn = isUserTurn && !hasActiveChatSession;
+  const canReturnToMainMenu = useUserCanInputChat() || !hasActiveChatSession;
   const previousUserIdRef = useRef<string | null>(null);
   const visibleRelationships = useCachedCharacterRelationships();
 
@@ -120,8 +127,7 @@ export default function ScenarioView() {
   const perspectiveLocationId: string | undefined = perspectiveCharacter
     ? charactersById[perspectiveCharacter.id]?.locationId
     : undefined;
-  const canAddChatParticipant =
-    activeChatState !== 'processing_memories' && (hasActiveChatSession || isUserTurn);
+  const canAddChatParticipant = !isFinalizingChat && (hasActiveChatSession || isUserTurn);
 
   const locationById = useMemo(
     () =>
@@ -240,11 +246,35 @@ export default function ScenarioView() {
     );
   }
 
+  if (
+    scenarioCharactersAreLoaded &&
+    scenarioCharacters.length === 0 &&
+    globalCharactersAreLoaded &&
+    globalCharacters.length === 0
+  ) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 space-y-3">
+        <h1 className="text-2xl font-semibold text-danger-text">No Characters Available</h1>
+        <p className="text-secondary text-sm">
+          This scenario contains no characters, and there are no global characters in your library. Please
+          create or import a global character first.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="px-4 py-2 bg-button-emphasized-bg text-button-emphasized-text rounded cursor-pointer"
+        >
+          Main Menu
+        </button>
+      </div>
+    );
+  }
+
   if (!scenario || !user || !perspectiveCharacter || !activeMap) {
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-3">
         <h1 className="text-2xl font-semibold">Loading...</h1>
-        <button type="button" onClick={() => navigate('/')} disabled={!canSubmitUserTurn}>
+        <button type="button" onClick={() => navigate('/')} disabled={!canReturnToMainMenu}>
           Main Menu
         </button>
       </div>
@@ -270,7 +300,7 @@ export default function ScenarioView() {
           Map
         </button>
         {includeMenu && (
-          <button type="button" onClick={() => navigate('/')} disabled={!canSubmitUserTurn}>
+          <button type="button" onClick={() => navigate('/')} disabled={!canReturnToMainMenu}>
             Main Menu
           </button>
         )}
@@ -305,13 +335,14 @@ export default function ScenarioView() {
           {showNpcPhaseControls && (
             <div>
               <div className="font-semibold mb-1">
-                {(perspectiveCharacter.firstName + ' ' + perspectiveCharacter.lastName).trim()}'s turn
+                {isUserTurn &&
+                  `${(perspectiveCharacter.firstName + ' ' + perspectiveCharacter.lastName).trim()}'s turn`}
               </div>
               <div className="flex gap-2 flex-wrap">
                 <button
                   type="button"
                   className="border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover"
-                  onClick={() => setUserRequestedPhaseTransition('stopped')}
+                  onClick={() => globalParallelJobManager.cancelAllJobs(new UserStopSignalException())}
                 >
                   ■ Stop
                 </button>
@@ -339,7 +370,7 @@ export default function ScenarioView() {
                   <CharacterCard
                     key={char.id}
                     character={char}
-                    subtitle={rel.descriptor}
+                    subtitle2={rel.descriptor}
                     onClick={() => {
                       if (hasActiveChatSession) {
                         addCharacterToActiveChat(char.id);

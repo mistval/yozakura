@@ -84,12 +84,19 @@ export const settingsTooltips = {
   'npc.groupAdditionalParticipants':
     'When an NPC starts a group chat, this is how many other participants it attempts to include (limited by how many other chat candidates there are).',
   'npc.singleChatRate': 'Chance that an NPC chooses to chat during their turn (as opposed to moving).',
+  'image.generateImagesInParallelWithText':
+    'When enabled, chat images generate in parallel in the background while the text conversation continues. When disabled, text generation waits for image generation to complete. In general, you should leave this off if you are running text and image generation models on your own machine, as a typical machine struggles to do both at the same time.',
+  'image.concurrency': 'Maximum number of image generation jobs that can run in parallel.',
+  'llm.concurrencyGroupName':
+    'Name of the concurrency pool for this prompt group. Prompts sharing the same group name will share a concurrency limit.',
+  'llm.concurrencyGroupLimit':
+    'Maximum number of concurrent requests allowed for this concurrency group. If multiple option groups specify limits for the same group name, the lowest limit is used.',
   'llm.name': 'Friendly label for this LLM option group.',
   'llm.url': 'Optional endpoint override. Leave blank to inherit URL from earlier matching groups.',
   'llm.authToken':
     'Optional bearer token override. Leave blank to inherit token from earlier matching groups.',
   'llm.tokenStreaming':
-    'When enabled, NPC responses stream token-by-token. This requires your OpenAI-compatible API provider to support streaming (SSE).',
+    'When enabled, responses stream token-by-token. Select Inherit to use the setting from earlier matching groups. Requires your OpenAI-compatible API provider to support streaming (SSE).',
   'llm.responsePreParser':
     'Optional JavaScript function source that pre-processes raw model responses for this option group. Leave blank to inherit from earlier matching groups. It must evaluate to a function like <code>(response) => string</code>. This parser runs before any parsers configured for prompt templates.',
   'llm.model':

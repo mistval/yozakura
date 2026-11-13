@@ -27,6 +27,7 @@ import type { CharacterEditorModalProps, PendingCardImport } from './types';
 import { generateCharacterCard } from '../../engine/image_gen';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
 import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
+import { addOrReplaceVersionQueryParam } from '../../util/id.js';
 
 type CharacterEditorModalContextValue = {
   open: boolean;
@@ -60,6 +61,7 @@ type CharacterEditorModalContextValue = {
   generateImage: () => Promise<void>;
   exportCard: () => Promise<void>;
   save: () => Promise<void>;
+  saveAsScenarioAndGlobal: () => Promise<void>;
   remove: () => Promise<void>;
   handleUploadedCardFile: (file: File) => Promise<void>;
   closePendingImport: () => void;
@@ -131,7 +133,7 @@ export function CharacterEditorModalProvider({
   const currentImageSrc = previewUrl
     ? previewUrl
     : currentImagePath
-      ? `${currentImagePath}?v=${imageRefreshKey}`
+      ? addOrReplaceVersionQueryParam(currentImagePath, imageRefreshKey)
       : '/images/character/default_character.png';
 
   useEffect(() => {
@@ -353,7 +355,7 @@ export function CharacterEditorModalProvider({
       ? new Uint8Array(await selectedImageFile.arrayBuffer())
       : currentImagePath
         ? await (async () => {
-            const response = await fetch(`${currentImagePath}?v=${Date.now()}`);
+            const response = await fetch(addOrReplaceVersionQueryParam(currentImagePath));
             if (!response.ok) {
               throw new Error('No existing character card image was found to export.');
             }
@@ -383,7 +385,7 @@ export function CharacterEditorModalProvider({
     }, 0);
   };
 
-  const save = async () => {
+  const performSave = async (opts?: { alsoSaveGlobal?: boolean }) => {
     const sanitizedCharacter = {
       ...character,
       firstName: character.firstName.trim(),
@@ -392,7 +394,18 @@ export function CharacterEditorModalProvider({
 
     await runWithField('save', async () => {
       if (isGlobalMode) {
-        useGlobalCharactersStore.getState().saveGlobalCharacter(sanitizedCharacter, selectedImageFile);
+        void useGlobalCharactersStore.getState().saveGlobalCharacter(sanitizedCharacter, selectedImageFile);
+      } else if (opts?.alsoSaveGlobal) {
+        const savedGlobal = await useGlobalCharactersStore
+          .getState()
+          .saveScenarioCharacterAsGlobal(sanitizedCharacter, selectedImageFile);
+        saveScenarioCharacter(
+          {
+            ...sanitizedCharacter,
+            globalCharacterId: savedGlobal.id,
+          },
+          selectedImageFile
+        );
       } else {
         saveScenarioCharacter(sanitizedCharacter, selectedImageFile);
       }
@@ -400,6 +413,10 @@ export function CharacterEditorModalProvider({
       onClose();
     });
   };
+
+  const save = () => performSave();
+
+  const saveAsScenarioAndGlobal = () => performSave({ alsoSaveGlobal: true });
 
   const remove = async () => {
     await runWithField('delete', async () => {
@@ -561,6 +578,7 @@ export function CharacterEditorModalProvider({
     generateImage: generateImageField,
     exportCard,
     save,
+    saveAsScenarioAndGlobal,
     remove,
     handleUploadedCardFile,
     closePendingImport,

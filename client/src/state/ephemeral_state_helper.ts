@@ -71,8 +71,8 @@ export interface IEphemeralStateDelegate<TEntityType> {
   readonly setDatabaseState: (entities: TEntityType[]) => Promise<void>;
   // Delete these entities from the database. Must be atomic (SQLite transaction or multi-delete).
   readonly deleteDatabaseState: (entities: TEntityType[]) => Promise<void>;
-  // Reload these entities from the database
-  readonly refreshStoreStateFromDatabase: (entities: TEntityType[]) => Promise<void>;
+  // Load the persisted state of these entities from the database
+  readonly getEntitiesFromDatabase: (entities: TEntityType[]) => Promise<TEntityType[]>;
 }
 
 export class EphemeralStateHelper<TEntityType extends { id: string }> {
@@ -139,7 +139,7 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
         .catch(() => {})
         .then(async () => {
           try {
-            await this.delegate.refreshStoreStateFromDatabase(entitiesToRefresh);
+            await this.refreshStoreStateFromDatabase(entitiesToRefresh);
           } finally {
             const idsToRemove = flushedIds.filter((id) => !this.pendingOperations.has(id));
             useDeferredSyncStore.getState().removeSyncingEntityIds(idsToRemove);
@@ -230,7 +230,7 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
         operationType: 'database_sync_updated',
       });
 
-      await this.delegate.refreshStoreStateFromDatabase(updates);
+      await this.refreshStoreStateFromDatabase(updates);
     }
   }
 
@@ -245,7 +245,21 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
         operationType: 'database_sync_delete',
       });
 
-      await this.delegate.refreshStoreStateFromDatabase(deletes);
+      await this.refreshStoreStateFromDatabase(deletes);
+    }
+  }
+
+  private async refreshStoreStateFromDatabase(entities: TEntityType[]) {
+    const persistedEntities = await this.delegate.getEntitiesFromDatabase(entities);
+    const persistedIds = new Set(persistedEntities.map((entity) => entity.id));
+    const missingEntities = entities.filter((entity) => !persistedIds.has(entity.id));
+
+    if (missingEntities.length > 0) {
+      this.delegate.deleteStoreState(missingEntities);
+    }
+
+    if (persistedEntities.length > 0) {
+      this.delegate.setStoreState(persistedEntities);
     }
   }
 }
