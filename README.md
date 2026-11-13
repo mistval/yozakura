@@ -45,7 +45,7 @@ This runs the server and the client concurrently with hot reloading.
 
 That should be all you need to do to get it running. Navigate to [http://localhost:5173/](http://localhost:5173/) in your browser to see the app.
 
-Alternatively, there is also a VS Code Dev Container that you can run via VS Code's Dev Container extension. This is especially good for running agentic coding sessions in a safe sandbox. Once the dev container launches, run `npm run dev` in the terminal to start the dev server.
+Alternatively, there is also a VS Code Dev Container that you can run via VS Code's Dev Container extension. This is especially good for running agentic coding sessions in a safe sandbox, and the included config is tuned for Google Antigravity. The dev container includes all dependencies for Yozakura, but if you run `npm run dev` inside of it and have issues with hot reloading, then consider running `npm run dev` _outside_ of the container instead. That will require also running the above install commands outside of the container as the node_modules are not shared between container and host (while the source code files are).
 
 ## Debugging in VS Code
 
