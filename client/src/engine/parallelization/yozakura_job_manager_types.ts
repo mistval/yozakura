@@ -11,6 +11,7 @@ export const ChatJobTags = {
   generatingImage: 'generating_image',
   generatingImagePrompt: 'generating_image_prompt',
   finalizingChat: 'finalizing_chat',
+  waitingBetweenMessages: 'waiting_between_messages',
 } as const;
 
 export type ChatJobTag = (typeof ChatJobTags)[keyof typeof ChatJobTags];

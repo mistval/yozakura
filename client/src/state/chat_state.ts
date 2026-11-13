@@ -39,6 +39,7 @@ export function useUserCanInputChat() {
 
   const negativeConditions = [
     useIsChatFinalizing(),
+    useJobWithTagExists(ChatJobTags.waitingBetweenMessages),
     useJobWithTagExists(ChatJobTags.characterIsSpeaking),
     useJobWithTagExists(ChatJobTags.selectingSpeaker),
     useJobWithTagExists(ChatJobTags.judgingConversationEnd),

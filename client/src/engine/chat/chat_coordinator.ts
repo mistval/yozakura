@@ -612,8 +612,8 @@ export class ChatCoordinator {
     }
 
     await globalParallelJobManager.enqueue({
-      name: 'Waiting between messages',
-      tags: [ChatJobTags.abortOnPause],
+      name: `Waiting between messages (${delaySeconds} seconds)`,
+      tags: [ChatJobTags.abortOnPause, ChatJobTags.chatJob, ChatJobTags.waitingBetweenMessages],
       job: (abortSignal) => wait(delaySeconds * 1000, abortSignal),
     });
   }
