@@ -21,7 +21,7 @@ describe('cascading_llm_configs', () => {
     expect(isKnownCloudLlmProvider('')).toBe(false);
   });
 
-  it('sets concurrencyGroupLimit to 3 for known cloud providers in updateLLMConfigsWithBaseDefaultsConnection', () => {
+  it('sets concurrencyGroupLimit to 6 for known cloud providers in updateLLMConfigsWithBaseDefaultsConnection', () => {
     const updated = updateLLMConfigsWithBaseDefaultsConnection(
       DEFAULT_LLM_CONFIGS,
       'https://openrouter.ai/api/v1/chat/completions',
@@ -29,7 +29,7 @@ describe('cascading_llm_configs', () => {
       'deepseek/deepseek-chat'
     );
     const base = findBaseDefaultsLLMConfig(updated);
-    expect(base?.concurrencyGroupLimit).toBe(3);
+    expect(base?.concurrencyGroupLimit).toBe(6);
   });
 
   it('keeps concurrencyGroupLimit as 1 for local endpoints in updateLLMConfigsWithBaseDefaultsConnection', () => {
