@@ -1,9 +1,9 @@
 import { useState } from 'react';
+import z from 'zod';
 import { useSettingsModal } from './SettingsModalContext.js';
 import { LLM_DEFAULTS } from '../../engine/settings/llm_defaults.js';
 import { useSettingsStore, type LLMOptionsGroup } from '../../state/settings_store.js';
 import { useModalScroll } from '../ui/Modal.js';
-import CheckboxSettingRow from './ui/CheckboxSettingRow.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
 import { settingsTooltips } from './settings_tooltips.js';
 import { getErrorMessage } from '../../errors/error_util.js';
@@ -17,6 +17,8 @@ import { useQueryParam } from '../../util/queryParams.js';
 
 type ConfigDraft = LLMOptionsGroup;
 const DEFAULT_LLM_META_OPTIONS_SOURCE = JSON.stringify(LLM_DEFAULTS, null, 2);
+const tokenStreamingSelectSchema = z.enum(['inherit', 'enabled', 'disabled']);
+type TokenStreamingSelectValue = z.infer<typeof tokenStreamingSelectSchema>;
 
 function maskToken(token: string) {
   if (token.length <= 8) return '••••••••';
@@ -65,6 +67,7 @@ function ConfigEditor({
   onSave: (config: ConfigDraft) => void;
   onCancel: () => void;
 }) {
+  const initialTokenStreaming: TokenStreamingSelectValue = config.tokenStreamingEnabled ?? 'inherit';
   const [draft, setDraft] = useState({
     ...config,
     name: config.name || '',
@@ -73,7 +76,7 @@ function ConfigEditor({
     responsePreParserSource: config.responsePreParserSource || '',
     rule: config.rule || '',
     llmMetaOptionsSource: config.llmMetaOptions || DEFAULT_LLM_META_OPTIONS_SOURCE,
-    tokenStreamingEnabled: config.tokenStreamingEnabled ?? undefined,
+    tokenStreamingEnabled: initialTokenStreaming,
     concurrencyGroupName: config.concurrencyGroupName || '',
     concurrencyGroupLimit: config.concurrencyGroupLimit?.toString() || '',
   });
@@ -145,7 +148,7 @@ function ConfigEditor({
       ...(trimmedUrl ? { llmUrl: trimmedUrl } : {}),
       ...(trimmedToken ? { llmAuthToken: trimmedToken } : {}),
       ...(trimmedResponsePreParserSource ? { responsePreParserSource: trimmedResponsePreParserSource } : {}),
-      ...(draft.tokenStreamingEnabled !== undefined
+      ...(draft.tokenStreamingEnabled !== 'inherit'
         ? { tokenStreamingEnabled: draft.tokenStreamingEnabled }
         : {}),
       ...(trimmedConcurrencyGroupName ? { concurrencyGroupName: trimmedConcurrencyGroupName } : {}),
@@ -296,13 +299,30 @@ function ConfigEditor({
         </div>
 
         <div className="space-y-3 mt-3">
-          <CheckboxSettingRow
-            id={`llm-token-streaming-${config.id}`}
-            label="Token streaming"
-            tooltipHtml={settingsTooltips['llm.tokenStreaming']}
-            checked={draft.tokenStreamingEnabled ?? true}
-            onChange={(nextChecked) => setDraft((prev) => ({ ...prev, tokenStreamingEnabled: nextChecked }))}
-          />
+          <div>
+            <SettingFieldLabel
+              text="Token streaming"
+              htmlFor={`llm-token-streaming-${config.id}`}
+              tooltipHtml={settingsTooltips['llm.tokenStreaming']}
+            />
+            <select
+              id={`llm-token-streaming-${config.id}`}
+              value={draft.tokenStreamingEnabled}
+              onChange={(event) => {
+                const parsed = tokenStreamingSelectSchema.safeParse(event.target.value);
+                if (!parsed.success) {
+                  return;
+                }
+
+                setDraft((prev) => ({ ...prev, tokenStreamingEnabled: parsed.data }));
+              }}
+              className="rounded-input"
+            >
+              <option value="inherit">Inherit</option>
+              <option value="enabled">Enabled</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </div>
           <div className="flex gap-3">
             <div className="w-full">
               <SettingFieldLabel
@@ -497,11 +517,14 @@ export default function LlmSettingsSection() {
                           {config.concurrencyGroupLimit ? `(Limit: ${config.concurrencyGroupLimit})` : ''}
                         </div>
                       )}
-                      {config.tokenStreamingEnabled !== undefined && (
-                        <div className="text-sm text-muted">
-                          Token Streaming: {config.tokenStreamingEnabled ? 'Enabled' : 'Disabled'}
-                        </div>
-                      )}
+                      <div className="text-sm text-muted">
+                        Token Streaming:{' '}
+                        {config.tokenStreamingEnabled === 'enabled'
+                          ? 'Enabled'
+                          : config.tokenStreamingEnabled === 'disabled'
+                            ? 'Disabled'
+                            : '(inherit)'}
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <button
@@ -538,6 +561,7 @@ export default function LlmSettingsSection() {
                         !config.llmUrl &&
                         !config.llmAuthToken &&
                         !config.responsePreParserSource &&
+                        !config.tokenStreamingEnabled &&
                         !hasMetaOptions
                       ) {
                         removeConfig(config.id);

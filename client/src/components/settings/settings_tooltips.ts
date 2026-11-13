@@ -96,7 +96,7 @@ export const settingsTooltips = {
   'llm.authToken':
     'Optional bearer token override. Leave blank to inherit token from earlier matching groups.',
   'llm.tokenStreaming':
-    'When enabled, NPC responses stream token-by-token. This requires your OpenAI-compatible API provider to support streaming (SSE).',
+    'When enabled, responses stream token-by-token. Select Inherit to use the setting from earlier matching groups. Requires your OpenAI-compatible API provider to support streaming (SSE).',
   'llm.responsePreParser':
     'Optional JavaScript function source that pre-processes raw model responses for this option group. Leave blank to inherit from earlier matching groups. It must evaluate to a function like <code>(response) => string</code>. This parser runs before any parsers configured for prompt templates.',
   'llm.model':

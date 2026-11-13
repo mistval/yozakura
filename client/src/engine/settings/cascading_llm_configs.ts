@@ -22,6 +22,9 @@ const DEFAULT_RESPONSE_PRE_PARSER_SOURCE = `(response) => {
   return extractedTaggedText.replaceAll('[TOOL_CALLS]', '');
 }`;
 
+export const tokenStreamingModeSchema = z.enum(['enabled', 'disabled']);
+export type TokenStreamingMode = z.infer<typeof tokenStreamingModeSchema>;
+
 export const llmConfigSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -30,7 +33,7 @@ export const llmConfigSchema = z.object({
   llmUrl: z.string().optional(),
   llmAuthToken: z.string().optional(),
   responsePreParserSource: z.string().optional(),
-  tokenStreamingEnabled: z.boolean().optional(),
+  tokenStreamingEnabled: tokenStreamingModeSchema.optional(),
   concurrencyGroupName: z.string().optional(),
   concurrencyGroupLimit: z.number().optional(),
 });
@@ -135,7 +138,7 @@ export const DEFAULT_LLM_CONFIGS: LLMConfigById = {
     llmMetaOptions: JSON.stringify(LLM_DEFAULTS, null, 2),
     llmUrl: DEFAULT_COMPLETIONS_URL,
     responsePreParserSource: DEFAULT_RESPONSE_PRE_PARSER_SOURCE,
-    tokenStreamingEnabled: true,
+    tokenStreamingEnabled: 'enabled',
     concurrencyGroupName: 'default_llm',
     concurrencyGroupLimit: 1,
   },

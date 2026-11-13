@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BASE_DEFAULTS_LLM_CONFIG_ID,
   DEFAULT_LLM_CONFIGS,
   findBaseDefaultsLLMConfig,
   isKnownCloudLlmProvider,
@@ -40,5 +41,15 @@ describe('cascading_llm_configs', () => {
     );
     const base = findBaseDefaultsLLMConfig(updated);
     expect(base?.concurrencyGroupLimit).toBe(1);
+  });
+
+  it('defaults tokenStreamingEnabled to enabled for base and undefined (inherit) for all other configs', () => {
+    for (const [id, config] of Object.entries(DEFAULT_LLM_CONFIGS)) {
+      if (id === BASE_DEFAULTS_LLM_CONFIG_ID) {
+        expect(config.tokenStreamingEnabled).toBe('enabled');
+      } else {
+        expect(config.tokenStreamingEnabled).toBeUndefined();
+      }
+    }
   });
 });

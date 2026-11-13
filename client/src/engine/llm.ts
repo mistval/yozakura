@@ -133,8 +133,10 @@ export function resolveLlmPromptOptions(
       responsePreParserSource = trimmedResponsePreParserSource;
     }
 
-    if (config.tokenStreamingEnabled !== undefined) {
-      tokenStreamingEnabled = config.tokenStreamingEnabled;
+    if (config.tokenStreamingEnabled === 'enabled') {
+      tokenStreamingEnabled = true;
+    } else if (config.tokenStreamingEnabled === 'disabled') {
+      tokenStreamingEnabled = false;
     }
 
     if (config.concurrencyGroupName) {
