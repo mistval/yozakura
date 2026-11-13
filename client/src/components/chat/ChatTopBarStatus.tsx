@@ -9,7 +9,7 @@ export default function ChatTopBarStatus() {
   const isFinalizingChat = useIsChatFinalizing();
   const runningChatJobs = chatJobs.filter((j) => j.state === 'running');
   const singleRunningJob = runningChatJobs.length === 1 ? runningChatJobs[0] : undefined;
-  const hasMultipleRunningJobs = chatJobs.length > 1;
+  const hasMultipleRunningJobs = runningChatJobs.length > 1;
 
   useEffect(() => {
     if (!showWorkingPopover) return;
