@@ -12,3 +12,4 @@
 - Prefer manual dependency injection over vitest mocking.
 - KISS YAGNI. Don't add unrequested extra functionality/dynamism/flexibility that we don't need right now.
 - Avoid introducing complexity to solve practical non-issues.
+- JSX files should be named with Pascal case, all others with snake case.
