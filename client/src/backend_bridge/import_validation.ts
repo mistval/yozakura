@@ -54,6 +54,25 @@ const STAGED_ID_TABLES = Object.entries(TABLE_COLUMNS)
   .filter(([, cols]) => cols.some((col) => col === 'id'))
   .map(([table]) => table);
 
+const NON_MIRRORED_COLUMNS = new Set(['data', 'created_at', 'updated_at']);
+const SQL_ONLY_TABLE_COLUMNS = new Set(['conversation.scenario_id']);
+
+function snakeToCamel(col: string): string {
+  return col.replace(/_([a-z])/g, (_, ch: string) => ch.toUpperCase());
+}
+
+const STAGED_MIRRORED_COLUMN_CHECKS = Object.entries(TABLE_COLUMNS)
+  .filter(([, cols]) => cols.some((col) => col === 'id') && cols.some((col) => col === 'data'))
+  .flatMap(([table, cols]) =>
+    cols
+      .filter((col) => !NON_MIRRORED_COLUMNS.has(col) && !SQL_ONLY_TABLE_COLUMNS.has(`${table}.${col}`))
+      .map((col) => ({
+        table,
+        col,
+        jsonPath: `$.${snakeToCamel(col)}`,
+      }))
+  );
+
 async function validateEntities<T extends { id: string }>(
   loader: (page: number) => Promise<T[]>,
   schema: z.ZodType<unknown>,
@@ -152,7 +171,8 @@ export async function validateStagedData(options: {
 }): Promise<ValidationResult> {
   const errors: string[] = [];
 
-  // 0. Ensure all entity IDs across all known staging tables are globally unique
+  // 0. Ensure all entity IDs across all known staging tables are globally unique,
+  //    and that every mirrored relational column on (id, data) tables matches its JSON field
   const idUnionSql = STAGED_ID_TABLES.map((table) => `SELECT id FROM import_staging.${table}`).join(
     ' UNION ALL '
   );
@@ -164,6 +184,28 @@ export async function validateStagedData(options: {
   if (duplicateIdRows.length > 0) {
     errors.push(
       `Duplicate entity IDs found across staging tables: ${duplicateIdRows.map((r) => r.id).join(', ')}`
+    );
+  }
+
+  const columnMismatchUnionSql = STAGED_MIRRORED_COLUMN_CHECKS.map(({ table, col, jsonPath }) =>
+    `
+      SELECT '${table}' AS table_name, '${col}' AS column_name, id
+      FROM import_staging.${table}
+      WHERE NOT json_valid(data)
+         OR typeof(json_extract(data, '${jsonPath}')) != 'text'
+         OR json_extract(data, '${jsonPath}') != ${col}
+    `.trim()
+  ).join(' UNION ALL ');
+  const mismatchedRows = await importStagingDatabase.dbAll(
+    columnMismatchUnionSql,
+    [[]],
+    z.object({ table_name: z.string(), column_name: z.string(), id: z.string() })
+  );
+  if (mismatchedRows.length > 0) {
+    errors.push(
+      `Mismatched entity column and JSON data: ${mismatchedRows
+        .map((r) => `${r.table_name}.${r.column_name}(${r.id})`)
+        .join(', ')}`
     );
   }
 

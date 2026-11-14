@@ -166,8 +166,17 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
         await pipeline(req, fs.createWriteStream(zipFilePath));
       }
 
-      // 3. Extract the archive safely using extract-zip
-      await extract(zipFilePath, { dir: path.resolve(unpackedDir) });
+      // 3. Extract the archive safely using extract-zip (reject any symlink entries)
+      await extract(zipFilePath, {
+        dir: path.resolve(unpackedDir),
+        onEntry: (entry) => {
+          const unixMode = (entry.externalFileAttributes >>> 16) & 0xffff;
+          const isSymlink = (unixMode & 0o170000) === 0o120000;
+          if (isSymlink) {
+            throw new Error(`Forbidden symlink entry in import archive: "${entry.fileName}"`);
+          }
+        },
+      });
 
       // 4. Validate manifest.json with Zod
       const manifestPath = path.join(unpackedDir, 'manifest.json');
@@ -402,12 +411,16 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
           const sourceAbsPath = guardPathWithinBase(unpackedDir, item.zipPath);
           let stat: fs.Stats;
           try {
-            stat = await fs.promises.stat(sourceAbsPath);
+            stat = await fs.promises.lstat(sourceAbsPath);
           } catch (err) {
             if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
               return;
             }
             throw err;
+          }
+
+          if (stat.isSymbolicLink()) {
+            throw new Error(`Forbidden symlink image copy source: "${item.zipPath}"`);
           }
 
           if (stat.isDirectory()) {

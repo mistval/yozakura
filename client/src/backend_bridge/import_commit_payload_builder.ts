@@ -97,9 +97,10 @@ export async function prepareStagingAndBuildCommitPayload(
     let targetRelPath = zipPath;
     if (conflictResolutions[char.id] === 'copy') {
       const newId = copiedCharIdToNewId.get(char.id);
-      if (newId) {
-        targetRelPath = `character_cards/${newId}.png`;
+      if (!newId) {
+        throw new Error(`Failed to allocate copy ID for global character "${char.id}"`);
       }
+      targetRelPath = `character_cards/${newId}.png`;
     }
 
     imageCopies.push({

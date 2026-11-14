@@ -13,6 +13,7 @@ import {
 import { buildExportPayload, TreeEntityIds } from '../client/src/backend_bridge/export_payload_builder.js';
 import { stageImportArchive, cancelImport, commitImport } from '../client/src/backend_bridge/import_api.js';
 import { validateStagedData } from '../client/src/backend_bridge/import_validation.js';
+import { prepareStagingAndBuildCommitPayload } from '../client/src/backend_bridge/import_commit_payload_builder.js';
 import { MAX_DB_ROW_LINE_CHARS } from '../server/src/routes/import.js';
 import type { WorldMap, Scenario, ScenarioSummary, Character } from '../client/src/engine/types.js';
 
@@ -579,10 +580,10 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
         userCharacterName: 'Alice Liddell',
         hasCharacters: true,
         hasCharacterGroups: true,
-        hasCharacterGroupsSchedules: true,
-        hasMemories: true,
-        hasConversations: true,
-        hasTurnState: true,
+        hasCharacterGroupSchedules: true,
+        hasRelationships: true,
+        hasConversationLogs: true,
+        hasCurrentConversation: true,
         createdAt: sourceScenario.createdAt,
         updatedAt: sourceScenario.updatedAt,
       };
@@ -706,6 +707,306 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
     if (!duplicateIdRes.valid) {
       expect(duplicateIdRes.errors.join('\n')).toContain('Duplicate entity IDs found across staging tables');
       expect(duplicateIdRes.errors.join('\n')).toContain(seeded.scenarioId);
+    }
+  });
+
+  it('rejects staging when archive contains symlink entries and rejects symlink sources on commit', async () => {
+    /** Marks matching entries as Unix symlinks in the ZIP central directory. */
+    const markZipEntriesAsSymlinks = (zip: Buffer, symlinkEntryNames: ReadonlySet<string>): Buffer => {
+      const patched = Buffer.from(zip);
+      let pos = 0;
+      let patchedCount = 0;
+      while (pos <= patched.length - 46) {
+        if (patched.readUInt32LE(pos) === 0x02014b50) {
+          const nameLen = patched.readUInt16LE(pos + 28);
+          const extraLen = patched.readUInt16LE(pos + 30);
+          const commentLen = patched.readUInt16LE(pos + 32);
+          const entryName = patched.toString('utf8', pos + 46, pos + 46 + nameLen);
+          if (symlinkEntryNames.has(entryName)) {
+            patched.writeUInt16LE(0x031e, pos + 4);
+            patched.writeUInt32LE((0o120777 << 16) >>> 0, pos + 38);
+            patchedCount++;
+          }
+          pos += 46 + nameLen + extraLen + commentLen;
+        } else {
+          pos++;
+        }
+      }
+      expect(patchedCount).toBe(symlinkEntryNames.size);
+      return patched;
+    };
+
+    server = await createTestServer();
+    server.setActive();
+
+    const manifest = { exportName: 'SymlinkArchive', dbUserVersion: 8 };
+
+    // 1. Archive with a file symlink pointing outside unpackedDir
+    const rawFileSymlinkZip = await createZipBuffer([
+      { name: 'manifest.json', content: JSON.stringify(manifest) },
+      { name: 'character_cards/victim.png', content: Buffer.from('../../../../app.sqlite') },
+    ]);
+    const fileSymlinkZip = markZipEntriesAsSymlinks(
+      rawFileSymlinkZip,
+      new Set(['character_cards/victim.png'])
+    );
+
+    const stageFileSymlinkRes = await stageImportArchive(
+      new File([new Uint8Array(fileSymlinkZip)], 'SymlinkFile.yozakura_export.zip', {
+        type: 'application/zip',
+      })
+    );
+    expect(stageFileSymlinkRes.success).toBe(false);
+    if (!stageFileSymlinkRes.success) {
+      expect(stageFileSymlinkRes.error).toContain('Forbidden symlink entry in import archive');
+    }
+    expect(fs.existsSync(path.join(server.dataDir, 'temp', 'import_staging'))).toBe(false);
+
+    // 2. Archive with a directory-named symlink at character_cards
+    const rawDirSymlinkZip = await createZipBuffer([
+      { name: 'manifest.json', content: JSON.stringify(manifest) },
+      { name: 'character_cards', content: Buffer.from('../../../character_cards') },
+    ]);
+    const dirSymlinkZip = markZipEntriesAsSymlinks(rawDirSymlinkZip, new Set(['character_cards']));
+
+    const stageDirSymlinkRes = await stageImportArchive(
+      new File([new Uint8Array(dirSymlinkZip)], 'SymlinkDir.yozakura_export.zip', {
+        type: 'application/zip',
+      })
+    );
+    expect(stageDirSymlinkRes.success).toBe(false);
+    if (!stageDirSymlinkRes.success) {
+      expect(stageDirSymlinkRes.error).toContain('Forbidden symlink entry in import archive');
+    }
+
+    // 3. Defense-in-depth: /import/commit rejects symlink copy sources via lstat
+    const cleanZip = await createZipBuffer([{ name: 'manifest.json', content: JSON.stringify(manifest) }]);
+    const cleanStageRes = await stageImportArchive(
+      new File([new Uint8Array(cleanZip)], 'Clean.yozakura_export.zip', { type: 'application/zip' })
+    );
+    expect(cleanStageRes.success).toBe(true);
+
+    const unpackedCardsDir = path.join(
+      server.dataDir,
+      'temp',
+      'import_staging',
+      'unpacked',
+      'character_cards'
+    );
+    fs.mkdirSync(unpackedCardsDir, { recursive: true });
+    fs.symlinkSync(path.join(server.dataDir, 'app.sqlite'), path.join(unpackedCardsDir, 'sneaky.png'));
+
+    const symlinkCommitRes = await commitImport({
+      sqlStatements: [],
+      imageCopies: [
+        {
+          zipPath: 'character_cards/sneaky.png',
+          targetRelPath: 'character_cards/sneaky.png',
+        },
+      ],
+      allowedImageDirectories: ['character_cards', 'scenario'],
+      allowedFileExtensions: ['.png'],
+    });
+    expect(symlinkCommitRes.success).toBe(false);
+    if (!symlinkCommitRes.success) {
+      expect(symlinkCommitRes.error).toContain('Forbidden symlink image copy source');
+    }
+    expect(fs.existsSync(path.join(server.dataDir, 'character_cards', 'sneaky.png'))).toBe(false);
+  });
+
+  it('rejects mismatched SQL id and JSON data id across TABLE_COLUMNS tables and prevents fallback copy overwrite', async () => {
+    const sourceServer = await createTestServer();
+    let zipBuffer: Buffer;
+    let seeded: ReturnType<typeof seedCompleteScenario>;
+
+    try {
+      sourceServer.setActive();
+      seeded = seedCompleteScenario(sourceServer.db, sourceServer.dataDir);
+
+      const sourceMap = JSON.parse(
+        (sourceServer.db.prepare('SELECT data FROM map WHERE id = ?').get(seeded.mapId) as { data: string })
+          .data
+      ) as WorldMap;
+      const sourceScenario = JSON.parse(
+        (
+          sourceServer.db.prepare('SELECT data FROM scenario WHERE id = ?').get(seeded.scenarioId) as {
+            data: string;
+          }
+        ).data
+      ) as Scenario;
+      const sourceGlobalChar = JSON.parse(
+        (
+          sourceServer.db.prepare('SELECT data FROM character WHERE id = ?').get(seeded.globalCharId) as {
+            data: string;
+          }
+        ).data
+      ) as Character;
+
+      const sourceScenarioSummary: ScenarioSummary = {
+        scenario: sourceScenario,
+        mapId: sourceScenario.mapId,
+        mapName: sourceMap.name,
+        userCharacterName: 'Alice Liddell',
+        hasCharacters: true,
+        hasCharacterGroups: true,
+        hasCharacterGroupSchedules: true,
+        hasRelationships: true,
+        hasConversationLogs: true,
+        hasCurrentConversation: true,
+        createdAt: sourceScenario.createdAt,
+        updatedAt: sourceScenario.updatedAt,
+      };
+
+      const exportPayload = buildExportPayload({
+        exportName: 'IdMismatchExport',
+        selectedIds: new Set([
+          TreeEntityIds.scenario(seeded.scenarioId),
+          TreeEntityIds.scenarioCharacters(seeded.scenarioId),
+          TreeEntityIds.scenarioGroups(seeded.scenarioId),
+          TreeEntityIds.scenarioSchedules(seeded.scenarioId),
+          TreeEntityIds.scenarioMemories(seeded.scenarioId),
+          TreeEntityIds.scenarioConversations(seeded.scenarioId),
+          TreeEntityIds.scenarioTurn(seeded.scenarioId),
+          TreeEntityIds.map(seeded.mapId),
+          TreeEntityIds.character(seeded.globalCharId),
+        ]),
+        scenarios: [sourceScenarioSummary],
+        maps: [sourceMap],
+        globalCharacters: [sourceGlobalChar],
+      });
+
+      ({ zipBuffer } = await exportViaApi(exportPayload));
+    } finally {
+      await sourceServer.close();
+    }
+
+    server = await createTestServer();
+    server.setActive();
+
+    const file = new File([new Uint8Array(zipBuffer)], 'IdMismatch.yozakura_export.zip', {
+      type: 'application/zip',
+    });
+    const stageResult = await stageImportArchive(file);
+    expect(stageResult.success).toBe(true);
+
+    // 1. Mismatch on global character (SQL id changed while JSON $.id still claims seeded.globalCharId)
+    const fakeSqlId = 'aaaaaaaaaaaaaaaaaa';
+    server.db
+      .prepare('UPDATE import_staging.character SET id = ? WHERE id = ?')
+      .run(fakeSqlId, seeded.globalCharId);
+
+    // Build payload directly with "copy": must throw instead of silently falling back to zipPath overwrite
+    await expect(
+      prepareStagingAndBuildCommitPayload({
+        exportName: 'IdMismatchExport',
+        selectedGlobalCharacterIds: [seeded.globalCharId],
+        conflictResolutions: { [seeded.globalCharId]: 'copy' },
+      })
+    ).rejects.toThrow(`Failed to allocate copy ID for global character "${seeded.globalCharId}"`);
+
+    const charMismatchRes = await validateStagedData({
+      selectedScenarioIds: [],
+      selectedMapIds: [],
+      selectedGlobalCharacterIds: [seeded.globalCharId],
+    });
+    expect(charMismatchRes.valid).toBe(false);
+    if (!charMismatchRes.valid) {
+      expect(charMismatchRes.errors.join('\n')).toContain(
+        `Mismatched entity column and JSON data: character.id(${fakeSqlId})`
+      );
+    }
+
+    // Restore global character ID, then tamper a scenario_character row with wrong JSON id
+    server.db
+      .prepare('UPDATE import_staging.character SET id = ? WHERE id = ?')
+      .run(seeded.globalCharId, fakeSqlId);
+
+    const scenCharRow = server.db
+      .prepare('SELECT data FROM import_staging.scenario_character WHERE id = ?')
+      .get(seeded.scenarioChar1Id) as { data: string };
+    const scenCharData = JSON.parse(scenCharRow.data) as Record<string, unknown>;
+    server.db
+      .prepare('UPDATE import_staging.scenario_character SET data = ? WHERE id = ?')
+      .run(JSON.stringify({ ...scenCharData, id: 'bbbbbbbbbbbbbbbbbb' }), seeded.scenarioChar1Id);
+
+    const scenCharMismatchRes = await validateStagedData({
+      selectedScenarioIds: [seeded.scenarioId],
+      selectedMapIds: [],
+      selectedGlobalCharacterIds: [],
+    });
+    expect(scenCharMismatchRes.valid).toBe(false);
+    if (!scenCharMismatchRes.valid) {
+      expect(scenCharMismatchRes.errors.join('\n')).toContain(
+        `Mismatched entity column and JSON data: scenario_character.id(${seeded.scenarioChar1Id})`
+      );
+    }
+
+    // Also verify relational columns (scenario_id, from_id, to_id, group_id) are checked against JSON data
+    server.db
+      .prepare('UPDATE import_staging.scenario_character SET data = ? WHERE id = ?')
+      .run(JSON.stringify({ ...scenCharData, scenarioId: 'cccccccccccccccccc' }), seeded.scenarioChar1Id);
+
+    const relRow = server.db
+      .prepare('SELECT id, data FROM import_staging.character_relationship LIMIT 1')
+      .get() as { id: string; data: string };
+    const relData = JSON.parse(relRow.data) as Record<string, unknown>;
+    server.db
+      .prepare('UPDATE import_staging.character_relationship SET data = ? WHERE id = ?')
+      .run(
+        JSON.stringify({ ...relData, fromId: 'dddddddddddddddddd', toId: 'eeeeeeeeeeeeeeeeee' }),
+        relRow.id
+      );
+
+    const schedRow = server.db
+      .prepare('SELECT id, data FROM import_staging.scenario_character_group_schedule LIMIT 1')
+      .get() as { id: string; data: string };
+    const schedData = JSON.parse(schedRow.data) as Record<string, unknown>;
+    server.db
+      .prepare('UPDATE import_staging.scenario_character_group_schedule SET data = ? WHERE id = ?')
+      .run(JSON.stringify({ ...schedData, groupId: 'ffffffffffffffffff' }), schedRow.id);
+
+    const fkMismatchRes = await validateStagedData({
+      selectedScenarioIds: [seeded.scenarioId],
+      selectedMapIds: [],
+      selectedGlobalCharacterIds: [],
+    });
+    expect(fkMismatchRes.valid).toBe(false);
+    if (!fkMismatchRes.valid) {
+      const joinedErrors = fkMismatchRes.errors.join('\n');
+      expect(joinedErrors).toContain(`scenario_character.scenario_id(${seeded.scenarioChar1Id})`);
+      expect(joinedErrors).toContain(`character_relationship.from_id(${relRow.id})`);
+      expect(joinedErrors).toContain(`character_relationship.to_id(${relRow.id})`);
+      expect(joinedErrors).toContain(`scenario_character_group_schedule.group_id(${schedRow.id})`);
+    }
+
+    // Restore rows, then verify missing/non-string $.id in map is also rejected cleanly
+    server.db
+      .prepare('UPDATE import_staging.scenario_character SET data = ? WHERE id = ?')
+      .run(scenCharRow.data, seeded.scenarioChar1Id);
+    server.db
+      .prepare('UPDATE import_staging.character_relationship SET data = ? WHERE id = ?')
+      .run(relRow.data, relRow.id);
+    server.db
+      .prepare('UPDATE import_staging.scenario_character_group_schedule SET data = ? WHERE id = ?')
+      .run(schedRow.data, schedRow.id);
+    const mapRow = server.db
+      .prepare('SELECT data FROM import_staging.map WHERE id = ?')
+      .get(seeded.mapId) as { data: string };
+    const mapData = JSON.parse(mapRow.data) as Record<string, unknown>;
+    server.db
+      .prepare('UPDATE import_staging.map SET data = ? WHERE id = ?')
+      .run(JSON.stringify({ ...mapData, id: 12345 }), seeded.mapId);
+
+    const mapTypeMismatchRes = await validateStagedData({
+      selectedScenarioIds: [],
+      selectedMapIds: [seeded.mapId],
+      selectedGlobalCharacterIds: [],
+    });
+    expect(mapTypeMismatchRes.valid).toBe(false);
+    if (!mapTypeMismatchRes.valid) {
+      expect(mapTypeMismatchRes.errors.join('\n')).toContain(
+        `Mismatched entity column and JSON data: map.id(${seeded.mapId})`
+      );
     }
   });
 });
