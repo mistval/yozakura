@@ -20,65 +20,67 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
       label: 'Scenarios',
       subtitle: `(${scenarios.length} ${countSuffix})`,
       getChildren: async () => {
-        return scenarios.map((summary) => {
-          const scenId = summary.scenario.id;
-          return {
-            id: TreeEntityIds.scenario(scenId),
-            label: `${summary.userCharacterName} on ${summary.mapName}`,
-            subtitle: `Turn ${summary.scenario.turnNumber}`,
-            getChildren: async () => {
-              const children: TreeNode[] = [];
+        return Array.from(scenarios)
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .map((summary) => {
+            const scenId = summary.scenario.id;
+            return {
+              id: TreeEntityIds.scenario(scenId),
+              label: `${summary.userCharacterName} on ${summary.mapName}`,
+              subtitle: `Turn ${summary.scenario.turnNumber}`,
+              getChildren: async () => {
+                const children: TreeNode[] = [];
 
-              if (summary.mapName && maps.some((m) => m.id === summary.scenario.mapId)) {
-                children.push({
-                  id: TreeEntityIds.scenarioMap(scenId, summary.scenario.mapId),
-                  label: `Map: ${summary.mapName}`,
-                  subtitle: 'Map used by this scenario',
-                });
-              }
-
-              const charactersNodeId = TreeEntityIds.scenarioCharacters(scenId);
-              const characterGroupsId = TreeEntityIds.scenarioGroups(scenId);
-
-              children.push(
-                {
-                  id: charactersNodeId,
-                  label: 'Characters',
-                  subtitle: 'Character definitions and card images',
-                },
-                {
-                  id: characterGroupsId,
-                  label: 'Character Groups',
-                  subtitle: 'Zones and groups',
-                },
-                {
-                  id: TreeEntityIds.scenarioSchedules(scenId),
-                  label: 'Group Schedules',
-                  subtitle: '(Requires Character Groups)',
-                  requiredSiblingNodeIds: [characterGroupsId],
-                },
-                {
-                  id: TreeEntityIds.scenarioMemories(scenId),
-                  label: 'Character Memories & Relationships',
-                  requiredSiblingNodeIds: [charactersNodeId],
-                },
-                {
-                  id: TreeEntityIds.scenarioConversations(scenId),
-                  label: 'Conversation Logs',
-                  subtitle: 'Chat logs, participants and images',
-                },
-                {
-                  id: TreeEntityIds.scenarioTurn(scenId),
-                  label: 'Current Conversation',
-                  subtitle: 'The current conversation (if any)',
-                  requiredSiblingNodeIds: [charactersNodeId],
+                if (summary.mapName && maps.some((m) => m.id === summary.scenario.mapId)) {
+                  children.push({
+                    id: TreeEntityIds.scenarioMap(scenId, summary.scenario.mapId),
+                    label: `Map: ${summary.mapName}`,
+                    subtitle: 'Map used by this scenario',
+                  });
                 }
-              );
 
-              return children;
-            },
-          };
-        });
+                const charactersNodeId = TreeEntityIds.scenarioCharacters(scenId);
+                const characterGroupsId = TreeEntityIds.scenarioGroups(scenId);
+
+                children.push(
+                  {
+                    id: charactersNodeId,
+                    label: 'Characters',
+                    subtitle: 'Character definitions and card images',
+                  },
+                  {
+                    id: characterGroupsId,
+                    label: 'Character Groups',
+                    subtitle: 'Zones and groups',
+                  },
+                  {
+                    id: TreeEntityIds.scenarioSchedules(scenId),
+                    label: 'Group Schedules',
+                    subtitle: '(Requires Character Groups)',
+                    requiredSiblingNodeIds: [characterGroupsId],
+                  },
+                  {
+                    id: TreeEntityIds.scenarioMemories(scenId),
+                    label: 'Character Memories & Relationships',
+                    requiredSiblingNodeIds: [charactersNodeId],
+                  },
+                  {
+                    id: TreeEntityIds.scenarioConversations(scenId),
+                    label: 'Conversation Logs',
+                    subtitle: 'Chat logs, participants and images',
+                  },
+                  {
+                    id: TreeEntityIds.scenarioTurn(scenId),
+                    label: 'Current Conversation',
+                    subtitle: 'The current conversation (if any)',
+                    requiredSiblingNodeIds: [charactersNodeId],
+                  }
+                );
+
+                return children;
+              },
+            };
+          });
       },
     };
     treeRoots.push(scenariosRoot);
