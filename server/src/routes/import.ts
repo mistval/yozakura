@@ -3,7 +3,6 @@ import type Database from 'better-sqlite3';
 import BetterSqlite3 from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
 import readline from 'readline';
 import { pipeline } from 'stream/promises';
 import extract from 'extract-zip';
@@ -13,6 +12,39 @@ import { guardPathWithinBase } from './pathGuard.js';
 import { runMigrations } from '../migrator.js';
 import { clearPreparedStatementCache } from './db.js';
 import { applyIdMap } from '../id_map.js';
+
+export const MAX_DB_ROW_LINE_CHARS = 10 * 1024 * 1024; // 10M characters
+
+async function copyValidatedImageFile(
+  srcAbsPath: string,
+  rawTargetRelPath: string,
+  idMap: Map<string, string>,
+  normalizedAllowedDirs: string[],
+  allowedFileExtensions: string[],
+  dataDir: string
+): Promise<void> {
+  const mappedRelPath = applyIdMap(rawTargetRelPath, idMap);
+  const normMappedRel = path.normalize(mappedRelPath).replace(/\\/g, '/').replace(/^\/+/, '');
+
+  const isAllowed = normalizedAllowedDirs.some((allowed) => normMappedRel.startsWith(allowed + '/'));
+  if (!isAllowed) {
+    throw new Error(
+      `Forbidden image copy destination: "${normMappedRel}" is not within allowed directories (${normalizedAllowedDirs.join(', ')})`
+    );
+  }
+
+  const srcExt = path.extname(srcAbsPath).toLowerCase();
+  const targetExt = path.extname(normMappedRel).toLowerCase();
+  if (!allowedFileExtensions.includes(srcExt) || !allowedFileExtensions.includes(targetExt)) {
+    throw new Error(
+      `Forbidden file extension in image copy: "${normMappedRel}" is not in allowed extensions (${allowedFileExtensions.join(', ')})`
+    );
+  }
+
+  const targetAbsPath = guardPathWithinBase(dataDir, normMappedRel);
+  await fs.promises.mkdir(path.dirname(targetAbsPath), { recursive: true });
+  await fs.promises.copyFile(srcAbsPath, targetAbsPath);
+}
 
 export const manifestDataSchema = z.object({
   exportName: z.string().min(1),
@@ -45,6 +77,7 @@ export const commitRequestBodySchema = z.object({
   sqlStatements: z.array(sqlStatementEntrySchema),
   imageCopies: z.array(imageCopyEntrySchema),
   allowedImageDirectories: z.array(z.string().min(1)).optional().default(['character_cards', 'scenario']),
+  allowedFileExtensions: z.array(z.string().min(1)).optional().default(['.png']),
 });
 export type CommitRequestBody = z.infer<typeof commitRequestBodySchema>;
 
@@ -226,6 +259,11 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
         });
 
         for await (const line of rl) {
+          if (line.length > MAX_DB_ROW_LINE_CHARS) {
+            throw new Error(
+              `Corrupt export archive: line in db_rows.jsonl exceeds maximum allowed size (${MAX_DB_ROW_LINE_CHARS} characters)`
+            );
+          }
           const trimmed = line.trim();
           if (!trimmed) continue;
 
@@ -304,7 +342,7 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
       return;
     }
 
-    const { sqlStatements, imageCopies, allowedImageDirectories } = parseResult.data;
+    const { sqlStatements, imageCopies, allowedImageDirectories, allowedFileExtensions } = parseResult.data;
 
     if (!fs.existsSync(stagingDir)) {
       res.status(400).json({ error: 'No active import staging session found' });
@@ -342,7 +380,7 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
         return applyIdMap(val, idMap);
       });
 
-      // 3. Normalize allowedImageDirectories and validate image copy targets
+      // 3. Normalize allowedImageDirectories, then validate and copy image files asynchronously
       const normalizedAllowedDirs = allowedImageDirectories.map((d) => {
         const norm = path
           .normalize(d)
@@ -355,70 +393,74 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
       });
 
       const unpackedDir = path.join(stagingDir, 'unpacked');
+      const scanQueue = new PQueue({ concurrency: 10 });
       const copyQueue = new PQueue({ concurrency: 10 });
       const copyTasks: Promise<void>[] = [];
 
-      for (const item of imageCopies) {
-        const sourceAbsPath = guardPathWithinBase(unpackedDir, item.zipPath);
-        if (!fs.existsSync(sourceAbsPath)) {
-          continue;
-        }
+      const scanTasks = imageCopies.map((item) =>
+        scanQueue.add(async () => {
+          const sourceAbsPath = guardPathWithinBase(unpackedDir, item.zipPath);
+          let stat: fs.Stats;
+          try {
+            stat = await fs.promises.stat(sourceAbsPath);
+          } catch (err) {
+            if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
+              return;
+            }
+            throw err;
+          }
 
-        const stat = fs.statSync(sourceAbsPath);
-        if (stat.isDirectory()) {
-          const files = fs.readdirSync(sourceAbsPath);
-          for (const file of files) {
-            const fileSrc = path.join(sourceAbsPath, file);
-            if (fs.statSync(fileSrc).isFile()) {
-              const rawRel = `${item.targetRelPath}/${file}`;
-              const mappedRelPath = applyIdMap(rawRel, idMap);
-              const normMappedRel = path.normalize(mappedRelPath).replace(/\\/g, '/').replace(/^\/+/, '');
-
-              const isAllowed = normalizedAllowedDirs.some(
-                (allowed) => normMappedRel === allowed || normMappedRel.startsWith(allowed + '/')
-              );
-              if (!isAllowed) {
+          if (stat.isDirectory()) {
+            const entries = await fs.promises.readdir(sourceAbsPath, { withFileTypes: true });
+            for (const entry of entries) {
+              if (!entry.isFile()) {
                 throw new Error(
-                  `Forbidden image copy destination: "${normMappedRel}" is not within allowed directories (${normalizedAllowedDirs.join(', ')})`
+                  `Forbidden entry in image directory "${item.zipPath}": "${entry.name}" is not a regular file`
                 );
               }
-
-              const targetAbsPath = guardPathWithinBase(dataDir, normMappedRel);
+              const fileSrc = path.join(sourceAbsPath, entry.name);
+              const targetRel = `${item.targetRelPath}/${entry.name}`;
               copyTasks.push(
-                copyQueue.add(async () => {
-                  await fs.promises.mkdir(path.dirname(targetAbsPath), { recursive: true });
-                  await fs.promises.copyFile(fileSrc, targetAbsPath);
-                })
+                copyQueue.add(() =>
+                  copyValidatedImageFile(
+                    fileSrc,
+                    targetRel,
+                    idMap,
+                    normalizedAllowedDirs,
+                    allowedFileExtensions,
+                    dataDir
+                  )
+                )
               );
             }
-          }
-        } else if (stat.isFile()) {
-          const mappedRelPath = applyIdMap(item.targetRelPath, idMap);
-          const normMappedRel = path.normalize(mappedRelPath).replace(/\\/g, '/').replace(/^\/+/, '');
-
-          const isAllowed = normalizedAllowedDirs.some(
-            (allowed) => normMappedRel === allowed || normMappedRel.startsWith(allowed + '/')
-          );
-          if (!isAllowed) {
+          } else if (stat.isFile()) {
+            copyTasks.push(
+              copyQueue.add(() =>
+                copyValidatedImageFile(
+                  sourceAbsPath,
+                  item.targetRelPath,
+                  idMap,
+                  normalizedAllowedDirs,
+                  allowedFileExtensions,
+                  dataDir
+                )
+              )
+            );
+          } else {
             throw new Error(
-              `Forbidden image copy destination: "${normMappedRel}" is not within allowed directories (${normalizedAllowedDirs.join(', ')})`
+              `Forbidden image copy source: "${item.zipPath}" is neither a regular file nor a directory`
             );
           }
-
-          const targetAbsPath = guardPathWithinBase(dataDir, normMappedRel);
-          copyTasks.push(
-            copyQueue.add(async () => {
-              await fs.promises.mkdir(path.dirname(targetAbsPath), { recursive: true });
-              await fs.promises.copyFile(sourceAbsPath, targetAbsPath);
-            })
-          );
-        }
-      }
+        })
+      );
 
       try {
+        await Promise.all(scanTasks);
         await Promise.all(copyTasks);
       } catch (copyErr) {
+        scanQueue.clear();
         copyQueue.clear();
+        await Promise.allSettled([...scanTasks, ...copyTasks]);
         throw copyErr;
       }
 

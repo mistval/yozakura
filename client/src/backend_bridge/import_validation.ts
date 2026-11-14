@@ -12,6 +12,7 @@ import {
   type WorldMap,
 } from '../engine/types.js';
 import { importStagingDatabase } from './database.js';
+import { TABLE_COLUMNS } from './export_queries.js';
 
 export type ValidationResult =
   | {
@@ -27,7 +28,31 @@ const jsonRowSchema = z.object({
   data: z.string(),
 });
 
+function isValidCharacterImagePath(imagePath: string, expectedApiPath: string): boolean {
+  if (imagePath === '') return true;
+  if (imagePath.startsWith('/images/') && !imagePath.includes('..')) return true;
+  const cleanPath = imagePath.split('?')[0];
+  return cleanPath === expectedApiPath;
+}
+
+function createCharacterImportSchema(getExpectedApiPath: (character: { id: string }) => string) {
+  return characterSchema.superRefine((character, ctx) => {
+    const expectedApiPath = getExpectedApiPath(character);
+    if (!isValidCharacterImagePath(character.imagePath, expectedApiPath)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['imagePath'],
+        message: `Invalid character imagePath "${character.imagePath}" (expected "", "/images/...", or "${expectedApiPath}")`,
+      });
+    }
+  });
+}
+
 const VALIDATION_PAGE_SIZE = 250;
+
+const STAGED_ID_TABLES = Object.entries(TABLE_COLUMNS)
+  .filter(([, cols]) => cols.some((col) => col === 'id'))
+  .map(([table]) => table);
 
 async function validateEntities<T extends { id: string }>(
   loader: (page: number) => Promise<T[]>,
@@ -127,6 +152,21 @@ export async function validateStagedData(options: {
 }): Promise<ValidationResult> {
   const errors: string[] = [];
 
+  // 0. Ensure all entity IDs across all known staging tables are globally unique
+  const idUnionSql = STAGED_ID_TABLES.map((table) => `SELECT id FROM import_staging.${table}`).join(
+    ' UNION ALL '
+  );
+  const duplicateIdRows = await importStagingDatabase.dbAll(
+    `SELECT id FROM (${idUnionSql}) GROUP BY id HAVING COUNT(*) > 1`,
+    [[]],
+    z.object({ id: z.string() })
+  );
+  if (duplicateIdRows.length > 0) {
+    errors.push(
+      `Duplicate entity IDs found across staging tables: ${duplicateIdRows.map((r) => r.id).join(', ')}`
+    );
+  }
+
   // 1. Validate selected Maps
   if (options.selectedMapIds.length > 0) {
     await validateEntities(
@@ -156,7 +196,7 @@ export async function validateStagedData(options: {
         const allGlobalChars = await importStagingDatabase.loadGlobalCharacters();
         return allGlobalChars.filter((c) => idSet.has(c.id));
       }),
-      characterSchema,
+      createCharacterImportSchema((c) => `/api/files/character_cards/${c.id}.png`),
       'global character',
       errors
     );
@@ -179,7 +219,7 @@ export async function validateStagedData(options: {
       if (!options.selectedScenarioCharactersIds || options.selectedScenarioCharactersIds.includes(scenId)) {
         await validateEntities(
           once(() => importStagingDatabase.loadScenarioCharacters(scenId)),
-          characterSchema,
+          createCharacterImportSchema((c) => `/api/files/scenario/${scenId}/character_cards/${c.id}.png`),
           `scenario character in scenario ${scenId}`,
           errors
         );

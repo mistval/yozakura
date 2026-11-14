@@ -98,6 +98,7 @@ export type ImportCommitPayload = {
     targetRelPath: string;
   }>;
   allowedImageDirectories?: string[];
+  allowedFileExtensions?: string[];
 };
 
 export type CommitImportResult =

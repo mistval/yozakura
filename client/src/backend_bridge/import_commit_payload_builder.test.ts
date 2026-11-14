@@ -75,6 +75,7 @@ describe('import_commit_payload_builder', () => {
         targetRelPath: 'scenario/scen_1/chat_images',
       },
     ]);
+    expect(payload.allowedFileExtensions).toEqual(['.png']);
   });
 
   it('handles conflict resolutions: skips skipped entities and renames copied maps', async () => {
@@ -253,6 +254,7 @@ describe('import_commit_payload_builder', () => {
         targetRelPath: 'scenario/scen_1/chat_images',
       },
     ]);
+    expect(payload.allowedFileExtensions).toEqual(['.png']);
   });
 
   it('omits conversation logs and chat images when conversations are unchecked', async () => {

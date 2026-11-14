@@ -127,5 +127,6 @@ export async function prepareStagingAndBuildCommitPayload(
     sqlStatements,
     imageCopies,
     allowedImageDirectories: ['character_cards', 'scenario'],
+    allowedFileExtensions: ['.png'],
   };
 }

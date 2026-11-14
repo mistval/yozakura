@@ -43,7 +43,7 @@ export async function prepareImportStaging(params: PrepareImportStagingParams): 
   `);
   await db.dbRun('DELETE FROM import_staging._id_map;');
 
-  // 2. Populate _id_map unconditionally for all scenario-scoped entities in staging
+  // 2. Populate _id_map for all scenario-scoped entities in staging
   for (const table of SCENARIO_SCOPED_TABLES) {
     await db.dbRun(`
       INSERT OR IGNORE INTO import_staging._id_map (old_id, new_id)
