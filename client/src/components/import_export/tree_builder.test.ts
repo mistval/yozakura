@@ -16,6 +16,12 @@ describe('buildImportExportTreeRoots', () => {
       mapName: 'Test Town',
       createdAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z',
+      hasCharacters: true,
+      hasCharacterGroups: true,
+      hasCharacterGroupSchedules: true,
+      hasRelationships: true,
+      hasConversationLogs: true,
+      hasCurrentConversation: true,
     },
   ];
 
@@ -106,5 +112,27 @@ describe('buildImportExportTreeRoots', () => {
     const scenChildren = await roots[0]!.getChildren!();
     const scenSubChildren = await scenChildren[0]!.getChildren!();
     expect(scenSubChildren.map((c) => c.id)).not.toContain(TreeEntityIds.scenarioMap('scen_1', 'map_1'));
+  });
+
+  it('omits scenario sub-items that have no data', async () => {
+    const emptyScenario: ScenarioSummary = {
+      ...dummyScenarios[0]!,
+      hasCharacters: false,
+      hasCharacterGroups: false,
+      hasCharacterGroupSchedules: false,
+      hasRelationships: false,
+      hasConversationLogs: false,
+      hasCurrentConversation: false,
+    };
+
+    const roots = buildImportExportTreeRoots({
+      scenarios: [emptyScenario],
+      maps: dummyMaps,
+      globalCharacters: [],
+    });
+
+    const scenChildren = await roots[0]!.getChildren!();
+    const scenSubChildren = await scenChildren[0]!.getChildren!();
+    expect(scenSubChildren.map((c) => c.id)).toEqual([TreeEntityIds.scenarioMap('scen_1', 'map_1')]);
   });
 });

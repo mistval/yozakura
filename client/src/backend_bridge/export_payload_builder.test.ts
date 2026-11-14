@@ -18,6 +18,12 @@ describe('export_payload_builder', () => {
     userCharacterName: 'Alice',
     createdAt: '2026-10-29T10:00:00Z',
     updatedAt: '2026-10-29T12:00:00Z',
+    hasCharacters: true,
+    hasCharacterGroups: true,
+    hasCharacterGroupSchedules: true,
+    hasRelationships: true,
+    hasConversationLogs: true,
+    hasCurrentConversation: true,
   };
 
   const dummyMap: WorldMap = {

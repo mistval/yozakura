@@ -263,7 +263,13 @@ function createSqlStatements(schema: string) {
         s.updated_at,
         m.data AS map_data,
         uc.data AS user_character_data,
-        json_extract(s.data, '$.mapId') AS map_id
+        json_extract(s.data, '$.mapId') AS map_id,
+        (EXISTS (SELECT * FROM ${table('scenario_character')} sc WHERE sc.scenario_id = s.id)) AS has_characters,
+        (EXISTS (SELECT * FROM ${table('scenario_character_group')} cg WHERE cg.scenario_id = s.id)) AS has_character_groups,
+        (EXISTS (SELECT * FROM ${table('scenario_character_group_schedule')} gs WHERE gs.scenario_id = s.id)) AS has_character_groups_schedules,
+        (EXISTS (SELECT * FROM ${table('character_relationship')} cr JOIN ${table('scenario_character')} sc ON sc.id = cr.from_id WHERE sc.scenario_id = s.id)) AS has_relationships,
+        (EXISTS (SELECT * FROM ${table('conversation')} c WHERE c.scenario_id = s.id)) AS has_conversation_logs,
+        (EXISTS (SELECT * FROM ${table('key_value')} kv WHERE kv.key = 'scenario_' || s.id || '_turn')) AS has_current_conversation
       FROM ${table('scenario')} s
       LEFT JOIN ${table('map')} m ON m.id = json_extract(s.data, '$.mapId')
       LEFT JOIN ${table('scenario_character')} uc ON uc.id = json_extract(s.data, '$.userCharacterId')
@@ -459,6 +465,12 @@ export class DatabaseClient {
       map_data: z.string().nullable(),
       user_character_data: z.string().nullable(),
       map_id: idSchema,
+      has_characters: z.number(),
+      has_character_groups: z.number(),
+      has_character_groups_schedules: z.number(),
+      has_relationships: z.number(),
+      has_conversation_logs: z.number(),
+      has_current_conversation: z.number(),
     });
 
     const rows = await this.selectTypedMultiQuery(this.sql.SELECT_SCENARIO_SUMMARIES_SQL, [[]], rowSchema);
@@ -485,6 +497,12 @@ export class DatabaseClient {
         userCharacterName,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
+        hasCharacters: Boolean(row.has_characters),
+        hasCharacterGroups: Boolean(row.has_character_groups),
+        hasCharacterGroupSchedules: Boolean(row.has_character_groups_schedules),
+        hasRelationships: Boolean(row.has_relationships),
+        hasConversationLogs: Boolean(row.has_conversation_logs),
+        hasCurrentConversation: Boolean(row.has_current_conversation),
       };
     });
   }

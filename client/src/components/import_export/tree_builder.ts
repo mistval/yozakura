@@ -42,40 +42,55 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                 const charactersNodeId = TreeEntityIds.scenarioCharacters(scenId);
                 const characterGroupsId = TreeEntityIds.scenarioGroups(scenId);
 
-                children.push(
-                  {
+                if (summary.hasCharacters) {
+                  children.push({
                     id: charactersNodeId,
                     label: 'Characters',
                     subtitle: 'Character definitions and card images',
-                  },
-                  {
+                  });
+                }
+
+                if (summary.hasCharacterGroups) {
+                  children.push({
                     id: characterGroupsId,
                     label: 'Character Groups',
                     subtitle: 'Zones and groups',
-                  },
-                  {
+                  });
+                }
+
+                if (summary.hasCharacterGroups && summary.hasCharacterGroupSchedules) {
+                  children.push({
                     id: TreeEntityIds.scenarioSchedules(scenId),
                     label: 'Group Schedules',
                     subtitle: '(Requires Character Groups)',
                     requiredSiblingNodeIds: [characterGroupsId],
-                  },
-                  {
+                  });
+                }
+
+                if (summary.hasCharacters && summary.hasRelationships) {
+                  children.push({
                     id: TreeEntityIds.scenarioMemories(scenId),
                     label: 'Character Memories & Relationships',
                     requiredSiblingNodeIds: [charactersNodeId],
-                  },
-                  {
+                  });
+                }
+
+                if (summary.hasConversationLogs) {
+                  children.push({
                     id: TreeEntityIds.scenarioConversations(scenId),
                     label: 'Conversation Logs',
                     subtitle: 'Chat logs, participants and images',
-                  },
-                  {
+                  });
+                }
+
+                if (summary.hasCharacters && summary.hasCurrentConversation) {
+                  children.push({
                     id: TreeEntityIds.scenarioTurn(scenId),
                     label: 'Current Conversation',
                     subtitle: 'The current conversation (if any)',
                     requiredSiblingNodeIds: [charactersNodeId],
-                  }
-                );
+                  });
+                }
 
                 return children;
               },

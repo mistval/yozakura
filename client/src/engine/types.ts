@@ -250,6 +250,12 @@ export type ScenarioSummary = {
   userCharacterName: string;
   createdAt: string;
   updatedAt: string;
+  hasCharacters: boolean;
+  hasCharacterGroups: boolean;
+  hasCharacterGroupSchedules: boolean;
+  hasRelationships: boolean;
+  hasConversationLogs: boolean;
+  hasCurrentConversation: boolean;
 };
 
 export const movementPolicySchema = z.enum(['teleport', 'jump', 'rush', 'casual']);
