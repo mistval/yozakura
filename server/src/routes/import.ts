@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 import { pipeline } from 'stream/promises';
-import extract from 'extract-zip';
+import yauzl from 'yauzl';
 import PQueue from 'p-queue';
 import { z } from 'zod';
 import { guardPathWithinBase } from './pathGuard.js';
@@ -14,6 +14,56 @@ import { clearPreparedStatementCache } from './db.js';
 import { applyIdMap } from '../id_map.js';
 
 export const MAX_DB_ROW_LINE_CHARS = 10 * 1024 * 1024; // 10M characters
+
+/** Extracts a ZIP archive into targetDir while rejecting symlinks and path traversal entries. */
+async function extractArchiveSafely(zipFilePath: string, targetDir: string): Promise<void> {
+  await fs.promises.mkdir(targetDir, { recursive: true });
+  const canonicalTargetDir = await fs.promises.realpath(targetDir);
+
+  const zipfile = await yauzl.openPromise(zipFilePath, { lazyEntries: true });
+  try {
+    for await (const entry of zipfile.eachEntry()) {
+      const unixMode = (entry.externalFileAttributes >>> 16) & 0xffff;
+      const isSymlink = (unixMode & 0o170000) === 0o120000;
+      if (isSymlink) {
+        throw new Error(`Forbidden symlink entry in import archive: "${entry.fileName}"`);
+      }
+
+      if (entry.fileName.startsWith('__MACOSX/')) {
+        continue;
+      }
+
+      const destPath = guardPathWithinBase(canonicalTargetDir, entry.fileName);
+      const madeBy = entry.versionMadeBy >> 8;
+      const isDir =
+        (unixMode & 0o170000) === 0o040000 ||
+        entry.fileName.endsWith('/') ||
+        (madeBy === 0 && entry.externalFileAttributes === 16);
+
+      if (isDir) {
+        await fs.promises.mkdir(destPath, { recursive: true });
+        continue;
+      }
+
+      const destDir = path.dirname(destPath);
+      await fs.promises.mkdir(destDir, { recursive: true });
+      const canonicalDestDir = await fs.promises.realpath(destDir);
+      if (
+        canonicalDestDir !== canonicalTargetDir &&
+        !canonicalDestDir.startsWith(canonicalTargetDir + path.sep)
+      ) {
+        throw new Error(
+          `Out of bound path "${canonicalDestDir}" found while processing file ${entry.fileName}`
+        );
+      }
+
+      const readStream = await zipfile.openReadStreamPromise(entry);
+      await pipeline(readStream, fs.createWriteStream(destPath));
+    }
+  } finally {
+    zipfile.close();
+  }
+}
 
 async function copyValidatedImageFile(
   srcAbsPath: string,
@@ -166,17 +216,8 @@ export default function importRouter(dataDir: string, db: Database.Database): Ro
         await pipeline(req, fs.createWriteStream(zipFilePath));
       }
 
-      // 3. Extract the archive safely using extract-zip (reject any symlink entries)
-      await extract(zipFilePath, {
-        dir: path.resolve(unpackedDir),
-        onEntry: (entry) => {
-          const unixMode = (entry.externalFileAttributes >>> 16) & 0xffff;
-          const isSymlink = (unixMode & 0o170000) === 0o120000;
-          if (isSymlink) {
-            throw new Error(`Forbidden symlink entry in import archive: "${entry.fileName}"`);
-          }
-        },
-      });
+      // 3. Extract the archive safely using yauzl (reject any symlink or traversal entries)
+      await extractArchiveSafely(zipFilePath, unpackedDir);
 
       // 4. Validate manifest.json with Zod
       const manifestPath = path.join(unpackedDir, 'manifest.json');
