@@ -47,6 +47,7 @@ describe('import_queries', () => {
         selectedScenarioMemoriesIds: [], // unchecked memories -> should strip
         selectedScenarioGroupsIds: [], // unchecked groups -> should strip
         copiedMapIds: ['map_1'],
+        activeGlobalCharIds: ['char_1', 'char_copy'],
         copiedGlobalCharIds: ['char_copy'],
       });
 

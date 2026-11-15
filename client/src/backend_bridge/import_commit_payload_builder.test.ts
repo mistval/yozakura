@@ -60,11 +60,11 @@ describe('import_commit_payload_builder', () => {
     expect(sqlText).toContain('INSERT INTO main.conversation_participant');
     expect(sqlText).toContain('INSERT INTO main.key_value');
 
-    // Verify image copies include char_1, scen_1 cards and chat images, but not scen_2
+    // Verify image copies normalize global character targets to <id>.png and include scen_1 cards and chat images
     expect(payload.imageCopies).toEqual([
       {
         zipPath: 'character_cards/custom_1.png',
-        targetRelPath: 'character_cards/custom_1.png',
+        targetRelPath: 'character_cards/char_1.png',
       },
       {
         zipPath: 'scenario/scen_1/character_cards',
@@ -119,11 +119,11 @@ describe('import_commit_payload_builder', () => {
     expect(nameUpdateCall).toBeDefined();
     expect(nameUpdateCall!.params).toEqual([[' (Imported From HolidayArchive)', '["map_copy"]']]);
 
-    // Skipped character image should not be in imageCopies
+    // Skipped character image should not be in imageCopies; overwritten character normalizes to <id>.png
     expect(payload.imageCopies).toEqual([
       {
         zipPath: 'character_cards/overwrite_portrait.png',
-        targetRelPath: 'character_cards/overwrite_portrait.png',
+        targetRelPath: 'character_cards/char_overwrite.png',
       },
     ]);
   });
@@ -171,7 +171,7 @@ describe('import_commit_payload_builder', () => {
     );
     expect(charUpdateCall).toBeDefined();
     expect(charUpdateCall!.statement).toContain(
-      "'/api/files/character_cards/' || (SELECT new_id FROM import_staging._id_map"
+      "'/api/files/character_cards/' || COALESCE((SELECT new_id FROM import_staging._id_map"
     );
 
     // Check that imageCopies rewrote targetRelPath to the new character ID

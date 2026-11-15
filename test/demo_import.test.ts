@@ -8,6 +8,8 @@ import {
   importDemoScenario,
   importDemoGlobalCharacters,
 } from '../client/src/backend_bridge/demo_import.js';
+import { validateStagedData } from '../client/src/backend_bridge/import_validation.js';
+import { importStagingDatabase } from '../client/src/backend_bridge/database.js';
 
 describe('Integration: Demo Entities from Export', () => {
   let server: TestServer;
@@ -45,6 +47,18 @@ describe('Integration: Demo Entities from Export', () => {
       c: number;
     };
     expect(scenCount.c).toBe(1);
+
+    const [stagedSummaries, stagedMaps, stagedChars] = await Promise.all([
+      importStagingDatabase.loadScenarioSummaries(),
+      importStagingDatabase.loadMaps(),
+      importStagingDatabase.loadGlobalCharacters(),
+    ]);
+    const validationRes = await validateStagedData({
+      selectedScenarioIds: stagedSummaries.map((s) => s.scenario.id),
+      selectedMapIds: stagedMaps.map((m) => m.id),
+      selectedGlobalCharacterIds: stagedChars.map((c) => c.id),
+    });
+    expect(validationRes).toEqual({ valid: true });
 
     await cancelImport();
   });

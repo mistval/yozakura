@@ -49,7 +49,9 @@ export async function prepareStagingAndBuildCommitPayload(
   const globalCharacters = stagedGlobalCharacters ?? (await db.loadGlobalCharacters());
 
   const copiedMapIds = selectedMapIds.filter((id) => conflictResolutions[id] === 'copy');
-  const copiedGlobalCharIds = selectedGlobalCharacterIds.filter((id) => conflictResolutions[id] === 'copy');
+  const activeMapIds = selectedMapIds.filter((id) => conflictResolutions[id] !== 'skip');
+  const activeGlobalCharIds = selectedGlobalCharacterIds.filter((id) => conflictResolutions[id] !== 'skip');
+  const copiedGlobalCharIds = activeGlobalCharIds.filter((id) => conflictResolutions[id] === 'copy');
 
   // 1. Prepare staging database and remap IDs
   const copiedCharIdToNewId = await prepareImportStaging({
@@ -59,13 +61,11 @@ export async function prepareStagingAndBuildCommitPayload(
     selectedScenarioMemoriesIds,
     selectedScenarioGroupsIds,
     copiedMapIds,
+    activeGlobalCharIds,
     copiedGlobalCharIds,
   });
 
   // 2. Generate ordered sqlStatements
-  const activeMapIds = selectedMapIds.filter((id) => conflictResolutions[id] !== 'skip');
-  const activeGlobalCharIds = selectedGlobalCharacterIds.filter((id) => conflictResolutions[id] !== 'skip');
-
   const sqlStatements = buildImportCommitStatements({
     activeMapIds,
     activeGlobalCharIds,
@@ -80,7 +80,7 @@ export async function prepareStagingAndBuildCommitPayload(
   // 3. Build imageCopies directly from selected entities
   const imageCopies: Array<{ zipPath: string; targetRelPath: string }> = [];
 
-  // Global character cards
+  // Global character cards (always normalize target filename to <targetCharId>.png)
   for (const char of globalCharacters) {
     if (!selectedGlobalCharacterIds.includes(char.id)) continue;
     if (conflictResolutions[char.id] === 'skip') continue;
@@ -88,18 +88,14 @@ export async function prepareStagingAndBuildCommitPayload(
     const zipPath = Files.getCharacterZipImagePath(char);
     if (!zipPath) continue;
 
-    let targetRelPath = zipPath;
-    if (conflictResolutions[char.id] === 'copy') {
-      const newId = copiedCharIdToNewId.get(char.id);
-      if (!newId) {
-        throw new Error(`Failed to allocate copy ID for global character "${char.id}"`);
-      }
-      targetRelPath = `character_cards/${newId}.png`;
+    const targetCharId = conflictResolutions[char.id] === 'copy' ? copiedCharIdToNewId.get(char.id) : char.id;
+    if (!targetCharId) {
+      throw new Error(`Failed to allocate copy ID for global character "${char.id}"`);
     }
 
     imageCopies.push({
       zipPath,
-      targetRelPath,
+      targetRelPath: `character_cards/${targetCharId}.png`,
     });
   }
 

@@ -28,21 +28,38 @@ const jsonRowSchema = z.object({
   data: z.string(),
 });
 
-function isValidCharacterImagePath(imagePath: string, expectedApiPath: string): boolean {
-  if (imagePath === '') return true;
-  if (imagePath.startsWith('/images/') && !imagePath.includes('..')) return true;
-  const cleanPath = imagePath.split('?')[0];
-  return cleanPath === expectedApiPath;
+function isValidSafePngFilename(filename: string): boolean {
+  return (
+    filename.length > 4 &&
+    !filename.startsWith('.') &&
+    !filename.includes('/') &&
+    !filename.includes('\\') &&
+    !filename.includes('..') &&
+    !filename.includes('#') &&
+    filename.toLowerCase().endsWith('.png')
+  );
 }
 
-function createCharacterImportSchema(getExpectedApiPath: (character: { id: string }) => string) {
+function isValidCharacterImagePath(imagePath: string, expectedDirPrefix: string): boolean {
+  if (imagePath === '') return true;
+  if (imagePath.startsWith('/images/') && !imagePath.includes('..') && !imagePath.includes('\\')) {
+    return true;
+  }
+  const cleanPath = imagePath.split('?')[0] ?? '';
+  if (!cleanPath.startsWith(expectedDirPrefix)) {
+    return false;
+  }
+  const filename = cleanPath.slice(expectedDirPrefix.length);
+  return isValidSafePngFilename(filename);
+}
+
+function createCharacterImportSchema(expectedDirPrefix: string) {
   return characterSchema.superRefine((character, ctx) => {
-    const expectedApiPath = getExpectedApiPath(character);
-    if (!isValidCharacterImagePath(character.imagePath, expectedApiPath)) {
+    if (!isValidCharacterImagePath(character.imagePath, expectedDirPrefix)) {
       ctx.addIssue({
         code: 'custom',
         path: ['imagePath'],
-        message: `Invalid character imagePath "${character.imagePath}" (expected "", "/images/...", or "${expectedApiPath}")`,
+        message: `Invalid character imagePath "${character.imagePath}" (expected "", "/images/...", or "${expectedDirPrefix}<filename>.png")`,
       });
     }
   });
@@ -238,7 +255,7 @@ export async function validateStagedData(options: {
         const allGlobalChars = await importStagingDatabase.loadGlobalCharacters();
         return allGlobalChars.filter((c) => idSet.has(c.id));
       }),
-      createCharacterImportSchema((c) => `/api/files/character_cards/${c.id}.png`),
+      createCharacterImportSchema('/api/files/character_cards/'),
       'global character',
       errors
     );
@@ -261,7 +278,7 @@ export async function validateStagedData(options: {
       if (!options.selectedScenarioCharactersIds || options.selectedScenarioCharactersIds.includes(scenId)) {
         await validateEntities(
           once(() => importStagingDatabase.loadScenarioCharacters(scenId)),
-          createCharacterImportSchema((c) => `/api/files/scenario/${scenId}/character_cards/${c.id}.png`),
+          createCharacterImportSchema(`/api/files/scenario/${scenId}/character_cards/`),
           `scenario character in scenario ${scenId}`,
           errors
         );

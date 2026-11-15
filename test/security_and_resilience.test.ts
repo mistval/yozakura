@@ -628,47 +628,56 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
     });
     expect(validResult.valid).toBe(true);
 
-    // 1. Tamper global character imagePath to point at a different character's image
+    // 1. Global character allows valid filenames inside /api/files/character_cards/ even if filename != id
+    //    (commit normalizes them to <targetId>.png), while rejecting wrong directories, traversal,
+    //    subdirectories, non-.png extensions, and external URLs
     const globalCharRow = server.db
       .prepare('SELECT data FROM import_staging.character WHERE id = ?')
       .get(seeded.globalCharId) as { data: string };
     const globalCharData = JSON.parse(globalCharRow.data) as Record<string, unknown>;
     const originalGlobalImagePath = globalCharData.imagePath;
+
     server.db.prepare('UPDATE import_staging.character SET data = ? WHERE id = ?').run(
       JSON.stringify({
         ...globalCharData,
-        imagePath: '/api/files/character_cards/ffffffffffffffffff.png',
+        imagePath: '/api/files/character_cards/custom_portrait.png?v=123',
       }),
       seeded.globalCharId
     );
 
-    const badGlobalImgRes = await validateStagedData({
+    const customGlobalImgRes = await validateStagedData({
       selectedScenarioIds: [],
       selectedMapIds: [],
       selectedGlobalCharacterIds: [seeded.globalCharId],
     });
-    expect(badGlobalImgRes.valid).toBe(false);
-    if (!badGlobalImgRes.valid) {
-      expect(badGlobalImgRes.errors.join('\n')).toContain('Invalid character imagePath');
+    expect(customGlobalImgRes.valid).toBe(true);
+
+    // Reject /images/../ traversal, wrong directories, nested subdirs, non-.png, and external URLs
+    for (const badPath of [
+      '/images/../secret.png',
+      `/api/files/scenario/${seeded.scenarioId}/character_cards/${seeded.globalCharId}.png`,
+      '/api/files/character_cards/nested/pic.png',
+      '/api/files/character_cards/evil.svg',
+      'https://evil.com/portrait.png',
+    ]) {
+      server.db
+        .prepare('UPDATE import_staging.character SET data = ? WHERE id = ?')
+        .run(JSON.stringify({ ...globalCharData, imagePath: badPath }), seeded.globalCharId);
+
+      const rejectedImgRes = await validateStagedData({
+        selectedScenarioIds: [],
+        selectedMapIds: [],
+        selectedGlobalCharacterIds: [seeded.globalCharId],
+      });
+      expect(rejectedImgRes.valid).toBe(false);
     }
-
-    // Restore valid global imagePath and verify /images/../ traversal is also rejected
-    server.db
-      .prepare('UPDATE import_staging.character SET data = ? WHERE id = ?')
-      .run(JSON.stringify({ ...globalCharData, imagePath: '/images/../secret.png' }), seeded.globalCharId);
-
-    const traversalImgRes = await validateStagedData({
-      selectedScenarioIds: [],
-      selectedMapIds: [],
-      selectedGlobalCharacterIds: [seeded.globalCharId],
-    });
-    expect(traversalImgRes.valid).toBe(false);
 
     server.db
       .prepare('UPDATE import_staging.character SET data = ? WHERE id = ?')
       .run(JSON.stringify({ ...globalCharData, imagePath: originalGlobalImagePath }), seeded.globalCharId);
 
-    // 2. Tamper scenario character imagePath to point at a different scenario/character
+    // 2. Scenario character allows valid filenames inside its own scenario character_cards/ dir
+    //    (e.g. cloned globalCharacterId filename), but rejects other scenarios or wrong dirs
     const scenCharRow = server.db
       .prepare('SELECT data FROM import_staging.scenario_character WHERE id = ?')
       .get(seeded.scenarioChar1Id) as { data: string };
@@ -676,7 +685,22 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
     server.db.prepare('UPDATE import_staging.scenario_character SET data = ? WHERE id = ?').run(
       JSON.stringify({
         ...scenCharData,
-        imagePath: `/api/files/scenario/${seeded.scenarioId}/character_cards/${seeded.scenarioChar2Id}.png`,
+        imagePath: `/api/files/scenario/${seeded.scenarioId}/character_cards/${seeded.globalCharId}.png`,
+      }),
+      seeded.scenarioChar1Id
+    );
+
+    const nonMatchingIdScenImgRes = await validateStagedData({
+      selectedScenarioIds: [seeded.scenarioId],
+      selectedMapIds: [],
+      selectedGlobalCharacterIds: [],
+    });
+    expect(nonMatchingIdScenImgRes.valid).toBe(true);
+
+    server.db.prepare('UPDATE import_staging.scenario_character SET data = ? WHERE id = ?').run(
+      JSON.stringify({
+        ...scenCharData,
+        imagePath: `/api/files/scenario/ffffffffffffffffff/character_cards/${seeded.scenarioChar1Id}.png`,
       }),
       seeded.scenarioChar1Id
     );
@@ -1006,5 +1030,87 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
         `Mismatched entity column and JSON data: map.id(${seeded.mapId})`
       );
     }
+  });
+
+  it('normalizes non-matching global character image filenames to <id>.png so they cannot overwrite other portraits', async () => {
+    server = await createTestServer();
+    server.setActive();
+
+    const victimId = 'ffffffffffffffffff';
+    const importedId = 'aaaaaaaaaaaaaaaaaa';
+    const now = new Date().toISOString();
+
+    const cardDir = path.join(server.dataDir, 'character_cards');
+    fs.mkdirSync(cardDir, { recursive: true });
+    fs.writeFileSync(path.join(cardDir, `${victimId}.png`), Buffer.from('VICTIM_ORIGINAL_PNG'));
+
+    const currentDbVersion = Number(server.db.pragma('user_version', { simple: true }));
+    const manifest = { exportName: 'NonMatchingImageTest', dbUserVersion: currentDbVersion };
+    const importedChar = {
+      id: importedId,
+      createdAt: now,
+      updatedAt: now,
+      globalCharacterId: importedId,
+      scenarioId: '',
+      firstName: 'Custom',
+      lastName: 'ImageChar',
+      internalDescription: 'Desc',
+      externalDescription: 'Ext',
+      baseAppearanceTags: 'tag',
+      imagePath: `/api/files/character_cards/${victimId}.png?v=123`,
+      wardrobes: [],
+      globalMemories: '',
+      locationId: '',
+      exampleDialogue: '',
+      rollingConversationSummaries: [],
+      nextConversationWithCharacterId: '',
+      groupIds: [],
+    };
+
+    const dbRowsLines = JSON.stringify({
+      table: 'character',
+      row: {
+        id: importedId,
+        data: JSON.stringify(importedChar),
+        created_at: now,
+        updated_at: now,
+      },
+    });
+
+    const zipBuffer = await createZipBuffer([
+      { name: 'manifest.json', content: JSON.stringify(manifest) },
+      { name: 'db_rows.jsonl', content: dbRowsLines },
+      { name: `character_cards/${victimId}.png`, content: Buffer.from('IMPORTED_PNG_DATA') },
+    ]);
+
+    const file = new File([new Uint8Array(zipBuffer)], 'NonMatchingImageTest.yozakura_export.zip', {
+      type: 'application/zip',
+    });
+    const stageRes = await stageImportArchive(file);
+    expect(stageRes.success).toBe(true);
+
+    const validRes = await validateStagedData({
+      selectedScenarioIds: [],
+      selectedMapIds: [],
+      selectedGlobalCharacterIds: [importedId],
+    });
+    expect(validRes).toEqual({ valid: true });
+
+    const payload = await prepareStagingAndBuildCommitPayload({
+      exportName: 'NonMatchingImageTest',
+      selectedGlobalCharacterIds: [importedId],
+    });
+    const commitRes = await commitImport(payload);
+    expect(commitRes.success).toBe(true);
+
+    // Victim's existing portrait file must be completely untouched
+    expect(fs.readFileSync(path.join(cardDir, `${victimId}.png`), 'utf8')).toBe('VICTIM_ORIGINAL_PNG');
+
+    // Imported character's portrait was copied to <importedId>.png and DB imagePath normalized
+    expect(fs.readFileSync(path.join(cardDir, `${importedId}.png`), 'utf8')).toBe('IMPORTED_PNG_DATA');
+    const storedRow = server.db.prepare('SELECT data FROM main.character WHERE id = ?').get(importedId) as {
+      data: string;
+    };
+    expect(JSON.parse(storedRow.data).imagePath).toBe(`/api/files/character_cards/${importedId}.png`);
   });
 });

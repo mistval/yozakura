@@ -20,6 +20,7 @@ export type PrepareImportStagingParams = {
   selectedScenarioMemoriesIds: string[];
   selectedScenarioGroupsIds: string[];
   copiedMapIds: string[];
+  activeGlobalCharIds: string[];
   copiedGlobalCharIds: string[];
 };
 
@@ -31,6 +32,7 @@ export async function prepareImportStaging(params: PrepareImportStagingParams): 
     selectedScenarioMemoriesIds,
     selectedScenarioGroupsIds,
     copiedMapIds,
+    activeGlobalCharIds,
     copiedGlobalCharIds,
   } = params;
 
@@ -88,23 +90,6 @@ export async function prepareImportStaging(params: PrepareImportStagingParams): 
       [[JSON.stringify(copiedGlobalCharIds)]]
     );
 
-    await db.dbRun(
-      `
-        UPDATE import_staging.character
-        SET data = json_set(
-          data,
-          '$.imagePath',
-          CASE
-            WHEN json_extract(data, '$.imagePath') LIKE '/api/files/character_cards/%'
-            THEN '/api/files/character_cards/' || (SELECT new_id FROM import_staging._id_map WHERE old_id = character.id) || '.png'
-            ELSE json_extract(data, '$.imagePath')
-          END
-        )
-        WHERE id IN (SELECT value FROM json_each(?));
-      `.trim(),
-      [[JSON.stringify(copiedGlobalCharIds)]]
-    );
-
     const idMapRows = await db.dbAll<{ old_id: string; new_id: string }>(
       `SELECT old_id, new_id FROM import_staging._id_map WHERE old_id IN (SELECT value FROM json_each(?))`.trim(),
       [[JSON.stringify(copiedGlobalCharIds)]],
@@ -113,6 +98,27 @@ export async function prepareImportStaging(params: PrepareImportStagingParams): 
     for (const r of idMapRows) {
       copiedCharIdToNewId.set(r.old_id, r.new_id);
     }
+  }
+
+  // Normalize /api/files/character_cards/* paths on all active global characters to <target_id>.png
+  // so non-matching filenames in an archive can never overwrite another existing character's file on disk
+  if (activeGlobalCharIds.length > 0) {
+    await db.dbRun(
+      `
+        UPDATE import_staging.character
+        SET data = json_set(
+          data,
+          '$.imagePath',
+          CASE
+            WHEN json_extract(data, '$.imagePath') LIKE '/api/files/character_cards/%'
+            THEN '/api/files/character_cards/' || COALESCE((SELECT new_id FROM import_staging._id_map WHERE old_id = character.id), character.id) || '.png'
+            ELSE json_extract(data, '$.imagePath')
+          END
+        )
+        WHERE id IN (SELECT value FROM json_each(?));
+      `.trim(),
+      [[JSON.stringify(activeGlobalCharIds)]]
+    );
   }
 
   // 4. Strip unchecked memories and groups from scenario_character data
