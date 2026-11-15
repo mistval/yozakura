@@ -89,7 +89,7 @@ export class ParallelJobManager {
   }
 
   public async waitAllForTag(tag: string, exclusiveTags: string[] = []) {
-    const settledResults = await globalParallelJobManager.allSettledForTag(tag, exclusiveTags);
+    const settledResults = await this.allSettledForTag(tag, exclusiveTags);
     for (const result of settledResults) {
       if (result.status === 'rejected') {
         throw result.reason;
