@@ -2,31 +2,23 @@ import { useMemo, useState } from 'react';
 import { useStateRef } from '../hooks/useStateRef.js';
 import { useDraft } from '../hooks/useDraft.js';
 import { useLocation, useNavigate } from 'react-router';
-import { DEMO_CHARACTERS } from '../engine/demo_characters.js';
 import YozakuraLogo from '../theme/yozakura_logo.js';
 import { useSettingsStore, type Settings } from '../state/settings_store.js';
+import { useScenarioStore } from '../state/scenario_store.js';
 import Modal from './ui/Modal.js';
 import InfoTooltip from './ui/InfoTooltip.js';
 import { getErrorMessage } from '../errors/error_util.js';
 import { useLlmConnectionTest } from '../hooks/useLlmConnectionTest.js';
-import { useMapStore } from '../state/map_store.js';
-import { assertNonNullish } from '../errors/application_error.js';
-import { useGlobalCharactersStore } from '../state/global_character_store.js';
-import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
-import { useScenarioStore } from '../state/scenario_store.js';
 import {
   findBaseDefaultsLLMConfig,
   updateLLMConfigsWithBaseDefaultsConnection,
 } from '../engine/settings/cascading_llm_configs.js';
-import { getRequiredRandomChoice } from '../util/array.js';
 import { getBuiltinImageScript } from '../engine/settings/settings_scripts/image/image_scripts.js';
 import CustomScriptSettings from './settings/settingsScripts/CustomScriptSettings.js';
 import {
   IMAGE_SCRIPT_DESCRIPTOR,
   useImageScriptSelection,
 } from './settings/settingsScripts/imageScriptSection.js';
-
-const DEMO_MAP_ID = 'paradise_island';
 
 const FTUE_API_URL_TOOLTIP_HTML =
   'Use an OpenAI-compatible completions API endpoint (usually an endpoint that ends in <code>/v1/chat/completions</code>).';
@@ -37,21 +29,15 @@ const FTUE_AUTH_TOKEN_TOOLTIP_HTML =
 const FTUE_MODEL_TOOLTIP_HTML =
   'If your API accepts a <code>model</code> field in request bodies to specify the model to use, you can set that model here.';
 
-const FTUE_TOKEN_STREAMING_TOOLTIP_HTML =
-  'When enabled, NPC chat responses stream token-by-token while they are being generated. Your API provider must support OpenAI-compatible streaming (SSE). Most providers do support this.';
-
 export default function MainMenuFtueModal() {
   const navigate = useNavigate();
   const location = useLocation();
   const llmConfigs = useSettingsStore((s) => s.llmConfigs);
-  const tokenStreamingEnabled = useSettingsStore((s) => s.tokenStreamingEnabled);
   const mainMenuFtueSeen = useSettingsStore((s) => s.mainMenuFtueSeen);
   const setSettings = useSettingsStore((s) => s.setSettings);
 
   const imageSelection = useImageScriptSelection();
 
-  const globalCharactersAreLoaded = useGlobalCharactersStore((s) => s.globalCharactersAreLoaded);
-  const maps = useMapStore((s) => s.maps);
   const [demoStartLoading, setDemoStartLoading, demoStartLoadingRef] = useStateRef(false);
   const [demoStartError, setDemoStartError] = useState('');
   const {
@@ -105,45 +91,9 @@ export default function MainMenuFtueModal() {
     setDemoStartError('');
 
     try {
-      const { installDemoCharactersGlobally, globalCharactersById } = useGlobalCharactersStore.getState();
-      const { copyGlobalCharactersToInactiveScenarioImmediate, saveInactiveScenarioCharacterImmediate } =
-        useScenarioCharacterStore.getState();
-      const { saveImmediateInactiveScenario, saveImmediateBlankInactiveScenario } =
-        useScenarioStore.getState();
-
-      await installDemoCharactersGlobally();
-
-      const demoMap = maps.find((m) => m.id === DEMO_MAP_ID) || maps[0];
-      assertNonNullish(demoMap, 'No maps are available.');
-      const scenario = await saveImmediateBlankInactiveScenario(demoMap.id);
-
-      const scenarioCharacters = await copyGlobalCharactersToInactiveScenarioImmediate(
-        DEMO_CHARACTERS.map((demoCharacter) => globalCharactersById[demoCharacter.id] || demoCharacter),
-        scenario.id,
-        demoMap
-      );
-
-      let userCharacter = getRequiredRandomChoice(scenarioCharacters);
-      const otherCharacter = getRequiredRandomChoice(
-        scenarioCharacters.filter((c) => c.id !== userCharacter.id)
-      );
-
-      // Ensure user character spawns in same location as at least one other character
-      userCharacter = {
-        ...userCharacter,
-        locationId: otherCharacter.locationId,
-      };
-
-      await Promise.all([
-        saveInactiveScenarioCharacterImmediate(userCharacter),
-        saveImmediateInactiveScenario({
-          ...scenario,
-          userCharacterId: userCharacter.id,
-        }),
-      ]);
-
+      const { newScenarioId } = await useScenarioStore.getState().importDemoScenario();
       markFtueSeen();
-      navigate(`/scenario/${scenario.id}`);
+      navigate(`/scenario/${newScenarioId}`);
     } catch (error) {
       setDemoStartError(getErrorMessage(error));
     } finally {
@@ -239,24 +189,6 @@ export default function MainMenuFtueModal() {
               />
             </div>
 
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-medium" htmlFor="ftue-token-streaming-enabled">
-                Token streaming
-              </label>
-              <input
-                id="ftue-token-streaming-enabled"
-                type="checkbox"
-                checked={tokenStreamingEnabled}
-                onChange={(event) => setSettings({ tokenStreamingEnabled: event.target.checked })}
-                className="h-4 w-4!"
-              />
-              <InfoTooltip
-                label="About token streaming"
-                html={FTUE_TOKEN_STREAMING_TOOLTIP_HTML}
-                align="center"
-              />
-            </div>
-
             <div className="flex items-center justify-end gap-3 pt-1">
               {llmConnectionTestSuccess && <p className="text-sm text-secondary">✓ Connection successful.</p>}
               <button
@@ -288,11 +220,7 @@ export default function MainMenuFtueModal() {
             <h3 className="text-lg font-semibold">
               Want to try Yozakura right away? Start a scenario with demo characters.
             </h3>
-            <button
-              type="button"
-              onClick={() => void startDemoSimulation()}
-              disabled={demoStartLoading || !globalCharactersAreLoaded}
-            >
+            <button type="button" onClick={() => void startDemoSimulation()} disabled={demoStartLoading}>
               {demoStartLoading ? 'Starting...' : 'Start'}
             </button>
             {demoStartError && <div className="error-card">{demoStartError}</div>}

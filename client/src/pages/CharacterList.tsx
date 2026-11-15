@@ -70,7 +70,18 @@ export default function CharacterList() {
               }}
               className="underline cursor-pointer text-primary hover:text-primary-strong"
             >
-              {'install the demo characters'}
+              install the demo characters
+            </a>{' '}
+            or{' '}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                openBulkImport();
+              }}
+              className="underline cursor-pointer text-primary hover:text-primary-strong"
+            >
+              bulk import characters from Yozakura or SillyTavern character card pngs
             </a>
             .
           </div>

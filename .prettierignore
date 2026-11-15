@@ -9,3 +9,8 @@ out/
 docs/.docusaurus
 venv
 data/
+*.png
+demo_data
+.husky
+.prettierignore
+Dockerfile

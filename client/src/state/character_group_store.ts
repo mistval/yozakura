@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import * as Database from '../backend_bridge/database.js';
+import {
+  createPersistedObject,
+  doAsDataRead,
+  doAsDataWrite,
+  mainDatabase,
+} from '../backend_bridge/database.js';
 import type { ScenarioCharacterGroup, ScenarioCharacterGroupSchedule } from '../engine/types.js';
 import { assert } from '../errors/application_error.js';
 import { concatUniqueById, removeById } from '../util/array.js';
@@ -43,10 +48,10 @@ export const useCharacterGroupStore = create<CharacterGroupStoreState>((set, get
       return;
     }
 
-    const [groups, schedules] = await Database.doAsDataRead(async () => {
+    const [groups, schedules] = await doAsDataRead(async () => {
       return Promise.all([
-        Database.loadScenarioCharacterGroups(scenario.id),
-        Database.loadGroupSchedules(scenario.id),
+        mainDatabase.loadScenarioCharacterGroups(scenario.id),
+        mainDatabase.loadGroupSchedules(scenario.id),
       ]);
     }, `${DATABASE_OBJECT_NAME}.${scenario.id}.all`);
 
@@ -59,7 +64,7 @@ export const useCharacterGroupStore = create<CharacterGroupStoreState>((set, get
 
   createGroup: (name) => {
     const scenarioId = getRequiredActiveScenario().id;
-    const group: ScenarioCharacterGroup = Database.createPersistedObject({
+    const group: ScenarioCharacterGroup = createPersistedObject({
       scenarioId,
       name,
       privateZones: [],
@@ -92,8 +97,8 @@ export const useCharacterGroupStore = create<CharacterGroupStoreState>((set, get
 
     characterStore.saveScenarioCharacters(updatedCharacters);
 
-    void Database.doAsDataWrite(async () => {
-      await Database.deleteScenarioCharacterGroup(groupId);
+    void doAsDataWrite(async () => {
+      await mainDatabase.deleteScenarioCharacterGroup(groupId);
     }, DATABASE_OBJECT_NAME);
   },
 
@@ -111,11 +116,11 @@ export const useCharacterGroupStore = create<CharacterGroupStoreState>((set, get
   saveSchedule: (schedule) => {
     set({ schedulesByGroupId: { ...get().schedulesByGroupId, [schedule.groupId]: schedule } });
 
-    void Database.doAsDataWrite(
+    void doAsDataWrite(
       async () => {
         const latest = get().schedulesByGroupId[schedule.groupId];
         if (latest) {
-          await Database.storeGroupSchedule(latest);
+          await mainDatabase.storeGroupSchedule(latest);
         }
       },
       SCHEDULE_DATABASE_OBJECT_NAME,
@@ -130,7 +135,7 @@ export const useCharacterGroupStore = create<CharacterGroupStoreState>((set, get
     }
 
     const scenarioId = getRequiredActiveScenario().id;
-    const schedule = Database.createPersistedObject({
+    const schedule = createPersistedObject({
       scenarioId,
       groupId,
       lengthInTurns: DEFAULT_SCHEDULE_LENGTH_IN_TURNS,
@@ -169,11 +174,11 @@ export const useCharacterGroupStore = create<CharacterGroupStoreState>((set, get
   saveGroup: (group) => {
     set({ groups: concatUniqueById(get().groups, group) });
 
-    void Database.doAsDataWrite(
+    void doAsDataWrite(
       async () => {
         const latest = get().groups.find((g) => g.id === group.id);
         if (latest) {
-          await Database.storeScenarioCharacterGroups([latest]);
+          await mainDatabase.storeScenarioCharacterGroups([latest]);
         }
       },
       DATABASE_OBJECT_NAME,

@@ -1,0 +1,55 @@
+import { describe, expect, it } from 'vitest';
+import {
+  BASE_DEFAULTS_LLM_CONFIG_ID,
+  DEFAULT_LLM_CONFIGS,
+  findBaseDefaultsLLMConfig,
+  isKnownCloudLlmProvider,
+  updateLLMConfigsWithBaseDefaultsConnection,
+} from './cascading_llm_configs.js';
+
+describe('cascading_llm_configs', () => {
+  it('correctly identifies known cloud LLM providers', () => {
+    expect(isKnownCloudLlmProvider('https://openrouter.ai/api/v1/chat/completions')).toBe(true);
+    expect(isKnownCloudLlmProvider('https://api.openai.com/v1/chat/completions')).toBe(true);
+    expect(isKnownCloudLlmProvider('https://api.groq.com/openai/v1/chat/completions')).toBe(true);
+    expect(isKnownCloudLlmProvider('https://api.deepseek.com/chat/completions')).toBe(true);
+    expect(isKnownCloudLlmProvider('openrouter.ai/api/v1')).toBe(true);
+
+    expect(isKnownCloudLlmProvider('http://localhost:5001/v1/chat/completions')).toBe(false);
+    expect(isKnownCloudLlmProvider('http://127.0.0.1:11434/v1/chat/completions')).toBe(false);
+    expect(isKnownCloudLlmProvider('http://192.168.1.100:5000/v1/chat/completions')).toBe(false);
+    expect(isKnownCloudLlmProvider('')).toBe(false);
+  });
+
+  it('sets concurrencyGroupLimit to 6 for known cloud providers in updateLLMConfigsWithBaseDefaultsConnection', () => {
+    const updated = updateLLMConfigsWithBaseDefaultsConnection(
+      DEFAULT_LLM_CONFIGS,
+      'https://openrouter.ai/api/v1/chat/completions',
+      'test-token',
+      'deepseek/deepseek-chat'
+    );
+    const base = findBaseDefaultsLLMConfig(updated);
+    expect(base?.concurrencyGroupLimit).toBe(6);
+  });
+
+  it('keeps concurrencyGroupLimit as 1 for local endpoints in updateLLMConfigsWithBaseDefaultsConnection', () => {
+    const updated = updateLLMConfigsWithBaseDefaultsConnection(
+      DEFAULT_LLM_CONFIGS,
+      'http://localhost:5001/v1/chat/completions',
+      '',
+      ''
+    );
+    const base = findBaseDefaultsLLMConfig(updated);
+    expect(base?.concurrencyGroupLimit).toBe(1);
+  });
+
+  it('defaults tokenStreamingEnabled to enabled for base and undefined (inherit) for all other configs', () => {
+    for (const [id, config] of Object.entries(DEFAULT_LLM_CONFIGS)) {
+      if (id === BASE_DEFAULTS_LLM_CONFIG_ID) {
+        expect(config.tokenStreamingEnabled).toBe('enabled');
+      } else {
+        expect(config.tokenStreamingEnabled).toBeUndefined();
+      }
+    }
+  });
+});

@@ -53,7 +53,7 @@ export default function CharacterOverviewAddCharactersModal() {
     setAddCharacterSelectedGlobalIds([]);
 
     for (const character of addCharacters) {
-      void useScenarioCharacterStore.getState().addGlobalCharacterToActiveScenario(character, {
+      void useScenarioCharacterStore.getState().addGlobalCharacterToActiveScenarioImmediate(character, {
         scenarioId: scenario.id,
         map: activeMap,
       });

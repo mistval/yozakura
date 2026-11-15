@@ -18,21 +18,29 @@ const allSchema = z.object({
   parameterGroups: z.array(z.array(z.unknown())),
 });
 
+let preparedStatementCaches = new WeakMap<Database.Database, LRUCache<string, Database.Statement>>();
+
+export function clearPreparedStatementCache(): void {
+  preparedStatementCaches = new WeakMap();
+}
+
 export default function dbRouter(db: Database.Database): Router {
   const router = express.Router();
 
-  const preparedStatementCache = new LRUCache<string, Database.Statement>({
-    max: 1000,
-  });
-
   function getPreparedStatement(statementText: string): Database.Statement {
-    const cached = preparedStatementCache.get(statementText);
+    let cache = preparedStatementCaches.get(db);
+    if (!cache) {
+      cache = new LRUCache<string, Database.Statement>({ max: 1000 });
+      preparedStatementCaches.set(db, cache);
+    }
+
+    const cached = cache.get(statementText);
     if (cached) {
       return cached;
     }
 
     const prepared = db.prepare(statementText);
-    preparedStatementCache.set(statementText, prepared);
+    cache.set(statementText, prepared);
     return prepared;
   }
 

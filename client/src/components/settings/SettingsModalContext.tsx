@@ -3,6 +3,13 @@ import { createContext, useCallback, useContext, useMemo } from 'react';
 import { useMatch } from 'react-router';
 import { useQueryParams } from '../../util/queryParams.js';
 
+const closedSettingsParams = {
+  settings: undefined,
+  settingspath: undefined,
+  llmoptionsid: undefined,
+  llmoptionsadvanced: undefined,
+};
+
 type SettingsModalContextType = {
   open: boolean;
   settingsPath: string;
@@ -31,7 +38,7 @@ export function SettingsModalProvider({ children }: { children: ReactNode }) {
   );
 
   const closeSettings = useCallback(() => {
-    setParams({ settings: undefined, settingspath: undefined });
+    setParams(closedSettingsParams);
   }, [setParams]);
 
   const setSettingsSection = useCallback(

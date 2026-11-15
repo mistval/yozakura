@@ -23,6 +23,7 @@ type TestEntity = {
 
 function createHelper() {
   const store = new Map<string, TestEntity>();
+  const db = new Map<string, TestEntity>();
   const delegate: IEphemeralStateDelegate<TestEntity> = {
     setStoreState: vi.fn((entities) => {
       for (const entity of entities) {
@@ -34,12 +35,25 @@ function createHelper() {
         store.delete(entity.id);
       }
     }),
-    setDatabaseState: vi.fn(async () => {}),
-    deleteDatabaseState: vi.fn(async () => {}),
-    refreshStoreStateFromDatabase: vi.fn(async () => {}),
+    setDatabaseState: vi.fn(async (entities) => {
+      for (const entity of entities) {
+        db.set(entity.id, entity);
+      }
+    }),
+    deleteDatabaseState: vi.fn(async (entities) => {
+      for (const entity of entities) {
+        db.delete(entity.id);
+      }
+    }),
+    getEntitiesFromDatabase: vi.fn(async (entities: TestEntity[]) => {
+      return entities
+        .map((entity) => db.get(entity.id))
+        .filter((entity): entity is TestEntity => Boolean(entity));
+    }),
   };
 
   return {
+    db,
     delegate,
     helper: new EphemeralStateHelper(delegate),
     store,
@@ -120,14 +134,26 @@ describe('EphemeralStateHelper', () => {
     expect(delegate.setDatabaseState).toHaveBeenCalledWith(entities);
   });
 
-  it('refreshes affected entities when pending changes are discarded', async () => {
-    const { delegate, helper } = createHelper();
-    const entity = { id: 'one', value: 'updated' };
+  it('refreshes affected entities when pending changes are discarded, restoring persisted and deleting non-persisted', async () => {
+    const { db, delegate, helper, store } = createHelper();
+    const persisted = { id: 'persisted', value: 'original' };
+    db.set(persisted.id, persisted);
+    store.set(persisted.id, persisted);
 
-    await helper.stageUpdatedEntity(entity, DEFERRED_SYNC);
+    const updatedPersisted = { id: 'persisted', value: 'updated' };
+    const newlyCreated = { id: 'new-uncommitted', value: 'draft' };
+
+    await helper.stageUpdatedEntities([updatedPersisted, newlyCreated], DEFERRED_SYNC);
+    expect(store.get(persisted.id)).toEqual(updatedPersisted);
+    expect(store.get(newlyCreated.id)).toEqual(newlyCreated);
+
     await helper.discardPendingChanges();
 
-    expect(delegate.refreshStoreStateFromDatabase).toHaveBeenCalledWith([entity]);
+    expect(delegate.getEntitiesFromDatabase).toHaveBeenCalledWith([updatedPersisted, newlyCreated]);
+    expect(delegate.deleteStoreState).toHaveBeenCalledWith([newlyCreated]);
+    expect(delegate.setStoreState).toHaveBeenLastCalledWith([persisted]);
+    expect(store.get(persisted.id)).toEqual(persisted);
+    expect(store.has(newlyCreated.id)).toBe(false);
 
     await helper.commitChanges();
     expect(delegate.setDatabaseState).not.toHaveBeenCalled();
@@ -141,7 +167,7 @@ describe('EphemeralStateHelper', () => {
     await helper.commitChanges();
 
     expect(delegate.setDatabaseState).not.toHaveBeenCalled();
-    expect(delegate.refreshStoreStateFromDatabase).not.toHaveBeenCalled();
+    expect(delegate.getEntitiesFromDatabase).not.toHaveBeenCalled();
   });
 
   it('abandons pending changes when its configured scenario subscription observes a new ID', async () => {
@@ -163,7 +189,7 @@ describe('EphemeralStateHelper', () => {
     await slice.commitAllChanges();
 
     expect(delegate.setDatabaseState).not.toHaveBeenCalled();
-    expect(delegate.refreshStoreStateFromDatabase).not.toHaveBeenCalled();
+    expect(delegate.getEntitiesFromDatabase).not.toHaveBeenCalled();
   });
 
   it('tracks deferred sync entities in useDeferredSyncStore and releases them on commit', async () => {
@@ -238,7 +264,7 @@ describe('EphemeralStateHelper', () => {
     expect(isEntityInDeferredSync(entity.id)).toBe(true);
 
     await helper.discardPendingChanges();
-    expect(delegate.refreshStoreStateFromDatabase).not.toHaveBeenCalled();
+    expect(delegate.getEntitiesFromDatabase).not.toHaveBeenCalled();
     expect(isEntityInDeferredSync(entity.id)).toBe(false);
   });
 });

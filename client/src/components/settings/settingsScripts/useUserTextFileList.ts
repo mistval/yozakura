@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
-import * as Database from '../../../backend_bridge/database.js';
+import { doAsDataWrite, mainDatabase, type UserTextFileSummary } from '../../../backend_bridge/database.js';
 import { getErrorMessage } from '../../../errors/error_util.js';
 import { newId } from '../../../util/id.js';
 import { concatUniqueById, findById, removeById } from '../../../util/array.js';
 
 export function useUserTextFileList(groupKey: string) {
-  const [files, setFiles] = useState<Database.UserTextFileSummary[]>([]);
+  const [files, setFiles] = useState<UserTextFileSummary[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const saveDebounced = useCallback((file: Database.UserTextFileSummary) => {
+  const saveDebounced = useCallback((file: UserTextFileSummary) => {
     setFiles((prev) => concatUniqueById(prev, file));
-    void Database.doAsDataWrite(() => Database.saveUserTextFile(file), 'user_text_file', {
+    void doAsDataWrite(() => mainDatabase.saveUserTextFile(file), 'user_text_file', {
       debouncerKey: file.id,
     });
   }, []);
 
   const refresh = useCallback(async () => {
     try {
-      setFiles(await Database.loadUserTextFiles(groupKey));
+      setFiles(await mainDatabase.loadUserTextFiles(groupKey));
     } catch (e) {
       setError(getErrorMessage(e));
     }
@@ -70,7 +70,7 @@ export function useUserTextFileList(groupKey: string) {
       try {
         const remaining = removeById(files, id);
         setFiles(remaining);
-        await Database.doAsDataWrite(() => Database.deleteUserTextFile(id), 'user_text_file');
+        await doAsDataWrite(() => mainDatabase.deleteUserTextFile(id), 'user_text_file');
         return remaining[0]?.id;
       } catch (e) {
         setError(getErrorMessage(e));

@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import * as Database from '../backend_bridge/database.js';
+import { createPersistedObject } from '../backend_bridge/database.js';
 import {
   type Character,
   type MapZone,
@@ -222,7 +222,7 @@ export function createWardrobe(
     autoRevert?: boolean;
   } = {}
 ): Wardrobe {
-  return Database.createPersistedObject({
+  return createPersistedObject({
     text: opts.text ?? '',
     enabled: opts.enabled ?? false,
     tags: opts.tags ?? [],
@@ -300,4 +300,15 @@ export function applyPostConversationWardrobeAutoRevert(
   }
 
   return updatedCharacters;
+}
+
+function getCharacterWardrobeTags(character: Pick<Character, 'wardrobes'>): string {
+  return character.wardrobes
+    .filter((wardrobe) => wardrobe.enabled)
+    .map((wardrobe) => wardrobe.text)
+    .join(', ');
+}
+
+export function buildAppearanceTags(character: Character): string {
+  return [character.baseAppearanceTags, getCharacterWardrobeTags(character)].join(',');
 }

@@ -8,10 +8,12 @@ import {
 import { InteractiveRetryError } from '../errors/interactive_retry_error.js';
 import { getErrorMessage } from '../errors/error_util.js';
 import { rethrowSignalException } from './scenario_loop/flow_control.js';
+import { raceWithAbort } from '../util/promise.js';
 
 type RunWithInteractiveRetryOptions<T> = {
   operationType: string;
-  run: (attempt: number) => Promise<T>;
+  run: (attempt: number, abortSignal: AbortSignal | undefined) => Promise<T>;
+  abortSignal?: AbortSignal | undefined;
   retryDelayMs?: number;
   maxRetries?: number;
   shouldRetry?: (error: unknown, attempt: number) => boolean;
@@ -147,8 +149,11 @@ export async function showNonRetriableErrorCardIfNeeded(
 
 async function waitForRetryDecision(
   id: InteractiveRetryOperationId,
-  retryDelayMs: number
+  retryDelayMs: number,
+  abortSignal?: AbortSignal
 ): Promise<'retry_now' | 'cancel'> {
+  abortSignal?.throwIfAborted();
+
   const deferred = createDeferred<InteractiveRetryAction>();
   pendingActionDeferredById.set(id, deferred);
 
@@ -163,7 +168,7 @@ async function waitForRetryDecision(
   }, retryDelayMs);
 
   try {
-    const action = await deferred.promise;
+    const action = await (abortSignal ? raceWithAbort(deferred.promise, abortSignal) : deferred.promise);
     return action === 'cancel' ? 'cancel' : 'retry_now';
   } finally {
     clearTimeout(timerId);
@@ -174,12 +179,14 @@ async function waitForRetryDecision(
   }
 }
 
-async function waitForAck(id: InteractiveRetryOperationId): Promise<void> {
+async function waitForAck(id: InteractiveRetryOperationId, abortSignal?: AbortSignal): Promise<void> {
+  abortSignal?.throwIfAborted();
+
   const deferred = createDeferred<InteractiveRetryAction>();
   pendingActionDeferredById.set(id, deferred);
 
   try {
-    await deferred.promise;
+    await (abortSignal ? raceWithAbort(deferred.promise, abortSignal) : deferred.promise);
   } finally {
     const active = pendingActionDeferredById.get(id);
     if (active === deferred) {
@@ -222,13 +229,18 @@ export async function runWithInteractiveRetry<T>(options: RunWithInteractiveRetr
 
   try {
     while (true) {
+      options.abortSignal?.throwIfAborted();
       attempt += 1;
 
       try {
-        const result = await options.run(attempt);
+        const runPromise = options.run(attempt, options.abortSignal);
+        const result = await (options.abortSignal
+          ? raceWithAbort(runPromise, options.abortSignal)
+          : runPromise);
         return result;
       } catch (error) {
         rethrowSignalException(error);
+        options.abortSignal?.throwIfAborted();
 
         if ((error as any)?.name === 'AbortError') {
           throw error;
@@ -267,7 +279,7 @@ export async function runWithInteractiveRetry<T>(options: RunWithInteractiveRetr
 
           upsertCard(retryCard);
 
-          const decision = await waitForRetryDecision(operationId, retryDelayMs);
+          const decision = await waitForRetryDecision(operationId, retryDelayMs, options.abortSignal);
           if (decision === 'cancel') {
             throw new InteractiveRetryError(lastOriginalError);
           }
@@ -301,7 +313,7 @@ export async function runWithInteractiveRetry<T>(options: RunWithInteractiveRetr
 
         upsertCard(nonRetryCard);
 
-        await waitForAck(operationId);
+        await waitForAck(operationId, options.abortSignal);
         throw new InteractiveRetryError(lastOriginalError);
       }
     }

@@ -13,6 +13,8 @@ import { clampUnitRate, toPercent } from '../../util/numeric.js';
 export default function ImageGenerationSettingsSection() {
   const imagePromptPrefix = useSettingsStore((s) => s.imagePromptPrefix);
   const editImagePromptsBeforeDispatch = useSettingsStore((s) => s.editImagePromptsBeforeDispatch);
+  const generateImagesInParallelWithText = useSettingsStore((s) => s.generateImagesInParallelWithText);
+  const imageGenerationConcurrency = useSettingsStore((s) => s.imageGenerationConcurrency);
   const autoImageRate = useSettingsStore((s) => s.autoImageRate);
   const autoImageNpcOnly = useSettingsStore((s) => s.autoImageNpcOnly);
   const autoImageTemplateWeights = useSettingsStore((s) => s.autoImageTemplateWeights);
@@ -54,6 +56,37 @@ export default function ImageGenerationSettingsSection() {
           checked={editImagePromptsBeforeDispatch}
           onChange={(nextChecked) => setSettings({ editImagePromptsBeforeDispatch: nextChecked })}
         />
+
+        <div className="flex gap-5">
+          <CheckboxSettingRow
+            id="image-parallel-with-text"
+            label="Generate Images In Parallel With Text"
+            tooltipHtml={settingsTooltips['image.generateImagesInParallelWithText']}
+            checked={generateImagesInParallelWithText}
+            onChange={(nextChecked) => setSettings({ generateImagesInParallelWithText: nextChecked })}
+          />
+
+          <div>
+            <SettingFieldLabel
+              text="Image generation concurrency"
+              htmlFor="image-concurrency"
+              tooltipHtml={settingsTooltips['image.concurrency']}
+            />
+            <input
+              id="image-concurrency"
+              type="number"
+              min={1}
+              value={imageGenerationConcurrency}
+              onChange={(event) => {
+                const val = parseInt(event.target.value, 10);
+                if (!Number.isNaN(val) && val >= 1) {
+                  setSettings({ imageGenerationConcurrency: val });
+                }
+              }}
+              className="rounded-input"
+            />
+          </div>
+        </div>
 
         <div>
           <SettingFieldLabel

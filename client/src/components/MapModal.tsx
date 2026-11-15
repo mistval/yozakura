@@ -5,7 +5,7 @@ import RoutedModalFrame from './ui/RoutedModalFrame.js';
 import type { Character } from '../engine/types.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import { useScenarioCharacterStore, useUserCharacter } from '../state/scenario_character_store.js';
-import * as Database from '../backend_bridge/database.js';
+import { doAsDataRead, mainDatabase } from '../backend_bridge/database.js';
 import type { ScenarioEvent, MovementPolicy } from '../engine/types.js';
 import { useCharacterOverview } from './character_overview/CharacterOverviewContext.js';
 import { useMapModal } from './MapModalContext.js';
@@ -65,8 +65,8 @@ function MapModalInner() {
     setLogLoading(true);
     void (async () => {
       try {
-        const result = await Database.doAsDataRead(
-          () => Database.loadScenarioEventPage(scenario.id, logPage),
+        const result = await doAsDataRead(
+          () => mainDatabase.loadScenarioEventPage(scenario.id, logPage),
           'scenario_event_log'
         );
         if (!cancelled) {

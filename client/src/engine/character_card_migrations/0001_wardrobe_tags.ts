@@ -1,11 +1,10 @@
-import type { CharacterCardMigration } from '../character_card_migrator.js';
 import { DAILY_AUTOSELECT_TAG_PREFIX, formatPrefixedTag } from '../wardrobes.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-export const migration: CharacterCardMigration = {
+export const migration = {
   doMigration(rawCard: Record<string, unknown>): Record<string, unknown> {
     if (!isRecord(rawCard.character)) {
       return rawCard;

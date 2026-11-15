@@ -18,6 +18,7 @@ module.exports = {
       /^\/generated($|\/)/,
       /^\/venv($|\/)/,
       /^\/node_modules($|\/)/,
+      /^\/server\/demo_data($|\/)/,
     ],
   },
   rebuildConfig: {},

@@ -10,6 +10,10 @@ import { createBlankCharacter } from '../character_gen';
 import { createWardrobe } from '../wardrobes';
 import { chatSceneImageTemplatesGroup, runtimeChatTemplatesGroup } from './chat/group';
 import { characterCardImagePromptTemplateChain } from './character_generation/group';
+import { globalParallelJobManager } from '../parallelization/job_manager';
+import { ParallelJobCancellationError } from '../parallelization/job_manager_types';
+import { runWithInteractiveRetry } from '../interative_retry';
+import { wait } from '../../util/promise';
 
 describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
   const createTestInstantiator = () => {
@@ -321,5 +325,137 @@ describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
 
     const prompt = await characterCardImagePromptTemplateChain.renderAndExecute(context);
     expect(prompt).toContain('1girl, silver hair, red eyes,kimono');
+  });
+
+  it('passes abortSignal into Eta context and parser context', async () => {
+    const bridge = SettingsBridge.createInMemory<TemplateGroupSettingsData>({
+      templateChains: {},
+    });
+
+    const chain = new PromptTemplateChain({
+      templateChainId: 'test_abort_signal_presence',
+      defaultTitle: 'Abort Signal Presence',
+      defaultDescription: 'Verifies abortSignal is exposed in template and parser',
+      contextSchema: characterEditorExecutionContextSchema,
+      groupSettingsBridge: bridge,
+      templates: [
+        {
+          templateId: 'test_abort_signal.user',
+          name: 'User',
+          description: 'Checks abortSignal in Eta context',
+          role: 'user',
+          defaultTemplateString: '<%= it.abortSignal instanceof AbortSignal %>:<%= it.abortSignal.aborted %>',
+        },
+      ],
+      parser: {
+        defaultParserSource:
+          'async (response, it) => `${response}|${it.abortSignal instanceof AbortSignal}:${it.abortSignal.aborted}`',
+        parserOutputSchema: z.string(),
+      },
+    });
+
+    const testContext = buildCharacterEditorContext({
+      ...createBlankCharacter(),
+      firstName: 'Alice',
+    });
+    const rendered = await chain.render(testContext);
+    expect(rendered).toEqual([{ role: 'user', content: 'true:false' }]);
+    const parsed = await chain.parse(rendered[0]!.content, testContext);
+    expect(parsed).toBe('true:false|true:false');
+  });
+
+  it('immediately aborts hung template renders via cancelAllJobs and swallows late rejections', async () => {
+    const bridge = SettingsBridge.createInMemory<TemplateGroupSettingsData>({
+      templateChains: {},
+    });
+
+    const chain = new PromptTemplateChain({
+      templateChainId: 'test_hung_template_abort',
+      defaultTitle: 'Hung Template Abort',
+      defaultDescription: 'Verifies hung template render aborts cleanly',
+      contextSchema: characterEditorExecutionContextSchema,
+      groupSettingsBridge: bridge,
+      templates: [
+        {
+          templateId: 'test_hung_template.user',
+          name: 'User',
+          description: 'Hangs in async Eta template then rejects late',
+          role: 'user',
+          defaultTemplateString:
+            '<% await new Promise((_, reject) => setTimeout(() => reject(new Error("late template failure")), 25)); %>',
+        },
+      ],
+    });
+
+    const testContext = buildCharacterEditorContext({
+      ...createBlankCharacter(),
+      firstName: 'Alice',
+    });
+    const renderPromise = chain.render(testContext);
+    const expectation = expect(renderPromise).rejects.toBeInstanceOf(ParallelJobCancellationError);
+    await wait(5);
+    globalParallelJobManager.cancelAllJobs();
+
+    await expectation;
+    await wait(40);
+  });
+
+  it('immediately aborts hung output parsers and swallows late rejections', async () => {
+    const bridge = SettingsBridge.createInMemory<TemplateGroupSettingsData>({
+      templateChains: {},
+    });
+
+    const chain = new PromptTemplateChain({
+      templateChainId: 'test_hung_parser_abort',
+      defaultTitle: 'Hung Parser Abort',
+      defaultDescription: 'Verifies hung output parser aborts cleanly',
+      contextSchema: characterEditorExecutionContextSchema,
+      groupSettingsBridge: bridge,
+      templates: [
+        {
+          templateId: 'test_hung_parser.user',
+          name: 'User',
+          description: 'Simple template',
+          role: 'user',
+          defaultTemplateString: 'ok',
+        },
+      ],
+      parser: {
+        defaultParserSource:
+          'async () => new Promise((_, reject) => setTimeout(() => reject(new Error("late parser failure")), 25))',
+        parserOutputSchema: z.string(),
+      },
+    });
+
+    const testContext = buildCharacterEditorContext({
+      ...createBlankCharacter(),
+      firstName: 'Alice',
+    });
+    const parsePromise = chain.parse('raw', testContext);
+    const expectation = expect(parsePromise).rejects.toBeInstanceOf(ParallelJobCancellationError);
+    await wait(5);
+    globalParallelJobManager.cancelAllJobs();
+
+    await expectation;
+    await wait(40);
+  });
+
+  it('aborts runWithInteractiveRetry immediately while waiting for retry', async () => {
+    const controller = new AbortController();
+    const promise = runWithInteractiveRetry({
+      operationType: 'test.abort_during_retry_wait',
+      abortSignal: controller.signal,
+      retryDelayMs: 60_000,
+      maxRetries: 3,
+      run: async () => {
+        throw new Error('transient error');
+      },
+    });
+
+    const expectation = expect(promise).rejects.toMatchObject({ name: 'AbortError' });
+    await wait(10);
+    controller.abort();
+
+    await expectation;
   });
 });

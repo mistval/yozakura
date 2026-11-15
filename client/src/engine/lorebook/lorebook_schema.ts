@@ -1,8 +1,7 @@
 import { z } from 'zod';
 
 export type ParsedLorebookTrigger =
-  | { type: 'phrase'; phrase: string }
-  | { type: 'regex'; source: string; flags: string };
+  { type: 'phrase'; phrase: string } | { type: 'regex'; source: string; flags: string };
 
 export function parseLorebookTrigger(value: string): ParsedLorebookTrigger {
   if (!value.startsWith('/')) {

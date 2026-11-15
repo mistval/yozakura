@@ -2,7 +2,7 @@ import { assertNonNullish } from '../../errors/application_error.js';
 import type { Character, CharacterRelationship } from '../types.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
-import { buildAppearanceTags } from '../image_gen.js';
+import { buildAppearanceTags } from '../wardrobes.js';
 import {
   getActiveChatGossipCharacter,
   getActiveChatMedium,
@@ -162,7 +162,7 @@ async function buildChatTemplateContext(
 ): Promise<ConversationExecutionContext> {
   const activeChatStore = useTurnMachineStore.getState();
 
-  if (!activeChatStore.isActive()) {
+  if (activeChatStore.chatState !== 'active') {
     throw new Error('buildChatTemplateContext() should only be called when a chat is active');
   }
 

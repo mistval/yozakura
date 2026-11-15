@@ -161,6 +161,9 @@ export default function MapEditor() {
       <MapValidationErrors mapId={id} />
 
       <p>Map changes are saved automatically.</p>
+      <button type="button" onClick={() => navigate('/maps')}>
+        Back to Maps List
+      </button>
     </div>
   );
 }

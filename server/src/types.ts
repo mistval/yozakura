@@ -1,5 +1,9 @@
 import type Database from 'better-sqlite3';
 
+export type MigrationContext = {
+  dataDir?: string;
+};
+
 export type Migration = {
   /**
    * Applies a single forward migration. Runs inside a transaction that also
@@ -8,5 +12,5 @@ export type Migration = {
    *
    * Must be synchronous: better-sqlite3 transactions cannot span awaits.
    */
-  doMigration: (db: Database.Database) => void;
+  doMigration: (db: Database.Database, context?: MigrationContext) => void;
 };

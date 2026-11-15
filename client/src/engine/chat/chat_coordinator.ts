@@ -2,6 +2,8 @@ import { assert, assertNonNullish } from '../../errors/application_error';
 import { chatCompletion } from '../llm.js';
 import { showNonRetriableErrorCardIfNeeded } from '../interative_retry.js';
 import { generateChatImage } from '../image_gen.js';
+import { globalParallelJobManager } from '../parallelization/job_manager.js';
+import { createTextCompletionJobConfig } from '../../state/parallel_job_manager_store.js';
 import {
   buildChatModeratorContext,
   buildConversationEndJudgeContext,
@@ -9,13 +11,25 @@ import {
 } from '../prompt_templates/prompt_context_builder';
 import { decideIntelligentChatEnd, type ChatEndDecision } from './intelligent_chat_end';
 import { useSettingsStore, type SpeakerSelectionMode } from '../../state/settings_store.js';
-import * as Database from '../../backend_bridge/database.js';
-import type { Character, ChatMessage, EphemeralLocation, StoredConversation } from '../types';
+import {
+  createPersistedObject,
+  doAsDataRead,
+  doAsDataWrite,
+  mainDatabase,
+} from '../../backend_bridge/database.js';
+import type {
+  Character,
+  CharacterMessage,
+  ChatMessage,
+  EphemeralLocation,
+  StoredConversation,
+} from '../types';
 import { getRequiredActiveScenario } from '../../state/scenario_store.js';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { ConversationTranscript } from './transcript';
+import { buildTranscriptRagDeps } from './transcript_rag_deps';
 import {
   getActiveChatMedium,
   getActiveChatParticipants,
@@ -38,10 +52,11 @@ import {
 import { wait } from '../../util/promise';
 import { getRequiredRandomChoice, weightedRandomChoice } from '../../util/array';
 import { clamp } from '../../util/numeric.js';
-import { withPhaseTransitionGate } from '../../util/phase_transition_gate';
-import { rethrowSignalException } from '../scenario_loop/flow_control';
+import { rethrowSignalException, SignalException } from '../scenario_loop/flow_control';
+import { persistTurn } from '../scenario_loop/turn_persistence';
 import type { PromptTemplateChain } from '../prompt_templates/prompt_template_chain.js';
 import type { PromptExecutionContext } from '../prompt_templates/prompt_template_context_fields.js';
+import { ChatJobTags } from '../../state/chat_state';
 
 export class ChatCoordinator {
   public static async prepareChatStart(participantIds: string[]): Promise<StartChatSessionArgs> {
@@ -60,6 +75,7 @@ export class ChatCoordinator {
       participantIds,
       initiatorId: firstParticipant.id,
       gossipTargetCharacterId,
+      ragDeps: buildTranscriptRagDeps(),
     };
   }
 
@@ -107,7 +123,7 @@ export class ChatCoordinator {
     return decision === 'stop';
   }
 
-  private static runConversationEndJudge(
+  private static async runConversationEndJudge(
     fromPerspectiveId: string,
     lengthParameters: {
       targetLength: number;
@@ -116,17 +132,16 @@ export class ChatCoordinator {
       historyLength: number;
     }
   ): Promise<ChatEndDecision> {
-    return this.turnMachineStore().doWithState('judging_conversation_end', () => {
-      return withPhaseTransitionGate(
-        async (abortSignal) => {
-          return conversationEndJudgeTemplatesChain.renderAndExecute(
-            await buildConversationEndJudgeContext(fromPerspectiveId, lengthParameters),
-            { abortSignal }
-          );
-        },
-        { pauseBehavior: 'abort' }
-      );
-    });
+    return conversationEndJudgeTemplatesChain.renderAndExecute(
+      await buildConversationEndJudgeContext(fromPerspectiveId, lengthParameters),
+      {
+        jobConfig: createTextCompletionJobConfig('Deciding whether to end', [
+          ChatJobTags.chatJob,
+          ChatJobTags.judgingConversationEnd,
+          ChatJobTags.abortOnPause,
+        ]),
+      }
+    );
   }
 
   public static deactivate() {
@@ -143,10 +158,6 @@ export class ChatCoordinator {
     }
 
     return this.turnMachineStore().removeChatParticipant(participantId);
-  }
-
-  public static setStateAwaitingCharacterInput() {
-    this.turnMachineStore().setStateAwaitingCharacterInput();
   }
 
   public static setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation | undefined) {
@@ -182,7 +193,7 @@ export class ChatCoordinator {
     this.setTranscript(updatedTranscript);
   }
 
-  public static async addCharacterMessage(
+  public static addCharacterMessage(
     senderId: string,
     message: string,
     options: { forceSkipAutoImage?: boolean } = {}
@@ -191,10 +202,7 @@ export class ChatCoordinator {
     const { updatedTranscript, newRawMessage } = this.transcript().addCharacterChatMessage(message, sender);
 
     this.setTranscript(updatedTranscript);
-
-    if (!options.forceSkipAutoImage) {
-      await this.maybeGenerateAutoImageForMessage(newRawMessage);
-    }
+    return this.runNewMessageEffects(newRawMessage, options);
   }
 
   public static hasUserChatMessages() {
@@ -208,6 +216,60 @@ export class ChatCoordinator {
       : (this.transcript().getMostRecentSpeakerId() ?? this.firstNonUserParticipantId());
 
     return this.buildSceneImageFullPrompt(imageCharacterId, { upToMessageId: afterMessageId });
+  }
+
+  public static async requestSceneImage(afterMessageId: string | undefined) {
+    try {
+      const prompt = await this.buildSceneImagePromptForRequest(afterMessageId);
+      if (useSettingsStore.getState().editImagePromptsBeforeDispatch) {
+        useScenarioLoopStateStore.getState().setPendingImagePromptEdit({
+          prompt,
+          afterMessageId,
+        });
+      } else {
+        await this.generateImageFromPrompt(prompt, { afterMessageId });
+      }
+    } catch (err) {
+      if (err instanceof SignalException) {
+        return;
+      }
+      await showNonRetriableErrorCardIfNeeded({
+        error: err,
+        operationType: 'chat_image.request',
+      });
+    }
+  }
+
+  public static async confirmSceneImagePrompt(prompt: string, afterMessageId: string | undefined) {
+    useScenarioLoopStateStore.getState().setPendingImagePromptEdit(undefined);
+    try {
+      await this.generateImageFromPrompt(prompt, { afterMessageId });
+    } catch (err) {
+      if (err instanceof SignalException) {
+        return;
+      }
+      await showNonRetriableErrorCardIfNeeded({
+        error: err,
+        operationType: 'chat_image.generate',
+      });
+    }
+  }
+
+  private static async runNewMessageEffects(
+    message: CharacterMessage,
+    options: { forceSkipAutoImage?: boolean } = {}
+  ) {
+    if (!options.forceSkipAutoImage) {
+      if (useSettingsStore.getState().generateImagesInParallelWithText) {
+        void this.maybeGenerateAutoImageForMessage(message).catch((err) => {
+          if (!(err instanceof SignalException)) {
+            console.error('Auto image generation error', err);
+          }
+        });
+      } else {
+        await this.maybeGenerateAutoImageForMessage(message);
+      }
+    }
   }
 
   private static firstNonUserParticipantId(): string {
@@ -233,46 +295,37 @@ export class ChatCoordinator {
       chain?: PromptTemplateChain<PromptExecutionContext, string> | undefined;
     }
   ) {
-    return this.turnMachineStore().doWithState('generating_image', async () => {
-      return withPhaseTransitionGate(
-        async (abortSignal) => {
-          const primaryCharacter = this.getCharacterById(primaryCharacterId);
-          const sceneImageChain = opts?.chain ?? this.getSelectedSceneImageChain();
-          assertNonNullish(sceneImageChain, 'No scene image chain available');
-          return sceneImageChain.renderAndExecute(
-            await buildFocusedChatTemplateContext(primaryCharacter.id, undefined, {
-              upToMessageId: opts?.upToMessageId,
-            }),
-            { abortSignal }
-          );
-        },
-        { pauseBehavior: 'ignore' }
-      );
-    });
+    const primaryCharacter = this.getCharacterById(primaryCharacterId);
+    const sceneImageChain = opts?.chain ?? this.getSelectedSceneImageChain();
+    assertNonNullish(sceneImageChain, 'No scene image chain available');
+    return sceneImageChain.renderAndExecute(
+      await buildFocusedChatTemplateContext(primaryCharacter.id, undefined, {
+        upToMessageId: opts?.upToMessageId,
+      }),
+      {
+        jobConfig: createTextCompletionJobConfig('Generating image prompt', [
+          ChatJobTags.chatJob,
+          ChatJobTags.generatingImagePrompt,
+        ]),
+      }
+    );
   }
 
   public static async generateImageFromPrompt(
     fullPrompt: string,
     opts?: { afterMessageId?: string | undefined }
   ) {
-    return this.turnMachineStore().doWithState('generating_image', async () => {
-      return withPhaseTransitionGate(
-        async (abortSignal) => {
-          const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
-          const files = await generateChatImage({
-            fullPrompt,
-            saveTo,
-            abortSignal,
-          });
-
-          const firstFile = files[0];
-          assertNonNullish(firstFile, 'No file returned from image generation call');
-
-          this.setTranscript(this.transcript().addImageMessage(firstFile, opts).updatedTranscript);
-        },
-        { pauseBehavior: 'ignore' }
-      );
+    const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
+    const files = await generateChatImage({
+      fullPrompt,
+      saveTo,
     });
+
+    const firstFile = files[0];
+    assertNonNullish(firstFile, 'No file returned from image generation call');
+
+    this.setTranscript(this.transcript().addImageMessage(firstFile, opts).updatedTranscript);
+    persistTurn();
   }
 
   public static async endActiveChat(noEffect: boolean) {
@@ -289,13 +342,20 @@ export class ChatCoordinator {
         );
         await lockEntitiesForEndOfChatUpdates(npcSpeakers);
 
-        for (const participant of npcSpeakers) {
-          characterUpdates.push(
-            await generateCharacterEndOfChatUpdates(participant, (statusInfo) =>
-              this.setStateProcessingMemories(statusInfo)
-            )
-          );
-        }
+        const updatePromises = npcSpeakers.map((participant) =>
+          generateCharacterEndOfChatUpdates(participant)
+        );
+
+        const settledUpdates = await Promise.all(updatePromises);
+        characterUpdates.push(...settledUpdates);
+
+        await globalParallelJobManager.enqueue({
+          name: 'Waiting for image jobs to finish',
+          tags: [ChatJobTags.chatJob, ChatJobTags.abortOnPause, ChatJobTags.finalizingChat],
+          job: async () => {
+            await globalParallelJobManager.waitAllForTag(ChatJobTags.chatJob, [ChatJobTags.finalizingChat]);
+          },
+        });
 
         await Promise.all([characterStore.commitAllChanges(), relationshipStore.commitAllChanges()]);
       } catch (err) {
@@ -307,7 +367,7 @@ export class ChatCoordinator {
         rethrowSignalException(err);
       }
 
-      const conversationLog: StoredConversation = Database.createPersistedObject({
+      const conversationLog: StoredConversation = createPersistedObject({
         serializedTranscript: this.transcript().serialize(),
         label: this.getPastTenseLabel(),
         characterUpdates,
@@ -315,9 +375,9 @@ export class ChatCoordinator {
         turnNumber: scenario.turnNumber,
       });
 
-      void Database.doAsDataWrite(
+      void doAsDataWrite(
         async () => {
-          await Database.storeConversation(scenario.id, conversationLog);
+          await mainDatabase.storeConversation(scenario.id, conversationLog);
         },
         'conversation',
         {
@@ -351,67 +411,43 @@ export class ChatCoordinator {
       prompts.push(userNudgePrompt);
     }
 
-    const tokenStreamingEnabled = useSettingsStore.getState().tokenStreamingEnabled;
-
-    return useTurnMachineStore.getState().doWithState('character_speaking', async () => {
-      return withPhaseTransitionGate(
-        async (abortSignal) => {
-          if (!tokenStreamingEnabled) {
-            const response = await chatCompletion(prompts, {
-              promptTemplateGroup: 'gen_npc_response',
-              completionRequestId,
-              promptContext,
-              abortSignal,
-            });
-
-            const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
-              completionRequestId,
-            });
-
-            const didPause = !wasPaused && this.isChatPaused();
-
-            await this.addCharacterMessage(speaker.id, parsedResponse, { forceSkipAutoImage: didPause });
-            await this.pauseAfterNpcOnlyMessage();
-
-            return this.transcript;
-          }
-
-          const draftMessage = await this.startStreamingNpcDraftMessage(speaker);
-
-          try {
-            const response = await chatCompletion(prompts, {
-              promptTemplateGroup: 'gen_npc_response',
-              promptContext,
-              completionRequestId,
-              abortSignal,
-              onTokens: async (fullText: string) => {
-                this.setTranscript(
-                  this.transcript().editLatestMessage(fullText, { isStreaming: true }).updatedTranscript
-                );
-              },
-            });
-
-            const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
-              completionRequestId,
-            });
-
-            const didPause = !wasPaused && this.isChatPaused();
-
-            // Delete and re-add. Slightly hacky way to trigger auto image and other effects.
-            this.deleteMessageById(draftMessage.id);
-            await this.addCharacterMessage(speaker.id, parsedResponse, { forceSkipAutoImage: didPause });
-
-            await this.pauseAfterNpcOnlyMessage();
-
-            return this.transcript;
-          } catch (err) {
-            this.deleteMessageById(draftMessage.id);
-            throw err;
-          }
+    const draftMessage = this.startStreamingNpcDraftMessage(speaker);
+    try {
+      const response = await chatCompletion(prompts, {
+        promptTemplateGroup: 'gen_npc_response',
+        promptContext,
+        completionRequestId,
+        jobConfig: createTextCompletionJobConfig(`${speaker.firstName} speaking`, [
+          ChatJobTags.chatJob,
+          ChatJobTags.characterIsSpeaking,
+        ]),
+        onTokens: (fullText: string) => {
+          this.setTranscript(
+            this.transcript().editMessageById(draftMessage.id, fullText, { isStreaming: true })
+              .updatedTranscript
+          );
         },
-        { pauseBehavior: 'ignore' }
+      });
+
+      const parsedResponse = await chatSystemPromptChain.parse(response, promptContext, {
+        completionRequestId,
+      });
+
+      this.setTranscript(
+        this.transcript().editMessageById(draftMessage.id, parsedResponse).updatedTranscript
       );
-    });
+    } catch (err) {
+      if (draftMessage) {
+        this.deleteMessageById(draftMessage.id);
+      }
+      throw err;
+    }
+
+    const didPause = !wasPaused && this.isChatPaused();
+    await this.runNewMessageEffects(draftMessage, { forceSkipAutoImage: didPause });
+    await this.pauseAfterNpcOnlyMessage();
+
+    return this.transcript;
   }
 
   public static getSpeakerSelectionMode(): SpeakerSelectionMode {
@@ -497,29 +533,28 @@ export class ChatCoordinator {
       }
 
       if (selectionMode === 'intelligent') {
-        return useTurnMachineStore.getState().doWithState('selecting_speaker', async () => {
-          return withPhaseTransitionGate(
-            async (abortSignal) => {
-              const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesChain.renderAndExecute(
-                await buildChatModeratorContext(speakerCandidates),
-                { abortSignal }
-              );
+        const moderatorSelectedSpeakerId = await moderationNextSpeakerTemplatesChain.renderAndExecute(
+          await buildChatModeratorContext(speakerCandidates),
+          {
+            jobConfig: createTextCompletionJobConfig('Selecting speaker', [
+              ChatJobTags.chatJob,
+              ChatJobTags.selectingSpeaker,
+              ChatJobTags.abortOnPause,
+            ]),
+          }
+        );
 
-              if (moderatorSelectedSpeakerId) {
-                const character = speakerCandidates.find((s) => s.id === moderatorSelectedSpeakerId);
+        if (moderatorSelectedSpeakerId) {
+          const character = speakerCandidates.find((s) => s.id === moderatorSelectedSpeakerId);
 
-                if (character) {
-                  return character;
-                }
-              }
+          if (character) {
+            return character;
+          }
+        }
 
-              // If moderator didn't select a speaker or selected one not in the chat,
-              // select randomly.
-              return getRequiredRandomChoice(speakerCandidates);
-            },
-            { pauseBehavior: 'abort' }
-          );
-        });
+        // If moderator didn't select a speaker or selected one not in the chat,
+        // select randomly.
+        return getRequiredRandomChoice(speakerCandidates);
       }
 
       assert(
@@ -527,6 +562,8 @@ export class ChatCoordinator {
         'Reached end of selectNextSpeaker function unexpectedly. Unknown speaker selection strategy?'
       );
     } catch (err) {
+      rethrowSignalException(err);
+
       await showNonRetriableErrorCardIfNeeded({
         error: err,
         operationType: 'select_next_speaker',
@@ -539,10 +576,6 @@ export class ChatCoordinator {
 
   public static countChatMessages() {
     return this.transcript().countCharacterChatMessages();
-  }
-
-  private static setStateProcessingMemories(statusInfo: string) {
-    this.turnMachineStore().setStateProcessingMemories(statusInfo);
   }
 
   private static turnMachineStore() {
@@ -578,7 +611,11 @@ export class ChatCoordinator {
       return;
     }
 
-    await wait(delaySeconds * 1000);
+    await globalParallelJobManager.enqueue({
+      name: `Waiting between messages (${delaySeconds} seconds)`,
+      tags: [ChatJobTags.abortOnPause, ChatJobTags.chatJob, ChatJobTags.waitingBetweenMessages],
+      job: (abortSignal) => wait(delaySeconds * 1000, abortSignal),
+    });
   }
 
   private static getPastTenseLabel() {
@@ -597,7 +634,7 @@ export class ChatCoordinator {
     }
   }
 
-  private static async startStreamingNpcDraftMessage(sender: Character) {
+  private static startStreamingNpcDraftMessage(sender: Character) {
     const { updatedTranscript, newRawMessage } = this.transcript().addCharacterChatMessage('', sender, {
       isStreaming: true,
     });
@@ -646,8 +683,9 @@ export class ChatCoordinator {
 
       const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId, {
         chain: selectedChain,
+        upToMessageId: chatMessage.id,
       });
-      await this.generateImageFromPrompt(fullPrompt);
+      await this.generateImageFromPrompt(fullPrompt, { afterMessageId: chatMessage.id });
     } catch (err) {
       rethrowSignalException(err);
 
@@ -667,8 +705,8 @@ export class ChatCoordinator {
     const gossipSourceId = participantIds.find((id) => id !== this.getUserCharacter().id);
     assertNonNullish(gossipSourceId, 'Could not get a gossip source ID');
 
-    return Database.doAsDataRead(() => {
-      return Database.loadWeightedGossipTargetCharacterId(
+    return doAsDataRead(() => {
+      return mainDatabase.loadWeightedGossipTargetCharacterId(
         gossipSourceId,
         participantIds,
         userCharacterId,

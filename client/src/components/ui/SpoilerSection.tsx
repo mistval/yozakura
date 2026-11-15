@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useStateRef } from '../../hooks/useStateRef.js';
 import { useDraft } from '../../hooks/useDraft.js';
+import { useQueryParam } from '../../util/queryParams.js';
 
 export function SpoilerSection({
   title,
@@ -9,6 +10,7 @@ export function SpoilerSection({
   defaultRevealed,
   className = '',
   disabled = false,
+  revealedQueryParam = '',
   onSave,
   onDelete,
 }: {
@@ -18,10 +20,12 @@ export function SpoilerSection({
   defaultRevealed?: boolean;
   className?: string;
   disabled?: boolean;
+  revealedQueryParam?: string;
   onSave?: (value: string) => Promise<void> | void;
   onDelete?: () => Promise<void> | void;
 }) {
-  const [revealed, setRevealed] = useState(defaultRevealed ?? false);
+  const [revealedState, setRevealedState] = useState(defaultRevealed ?? false);
+  const [revealedFromQueryParam, setRevealedFromQueryParam] = useQueryParam(revealedQueryParam);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving, savingRef] = useStateRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -31,6 +35,22 @@ export function SpoilerSection({
   const sourceValue = initialValue ?? '';
   const [draft, setDraft] = useDraft(sourceValue);
   const dirty = draft !== sourceValue;
+
+  const revealed = useMemo(() => {
+    if (revealedQueryParam) {
+      return revealedFromQueryParam === 'true';
+    }
+
+    return revealedState;
+  }, [revealedState, revealedFromQueryParam, revealedQueryParam]);
+
+  const toggleRevealedState = useCallback(() => {
+    if (revealedQueryParam) {
+      return setRevealedFromQueryParam(revealed ? undefined : 'true');
+    }
+
+    return setRevealedState(!revealed);
+  }, [revealed, setRevealedFromQueryParam, setRevealedState]);
 
   useEffect(() => {
     setSaved(false);
@@ -81,7 +101,7 @@ export function SpoilerSection({
       <button
         type="button"
         className="flex items-center gap-2 font-medium text-sm w-full text-left"
-        onClick={() => setRevealed((prev) => !prev)}
+        onClick={toggleRevealedState}
       >
         <span>{revealed ? '▾' : '▸'}</span>
         <span>{title}</span>

@@ -105,8 +105,7 @@ function migrateOverrides(overrides: Record<string, unknown>): Record<string, un
 export const migration: Migration = {
   doMigration(db) {
     const row = db.prepare(`SELECT data FROM key_value WHERE key = ? LIMIT 1`).get(SETTINGS_KEY) as
-      | { data: string }
-      | undefined;
+      { data: string } | undefined;
 
     if (!row) {
       return;

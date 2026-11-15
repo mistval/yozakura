@@ -15,7 +15,7 @@ import {
   makeTextFileGroupKey,
 } from '../../../engine/settings/settings_scripts/settings_scripts_state.js';
 import { createProxiedFetch } from '../../../backend_bridge/proxied_fetch.js';
-import { loadUserTextFileContent } from '../../../backend_bridge/database.js';
+import { mainDatabase } from '../../../backend_bridge/database.js';
 import { createSeededRandom } from '../../../engine/settings/settings_scripts/seeded_random.js';
 import DeleteButton from '../../ui/DeleteButton.js';
 import SettingFieldLabel from '../ui/SettingFieldLabel.js';
@@ -99,7 +99,10 @@ export default function CustomScriptSettings({
     proxiedFetch: createProxiedFetch(undefined),
     abortSignal: undefined,
     loadUserTextFile: (controlId, fileId) =>
-      loadUserTextFileContent(makeTextFileGroupKey(sectionId, selectedScriptId, controlId), fileId),
+      mainDatabase.loadUserTextFileContent(
+        makeTextFileGroupKey(sectionId, selectedScriptId, controlId),
+        fileId
+      ),
     createSeededRandom,
   });
 

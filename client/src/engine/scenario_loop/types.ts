@@ -52,17 +52,6 @@ interface ChatUserInputEditMessage {
   newContent: string;
 }
 
-interface ChatUserInputRequestImage {
-  actionType: 'request_image';
-  afterMessageId: string | undefined;
-}
-
-interface ChatUserInputGenerateImage {
-  actionType: 'generate_image';
-  prompt: string;
-  afterMessageId: string | undefined;
-}
-
 export type ChatUserInputAction =
   | ChatUserInputSendMessage
   | ChatUserInputSkipTurn
@@ -70,9 +59,7 @@ export type ChatUserInputAction =
   | ChatUserInputRequestEnd
   | ChatUserInputDeleteMessage
   | ChatUserInputRedoMessage
-  | ChatUserInputEditMessage
-  | ChatUserInputRequestImage
-  | ChatUserInputGenerateImage;
+  | ChatUserInputEditMessage;
 
 // A unified move that any character (user or NPC) can take on their turn.
 interface TurnMoveWait {

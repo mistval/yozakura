@@ -23,6 +23,7 @@ export default function ImagePromptModal({
       <div className="bg-emphasized rounded-sm p-4 w-full max-w-xl space-y-3">
         <h3 className="font-semibold">Edit Image Prompt</h3>
         <textarea
+          className="w-full"
           rows={6}
           value={prompt}
           onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value)}

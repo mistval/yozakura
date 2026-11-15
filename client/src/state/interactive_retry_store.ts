@@ -5,10 +5,7 @@ export type InteractiveRetryOperationId = number;
 type InteractiveRetryMode = 'retry_enabled' | 'retry_disabled';
 
 type InteractiveRetryStatus =
-  | 'waiting_for_retry'
-  | 'retrying'
-  | 'waiting_for_user_ack'
-  | 'waiting_for_user_cancel_or_retry';
+  'waiting_for_retry' | 'retrying' | 'waiting_for_user_ack' | 'waiting_for_user_cancel_or_retry';
 
 export type InteractiveRetryAction = 'retry_now' | 'cancel' | 'confirm';
 

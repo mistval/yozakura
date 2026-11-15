@@ -12,7 +12,7 @@ import {
   type TranscriptParticipant,
 } from '../types';
 import { assert, assertNonNullish } from '../../errors/application_error';
-import * as Database from '../../backend_bridge/database';
+import { createPersistedObject } from '../../backend_bridge/database';
 import { MemoryRAGHelper, type RagMessageDelegate } from '../memory_rag_helper';
 
 export type TranscriptRagDeps = {
@@ -231,7 +231,7 @@ export class ConversationTranscript {
   ) {}
 
   public serialize(): SerializedConversationTranscript {
-    return Database.createPersistedObject({
+    return createPersistedObject({
       rawMessages: this.getRawMessages().map((m) => chatMessageSchema.parse(m)),
       participants: this.participantInfo,
       ragHelperState: this.ragHelper.serialize(),
@@ -337,14 +337,14 @@ export class ConversationTranscript {
   }
 
   private addJoinMessage(joiner: TranscriptParticipant) {
-    const marker = Database.createPersistedObject({
+    const marker = createPersistedObject({
       messageType: 'system_message',
       systemMessageType: 'join',
       characterId: joiner.id,
       isPrivateToCharacterId: TRANSCRIPT_SYSTEM,
     }) satisfies JoinLeaveSystemMessage;
 
-    const newRawMessage = Database.createPersistedObject({
+    const newRawMessage = createPersistedObject({
       messageType: 'system_message',
       systemMessageType: 'join',
       characterId: joiner.id,
@@ -359,13 +359,28 @@ export class ConversationTranscript {
   }
 
   public addImageMessage(imageUrl: string, opts?: { afterMessageId?: string | undefined }) {
-    const newRawMessage = Database.createPersistedObject({
+    const newRawMessage = createPersistedObject({
       messageType: 'image',
       imageUrl,
     }) satisfies ImageMessage;
 
+    // If there are any image messages following the afterMessageId,
+    // we put the new image after those.
+    let coercedAfterMessageId = opts?.afterMessageId;
+    if (coercedAfterMessageId) {
+      for (let i = 0; i < this.messages.length; ++i) {
+        if (this.messages[i]?.getId() === opts?.afterMessageId) {
+          let nextMessageIdx = i + 1;
+          while (nextMessageIdx < this.messages.length && this.messages[nextMessageIdx]?.isImageMessage()) {
+            coercedAfterMessageId = this.messages[nextMessageIdx]?.getId();
+            ++nextMessageIdx;
+          }
+        }
+      }
+    }
+
     return {
-      ...this.addMessage(newRawMessage, undefined, opts),
+      ...this.addMessage(newRawMessage, undefined, { ...opts, afterMessageId: coercedAfterMessageId }),
       newRawMessage,
     };
   }
@@ -375,11 +390,11 @@ export class ConversationTranscript {
     speaker: TranscriptParticipant,
     opts?: { isStreaming?: boolean }
   ) {
-    const newRawMessage = Database.createPersistedObject({
+    const newRawMessage = createPersistedObject({
       messageType: 'chat_message',
       senderId: speaker.id,
       message,
-    }) satisfies CharacterMessage;
+    }) as CharacterMessage;
 
     // Defer RAG processing until message is finished. Optimization.
     if (!opts?.isStreaming) {
@@ -439,15 +454,6 @@ export class ConversationTranscript {
     };
   }
 
-  public editLatestMessage(newContent: string, opts?: { isStreaming?: true }) {
-    const latestMessage = this.messages[this.messages.length - 1];
-    if (!latestMessage) {
-      throw new Error('Can only edit the latest message if it is a character chat message');
-    }
-
-    return this.editMessageById(latestMessage.message.id, newContent, opts);
-  }
-
   public removeParticipant(participant: TranscriptParticipant) {
     if (!this.hasMessagesFromCharacter(participant.id)) {
       return {
@@ -459,7 +465,7 @@ export class ConversationTranscript {
     }
 
     const leaveMessage = new ChatMessageWrapper(
-      Database.createPersistedObject({
+      createPersistedObject({
         messageType: 'system_message',
         systemMessageType: 'leave',
         characterId: participant.id,
@@ -468,7 +474,7 @@ export class ConversationTranscript {
     );
 
     const marker = new ChatMessageWrapper(
-      Database.createPersistedObject({
+      createPersistedObject({
         messageType: 'system_message',
         systemMessageType: 'leave',
         characterId: participant.id,
@@ -520,6 +526,11 @@ export class ConversationTranscript {
 
   public getMostRecentMessage() {
     return this.messages[this.messages.length - 1];
+  }
+
+  public getMostRecentChatMessage() {
+    const message = this.messages.findLast((m) => m.isCharacterChatMessage());
+    return message?.asCharacterChatMessage();
   }
 
   public getMostRecentSpeakerId() {

@@ -25,6 +25,11 @@ const EXCLUDED_RESPONSE_HEADERS = new Set([
   'upgrade',
 ]);
 
+const undiciAgent = new Agent({
+  headersTimeout: 2147483647,
+  bodyTimeout: 2147483647,
+});
+
 export default function proxyRouter(): Router {
   const router = express.Router();
 
@@ -57,10 +62,7 @@ export default function proxyRouter(): Router {
         method,
         headers: new Headers(requestHeaders),
         signal: upstreamAbortController.signal,
-        dispatcher: new Agent({
-          headersTimeout: Number.MAX_SAFE_INTEGER,
-          bodyTimeout: Number.MAX_SAFE_INTEGER,
-        }),
+        dispatcher: undiciAgent,
       };
 
       if (canHaveBody) {
