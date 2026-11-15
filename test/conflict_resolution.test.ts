@@ -73,6 +73,12 @@ describe('Integration: Global Conflict Resolution (Skip, Overwrite, Make a Copy)
       userCharacterName: 'Alice Liddell',
       createdAt: sourceScenario.createdAt,
       updatedAt: sourceScenario.updatedAt,
+      hasCharacters: true,
+      hasCharacterGroups: true,
+      hasCharacterGroupSchedules: true,
+      hasRelationships: true,
+      hasConversationLogs: true,
+      hasCurrentConversation: true,
     };
 
     const selectedIds = new Set<string>([

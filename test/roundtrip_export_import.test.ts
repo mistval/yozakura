@@ -64,6 +64,12 @@ describe('Integration: Full Round-Trip Pack, Unpack & ID Remapping', () => {
       userCharacterName: 'Alice Liddell',
       createdAt: sourceScenario.createdAt,
       updatedAt: sourceScenario.updatedAt,
+      hasCharacters: true,
+      hasCharacterGroups: true,
+      hasCharacterGroupSchedules: true,
+      hasRelationships: true,
+      hasConversationLogs: true,
+      hasCurrentConversation: true,
     };
 
     // 2. Build full export payload

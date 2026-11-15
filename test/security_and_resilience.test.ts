@@ -151,6 +151,12 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
       userCharacterName: 'Alice Liddell',
       createdAt: sourceScenario.createdAt,
       updatedAt: sourceScenario.updatedAt,
+      hasCharacters: true,
+      hasCharacterGroups: true,
+      hasCharacterGroupSchedules: true,
+      hasRelationships: true,
+      hasConversationLogs: true,
+      hasCurrentConversation: true,
     };
 
     const exportPayload = buildExportPayload({

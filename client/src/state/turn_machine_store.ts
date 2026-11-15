@@ -324,8 +324,8 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
 
   setCurrentCharacter(characterId: string) {
     assert(
-      get().turnMachineState === 'deciding',
-      'Cannot change current character while not in the deciding state'
+      get().turnMachineState === 'deciding' || !get().turnMachineState,
+      'Cannot change current character in current turn machine state'
     );
 
     set({
@@ -588,10 +588,5 @@ useScenarioStore.subscribe((newState, prevState) => {
   }
 
   const turnMachineState = useTurnMachineStore.getState();
-  assert(
-    turnMachineState.turnMachineState === 'deciding',
-    'User character changed when turn machine was not in the deciding state'
-  );
-
   turnMachineState.setCurrentCharacter(newState.activeScenario.userCharacterId);
 });

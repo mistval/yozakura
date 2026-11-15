@@ -206,13 +206,13 @@ export const DEFAULT_LLM_CONFIGS: LLMConfigById = {
     id: 'rolling-global-memory-rewrite',
     name: 'Chat Memory: Global Memory Rewrite',
     rule: "context.promptTemplateGroup === 'gen_global_memory'",
-    llmMetaOptions: JSON.stringify({ max_tokens: 800 }),
+    llmMetaOptions: JSON.stringify({ max_tokens: 1200 }),
   },
   'character-description': {
     id: 'character-description',
     name: 'Character Creation: Generate Internal Description',
     rule: "context.promptTemplateGroup === 'gen_character_internal_description'",
-    llmMetaOptions: JSON.stringify({ max_tokens: 800 }),
+    llmMetaOptions: JSON.stringify({ max_tokens: 1200 }),
   },
   'external-description': {
     id: 'external-description',
@@ -224,7 +224,7 @@ export const DEFAULT_LLM_CONFIGS: LLMConfigById = {
     id: 'extract-character-description',
     name: 'Character Creation: Extract Character Description',
     rule: "context.promptTemplateGroup === 'gen_extract_character_description'",
-    llmMetaOptions: JSON.stringify({ max_tokens: 800 }),
+    llmMetaOptions: JSON.stringify({ max_tokens: 1200 }),
   },
   'generate-character-example-dialog': {
     id: 'generate-character-example-dialog',

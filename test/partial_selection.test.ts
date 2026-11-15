@@ -66,6 +66,12 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       userCharacterName: 'Alice Liddell',
       createdAt: sourceScenario.createdAt,
       updatedAt: sourceScenario.updatedAt,
+      hasCharacters: true,
+      hasCharacterGroups: true,
+      hasCharacterGroupSchedules: true,
+      hasRelationships: true,
+      hasConversationLogs: true,
+      hasCurrentConversation: true,
     };
 
     // Export without TreeEntityIds.scenarioMemories
@@ -162,6 +168,12 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       userCharacterName: 'Alice Liddell',
       createdAt: sourceScenario.createdAt,
       updatedAt: sourceScenario.updatedAt,
+      hasCharacters: true,
+      hasCharacterGroups: true,
+      hasCharacterGroupSchedules: true,
+      hasRelationships: true,
+      hasConversationLogs: true,
+      hasCurrentConversation: true,
     };
 
     // Export without Groups & Schedules
@@ -255,6 +267,12 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       userCharacterName: 'Alice Liddell',
       createdAt: sourceScenario.createdAt,
       updatedAt: sourceScenario.updatedAt,
+      hasCharacters: true,
+      hasCharacterGroups: true,
+      hasCharacterGroupSchedules: true,
+      hasRelationships: true,
+      hasConversationLogs: true,
+      hasCurrentConversation: true,
     };
 
     const selectedIds = new Set<string>([

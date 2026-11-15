@@ -181,10 +181,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
   ),
 
   setScenarioCharacters: (characters) => {
-    set({
-      ...getCharacterDataStructuresFromArray(characters),
-      scenarioCharactersAreLoaded: true,
-    });
+    set(getCharacterDataStructuresFromArray(characters));
   },
 
   removeCharacterLocal: (characterId) => {
@@ -230,6 +227,8 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
         useScenarioStore.getState().setUserCharacter(characters[0]!.id);
       }
     }
+
+    set({ scenarioCharactersAreLoaded: true });
   },
 
   saveScenarioCharacter: (character, imageFile, setter) => {
