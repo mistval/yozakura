@@ -193,11 +193,10 @@ describe('export_payload_builder', () => {
     expect(charQuery?.params[1]).toEqual(JSON.stringify(['scen_001']));
   });
 
-  it('extracts turn key_value via json_each', () => {
+  it('extracts conversations, turn key_value, and chat images via scenarioConversations even without characters', () => {
     const selectedIds = new Set<string>([
       TreeEntityIds.scenario('scen_001'),
-      TreeEntityIds.scenarioCharacters('scen_001'),
-      TreeEntityIds.scenarioTurn('scen_001'),
+      TreeEntityIds.scenarioConversations('scen_001'),
     ]);
 
     const payload = buildExportPayload({
@@ -208,9 +207,22 @@ describe('export_payload_builder', () => {
       globalCharacters: [],
     });
 
+    const convQuery = payload.queries.find((q) => q.table === 'conversation');
+    expect(convQuery).toBeDefined();
+    expect(convQuery?.params).toEqual([JSON.stringify(['scen_001'])]);
+
+    const partQuery = payload.queries.find((q) => q.table === 'conversation_participant');
+    expect(partQuery).toBeDefined();
+    expect(partQuery?.params).toEqual([JSON.stringify(['scen_001'])]);
+
     const kvQuery = payload.queries.find((q) => q.table === 'key_value');
     expect(kvQuery?.statement).toContain('IN (SELECT value FROM json_each(?))');
     expect(kvQuery?.params).toEqual([JSON.stringify(['scenario_scen_001_turn'])]);
+
+    expect(payload.imageDescriptors).toContainEqual({
+      mode: 'directory',
+      sourceRelDir: 'scenario/scen_001/chat_images',
+    });
   });
 
   it('includes custom character card images while skipping built-in static portraits', () => {

@@ -75,20 +75,11 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                   });
                 }
 
-                if (summary.hasConversationLogs) {
+                if (summary.hasConversationLogs || summary.hasCurrentConversation) {
                   children.push({
                     id: TreeEntityIds.scenarioConversations(scenId),
-                    label: 'Conversation Logs',
-                    subtitle: 'Chat logs, participants and images',
-                  });
-                }
-
-                if (summary.hasCharacters && summary.hasCurrentConversation) {
-                  children.push({
-                    id: TreeEntityIds.scenarioTurn(scenId),
-                    label: 'Current Conversation',
-                    subtitle: 'The current conversation (if any)',
-                    requiredSiblingNodeIds: [charactersNodeId],
+                    label: 'Conversations',
+                    subtitle: 'Conversations and chat images',
                   });
                 }
 

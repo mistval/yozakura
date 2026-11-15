@@ -13,7 +13,6 @@ export type BuildCommitPayloadOptions = {
   selectedScenarioSchedulesIds?: string[];
   selectedScenarioMemoriesIds?: string[];
   selectedScenarioConversationsIds?: string[];
-  selectedScenarioTurnIds?: string[];
   selectedMapIds?: string[];
   selectedGlobalCharacterIds?: string[];
   conflictResolutions?: Record<string, ConflictAction>;
@@ -32,7 +31,6 @@ export async function prepareStagingAndBuildCommitPayload(
     selectedScenarioSchedulesIds = selectedScenarioGroupsIds,
     selectedScenarioMemoriesIds = selectedScenarioIds,
     selectedScenarioConversationsIds = selectedScenarioIds,
-    selectedScenarioTurnIds = selectedScenarioIds,
     selectedMapIds = [],
     selectedGlobalCharacterIds = [],
     conflictResolutions = {},
@@ -41,9 +39,6 @@ export async function prepareStagingAndBuildCommitPayload(
   } = options;
 
   const effectiveMemoriesScenIds = selectedScenarioMemoriesIds.filter((id) =>
-    selectedScenarioCharactersIds.includes(id)
-  );
-  const effectiveTurnScenIds = selectedScenarioTurnIds.filter((id) =>
     selectedScenarioCharactersIds.includes(id)
   );
   const effectiveSchedulesScenIds = selectedScenarioSchedulesIds.filter((id) =>
@@ -80,7 +75,6 @@ export async function prepareStagingAndBuildCommitPayload(
     selectedScenarioGroupsIds,
     effectiveSchedulesScenIds,
     selectedScenarioConversationsIds,
-    effectiveTurnScenIds,
   });
 
   // 3. Build imageCopies directly from selected entities

@@ -74,7 +74,6 @@ describe('Integration: Full Round-Trip Pack, Unpack & ID Remapping', () => {
       TreeEntityIds.scenarioSchedules(seeded.scenarioId),
       TreeEntityIds.scenarioMemories(seeded.scenarioId),
       TreeEntityIds.scenarioConversations(seeded.scenarioId),
-      TreeEntityIds.scenarioTurn(seeded.scenarioId),
       TreeEntityIds.map(seeded.mapId),
       TreeEntityIds.character(seeded.globalCharId),
     ]);

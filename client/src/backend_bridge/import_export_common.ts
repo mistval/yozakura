@@ -21,7 +21,6 @@ export const TreeEntityIds = {
   scenarioSchedules: (scenId: string) => `scenario:${scenId}:schedules`,
   scenarioMemories: (scenId: string) => `scenario:${scenId}:memories`,
   scenarioConversations: (scenId: string) => `scenario:${scenId}:conversations`,
-  scenarioTurn: (scenId: string) => `scenario:${scenId}:turn`,
   scenarioMap: (scenId: string, mapId: string) => `scenario_map:${scenId}:${mapId}`,
 
   map: (mapId: string) => `map:${mapId}`,
@@ -37,7 +36,6 @@ export type DecomposedSelection = {
   selectedScenarioSchedulesIds: string[];
   selectedScenarioMemoriesIds: string[];
   selectedScenarioConversationsIds: string[];
-  selectedScenarioTurnIds: string[];
   selectedMapIds: string[];
   selectedGlobalCharacterIds: string[];
 };
@@ -58,7 +56,6 @@ export function decomposeSelection(options: DecomposeSelectionOptions): Decompos
   const selectedScenarioSchedulesIds: string[] = [];
   const selectedScenarioMemoriesIds: string[] = [];
   const selectedScenarioConversationsIds: string[] = [];
-  const selectedScenarioTurnIds: string[] = [];
 
   for (const summary of scenarios) {
     const scenId = summary.scenario.id;
@@ -73,14 +70,12 @@ export function decomposeSelection(options: DecomposeSelectionOptions): Decompos
     const hasSchedules = hasGroups && selectedIds.has(TreeEntityIds.scenarioSchedules(scenId));
     const hasMemories = hasCharacters && selectedIds.has(TreeEntityIds.scenarioMemories(scenId));
     const hasConversations = selectedIds.has(TreeEntityIds.scenarioConversations(scenId));
-    const hasTurn = hasCharacters && selectedIds.has(TreeEntityIds.scenarioTurn(scenId));
 
     if (hasCharacters) selectedScenarioCharactersIds.push(scenId);
     if (hasGroups) selectedScenarioGroupsIds.push(scenId);
     if (hasSchedules) selectedScenarioSchedulesIds.push(scenId);
     if (hasMemories) selectedScenarioMemoriesIds.push(scenId);
     if (hasConversations) selectedScenarioConversationsIds.push(scenId);
-    if (hasTurn) selectedScenarioTurnIds.push(scenId);
   }
 
   // Maps
@@ -110,7 +105,6 @@ export function decomposeSelection(options: DecomposeSelectionOptions): Decompos
     selectedScenarioSchedulesIds,
     selectedScenarioMemoriesIds,
     selectedScenarioConversationsIds,
-    selectedScenarioTurnIds,
     selectedMapIds,
     selectedGlobalCharacterIds,
   };

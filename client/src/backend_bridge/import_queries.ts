@@ -154,7 +154,6 @@ export type BuildImportCommitStatementsParams = {
   selectedScenarioGroupsIds: string[];
   effectiveSchedulesScenIds: string[];
   selectedScenarioConversationsIds: string[];
-  effectiveTurnScenIds: string[];
 };
 
 export function buildMapCommitStatement(activeMapIds: string[]): SqlStatementEntry | undefined {
@@ -417,7 +416,7 @@ export function buildImportCommitStatements(params: BuildImportCommitStatementsP
 
   sqlStatements.push(...buildConversationCommitStatements(params.selectedScenarioConversationsIds));
 
-  const turnStmt = buildTurnKeyValueCommitStatement(params.effectiveTurnScenIds);
+  const turnStmt = buildTurnKeyValueCommitStatement(params.selectedScenarioConversationsIds);
   if (turnStmt) sqlStatements.push(turnStmt);
 
   return sqlStatements;

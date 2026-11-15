@@ -264,7 +264,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       TreeEntityIds.scenarioSchedules(seeded.scenarioId),
       TreeEntityIds.scenarioMemories(seeded.scenarioId),
       TreeEntityIds.scenarioConversations(seeded.scenarioId),
-      TreeEntityIds.scenarioTurn(seeded.scenarioId),
       TreeEntityIds.map(seeded.mapId),
       TreeEntityIds.character(seeded.globalCharId),
     ]);
@@ -281,7 +280,7 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
     return { seeded, zipBuffer };
   }
 
-  it('omits conversations and chat images when Conversations checkbox is omitted', async () => {
+  it('omits conversations, current conversation, and chat images when Conversations checkbox is omitted', async () => {
     sourceServer = await createTestServer();
     sourceServer.setActive();
     const { seeded, zipBuffer } = await exportFullScenarioZip(sourceServer);
@@ -304,7 +303,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       selectedScenarioSchedulesIds: [seeded.scenarioId],
       selectedScenarioMemoriesIds: [seeded.scenarioId],
       selectedScenarioConversationsIds: [], // conversations omitted
-      selectedScenarioTurnIds: [seeded.scenarioId],
       selectedMapIds: [seeded.mapId],
       selectedGlobalCharacterIds: [seeded.globalCharId],
       conflictResolutions: {},
@@ -319,8 +317,12 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
     const partCount = targetServer.db
       .prepare('SELECT count(*) as count FROM conversation_participant')
       .get() as { count: number };
+    const turnCount = targetServer.db
+      .prepare("SELECT count(*) as count FROM key_value WHERE key LIKE 'scenario_%_turn'")
+      .get() as { count: number };
     expect(convCount.count).toBe(0);
     expect(partCount.count).toBe(0);
+    expect(turnCount.count).toBe(0);
 
     const targetScen = targetServer.db.prepare('SELECT id FROM scenario').get() as { id: string };
     const chatImageFilePath = path.join(
@@ -369,7 +371,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       selectedScenarioSchedulesIds: [], // Schedules omitted
       selectedScenarioMemoriesIds: [seeded.scenarioId],
       selectedScenarioConversationsIds: [seeded.scenarioId],
-      selectedScenarioTurnIds: [seeded.scenarioId],
       selectedMapIds: [seeded.mapId],
       selectedGlobalCharacterIds: [seeded.globalCharId],
       conflictResolutions: {},
@@ -388,7 +389,7 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
     expect(schedCount.count).toBe(0);
   });
 
-  it('omits characters, relationships, cards, and turn state when Characters is omitted', async () => {
+  it('omits characters, relationships, and cards when Characters is omitted while retaining conversations and current conversation', async () => {
     sourceServer = await createTestServer();
     sourceServer.setActive();
     const { seeded, zipBuffer } = await exportFullScenarioZip(sourceServer);
@@ -411,7 +412,6 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       selectedScenarioSchedulesIds: [seeded.scenarioId],
       selectedScenarioMemoriesIds: [seeded.scenarioId],
       selectedScenarioConversationsIds: [seeded.scenarioId],
-      selectedScenarioTurnIds: [seeded.scenarioId],
       selectedMapIds: [seeded.mapId],
       selectedGlobalCharacterIds: [seeded.globalCharId],
       conflictResolutions: {},
@@ -426,12 +426,16 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
     const relCount = targetServer.db
       .prepare('SELECT count(*) as count FROM character_relationship')
       .get() as { count: number };
+    const convCount = targetServer.db.prepare('SELECT count(*) as count FROM conversation').get() as {
+      count: number;
+    };
     const turnCount = targetServer.db
       .prepare("SELECT count(*) as count FROM key_value WHERE key LIKE 'scenario_%_turn'")
       .get() as { count: number };
     expect(charCount.count).toBe(0);
     expect(relCount.count).toBe(0);
-    expect(turnCount.count).toBe(0);
+    expect(convCount.count).toBe(1);
+    expect(turnCount.count).toBe(1);
 
     const targetScenRow = targetServer.db.prepare('SELECT id, data FROM scenario').get() as {
       id: string;
@@ -458,53 +462,5 @@ describe('Integration: Partial Selection & json_patch Stripping', () => {
       'tea_cup.png'
     );
     expect(fs.existsSync(chatImageFilePath)).toBe(true);
-  });
-
-  it('omits turn state when Turn checkbox is omitted', async () => {
-    sourceServer = await createTestServer();
-    sourceServer.setActive();
-    const { seeded, zipBuffer } = await exportFullScenarioZip(sourceServer);
-
-    targetServer = await createTestServer();
-    targetServer.setActive();
-
-    const file = new File([new Uint8Array(zipBuffer)], 'CompleteExportTest.yozakura_export.zip', {
-      type: 'application/zip',
-    });
-    const stageResult = await stageImportArchive(file);
-    expect(stageResult.success).toBe(true);
-    if (!stageResult.success) throw new Error('Stage failed');
-
-    const commitPayload = await prepareStagingAndBuildCommitPayload({
-      exportName: stageResult.manifest.exportName,
-      selectedScenarioIds: [seeded.scenarioId],
-      selectedScenarioCharactersIds: [seeded.scenarioId],
-      selectedScenarioGroupsIds: [seeded.scenarioId],
-      selectedScenarioSchedulesIds: [seeded.scenarioId],
-      selectedScenarioMemoriesIds: [seeded.scenarioId],
-      selectedScenarioConversationsIds: [seeded.scenarioId],
-      selectedScenarioTurnIds: [], // Turn omitted
-      selectedMapIds: [seeded.mapId],
-      selectedGlobalCharacterIds: [seeded.globalCharId],
-      conflictResolutions: {},
-    });
-
-    const commitResult = await commitImport(commitPayload);
-    expect(commitResult.success).toBe(true);
-
-    const turnCount = targetServer.db
-      .prepare("SELECT count(*) as count FROM key_value WHERE key LIKE 'scenario_%_turn'")
-      .get() as { count: number };
-    expect(turnCount.count).toBe(0);
-
-    const charCount = targetServer.db.prepare('SELECT count(*) as count FROM scenario_character').get() as {
-      count: number;
-    };
-    expect(charCount.count).toBe(2);
-
-    const convCount = targetServer.db.prepare('SELECT count(*) as count FROM conversation').get() as {
-      count: number;
-    };
-    expect(convCount.count).toBe(1);
   });
 });

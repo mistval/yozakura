@@ -147,7 +147,6 @@ describe('import_queries', () => {
         selectedScenarioGroupsIds: ['scen_1'],
         effectiveSchedulesScenIds: ['scen_1'],
         selectedScenarioConversationsIds: ['scen_1'],
-        effectiveTurnScenIds: ['scen_1'],
       });
 
       expect(stmts).toHaveLength(10);

@@ -76,8 +76,10 @@ describe('buildImportExportTreeRoots', () => {
       TreeEntityIds.scenarioSchedules('scen_1'),
       TreeEntityIds.scenarioMemories('scen_1'),
       TreeEntityIds.scenarioConversations('scen_1'),
-      TreeEntityIds.scenarioTurn('scen_1'),
     ]);
+    const convNode = scenSubChildren.find((c) => c.id === TreeEntityIds.scenarioConversations('scen_1'));
+    expect(convNode?.label).toBe('Conversations');
+    expect(convNode?.requiredSiblingNodeIds).toBeUndefined();
 
     // Test maps children
     const mapChildren = await roots[1]!.getChildren!();
@@ -134,5 +136,43 @@ describe('buildImportExportTreeRoots', () => {
     const scenChildren = await roots[0]!.getChildren!();
     const scenSubChildren = await scenChildren[0]!.getChildren!();
     expect(scenSubChildren.map((c) => c.id)).toEqual([TreeEntityIds.scenarioMap('scen_1', 'map_1')]);
+  });
+
+  it('shows Conversations when either hasConversationLogs or hasCurrentConversation is true, even without hasCharacters', async () => {
+    const logsOnlyNoChars: ScenarioSummary = {
+      ...dummyScenarios[0]!,
+      scenario: { ...dummyScenarios[0]!.scenario, id: 'scen_logs' },
+      hasCharacters: false,
+      hasCharacterGroups: false,
+      hasCharacterGroupSchedules: false,
+      hasRelationships: false,
+      hasConversationLogs: true,
+      hasCurrentConversation: false,
+    };
+    const currentOnlyNoChars: ScenarioSummary = {
+      ...dummyScenarios[0]!,
+      scenario: { ...dummyScenarios[0]!.scenario, id: 'scen_current' },
+      hasCharacters: false,
+      hasCharacterGroups: false,
+      hasCharacterGroupSchedules: false,
+      hasRelationships: false,
+      hasConversationLogs: false,
+      hasCurrentConversation: true,
+    };
+
+    const roots = buildImportExportTreeRoots({
+      scenarios: [logsOnlyNoChars, currentOnlyNoChars],
+      maps: [],
+      globalCharacters: [],
+    });
+
+    const scenChildren = await roots[0]!.getChildren!();
+    const logsSub = await scenChildren.find((s) => s.id === TreeEntityIds.scenario('scen_logs'))!
+      .getChildren!();
+    expect(logsSub.map((c) => c.id)).toEqual([TreeEntityIds.scenarioConversations('scen_logs')]);
+
+    const currentSub = await scenChildren.find((s) => s.id === TreeEntityIds.scenario('scen_current'))!
+      .getChildren!();
+    expect(currentSub.map((c) => c.id)).toEqual([TreeEntityIds.scenarioConversations('scen_current')]);
   });
 });

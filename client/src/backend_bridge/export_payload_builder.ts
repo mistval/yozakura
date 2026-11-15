@@ -112,7 +112,7 @@ export function buildExportPayload(options: BuildExportPayloadOptions): ExportPa
     scenariosWithGroups: decomposed.selectedScenarioGroupsIds,
     scenariosWithSchedules: decomposed.selectedScenarioSchedulesIds,
     scenariosWithConversations: decomposed.selectedScenarioConversationsIds,
-    turnKeys: decomposed.selectedScenarioTurnIds.map(turnPersistenceKey),
+    turnKeys: decomposed.selectedScenarioConversationsIds.map(turnPersistenceKey),
     selectedMapIds: decomposed.selectedMapIds,
     selectedGlobalCharacterIds: decomposed.selectedGlobalCharacterIds,
   });
