@@ -28,14 +28,14 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@electron-forge/cli": "^7.11.2",
-    "@electron-forge/maker-zip": "^7.11.2",
-    "@electron-forge/plugin-auto-unpack-natives": "^7.11.2",
+    "@electron-forge/cli": "^8.0.1",
+    "@electron-forge/maker-zip": "^8.0.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^8.0.1",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^22.16.0",
+    "@types/node": "^26.6.6",
     "concurrently": "^10.0.4",
     "cross-env": "^10.1.0",
-    "electron": "^41.7.2",
+    "electron": "^45.3.2",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.0",
     "prettier": "^3.9.10",
@@ -47,5 +47,9 @@
     "*": [
       "prettier --write"
     ]
+  },
+  "allowScripts": {
+    "electron@41.10.7": true,
+    "esbuild@0.28.2": true
   }
 }

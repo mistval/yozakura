@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim AS web-builder
+FROM node:26-bookworm-slim AS web-builder
 WORKDIR /app
 
 COPY client/package*.json ./client/
@@ -8,7 +8,7 @@ COPY client/index.html client/postcss.config.js client/tsconfig.json client/tsco
 COPY client/src ./client/src
 RUN npm run build --prefix client
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 WORKDIR /app
 
 COPY package*.json ./
