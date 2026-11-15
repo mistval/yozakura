@@ -116,10 +116,12 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
       label: 'Global Characters',
       subtitle: `(${globalCharacters.length} ${countSuffix})`,
       getChildren: async () => {
-        return globalCharacters.map((char) => ({
-          id: TreeEntityIds.character(char.id),
-          label: `${char.firstName} ${char.lastName}`,
-        }));
+        return Array.from(globalCharacters)
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .map((char) => ({
+            id: TreeEntityIds.character(char.id),
+            label: `${char.firstName} ${char.lastName}`,
+          }));
       },
     };
     treeRoots.push(charactersRoot);

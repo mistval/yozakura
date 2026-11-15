@@ -281,7 +281,7 @@ export default function DataImportComponent({ onImportStateChange }: DataImportC
         {isStaging && (
           <div className="p-4 bg-surface border border-border-default rounded text-sm flex items-center gap-3 text-primary font-medium animate-pulse">
             <span className="text-lg animate-spin inline-block">⟳</span>
-            <span>Uploading, migrating, and inspecting archive... Please wait.</span>
+            <span>Inspecting archive... Please wait.</span>
           </div>
         )}
 
