@@ -26,7 +26,7 @@ export default function CharacterOverviewSelectionStrip({
   const userId = useScenarioStore((state) => state.activeScenario?.userCharacterId);
 
   return (
-    <div className="flex gap-3 flex-wrap">
+    <div className="grid grid-cols-[repeat(2,minmax(0,210px))] sm:grid-cols-[repeat(auto-fill,minmax(180px,210px))] gap-2.5 sm:gap-3 items-stretch">
       {characters.flatMap((character) => {
         assertNonNullish(character);
         const isSelected = selectedIds.includes(character.id);
@@ -47,6 +47,8 @@ export default function CharacterOverviewSelectionStrip({
             character={character}
             subtitle={locationName}
             subtitle2={relToSelected || ''}
+            className="w-full h-full p-2 sm:p-3"
+            imageClassName="h-auto"
             onClick={() => onToggleSelect(character.id)}
             selected={isSelected}
           />
@@ -55,7 +57,7 @@ export default function CharacterOverviewSelectionStrip({
       <button
         type="button"
         onClick={openCharacterOverviewAddCharacters}
-        className="rounded-sm border border-dashed border-border-strong bg-emphasized p-3 w-48 h-84.25 flex items-center justify-center text-4xl text-muted hover:text-secondary-strong hover:border-border-accent"
+        className="rounded-sm border border-dashed border-border-strong bg-emphasized p-2 sm:p-3 w-full h-full min-h-52 flex items-center justify-center text-4xl text-muted hover:text-secondary-strong hover:border-border-accent"
         aria-label="Add character"
       >
         +

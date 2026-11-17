@@ -26,10 +26,10 @@ git checkout main
 npm install
 npm run install:all
 npm run build:web
-npm run start --prefix server
+PORT=4396 npm run start --prefix server
 ```
 
-Then go to http://localhost:3001/ in your browser.
+Then go to http://localhost:4396/ in your browser.
 
 ## Dev Setup
 
