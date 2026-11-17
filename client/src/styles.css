@@ -100,12 +100,12 @@
   --app-warning-border-soft: #fde68a;
 
   --app-success-bg: #ecfdf5;
-  --app-success-text: #16a34a;
+  --app-success-text: #15803d;
   --app-success-border: #059669;
   --app-success-ring: #22c55e;
-  --app-success-solid: #059669;
-  --app-success-solid-hover: #047857;
-  --app-success-border-strong: #059669;
+  --app-success-solid: #047857;
+  --app-success-solid-hover: #065f46;
+  --app-success-border-strong: #047857;
 }
 
 .dark {
@@ -150,7 +150,7 @@
   --app-warning-border-soft: #b45309;
 
   --app-success-bg: rgb(6 78 59 / 0.35);
-  --app-success-text: #16a34a;
+  --app-success-text: #34d399;
   --app-success-border: #10b981;
   --app-success-ring: #22c55e;
   --app-success-solid: #10b981;
@@ -409,10 +409,10 @@
   --app-success-bg: #dae5e1;
   --app-success-text: #3d6360;
   --app-success-border: #5f8782;
-  --app-success-ring: #000000;
-  --app-success-solid: #5f8782;
-  --app-success-solid-hover: #557b76;
-  --app-success-border-strong: #557d78;
+  --app-success-ring: #3d6360;
+  --app-success-solid: #436662;
+  --app-success-solid-hover: #385753;
+  --app-success-border-strong: #436662;
 }
 
 .oceanic {
@@ -430,7 +430,7 @@
   --app-text-primary: #223447;
   --app-text-secondary: #3d5469;
   --app-text-secondary-strong: #31475d;
-  --app-text-muted: #546b82;
+  --app-text-muted: #4b6278;
   --app-text-muted-soft: #74889c;
   --app-text-on-accent: #f3f8fc;
 
@@ -460,10 +460,10 @@
   --app-success-bg: #dceae7;
   --app-success-text: #366468;
   --app-success-border: #548992;
-  --app-success-ring: #0bda51;
-  --app-success-solid: #548992;
-  --app-success-solid-hover: #4a7b84;
-  --app-success-border-strong: #4e818a;
+  --app-success-ring: #2b8c7c;
+  --app-success-solid: #3f6e77;
+  --app-success-solid-hover: #355f68;
+  --app-success-border-strong: #3f6e77;
 }
 
 .littoral {
@@ -616,9 +616,9 @@
   --app-success-text: #1a6f49;
   --app-success-border: #2a9161;
   --app-success-ring: #2fa66d;
-  --app-success-solid: #2a9161;
-  --app-success-solid-hover: #22784f;
-  --app-success-border-strong: #248256;
+  --app-success-solid: #21784f;
+  --app-success-solid-hover: #1a6341;
+  --app-success-border-strong: #21784f;
 }
 
 .smokies {
@@ -636,7 +636,7 @@
   --app-text-primary: #4c3620;
   --app-text-secondary: #6f4f2f;
   --app-text-secondary-strong: #603f22;
-  --app-text-muted: #8e6b4b;
+  --app-text-muted: #735336;
   --app-text-muted-soft: #a98464;
   --app-text-on-accent: #fffdf8;
 
@@ -666,10 +666,10 @@
   --app-success-bg: #e7f3df;
   --app-success-text: #3f6d3f;
   --app-success-border: #66925d;
-  --app-success-ring: #ff782a;
-  --app-success-solid: #6e9e64;
-  --app-success-solid-hover: #628f58;
-  --app-success-border-strong: #5e8a54;
+  --app-success-ring: #c96124;
+  --app-success-solid: #4a7842;
+  --app-success-solid-hover: #3f6838;
+  --app-success-border-strong: #4a7842;
 }
 
 .sakura {
@@ -715,14 +715,14 @@
   --app-warning-border-soft: #edc7ab;
 
   --app-success-bg: #edf7ee;
-  --app-success-text: #4d835f;
+  --app-success-text: #3d704f;
   --app-success-border: #69a579;
-  --app-success-ring: #ff00ff;
+  --app-success-ring: #c83e87;
   --app-success-solid: #69a579;
   --app-success-solid-hover: #5b956c;
   --app-success-border-strong: #679c76;
 
-  --app-button-emphasized-bg: var(--app-border-accent);
+  --app-button-emphasized-bg: #a84e79;
 }
 
 .agape {
@@ -815,7 +815,7 @@
   --app-danger-solid-hover: #cc7394;
   --app-danger-border-strong: #b05d7f;
 
-  --app-warning-bg: rgb(106 85 62 / 0.9);
+  --app-warning-bg: rgb(92 66 36 / 0.48);
   --app-warning-text: #ffd8e6;
   --app-warning-text-strong: #e4b580;
   --app-warning-border: #aa7d45;
@@ -824,7 +824,7 @@
   --app-success-bg: rgb(22 56 46 / 0.42);
   --app-success-text: #b4d8be;
   --app-success-border: #5f9b73;
-  --app-success-ring: #cf10c0;
+  --app-success-ring: #c9449c;
   --app-success-solid: #5f9b73;
   --app-success-solid-hover: #4f8a66;
   --app-success-border-strong: #5c9070;
@@ -933,6 +933,60 @@
   --app-success-solid: #54b07a;
   --app-success-solid-hover: #6dc592;
   --app-success-border-strong: #5eb585;
+}
+
+.ember {
+  --app-background: #120b08;
+  --app-emphasized: #1c110c;
+  --app-inset: #150d09;
+  --app-surface-soft: rgb(28 17 12 / 0.94);
+  --app-surface-frosted: rgb(18 11 8 / 0.93);
+  --app-surface-subtle: #241610;
+  --app-surface-subtle-soft: rgb(36 22 16 / 0.8);
+  --app-surface-hover: rgb(62 34 21 / 0.5);
+  --app-surface-hover-strong: #352016;
+  --app-surface-hover-soft: #21130d;
+
+  --app-text-primary: #fde6cc;
+  --app-text-secondary: #eab88c;
+  --app-text-secondary-strong: #f4caa0;
+  --app-text-muted: #c9946b;
+  --app-text-muted-soft: #8e6144;
+  --app-text-on-accent: #1a0d06;
+
+  --app-border-default: #492a1b;
+  --app-border-strong: #5c3623;
+  --app-border-muted: #6e422b;
+  --app-border-accent: #d97a38;
+  --app-border-accent-hover: #f0954d;
+
+  --app-overlay: rgb(10 5 3 / 0.72);
+  --app-focus-ring: #f29d52;
+
+  --app-danger-bg: rgb(88 22 18 / 0.45);
+  --app-danger-text: #f9b6ad;
+  --app-danger-border: #a84238;
+  --app-danger-border-accent: #d4594c;
+  --app-danger-solid: #bd483b;
+  --app-danger-solid-hover: #d4594c;
+  --app-danger-border-strong: #b64a3e;
+
+  --app-warning-bg: rgb(94 56 16 / 0.45);
+  --app-warning-text: #fce2a6;
+  --app-warning-text-strong: #f6cd77;
+  --app-warning-border: #bd7c2e;
+  --app-warning-border-soft: #d4923e;
+
+  --app-success-bg: rgb(42 64 32 / 0.42);
+  --app-success-text: #cde5a8;
+  --app-success-border: #769c56;
+  --app-success-ring: #f59e42;
+  --app-success-solid: #7d9e56;
+  --app-success-solid-hover: #8fb465;
+  --app-success-border-strong: #769c56;
+
+  --app-button-emphasized-bg: #e07b39;
+  --app-button-emphasized-text: #160a04;
 }
 
 /*
@@ -1082,6 +1136,14 @@
   filter: brightness(0.86) saturate(0.88) contrast(1.08);
   -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.96));
   mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.96));
+}
+
+.ember-svg {
+  position: absolute;
+  transform: translate(0%, -100%);
+  width: 100vw;
+  height: 100vh;
+  opacity: 0.78;
 }
 
 .center-pulse-anim {

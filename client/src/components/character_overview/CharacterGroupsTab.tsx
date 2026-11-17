@@ -8,6 +8,7 @@ import Tabs from '../ui/Tabs.js';
 import ScheduleEditor from './ScheduleEditor.js';
 import { findById } from '../../util/array.js';
 import { useDeferredSyncStore } from '../../state/ephemeral_state_helper.js';
+import CharacterAvatar from '../CharacterAvatar.js';
 
 export default function CharacterGroupsTab() {
   const groups = useCharacterGroupStore((state) => state.groups);
@@ -120,13 +121,11 @@ export default function CharacterGroupsTab() {
                         isMember ? 'border-success-ring ring-2 ring-success-ring' : 'border-border-default'
                       } ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border-default bg-emphasized">
-                        <img
-                          src={character.imagePath}
-                          alt={`${character.firstName} ${character.lastName}`}
-                          className="h-full w-full object-cover object-top"
-                        />
-                      </div>
+                      <CharacterAvatar
+                        imagePath={character.imagePath}
+                        name={`${character.firstName} ${character.lastName}`}
+                        className="h-10 w-10"
+                      />
                       <div className="min-w-0 truncate text-sm">
                         {character.firstName} {character.lastName}
                       </div>

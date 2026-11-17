@@ -370,28 +370,6 @@ const stones: Stone[] = (() => {
   return list;
 })();
 
-// ─── Moon ───────────────────────────────────────────────────────────
-function Moon({ cx, cy, r }: { cx: number; cy: number; r: number }) {
-  return (
-    <g>
-      <circle cx={cx} cy={cy} r={r * 3.5} fill="#f8e8b0" opacity={0.08} />
-      <circle cx={cx} cy={cy} r={r * 2.2} fill="#f8e8b0" opacity={0.15} />
-      <circle cx={cx} cy={cy} r={r * 1.5} fill="#fbecc0" opacity={0.3} />
-      <circle cx={cx} cy={cy} r={r} fill="#fdf2d0" />
-      <circle cx={cx - r * 0.25} cy={cy - r * 0.2} r={r * 0.6} fill="#ffffff" opacity={0.4} />
-      <ellipse
-        cx={cx + r * 0.3}
-        cy={cy + r * 0.1}
-        rx={r * 0.25}
-        ry={r * 0.18}
-        fill="#e8d8a0"
-        opacity={0.35}
-      />
-      <ellipse cx={cx - r * 0.1} cy={cy + r * 0.4} rx={r * 0.18} ry={r * 0.12} fill="#e8d8a0" opacity={0.3} />
-    </g>
-  );
-}
-
 // ─── 赤提灯 (akachōchin) ──────────────────────────────────────────
 function Akachochin({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
   const s = scale;
@@ -839,9 +817,6 @@ export default function YozakuraBackground() {
           )}
         </g>
       ))}
-
-      {/* Moon */}
-      <Moon cx={1100} cy={130} r={35} />
 
       {/* Cirrus (pale silver) */}
       <g stroke="#d8dce8" fill="none" strokeLinecap="round">

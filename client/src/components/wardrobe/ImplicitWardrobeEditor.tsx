@@ -38,7 +38,7 @@ function WardrobeTagsInput({
       onChange={(event) => setDraft(event.target.value)}
       onBlur={handleBlur}
       placeholder="e.g. casual_clothes, work_uniform…"
-      className="flex-1 border rounded-sm px-2 py-1 bg-inset text-xs min-w-[120px]"
+      className="flex-1 min-w-[120px] w-full border rounded-sm px-2 py-1 bg-inset text-xs"
       disabled={disabled}
     />
   );
@@ -207,40 +207,38 @@ export default function ImplicitWardrobeEditor({
 
             {hasText && (
               <>
-                <div className="flex justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <label className="flex items-center gap-1 text-xs text-secondary whitespace-nowrap">
-                        <span>Autoselect group</span>
-                        <InfoTooltip
-                          label="Autoselect group"
-                          html='If non-empty, this wardrobe will be included in the named group. At the start of each scenario day, one wardrobe from each group is randomly selected and enabled; all others in the group are disabled. Leave empty to opt out of daily autoselection. This feature allows characters to spontaneously change appearance multidimensionally between days. For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
-                        />
-                      </label>
-                      <input
-                        type="text"
-                        value={new TagView(wardrobe.tags, DAILY_AUTOSELECT_TAG_PREFIX).getFirst() ?? ''}
-                        onChange={(event) => handleAutoSelectGroupChange(index, event.target.value)}
-                        placeholder="e.g. hat, shoes, expression…"
-                        className="flex-1 border rounded-sm px-2 py-1 bg-inset text-xs min-w-[120px]"
-                        disabled={disabled}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2 min-w-0 max-w-full">
+                    <label className="flex items-center gap-1 text-xs text-secondary whitespace-nowrap">
+                      <span>Autoselect group</span>
+                      <InfoTooltip
+                        label="Autoselect group"
+                        html='If non-empty, this wardrobe will be included in the named group. At the start of each scenario day, one wardrobe from each group is randomly selected and enabled; all others in the group are disabled. Leave empty to opt out of daily autoselection. This feature allows characters to spontaneously change appearance multidimensionally between days. For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
                       />
-                    </div>
+                    </label>
+                    <input
+                      type="text"
+                      value={new TagView(wardrobe.tags, DAILY_AUTOSELECT_TAG_PREFIX).getFirst() ?? ''}
+                      onChange={(event) => handleAutoSelectGroupChange(index, event.target.value)}
+                      placeholder="e.g. hat, shoes, expression…"
+                      className="flex-1 min-w-[120px] w-full border rounded-sm px-2 py-1 bg-inset text-xs"
+                      disabled={disabled}
+                    />
+                  </div>
 
-                    <div className="flex items-center gap-2">
-                      <label className="flex items-center gap-1 text-xs text-secondary whitespace-nowrap">
-                        <span>Tags</span>
-                        <InfoTooltip
-                          label="Wardrobe tags"
-                          html='Comma-separated tags for this wardrobe (e.g. casual_clothes, work_uniform). These can be targeted by Map Zone Wardrobe Triggers to automatically enable or disable outfits when entering zones. For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
-                        />
-                      </label>
-                      <WardrobeTagsInput
-                        tags={wardrobe.tags}
-                        onChange={(nextTags) => handleWardrobeTagsChange(index, nextTags)}
-                        disabled={disabled}
+                  <div className="flex items-center gap-2 min-w-0 max-w-full">
+                    <label className="flex items-center gap-1 text-xs text-secondary whitespace-nowrap">
+                      <span>Tags</span>
+                      <InfoTooltip
+                        label="Wardrobe tags"
+                        html='Comma-separated tags for this wardrobe (e.g. casual_clothes, work_uniform). These can be targeted by Map Zone Wardrobe Triggers to automatically enable or disable outfits when entering zones. For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
                       />
-                    </div>
+                    </label>
+                    <WardrobeTagsInput
+                      tags={wardrobe.tags}
+                      onChange={(nextTags) => handleWardrobeTagsChange(index, nextTags)}
+                      disabled={disabled}
+                    />
                   </div>
                 </div>
                 <div className="flex justify-end">

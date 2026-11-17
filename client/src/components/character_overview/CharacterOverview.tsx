@@ -132,7 +132,7 @@ function CharacterOverviewInner() {
               className={tab === 'overview' ? 'button-emphasized' : ''}
               onClick={() => setTab('overview')}
             >
-              Overview
+              Characters
             </button>
             <button
               type="button"
@@ -145,8 +145,6 @@ function CharacterOverviewInner() {
         }
       >
         <>
-          <h2 className="text-xl font-semibold">Character Overview</h2>
-
           {tab === 'overview' && (
             <>
               <CharacterOverviewSelectionStrip

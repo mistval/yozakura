@@ -13,6 +13,8 @@ keywords:
 
 There are three main ways to run Yozakura. The native electron application is the fastest to set up for most users and is dead easy. The Docker image has some advantages for more advanced users who are familiar with Docker, especially on Linux or MacOS. Cloning from GitHub is mainly intended for development and modifications, but is also a viable way to install and run Yozakura if that's your preference.
 
+Looking to play on your phone? See the [Mobile Devices](mobile-devices.md) guide for running directly on Android via Termux or connecting to your computer from mobile.
+
 ## Electron
 
 Prerequisites:

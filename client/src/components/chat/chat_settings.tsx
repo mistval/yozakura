@@ -66,7 +66,7 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
 
           <div className="space-y-2">
             <SettingFieldLabel
-              text="Chat Pane Width"
+              text="Layout"
               htmlFor="chat-pane-width"
               tooltipHtml={settingsTooltips['chat.paneWidth']}
             />
@@ -76,11 +76,12 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
               onChange={(event) => updateChatPaneWidth(event.target.value as ChatPaneWidth)}
               className="rounded-input bg-inset"
             >
-              <option value="narrow">Narrow</option>
-              <option value="medium">Medium</option>
-              <option value="wide">Wide</option>
-              <option value="extra_wide">Extra Wide</option>
-              <option value="unconstrained">Limit Breaker</option>
+              <option value="mobile">Mobile</option>
+              <option value="narrow">Desktop Narrow</option>
+              <option value="medium">Desktop Medium</option>
+              <option value="wide">Desktop Wide</option>
+              <option value="extra_wide">Desktop Extra Wide</option>
+              <option value="unconstrained">Desktop Limit Breaker</option>
             </select>
           </div>
 

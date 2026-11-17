@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import ConfirmDialog from './ConfirmDialog.js';
 
 type DeleteButtonProps = {
@@ -7,6 +7,7 @@ type DeleteButtonProps = {
   confirmTitle?: string;
   confirmLabel?: string;
   label?: string;
+  buttonText?: ReactNode | undefined;
   disabled?: boolean;
   className?: string | undefined;
 };
@@ -17,6 +18,7 @@ export default function DeleteButton({
   confirmTitle = 'Delete',
   confirmLabel = 'Delete',
   label = 'Delete',
+  buttonText = '🗑',
   disabled = false,
   className,
 }: DeleteButtonProps) {
@@ -43,7 +45,7 @@ export default function DeleteButton({
         title={label}
         className={`flex shrink-0 items-center justify-center rounded-sm px-3 py-2 text-on-accent! hover:bg-danger-solid-hover! ${className ?? ''}`}
       >
-        🗑
+        {buttonText}
       </button>
       <ConfirmDialog
         open={open}

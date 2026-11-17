@@ -1,6 +1,6 @@
 {
   "name": "Antigravity Sandbox",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:24",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:26",
   "customizations": {
     "vscode": {
       "extensions": ["Google.google-antigravity"],

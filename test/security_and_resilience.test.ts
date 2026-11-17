@@ -823,13 +823,14 @@ describe('Integration: Security, Resilience & Staging Lifecycle', () => {
       'character_cards'
     );
     fs.mkdirSync(unpackedCardsDir, { recursive: true });
-    fs.symlinkSync(path.join(server.dataDir, 'app.sqlite'), path.join(unpackedCardsDir, 'sneaky.png'));
+    // Directory junctions work without elevated privileges on Windows and act as regular symlinks on POSIX.
+    fs.symlinkSync(server.dataDir, path.join(unpackedCardsDir, 'sneaky_dir'), 'junction');
 
     const symlinkCommitRes = await commitImport({
       sqlStatements: [],
       imageCopies: [
         {
-          zipPath: 'character_cards/sneaky.png',
+          zipPath: 'character_cards/sneaky_dir',
           targetRelPath: 'character_cards/sneaky.png',
         },
       ],

@@ -7,8 +7,9 @@ import { removeMapLocation, setMapAdjacency } from '../engine/map/world_map.js';
 import DeleteButton from './ui/DeleteButton.js';
 import { useMapStore } from '../state/map_store.js';
 import { useShallow } from 'zustand/react/shallow';
+import CharacterAvatar from './CharacterAvatar.js';
 
-function CharacterAvatar({
+function CharacterChip({
   character,
   interactive,
   onClick,
@@ -20,17 +21,15 @@ function CharacterAvatar({
   return (
     <button
       type="button"
-      className={`flex w-full items-center gap-2 rounded-sm text-left ${interactive ? '' : 'pointer-events-none'}`}
+      className={`flex w-full items-center gap-2 rounded-sm px-2! py-1! text-left ${interactive ? '' : 'pointer-events-none'}`}
       onClick={onClick}
     >
-      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border-default bg-emphasized">
-        <img
-          src={character.imagePath}
-          alt={`${character.firstName} ${character.lastName}`}
-          className="h-full w-full object-cover object-top"
-        />
-      </div>
-      <div className="min-w-0 truncate text-sm">
+      <CharacterAvatar
+        imagePath={character.imagePath}
+        name={`${character.firstName} ${character.lastName}`}
+        className="h-8 w-8"
+      />
+      <div className="min-w-0 truncate text-xs sm:text-sm">
         {character.firstName} {character.lastName}
       </div>
     </button>
@@ -80,7 +79,9 @@ function LocationEntryItem({
           groupRefs.current.delete(locationId);
         }
       }}
-      className={`cursor-pointer space-y-2 rounded-sm border bg-inset p-3 transition-shadow ${ringClass}`}
+      className={`shrink-0 flex flex-col cursor-pointer space-y-2 rounded-sm border bg-inset p-2.5 transition-shadow ${
+        showCharacters ? 'min-w-44' : 'w-56'
+      } ${ringClass}`}
       onClick={() => toggleSelectedLocation(locationId, { center: true })}
       onMouseEnter={() => setHoveredLocationId(locationId)}
       onMouseLeave={() => setHoveredLocationId((current) => (current === locationId ? undefined : current))}
@@ -91,12 +92,12 @@ function LocationEntryItem({
       </div>
 
       {showCharacters ? (
-        <div className="space-y-2">
-          {characters.length === 0 ? (
-            <div className="text-sm text-muted">Nobody is here.</div>
-          ) : (
-            characters.map((character) => (
-              <CharacterAvatar
+        characters.length === 0 ? (
+          <div className="text-sm text-muted">Nobody is here.</div>
+        ) : (
+          <div className="grid grid-rows-2 grid-flow-col auto-cols-[minmax(140px,180px)] gap-1.5">
+            {characters.map((character) => (
+              <CharacterChip
                 key={character.id}
                 character={character}
                 interactive={isSelected && Boolean(onCharacterClick)}
@@ -105,9 +106,9 @@ function LocationEntryItem({
                   onCharacterClick?.(character);
                 }}
               />
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )
       ) : (
         <div className="line-clamp-3 text-sm text-secondary">
           {description || <span className="text-muted">No description.</span>}
@@ -123,6 +124,8 @@ function LocationEntriesBar({
   selectedLocationId,
   hoveredLocationId,
   groupRefs,
+  leadingElement,
+  onAddLocation,
   toggleSelectedLocation,
   setHoveredLocationId,
   onCharacterClick,
@@ -132,6 +135,8 @@ function LocationEntriesBar({
   hoveredLocationId: string | undefined;
   selectedLocationId: string | undefined;
   groupRefs: React.RefObject<Map<string, HTMLDivElement>>;
+  leadingElement?: ((helpers: { addLocation: () => void }) => React.ReactNode) | undefined;
+  onAddLocation: () => void;
   toggleSelectedLocation: (locationId: string, args?: { center?: boolean } | undefined) => void;
   setHoveredLocationId: (id: string | ((prev: string | undefined) => string | undefined)) => void;
   onCharacterClick?: ((char: Character) => void) | undefined;
@@ -153,7 +158,19 @@ function LocationEntriesBar({
   }, [locationIds, showCharacters, charactersByLocationId]);
 
   return (
-    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-2 scrollbar-none">
+    <div className="min-w-0 flex-1 flex items-stretch gap-2.5 overflow-x-auto p-2">
+      {leadingElement ? (
+        leadingElement({ addLocation: onAddLocation })
+      ) : (
+        <button
+          type="button"
+          className="shrink-0 max-w-24 px-2.5! text-center text-xs sm:text-sm"
+          onClick={onAddLocation}
+        >
+          + Add Location
+        </button>
+      )}
+
       {sortedLocationIds.map((locationId) => (
         <LocationEntryItem
           key={locationId}
@@ -281,7 +298,7 @@ function SelectedLocationDetails({
   }
 
   return (
-    <div className="bordered-section mt-4 max-h-[45%] shrink-0 overflow-y-auto">
+    <div className="bordered-section max-h-[40%] shrink-0 overflow-y-auto">
       <div className="flex gap-2">
         <div className="flex-1 space-y-1">
           <label className="block text-sm font-medium" htmlFor="map-location-name">
@@ -322,11 +339,11 @@ function SelectedLocationDetails({
       {otherLocations.length > 0 && (
         <div className="space-y-2">
           <div className="text-sm font-medium">Adjacent Locations</div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
             {otherLocations.map((targetLocation) => (
               <label
                 key={targetLocation.id}
-                className="grid grid-cols-[16px_minmax(0,1fr)] items-start gap-2 text-sm leading-5"
+                className="inline-flex max-w-full items-start gap-2 text-sm leading-5"
               >
                 <input
                   type="checkbox"
@@ -354,6 +371,7 @@ export default function MapGraphEditor({
   charactersByLocationId,
   onCharacterClick,
   highlightedLocationIds,
+  leadingElement,
   className = '',
 }: {
   mapId: string;
@@ -361,6 +379,7 @@ export default function MapGraphEditor({
   charactersByLocationId?: Record<string, Character[]> | undefined;
   onCharacterClick?: ((character: Character) => void) | undefined;
   highlightedLocationIds?: string[] | undefined;
+  leadingElement?: ((helpers: { addLocation: () => void }) => React.ReactNode) | undefined;
   className?: string | undefined;
 }) {
   const graphTheme = useGraphTheme();
@@ -379,14 +398,18 @@ export default function MapGraphEditor({
     if (!hoveredLocationId) {
       return;
     }
-    groupRefs.current.get(hoveredLocationId)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    groupRefs.current
+      .get(hoveredLocationId)
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
   }, [hoveredLocationId]);
 
   useEffect(() => {
     if (!selectedLocationId) {
       return;
     }
-    groupRefs.current.get(selectedLocationId)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    groupRefs.current
+      .get(selectedLocationId)
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
   }, [selectedLocationId]);
 
   const toggleSelectedLocation = (locationId: string, { center }: { center?: boolean } = {}) => {
@@ -423,39 +446,33 @@ export default function MapGraphEditor({
   };
 
   return (
-    <div className={`flex min-h-0 flex-col ${className}`}>
-      <div className="flex min-h-0 flex-1 gap-4">
-        <div className="flex w-72 shrink-0 flex-col overflow-hidden rounded-sm border border-border-default bg-surface-soft">
-          <div className="shrink-0 border-b border-border-default p-2">
-            <button type="button" className="w-full" onClick={addLocation}>
-              + Add Location
-            </button>
-          </div>
+    <div className={`flex min-h-0 flex-col gap-3 ${className}`}>
+      <div className="flex shrink-0 items-stretch overflow-hidden rounded-sm border border-border-default bg-surface-soft">
+        <LocationEntriesBar
+          mapId={mapId}
+          charactersByLocationId={charactersByLocationId}
+          selectedLocationId={selectedLocationId}
+          hoveredLocationId={hoveredLocationId}
+          groupRefs={groupRefs}
+          leadingElement={leadingElement}
+          toggleSelectedLocation={toggleSelectedLocation}
+          setHoveredLocationId={setHoveredLocationId}
+          onCharacterClick={onCharacterClick}
+          onAddLocation={addLocation}
+        />
+      </div>
 
-          <LocationEntriesBar
-            mapId={mapId}
-            charactersByLocationId={charactersByLocationId}
-            selectedLocationId={selectedLocationId}
-            hoveredLocationId={hoveredLocationId}
-            groupRefs={groupRefs}
-            toggleSelectedLocation={toggleSelectedLocation}
-            setHoveredLocationId={setHoveredLocationId}
-            onCharacterClick={onCharacterClick}
-          />
-        </div>
-
-        <div className="relative min-w-0 flex-1 overflow-hidden rounded-sm border border-border-default bg-inset">
-          <MapGraphCanvas
-            mapId={mapId}
-            graphRef={graphRef}
-            actives={actives}
-            graphTheme={graphTheme}
-            onNodePointerOver={(node) => setHoveredLocationId(node.id)}
-            onNodePointerOut={() => setHoveredLocationId(undefined)}
-            onNodeClick={(node) => toggleSelectedLocation(node.id)}
-            onCanvasClick={() => setSelectedLocationId(undefined)}
-          />
-        </div>
+      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden rounded-sm border border-border-default bg-inset">
+        <MapGraphCanvas
+          mapId={mapId}
+          graphRef={graphRef}
+          actives={actives}
+          graphTheme={graphTheme}
+          onNodePointerOver={(node) => setHoveredLocationId(node.id)}
+          onNodePointerOut={() => setHoveredLocationId(undefined)}
+          onNodeClick={(node) => toggleSelectedLocation(node.id)}
+          onCanvasClick={() => setSelectedLocationId(undefined)}
+        />
       </div>
 
       {selectedLocationId && (

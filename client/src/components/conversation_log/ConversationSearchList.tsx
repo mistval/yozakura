@@ -5,6 +5,7 @@ import type { Character, StoredConversation, TranscriptParticipant } from '../..
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { ConversationTranscript } from '../../engine/chat/transcript.js';
+import CharacterAvatar from '../CharacterAvatar.js';
 
 type ConversationSearchListProps = {
   scenarioId: string;
@@ -30,29 +31,19 @@ function ParticipantAvatar({
   participant: TranscriptParticipant;
   character?: Character;
 }) {
-  const [imageError, setImageError] = useState(false);
-  const imagePath = !imageError ? character?.imagePath || participant.imagePath : '';
+  const imagePath = character?.imagePath || participant.imagePath;
   const name = character
     ? `${character.firstName} ${character.lastName}`.trim()
     : `${participant.firstName} ${participant.lastName}`.trim();
 
   return (
-    <div
-      className="h-7 w-7 shrink-0 overflow-hidden rounded-full border border-border-default bg-emphasized"
-      title={name || 'Character'}
-    >
-      {imagePath ? (
-        <img
-          src={imagePath}
-          alt={name || 'Character'}
-          className="h-full w-full object-cover object-top"
-          onError={() => setImageError(true)}
-        />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-muted select-none">
-          {name ? name[0]?.toUpperCase() : '?'}
-        </div>
-      )}
+    <div title={name || 'Character'}>
+      <CharacterAvatar
+        imagePath={imagePath}
+        name={name || 'Character'}
+        className="h-7 w-7"
+        fallbackClassName="text-[10px]"
+      />
     </div>
   );
 }
@@ -226,9 +217,6 @@ export default function ConversationSearchList({
                         scenarioCharactersById={scenarioCharactersById}
                       />
                     </div>
-                    <span className="text-xs text-muted shrink-0 ml-2">
-                      {new Date(entry.createdAt).toLocaleString()}
-                    </span>
                   </button>
                 ))}
               </div>
@@ -255,9 +243,6 @@ export default function ConversationSearchList({
                   scenarioCharactersById={scenarioCharactersById}
                 />
               </div>
-              <span className="text-xs text-muted shrink-0 ml-2">
-                {new Date(entry.createdAt).toLocaleString()}
-              </span>
             </button>
           ))}
         </div>

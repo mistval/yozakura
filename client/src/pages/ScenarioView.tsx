@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import CharacterCard from '../components/CharacterCard';
 import ChatPane from '../components/ChatPane';
@@ -29,10 +29,19 @@ import { useTemporalContextStore } from '../state/temporal_context_store.js';
 import { getUserMovementSuggestion } from '../engine/character_schedule/get_scheduled_move';
 import { ChatCoordinator } from '../engine/chat/chat_coordinator';
 import { startScenarioLoop } from '../engine/scenario_loop/scenario_loop';
-import { useSettingsStore } from '../state/settings_store';
+import { useSettingsStore, type ChatPaneWidth } from '../state/settings_store';
 import { useUserCanInputChat, useIsChatFinalizing } from '../state/chat_state';
 import { globalParallelJobManager } from '../engine/parallelization/job_manager';
 import { UserStopSignalException } from '../engine/scenario_loop/flow_control';
+import ResponsiveDrawerSidebar, { useMobileDrawer } from '../components/ui/ResponsiveDrawerSidebar';
+
+const DESKTOP_CHAT_PANE_WIDTH_CLASSES: Record<Exclude<ChatPaneWidth, 'mobile'>, string> = {
+  narrow: 'w-[min(44rem,max(28rem,calc(100vw-22rem)))] shrink-0',
+  medium: 'w-[min(54rem,max(28rem,calc(100vw-22rem)))] shrink-0',
+  wide: 'w-[min(64rem,max(28rem,calc(100vw-22rem)))] shrink-0',
+  extra_wide: 'w-[min(74rem,max(28rem,calc(100vw-22rem)))] shrink-0',
+  unconstrained: 'flex-1 min-w-0',
+};
 
 export default function ScenarioView() {
   const navigate = useNavigate();
@@ -58,6 +67,8 @@ export default function ScenarioView() {
   const { openSettings } = useSettingsModal();
   const activeParticipants = useActiveChatParticipants();
   const freedomOfMovement = useSettingsStore((s) => s.freedomOfMovement);
+  const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
+  const isMobileLayout = chatPaneWidth === 'mobile';
   const activeChatState = useTurnMachineStore((state) => state.chatState);
   const hasActiveChatSession = activeChatState !== 'inactive';
   const currentTurnCharacterId = useCurrentTurnCharacterId();
@@ -75,6 +86,14 @@ export default function ScenarioView() {
   const canReturnToMainMenu = useUserCanInputChat() || !hasActiveChatSession;
   const previousUserIdRef = useRef<string | null>(null);
   const visibleRelationships = useCachedCharacterRelationships();
+  const [mobileViewportRect, setMobileViewportRect] = useState<{ top: number; height: number } | undefined>(
+    undefined
+  );
+
+  const { openDrawer: openMobileMenu, closeDrawer: closeMobileMenu } = useMobileDrawer(
+    'scenariomenu',
+    hasActiveChatSession
+  );
 
   useEffect(() => {
     if (!scenarioId) {
@@ -110,6 +129,33 @@ export default function ScenarioView() {
       previousUserIdRef.current = scenario.userCharacterId;
     }
   }, [scenario?.userCharacterId]);
+
+  useEffect(() => {
+    if (!isMobileLayout || !hasActiveChatSession) {
+      setMobileViewportRect(undefined);
+      return;
+    }
+
+    const viewport = window.visualViewport;
+    if (!viewport) {
+      return;
+    }
+
+    const updateViewportRect = () => {
+      setMobileViewportRect({
+        top: viewport.offsetTop,
+        height: viewport.height,
+      });
+    };
+
+    updateViewportRect();
+    viewport.addEventListener('resize', updateViewportRect);
+    viewport.addEventListener('scroll', updateViewportRect);
+    return () => {
+      viewport.removeEventListener('resize', updateViewportRect);
+      viewport.removeEventListener('scroll', updateViewportRect);
+    };
+  }, [isMobileLayout, hasActiveChatSession]);
 
   const user: Character | undefined = scenario
     ? (charactersById[scenario.userCharacterId] ?? undefined)
@@ -286,122 +332,162 @@ export default function ScenarioView() {
 
   const showNpcPhaseControls = npcPhaseBusy && !activeChatIncludesUser;
 
-  const renderSessionHeader = ({ includeMenu = false }: { includeMenu?: boolean } = {}) => (
-    <div className="flex justify-between items-center">
+  const renderNavigationButtons = () => (
+    <div className="flex flex-wrap items-center gap-2 justify-center">
+      <button type="button" onClick={() => showCharacterOverview()}>
+        Character Overview
+      </button>
+      <button type="button" onClick={() => showConversationLog()}>
+        Conversation Log
+      </button>
+      <button type="button" onClick={() => showMap()}>
+        Map
+      </button>
+      <button type="button" onClick={() => navigate('/')} disabled={!canReturnToMainMenu}>
+        Main Menu
+      </button>
+      <button type="button" onClick={() => openSettings()} aria-label="Settings" title="Settings">
+        ⚙
+      </button>
+    </div>
+  );
+
+  const renderScenarioPanel = ({ compact }: { compact: boolean }) => (
+    <div className="space-y-4">
+      <div className="bg-emphasized/50 border border-border-default rounded-sm p-2.5 w-fit w-full">
+        {renderNavigationButtons()}
+      </div>
+
       <div className="font-semibold" dangerouslySetInnerHTML={{ __html: temporalDisplayHtml }} />
-      <div className="flex gap-2">
-        <button type="button" onClick={() => showCharacterOverview()}>
-          Character Overview
-        </button>
-        <button type="button" onClick={() => showConversationLog()}>
-          Conversation Log
-        </button>
-        <button type="button" onClick={() => showMap()}>
-          Map
-        </button>
-        {includeMenu && (
-          <button type="button" onClick={() => navigate('/')} disabled={!canReturnToMainMenu}>
-            Main Menu
-          </button>
-        )}
-        <button type="button" onClick={() => openSettings()} aria-label="Settings" title="Settings">
-          ⚙
-        </button>
+
+      <LocationPanel
+        location={resolvedLocation}
+        adjacentLocationIds={adjacentLocations}
+        onMove={(locationId) => {
+          submitUserMove(
+            locationId,
+            moveSuggestion?.consumesTurnByLocationId[locationId] ?? !freedomOfMovement
+          );
+        }}
+        onWait={() => {
+          submitUserWait();
+        }}
+        canMove={canSubmitUserTurn}
+        suggestion={moveSuggestion}
+      />
+
+      {showNpcPhaseControls && (
+        <div>
+          <div className="font-semibold mb-1">
+            {!isUserTurn && `${perspectiveCharacter.firstName}'s turn`}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              className="border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover"
+              onClick={() => globalParallelJobManager.cancelAllJobs(new UserStopSignalException())}
+            >
+              ■ Stop
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="@container space-y-2">
+        <div className="flex justify-between items-center">
+          <h3 className="font-semibold">Characters here</h3>
+        </div>
+        <div
+          className={
+            compact
+              ? 'grid grid-cols-[repeat(2,minmax(0,230px))] @[560px]:grid-cols-[repeat(auto-fill,minmax(180px,230px))] gap-2.5 items-start'
+              : 'flex gap-3 flex-wrap items-start'
+          }
+        >
+          {charactersHere.map((char) => {
+            const rel = getDirectedRelationship(visibleRelationships, char.id, perspectiveCharacter.id);
+            const isSelected = Boolean(activeParticipants.some((participant) => participant.id === char.id));
+            return (
+              <CharacterCard
+                key={char.id}
+                character={char}
+                subtitle2={rel.descriptor}
+                className={compact ? 'w-full max-w-[230px] p-2' : undefined}
+                imageClassName="h-auto"
+                onClick={() => {
+                  if (hasActiveChatSession) {
+                    addCharacterToActiveChat(char.id);
+                    return;
+                  }
+                  submitUserChatAction(char.id);
+                }}
+                selected={isSelected}
+                disabled={!canAddChatParticipant || char.id === scenario.userCharacterId}
+              />
+            );
+          })}
+        </div>
+
+        <div className="space-y-2 pt-1">
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={toggleAutoMode}
+              className={
+                autoModeEnabled
+                  ? 'border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover'
+                  : undefined
+              }
+            >
+              {autoModeEnabled ? '■ Stop Auto Mode' : '▶ Auto Mode'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 
-  return (
-    <div className="max-w-6xl mx-auto p-6 space-y-4">
-      {renderSessionHeader({ includeMenu: true })}
-      <div className="flex gap-3 min-h-0">
-        <div className="flex-1 min-w-0 space-y-4">
-          <LocationPanel
-            location={resolvedLocation}
-            adjacentLocationIds={adjacentLocations}
-            onMove={(locationId) => {
-              submitUserMove(
-                locationId,
-                moveSuggestion?.consumesTurnByLocationId[locationId] ?? !freedomOfMovement
-              );
-            }}
-            onWait={() => {
-              submitUserWait();
-            }}
-            canMove={canSubmitUserTurn}
-            suggestion={moveSuggestion}
-          />
-
-          {showNpcPhaseControls && (
-            <div>
-              <div className="font-semibold mb-1">
-                {!isUserTurn && `${perspectiveCharacter.firstName}'s turn`}
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  type="button"
-                  className="border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover"
-                  onClick={() => globalParallelJobManager.cancelAllJobs(new UserStopSignalException())}
-                >
-                  ■ Stop
-                </button>
-              </div>
-            </div>
-          )}
-
-          {hasActiveChatSession && (
-            <div className="mx-auto py-6 space-y-3">
-              <ChatPane />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold">Characters here</h3>
-            </div>
-            <div className="flex gap-3 flex-wrap">
-              {charactersHere.map((char) => {
-                const rel = getDirectedRelationship(visibleRelationships, char.id, perspectiveCharacter.id);
-                const isSelected = Boolean(
-                  activeParticipants.some((participant) => participant.id === char.id)
-                );
-                return (
-                  <CharacterCard
-                    key={char.id}
-                    character={char}
-                    subtitle2={rel.descriptor}
-                    onClick={() => {
-                      if (hasActiveChatSession) {
-                        addCharacterToActiveChat(char.id);
-                        return;
-                      }
-                      submitUserChatAction(char.id);
-                    }}
-                    selected={isSelected}
-                    disabled={!canAddChatParticipant || char.id === scenario.userCharacterId}
-                  />
-                );
-              })}
-            </div>
-
-            <div className="space-y-2 pt-1">
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={toggleAutoMode}
-                  className={
-                    autoModeEnabled
-                      ? 'border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover'
-                      : undefined
-                  }
-                >
-                  {autoModeEnabled ? '■ Stop Auto Mode' : '▶ Auto Mode'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+  if (!hasActiveChatSession) {
+    return (
+      <div className={isMobileLayout ? 'w-full min-h-dvh p-3' : 'w-full min-h-dvh p-4 sm:p-6'}>
+        {renderScenarioPanel({ compact: isMobileLayout })}
       </div>
+    );
+  }
+
+  const desktopChatPaneWidthClass =
+    chatPaneWidth === 'mobile' ? '' : DESKTOP_CHAT_PANE_WIDTH_CLASSES[chatPaneWidth];
+  const desktopRightPanelWidthClass =
+    chatPaneWidth === 'unconstrained' ? 'w-[min(31rem,40vw)] shrink-0' : 'flex-1 min-w-[20rem]';
+
+  return (
+    <div
+      style={
+        isMobileLayout && mobileViewportRect
+          ? { top: `${mobileViewportRect.top}px`, height: `${mobileViewportRect.height}px` }
+          : undefined
+      }
+      className={
+        isMobileLayout
+          ? 'fixed inset-x-0 top-0 h-dvh overflow-hidden'
+          : 'w-full h-dvh flex overflow-x-auto overflow-y-hidden'
+      }
+    >
+      <div
+        className={isMobileLayout ? 'h-full w-full min-h-0' : `h-full min-h-0 ${desktopChatPaneWidthClass}`}
+      >
+        <ChatPane onOpenScenarioMenu={isMobileLayout ? openMobileMenu : undefined} />
+      </div>
+      <ResponsiveDrawerSidebar
+        isDrawer={isMobileLayout}
+        queryParam="scenariomenu"
+        onClose={closeMobileMenu}
+        drawerSide="right"
+        zIndex={40}
+        inlineClassName={`h-full overflow-y-auto p-4 ${desktopRightPanelWidthClass}`}
+      >
+        {renderScenarioPanel({ compact: true })}
+      </ResponsiveDrawerSidebar>
     </div>
   );
 }

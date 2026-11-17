@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStateRef } from '../hooks/useStateRef.js';
 import { useDraft } from '../hooks/useDraft.js';
 import { useLocation, useNavigate } from 'react-router';
 import YozakuraLogo from '../theme/yozakura_logo.js';
-import { useSettingsStore, type Settings } from '../state/settings_store.js';
+import { useSettingsStore, type ChatPaneWidth, type Settings } from '../state/settings_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import Modal from './ui/Modal.js';
 import InfoTooltip from './ui/InfoTooltip.js';
@@ -28,6 +28,9 @@ const FTUE_AUTH_TOKEN_TOOLTIP_HTML =
 
 const FTUE_MODEL_TOOLTIP_HTML =
   'If your API accepts a <code>model</code> field in request bodies to specify the model to use, you can set that model here.';
+
+const MOBILE_DEFAULT_COMPLETIONS_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const MOBILE_DEFAULT_MODEL = 'deepseek/deepseek-v4.1-flash-1017';
 
 export default function MainMenuFtueModal() {
   const navigate = useNavigate();
@@ -64,6 +67,30 @@ export default function MainMenuFtueModal() {
 
   const shouldRenderOnThisRoute = location.pathname === '/';
   const open = shouldRenderOnThisRoute && !mainMenuFtueSeen;
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const isMobile = window.innerWidth < 768;
+    const defaultLayout: ChatPaneWidth = isMobile ? 'mobile' : 'medium';
+
+    if (!isMobile) {
+      setSettings({ chatPaneWidth: defaultLayout });
+      return;
+    }
+
+    setSettings((previous: Settings) => ({
+      chatPaneWidth: defaultLayout,
+      llmConfigs: updateLLMConfigsWithBaseDefaultsConnection(
+        previous.llmConfigs,
+        MOBILE_DEFAULT_COMPLETIONS_URL,
+        findBaseDefaultsLLMConfig(previous.llmConfigs)?.llmAuthToken ?? '',
+        MOBILE_DEFAULT_MODEL
+      ),
+    }));
+  }, [open, setSettings]);
 
   const markFtueSeen = () => {
     setSettings(() => ({ mainMenuFtueSeen: true }));

@@ -7,6 +7,8 @@ export default function CharacterCard({
   onClick,
   selected,
   disabled,
+  className = 'w-48 p-3',
+  imageClassName = 'h-52 object-cover object-top',
   children,
 }: {
   character: Character;
@@ -15,17 +17,19 @@ export default function CharacterCard({
   onClick?: () => void;
   selected?: boolean;
   disabled?: boolean;
+  className?: string | undefined;
+  imageClassName?: string | undefined;
   children?: React.ReactNode;
 }) {
   const borderClass = selected ? 'ring-2 ring-success-ring' : 'border border-border-default';
 
   return (
-    <div className={`${borderClass} rounded-sm bg-emphasized p-3 w-48 space-y-2`}>
+    <div className={`${borderClass} rounded-sm bg-emphasized space-y-2 ${className}`}>
       <button type="button" className="w-full text-left" onClick={onClick} disabled={disabled}>
         <img
           src={character.imagePath}
           alt={`${character.firstName} ${character.lastName}`}
-          className="w-full h-52 object-cover rounded-sm"
+          className={`w-full rounded-sm ${imageClassName}`}
         />
         <div className="font-semibold mt-2 text-center">
           {character.firstName} {character.lastName}

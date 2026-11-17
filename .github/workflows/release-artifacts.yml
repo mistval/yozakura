@@ -85,9 +85,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          # Node 24.16.0 has a regression that makes electron-forge exit
-          # silently mid-package with code 0 and no output (24.15.0 is fine)
-          node-version: '24.15.0'
+          node-version-file: .nvmrc
           cache: 'npm'
           cache-dependency-path: |
             package-lock.json
