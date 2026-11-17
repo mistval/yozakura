@@ -88,7 +88,7 @@ Verify Yozakura is running on your computer at `http://localhost:4396`.
 
 ### 2. Connect privately with Tailscale
 
-[Tailscale](https://tailscale.com/) creates a private mesh network between your own devices (free for personal use, no router port forwarding needed, and works over both Wi-Fi and cellular data).
+[Tailscale](https://tailscale.com/) creates a private network between your own devices (free for personal use, no router setup needed, and works over both Wi-Fi and cellular data).
 
 1. Install **[Tailscale](https://tailscale.com/download)** on your computer and sign in.
 2. Install the **Tailscale** app on your phone (from Google Play or the App Store) and sign in with the **same account**.
@@ -99,14 +99,17 @@ Verify Yozakura is running on your computer at `http://localhost:4396`.
 http://<your-computer-tailscale-ip>:4396
 ```
 
-:::info Why Tailscale is secure (even with an `http://` address)
-Your browser will show `http://` in the address bar when connecting to a Tailscale IP, **but your traffic is still fully encrypted end-to-end**:
+:::info Is Tailscale secure (even with an `http://` address)?
+Yes—for most users, Tailscale offers strong privacy without complex setup:
 
-- **Device-to-device WireGuard encryption:** Tailscale encrypts all network traffic on your phone and decrypts it only on your computer using keys that stay strictly on your own devices. Neither your Wi-Fi/mobile carrier nor Tailscale's servers can read your chats, API keys, or images—even if traffic passes through a Tailscale relay.
-- **No public internet exposure:** Unlike port forwarding or public tunneling services, Yozakura is not given a public URL. Only devices signed into your personal Tailscale account can reach your computer's Tailscale IP at all.
-- **Optional `https://` URL:** If you prefer a green lock / `https://` address (e.g., to avoid browser "Not secure" warnings or add to your home screen as a web app), enable **MagicDNS** and **HTTPS Certificates** in your Tailscale admin console and run `tailscale serve --bg http://127.0.0.1:4396` on your computer. That gives you a `https://<machine>.<tailnet>.ts.net` URL that still stays private to your Tailscale devices and terminates TLS directly on your own computer.
+- **Encrypted between your devices:** Even though your browser shows `http://`, Tailscale wraps all traffic in an encrypted tunnel directly between your phone and computer. Your Wi-Fi network, mobile carrier, and Tailscale's servers cannot read your chats, API keys, or images.
+- **Private to your devices:** Yozakura is never given a public web address, so strangers on the internet cannot find or reach it.
+- **Some trust still remains:** Although Tailscale is widely trusted, it isn't 100% trustless. Tailscale's servers still coordinate your private network—they can see basic metadata (like your account and which devices are connected), and if Tailscale were ever compromised or acted maliciously, it could theoretically add an unauthorized device to your network. Enabling **Tailnet Lock** in Tailscale reduces this risk by requiring your own device's approval before any new device can connect.
+- **Optional `https://` address:** If you want a lock icon in your browser or want to add Yozakura cleanly to your phone's home screen, enable **MagicDNS** and **HTTPS Certificates** in the Tailscale admin console and run `tailscale serve --bg http://127.0.0.1:4396` on your computer for a private `https://<machine>.<tailnet>.ts.net` URL.
   :::
 
-:::tip Same Wi-Fi alternative
-If you only ever play while your phone and computer are on the same trusted home Wi-Fi, you don't even need Tailscale—you can connect directly to `http://<your-computer-local-ip>:4396` (you may need to allow port `4396` through your computer's firewall).
-:::
+:::tip Other private options (Same Wi-Fi, WireGuard, or Headscale)
+
+- **Same Wi-Fi only:** If you only play on your home Wi-Fi, you don't need Tailscale—open `http://<your-computer-local-ip>:4396` directly (you may need to allow port `4396` in your firewall).
+- **Zero third-party servers:** If you don't want to rely on Tailscale's servers at all, look into setting up **WireGuard** directly or self-hosting **Headscale** (an open-source alternative to Tailscale's coordination server). Both require more manual networking setup and are beyond the scope of this guide.
+  :::
