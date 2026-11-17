@@ -1,13 +1,13 @@
 import { SpoilerSection } from '../ui/SpoilerSection.js';
 import type { StoredConversation, ConversationStateUpdateNode } from '../../engine/types.js';
-import { useSettingsStore, type ChatPaneWidth } from '../../state/settings_store.js';
+import { useSettingsStore, type ConversationLogWidth } from '../../state/settings_store.js';
 import { ConversationTranscript } from '../../engine/chat/transcript.js';
 import { useMemo } from 'react';
 import Markdown from 'react-markdown';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
 import { useConversationLog } from './ConversationLogContext.js';
 
-const CHAT_PANE_WIDTH_OPTIONS: Array<{ value: ChatPaneWidth; label: string }> = [
+const CHAT_PANE_WIDTH_OPTIONS: Array<{ value: ConversationLogWidth; label: string }> = [
   { value: 'narrow', label: 'Narrow' },
   { value: 'medium', label: 'Medium' },
   { value: 'wide', label: 'Wide' },
@@ -77,7 +77,7 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
 
   if (!selectedEntry) return undefined;
 
-  const updateConversationLogWidth = (nextWidth: ChatPaneWidth) => {
+  const updateConversationLogWidth = (nextWidth: ConversationLogWidth) => {
     setSettings({ conversationLogWidth: nextWidth });
   };
 
@@ -141,7 +141,7 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
             <div className="font-medium">Conversation Width</div>
             <select
               value={conversationLogWidth}
-              onChange={(event) => updateConversationLogWidth(event.target.value as ChatPaneWidth)}
+              onChange={(event) => updateConversationLogWidth(event.target.value as ConversationLogWidth)}
               className="w-full rounded-input bg-inset"
             >
               {CHAT_PANE_WIDTH_OPTIONS.map((option) => (

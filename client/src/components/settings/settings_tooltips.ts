@@ -66,7 +66,8 @@ export const settingsTooltips = {
     'How many recent conversation summaries are retained per character globally and also pairwise. Older summaries are discarded and will no longer be injected into memory rewrite prompts, thus information no longer in that window is more likely to be discarded from character memory.',
   'npc.offscreenLearnedInformationLimit':
     'How many pieces of recent offscreen learned information are retained per character-pair. Older information is discarded and will no longer be injected into memory rewrite prompts, thus information no longer in that window is more likely to be discarded from character memory.',
-  'chat.paneWidth': 'Controls the horizontal layout width of the chat panel.',
+  'chat.paneWidth':
+    'Controls the scenario layout mode and chat panel width on desktop, or switches to the mobile drawer layout.',
   speakerSelectionMode:
     '<strong>Round Robin</strong> rotates speakers in a consistent order. <strong>Intelligent</strong> uses LLM-based moderation to choose who speaks next.',
   'behavior.pauseAtNpcChatStart':

@@ -7,8 +7,9 @@ import { removeMapLocation, setMapAdjacency } from '../engine/map/world_map.js';
 import DeleteButton from './ui/DeleteButton.js';
 import { useMapStore } from '../state/map_store.js';
 import { useShallow } from 'zustand/react/shallow';
+import CharacterAvatar from './CharacterAvatar.js';
 
-function CharacterAvatar({
+function CharacterChip({
   character,
   interactive,
   onClick,
@@ -23,13 +24,11 @@ function CharacterAvatar({
       className={`flex w-full items-center gap-2 rounded-sm text-left ${interactive ? '' : 'pointer-events-none'}`}
       onClick={onClick}
     >
-      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border-default bg-emphasized">
-        <img
-          src={character.imagePath}
-          alt={`${character.firstName} ${character.lastName}`}
-          className="h-full w-full object-cover object-top"
-        />
-      </div>
+      <CharacterAvatar
+        imagePath={character.imagePath}
+        name={`${character.firstName} ${character.lastName}`}
+        className="h-10 w-10"
+      />
       <div className="min-w-0 truncate text-sm">
         {character.firstName} {character.lastName}
       </div>
@@ -96,7 +95,7 @@ function LocationEntryItem({
             <div className="text-sm text-muted">Nobody is here.</div>
           ) : (
             characters.map((character) => (
-              <CharacterAvatar
+              <CharacterChip
                 key={character.id}
                 character={character}
                 interactive={isSelected && Boolean(onCharacterClick)}

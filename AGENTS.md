@@ -8,8 +8,9 @@
 - Prefer undefined over null.
 - Avoid excessively defensive programming.
 - Use the latest browser, JS, and TS features.
-- Keep the backend as ignorant of data shapes as possible. It's just a storage layer.
+- Keep the backend as ignorant of data shapes as possible. It's just a storage layer. Migrations are an exception, they can be high-context when necessary.
 - Prefer manual dependency injection over vitest mocking.
 - KISS YAGNI. Don't add unrequested extra functionality/dynamism/flexibility that we don't need right now.
 - Avoid introducing complexity to solve practical non-issues.
 - JSX files should be named with Pascal case, all others with snake case.
+- You may install Ubuntu packages and tools to help you do your job.

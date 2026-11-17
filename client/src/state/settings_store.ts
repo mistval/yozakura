@@ -32,7 +32,9 @@ const speakerSelectionModeSchema = z.enum(['round_robin', 'intelligent']);
 export type SpeakerSelectionMode = z.infer<typeof speakerSelectionModeSchema>;
 const npcChatEndModeSchema = z.enum(['fixed', 'intelligent']);
 export type NpcChatEndMode = z.infer<typeof npcChatEndModeSchema>;
-const chatPaneWidthSchema = z.enum(['narrow', 'medium', 'wide', 'extra_wide', 'unconstrained']);
+const conversationLogWidthSchema = z.enum(['narrow', 'medium', 'wide', 'extra_wide', 'unconstrained']);
+export type ConversationLogWidth = z.infer<typeof conversationLogWidthSchema>;
+const chatPaneWidthSchema = z.enum(['mobile', 'narrow', 'medium', 'wide', 'extra_wide', 'unconstrained']);
 export type ChatPaneWidth = z.infer<typeof chatPaneWidthSchema>;
 
 export const settingsSchema = z.object({
@@ -52,7 +54,7 @@ export const settingsSchema = z.object({
   speakerSelectionMode: speakerSelectionModeSchema,
   pauseAtNpcChatStart: z.boolean(),
   chatPaneWidth: chatPaneWidthSchema,
-  conversationLogWidth: chatPaneWidthSchema,
+  conversationLogWidth: conversationLogWidthSchema,
   freedomOfMovement: z.boolean(),
   npcOnlyChatDelay: z.number(),
   imagePromptPrefix: z.string(),

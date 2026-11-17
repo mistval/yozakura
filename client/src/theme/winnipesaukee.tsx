@@ -16,8 +16,6 @@ function inTextZone(x: number, y: number) {
 // ─── Moon ─────────────────────────────────────────────────────────
 // Position drives the moonglade — directly below the moon on the water.
 const MOON_X = 980;
-const MOON_Y = 125;
-const MOON_R = 28;
 
 // ─── Stars ────────────────────────────────────────────────────────
 interface Star {
@@ -305,50 +303,6 @@ function ForegroundTree({ tree }: { tree: FgTree }) {
   );
 }
 
-// ─── Moon component ──────────────────────────────────────────────
-function Moon() {
-  return (
-    <g>
-      {/* Halo rings — outer faint, inner brighter */}
-      <circle cx={MOON_X} cy={MOON_Y} r={MOON_R * 4} fill="#fff5d0" opacity={0.04} />
-      <circle cx={MOON_X} cy={MOON_Y} r={MOON_R * 2.6} fill="#fff0c8" opacity={0.08} />
-      <circle cx={MOON_X} cy={MOON_Y} r={MOON_R * 1.7} fill="#fff0c8" opacity={0.14} />
-      <circle cx={MOON_X} cy={MOON_Y} r={MOON_R * 1.25} fill="#fdf4d8" opacity={0.28} />
-      {/* Moon body */}
-      <circle cx={MOON_X} cy={MOON_Y} r={MOON_R} fill="#fdf4d8" />
-      {/* Subtle surface craters */}
-      <circle
-        cx={MOON_X - MOON_R * 0.3}
-        cy={MOON_Y - MOON_R * 0.1}
-        r={MOON_R * 0.16}
-        fill="#e8dfb8"
-        opacity={0.45}
-      />
-      <circle
-        cx={MOON_X + MOON_R * 0.25}
-        cy={MOON_Y + MOON_R * 0.25}
-        r={MOON_R * 0.11}
-        fill="#e8dfb8"
-        opacity={0.35}
-      />
-      <circle
-        cx={MOON_X - MOON_R * 0.08}
-        cy={MOON_Y + MOON_R * 0.42}
-        r={MOON_R * 0.13}
-        fill="#e8dfb8"
-        opacity={0.3}
-      />
-      <circle
-        cx={MOON_X + MOON_R * 0.45}
-        cy={MOON_Y - MOON_R * 0.2}
-        r={MOON_R * 0.07}
-        fill="#e8dfb8"
-        opacity={0.3}
-      />
-    </g>
-  );
-}
-
 export default function LakeWinnipesaukee() {
   // Moonlight wash — a single elongated ellipse positioned so its TOP edge
   // sits exactly at the horizon (where the moon's mirror point is). The
@@ -435,9 +389,6 @@ export default function LakeWinnipesaukee() {
           </g>
         );
       })}
-
-      {/* Moon */}
-      <Moon />
 
       {/* Mountain silhouettes — far to near */}
       <path d={farMountainPath} fill="#1a2030" />

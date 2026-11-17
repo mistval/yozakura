@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import CharacterCard from '../components/CharacterCard';
 import ChatPane from '../components/ChatPane';
@@ -29,10 +29,18 @@ import { useTemporalContextStore } from '../state/temporal_context_store.js';
 import { getUserMovementSuggestion } from '../engine/character_schedule/get_scheduled_move';
 import { ChatCoordinator } from '../engine/chat/chat_coordinator';
 import { startScenarioLoop } from '../engine/scenario_loop/scenario_loop';
-import { useSettingsStore } from '../state/settings_store';
+import { useSettingsStore, type ChatPaneWidth } from '../state/settings_store';
 import { useUserCanInputChat, useIsChatFinalizing } from '../state/chat_state';
 import { globalParallelJobManager } from '../engine/parallelization/job_manager';
 import { UserStopSignalException } from '../engine/scenario_loop/flow_control';
+
+const DESKTOP_CHAT_PANE_WIDTH_CLASSES: Record<Exclude<ChatPaneWidth, 'mobile'>, string> = {
+  narrow: 'w-[min(44rem,max(28rem,calc(100vw-22rem)))] shrink-0',
+  medium: 'w-[min(54rem,max(28rem,calc(100vw-22rem)))] shrink-0',
+  wide: 'w-[min(64rem,max(28rem,calc(100vw-22rem)))] shrink-0',
+  extra_wide: 'w-[min(74rem,max(28rem,calc(100vw-22rem)))] shrink-0',
+  unconstrained: 'flex-1 min-w-0',
+};
 
 export default function ScenarioView() {
   const navigate = useNavigate();
@@ -58,6 +66,8 @@ export default function ScenarioView() {
   const { openSettings } = useSettingsModal();
   const activeParticipants = useActiveChatParticipants();
   const freedomOfMovement = useSettingsStore((s) => s.freedomOfMovement);
+  const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
+  const isMobileLayout = chatPaneWidth === 'mobile';
   const activeChatState = useTurnMachineStore((state) => state.chatState);
   const hasActiveChatSession = activeChatState !== 'inactive';
   const currentTurnCharacterId = useCurrentTurnCharacterId();
@@ -75,6 +85,8 @@ export default function ScenarioView() {
   const canReturnToMainMenu = useUserCanInputChat() || !hasActiveChatSession;
   const previousUserIdRef = useRef<string | null>(null);
   const visibleRelationships = useCachedCharacterRelationships();
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!scenarioId) {
@@ -110,6 +122,27 @@ export default function ScenarioView() {
       previousUserIdRef.current = scenario.userCharacterId;
     }
   }, [scenario?.userCharacterId]);
+
+  useEffect(() => {
+    if (!isMobileLayout || !hasActiveChatSession) {
+      setMobileMenuOpen(false);
+    }
+  }, [isMobileLayout, hasActiveChatSession]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
 
   const user: Character | undefined = scenario
     ? (charactersById[scenario.userCharacterId] ?? undefined)
@@ -286,121 +319,175 @@ export default function ScenarioView() {
 
   const showNpcPhaseControls = npcPhaseBusy && !activeChatIncludesUser;
 
-  const renderSessionHeader = ({ includeMenu = false }: { includeMenu?: boolean } = {}) => (
-    <div className="flex justify-between items-center">
+  const renderNavigationButtons = () => (
+    <div className="flex flex-wrap items-center gap-2 justify-center">
+      <button type="button" onClick={() => showCharacterOverview()}>
+        Character Overview
+      </button>
+      <button type="button" onClick={() => showConversationLog()}>
+        Conversation Log
+      </button>
+      <button type="button" onClick={() => showMap()}>
+        Map
+      </button>
+      <button type="button" onClick={() => navigate('/')} disabled={!canReturnToMainMenu}>
+        Main Menu
+      </button>
+      <button type="button" onClick={() => openSettings()} aria-label="Settings" title="Settings">
+        ⚙
+      </button>
+    </div>
+  );
+
+  const renderScenarioPanel = ({ compact }: { compact: boolean }) => (
+    <div className="space-y-4">
+      <div className="bg-emphasized/50 border border-border-default rounded-sm p-2.5 w-fit w-full">
+        {renderNavigationButtons()}
+      </div>
+
       <div className="font-semibold" dangerouslySetInnerHTML={{ __html: temporalDisplayHtml }} />
-      <div className="flex gap-2">
-        <button type="button" onClick={() => showCharacterOverview()}>
-          Character Overview
-        </button>
-        <button type="button" onClick={() => showConversationLog()}>
-          Conversation Log
-        </button>
-        <button type="button" onClick={() => showMap()}>
-          Map
-        </button>
-        {includeMenu && (
-          <button type="button" onClick={() => navigate('/')} disabled={!canReturnToMainMenu}>
-            Main Menu
-          </button>
-        )}
-        <button type="button" onClick={() => openSettings()} aria-label="Settings" title="Settings">
-          ⚙
-        </button>
+
+      <LocationPanel
+        location={resolvedLocation}
+        adjacentLocationIds={adjacentLocations}
+        onMove={(locationId) => {
+          submitUserMove(
+            locationId,
+            moveSuggestion?.consumesTurnByLocationId[locationId] ?? !freedomOfMovement
+          );
+        }}
+        onWait={() => {
+          submitUserWait();
+        }}
+        canMove={canSubmitUserTurn}
+        suggestion={moveSuggestion}
+      />
+
+      {showNpcPhaseControls && (
+        <div>
+          <div className="font-semibold mb-1">
+            {!isUserTurn && `${perspectiveCharacter.firstName}'s turn`}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              className="border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover"
+              onClick={() => globalParallelJobManager.cancelAllJobs(new UserStopSignalException())}
+            >
+              ■ Stop
+            </button>
+          </div>
+        </div>
+      )}
+
+      <hr className="border-border-default" />
+
+      <div className="@container space-y-2">
+        <div className="flex justify-between items-center">
+          <h3 className="font-semibold">Characters here</h3>
+        </div>
+        <div
+          className={
+            compact
+              ? 'grid grid-cols-[repeat(2,minmax(0,230px))] @[560px]:grid-cols-[repeat(auto-fill,minmax(180px,230px))] gap-2.5 items-start'
+              : 'flex gap-3 flex-wrap items-start'
+          }
+        >
+          {charactersHere.map((char) => {
+            const rel = getDirectedRelationship(visibleRelationships, char.id, perspectiveCharacter.id);
+            const isSelected = Boolean(activeParticipants.some((participant) => participant.id === char.id));
+            return (
+              <CharacterCard
+                key={char.id}
+                character={char}
+                subtitle2={rel.descriptor}
+                className={compact ? 'w-full max-w-[230px] p-2' : undefined}
+                imageClassName="h-auto"
+                onClick={() => {
+                  if (hasActiveChatSession) {
+                    addCharacterToActiveChat(char.id);
+                    return;
+                  }
+                  submitUserChatAction(char.id);
+                }}
+                selected={isSelected}
+                disabled={!canAddChatParticipant || char.id === scenario.userCharacterId}
+              />
+            );
+          })}
+        </div>
+
+        <div className="space-y-2 pt-1">
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={toggleAutoMode}
+              className={
+                autoModeEnabled
+                  ? 'border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover'
+                  : undefined
+              }
+            >
+              {autoModeEnabled ? '■ Stop Auto Mode' : '▶ Auto Mode'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 
-  return (
-    <div className="max-w-6xl mx-auto p-6 space-y-4">
-      {renderSessionHeader({ includeMenu: true })}
-      <div className="flex gap-3 min-h-0">
-        <div className="flex-1 min-w-0 space-y-4">
-          <LocationPanel
-            location={resolvedLocation}
-            adjacentLocationIds={adjacentLocations}
-            onMove={(locationId) => {
-              submitUserMove(
-                locationId,
-                moveSuggestion?.consumesTurnByLocationId[locationId] ?? !freedomOfMovement
-              );
-            }}
-            onWait={() => {
-              submitUserWait();
-            }}
-            canMove={canSubmitUserTurn}
-            suggestion={moveSuggestion}
-          />
+  if (isMobileLayout) {
+    if (!hasActiveChatSession) {
+      return <div className="w-full min-h-dvh p-3">{renderScenarioPanel({ compact: true })}</div>;
+    }
 
-          {showNpcPhaseControls && (
-            <div>
-              <div className="font-semibold mb-1">
-                {!isUserTurn && `${perspectiveCharacter.firstName}'s turn`}
-              </div>
-              <div className="flex gap-2 flex-wrap">
+    return (
+      <div className="w-full h-dvh overflow-hidden">
+        <ChatPane onOpenScenarioMenu={() => setMobileMenuOpen(true)} />
+
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-overlay flex justify-end"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                setMobileMenuOpen(false);
+              }
+            }}
+          >
+            <div className="w-[80vw] max-w-[800px] h-full bg-emphasized border-l border-border-default p-3 flex flex-col gap-3 shadow-xl">
+              <div className="flex justify-end shrink-0">
                 <button
                   type="button"
-                  className="border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover"
-                  onClick={() => globalParallelJobManager.cancelAllJobs(new UserStopSignalException())}
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-label="Close menu"
+                  className="px-2! py-0.5! text-sm"
                 >
-                  ■ Stop
+                  ✕
                 </button>
               </div>
-            </div>
-          )}
-
-          {hasActiveChatSession && (
-            <div className="mx-auto py-6 space-y-3">
-              <ChatPane />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold">Characters here</h3>
-            </div>
-            <div className="flex gap-3 flex-wrap">
-              {charactersHere.map((char) => {
-                const rel = getDirectedRelationship(visibleRelationships, char.id, perspectiveCharacter.id);
-                const isSelected = Boolean(
-                  activeParticipants.some((participant) => participant.id === char.id)
-                );
-                return (
-                  <CharacterCard
-                    key={char.id}
-                    character={char}
-                    subtitle2={rel.descriptor}
-                    onClick={() => {
-                      if (hasActiveChatSession) {
-                        addCharacterToActiveChat(char.id);
-                        return;
-                      }
-                      submitUserChatAction(char.id);
-                    }}
-                    selected={isSelected}
-                    disabled={!canAddChatParticipant || char.id === scenario.userCharacterId}
-                  />
-                );
-              })}
-            </div>
-
-            <div className="space-y-2 pt-1">
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={toggleAutoMode}
-                  className={
-                    autoModeEnabled
-                      ? 'border-danger-border-accent bg-danger-solid text-on-accent hover:bg-danger-solid-hover'
-                      : undefined
-                  }
-                >
-                  {autoModeEnabled ? '■ Stop Auto Mode' : '▶ Auto Mode'}
-                </button>
-              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto">{renderScenarioPanel({ compact: true })}</div>
             </div>
           </div>
-        </div>
+        )}
+      </div>
+    );
+  }
+
+  if (!hasActiveChatSession) {
+    return <div className="w-full min-h-dvh p-4 sm:p-6">{renderScenarioPanel({ compact: false })}</div>;
+  }
+
+  const desktopChatPaneWidthClass = DESKTOP_CHAT_PANE_WIDTH_CLASSES[chatPaneWidth];
+  const desktopRightPanelWidthClass =
+    chatPaneWidth === 'unconstrained' ? 'w-[min(31rem,40vw)] shrink-0' : 'flex-1 min-w-[20rem]';
+
+  return (
+    <div className="w-full h-dvh flex overflow-x-auto overflow-y-hidden">
+      <div className={`h-full min-h-0 ${desktopChatPaneWidthClass}`}>
+        <ChatPane />
+      </div>
+      <div className={`h-full overflow-y-auto p-4 ${desktopRightPanelWidthClass}`}>
+        {renderScenarioPanel({ compact: true })}
       </div>
     </div>
   );

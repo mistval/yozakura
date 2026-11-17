@@ -13,6 +13,7 @@ import MapGraphEditor from './MapGraphEditor.js';
 import MapZoneEditor from './map_zones/MapZoneEditor.js';
 import DeleteButton from './ui/DeleteButton.js';
 import { useMapStore } from '../state/map_store.js';
+import CharacterAvatar from './CharacterAvatar.js';
 
 const MOVEMENT_VERB: Record<MovementPolicy, string> = {
   teleport: 'teleported',
@@ -195,15 +196,11 @@ function MapModalInner() {
                       </div>
                     )}
                     <div className="flex items-center gap-2 rounded-sm border border-border-default bg-inset p-2">
-                      <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-border-default bg-emphasized">
-                        {character && (
-                          <img
-                            src={character.imagePath}
-                            alt={entry.characterName}
-                            className="h-full w-full object-cover object-top"
-                          />
-                        )}
-                      </div>
+                      <CharacterAvatar
+                        imagePath={character?.imagePath}
+                        name={entry.characterName}
+                        className="h-8 w-8"
+                      />
                       <div className="min-w-0 text-sm">
                         <span className="font-medium">{entry.characterName}</span>{' '}
                         {movementVerb(entry.movementPolicy)} from {entry.fromLocationName} to{' '}

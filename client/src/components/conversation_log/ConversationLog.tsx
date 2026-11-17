@@ -7,9 +7,9 @@ import RoutedModalFrame from '../ui/RoutedModalFrame';
 import { useConversationLog } from './ConversationLogContext.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import ConversationSearchList from './ConversationSearchList.js';
-import { useSettingsStore, type ChatPaneWidth } from '../../state/settings_store.js';
+import { useSettingsStore, type ConversationLogWidth } from '../../state/settings_store.js';
 
-const CONVERSATION_LOG_WIDTH_CLASS_BY_SETTING: Record<ChatPaneWidth, string> = {
+const CONVERSATION_LOG_WIDTH_CLASS_BY_SETTING: Record<ConversationLogWidth, string> = {
   narrow: 'max-w-4xl',
   medium: 'max-w-5xl',
   wide: 'max-w-6xl',

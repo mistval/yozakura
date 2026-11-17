@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStateRef } from '../hooks/useStateRef.js';
 import { useDraft } from '../hooks/useDraft.js';
 import { useLocation, useNavigate } from 'react-router';
 import YozakuraLogo from '../theme/yozakura_logo.js';
-import { useSettingsStore, type Settings } from '../state/settings_store.js';
+import { useSettingsStore, type ChatPaneWidth, type Settings } from '../state/settings_store.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import Modal from './ui/Modal.js';
 import InfoTooltip from './ui/InfoTooltip.js';
@@ -64,6 +64,15 @@ export default function MainMenuFtueModal() {
 
   const shouldRenderOnThisRoute = location.pathname === '/';
   const open = shouldRenderOnThisRoute && !mainMenuFtueSeen;
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const defaultLayout: ChatPaneWidth = window.innerWidth < 768 ? 'mobile' : 'medium';
+    setSettings({ chatPaneWidth: defaultLayout });
+  }, [open, setSettings]);
 
   const markFtueSeen = () => {
     setSettings(() => ({ mainMenuFtueSeen: true }));
