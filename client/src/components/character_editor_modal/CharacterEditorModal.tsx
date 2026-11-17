@@ -11,28 +11,29 @@ import IdentitySection from './IdentitySection';
 import type { CharacterEditorModalProps } from './types';
 import WardrobesSection from './WardrobesSection';
 import { useModalStackZIndex } from '../../hooks/useModalQueryParam.js';
+import { useModalPanelClasses } from '../../hooks/use_mobile_layout.js';
 
 function CharacterEditorModalContent({ zIndex }: { zIndex?: number }) {
   const { open, closeEditor } = useCharacterEditorModal();
+  const { outerClassName, panelClassName } = useModalPanelClasses({
+    maxWidthClassName: 'max-w-4xl',
+    desktopPanelClassName: 'rounded-sm border shadow-xs p-6 space-y-4',
+  });
 
   return (
     <>
-      <Modal
-        closeOnBackdropClick={false}
-        open={open}
-        onClose={closeEditor}
-        className="p-4 md:p-6"
-        zIndex={zIndex}
-      >
-        <div className="bg-emphasized rounded-sm border shadow-xs max-w-4xl w-full mx-auto p-6 space-y-4">
-          <HeaderSection />
-          <IdentitySection />
-          <DescriptionSection />
-          <ExampleDialogueSection />
-          <BaseAppearanceSection />
-          <WardrobesSection />
-          <CharacterCardSection />
-          <FooterSection />
+      <Modal closeOnBackdropClick={false} open={open} onClose={closeEditor} zIndex={zIndex}>
+        <div className={outerClassName}>
+          <div className={panelClassName}>
+            <HeaderSection />
+            <IdentitySection />
+            <DescriptionSection />
+            <ExampleDialogueSection />
+            <BaseAppearanceSection />
+            <WardrobesSection />
+            <CharacterCardSection />
+            <FooterSection />
+          </div>
         </div>
       </Modal>
 

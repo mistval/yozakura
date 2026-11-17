@@ -183,7 +183,7 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
         </div>
         <div className="text-sm text-muted shrink-0">Turn {selectedEntry.turnNumber || 0}</div>
       </div>
-      <div className="flex gap-3 min-h-104">
+      <div className={isMobileLayout ? 'flex min-w-0' : 'flex gap-3 min-h-104'}>
         <ResponsiveDrawerSidebar
           isDrawer={isMobileLayout}
           queryParam="cl_participants"
@@ -194,7 +194,13 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
         >
           {sidebarContent}
         </ResponsiveDrawerSidebar>
-        <div className="border rounded-sm p-3 overflow-y-auto space-y-3 flex-1 min-h-0">
+        <div
+          className={
+            isMobileLayout
+              ? 'space-y-3 flex-1 min-w-0'
+              : 'border rounded-sm p-3 overflow-y-auto space-y-3 flex-1 min-h-0'
+          }
+        >
           {transcript.getVisibleMessages(userId).map((message) => {
             const isCharacterMessage = message.isCharacterChatMessage();
             const senderId = isCharacterMessage ? message.asCharacterChatMessage().senderId : undefined;
@@ -203,7 +209,10 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
               : undefined;
 
             return (
-              <div key={message.getId()} className="flow-root text-left px-1 py-0.5">
+              <div
+                key={message.getId()}
+                className={isMobileLayout ? 'flow-root text-left py-0.5' : 'flow-root text-left px-1 py-0.5'}
+              >
                 <TranscriptMessageContent
                   isImageMessage={message.isImageMessage()}
                   isCharacterMessage={isCharacterMessage && Boolean(senderId)}

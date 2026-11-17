@@ -1,6 +1,7 @@
 import type { ReactNode, Ref } from 'react';
 import Modal from './Modal';
 import { useModalQueryParam, useModalStackZIndex } from '../../hooks/useModalQueryParam.js';
+import { useModalPanelClasses } from '../../hooks/use_mobile_layout.js';
 
 type RoutedModalFrameProps = {
   open?: boolean;
@@ -41,22 +42,37 @@ export default function RoutedModalFrame({
   const open = queryParam !== undefined ? derivedOpen : (openProp ?? true);
   const zIndex = zIndexProp ?? (queryParam !== undefined ? derivedZIndex : undefined);
 
+  const {
+    isMobileLayout,
+    outerClassName: standardOuterClassName,
+    panelClassName: standardPanelClassName,
+  } = useModalPanelClasses({
+    maxWidthClassName,
+    mobilePanelClassName: 'p-2 space-y-3',
+  });
   const isDrawer = Boolean(drawerSide);
   const modalClassName = isDrawer
     ? `flex! overflow-y-hidden! ${drawerSide === 'right' ? 'justify-end' : 'justify-start'} ${className ?? ''}`.trim()
     : className;
   const outerContainerClassName = isDrawer
     ? 'w-[80vw] max-w-[800px] h-full shrink-0'
-    : `mx-auto p-4 md:p-6 ${maxWidthClassName}`;
+    : standardOuterClassName;
   const innerPanelClassName = isDrawer
     ? `bg-emphasized h-full overflow-y-auto shadow-xl p-3 space-y-3 ${
         drawerSide === 'right' ? 'border-l border-border-default' : 'border-r border-border-default'
       } ${panelClassName}`
-    : `bg-emphasized rounded-sm border shadow-xs p-4 md:p-6 space-y-4 ${panelClassName}`;
-  const stickyBarPositionClassName = isDrawer ? 'top-0' : 'top-3';
+    : `${standardPanelClassName} ${panelClassName}`.trim();
+  const stickyBarPositionClassName = isDrawer || isMobileLayout ? 'top-0' : 'top-3';
 
   return (
-    <Modal open={open} onClose={onClose} className={modalClassName} contentRef={contentRef} zIndex={zIndex}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      className={modalClassName}
+      contentRef={contentRef}
+      zIndex={zIndex}
+      fullScreenOnMobile={!isDrawer}
+    >
       <div className={outerContainerClassName}>
         <div className={innerPanelClassName}>
           {(showClose || (showBack && onBack) || headerActions) && (

@@ -4,6 +4,7 @@ import { useDraft } from '../hooks/useDraft.js';
 import { useLocation, useNavigate } from 'react-router';
 import YozakuraLogo from '../theme/yozakura_logo.js';
 import { useSettingsStore, type ChatPaneWidth, type Settings } from '../state/settings_store.js';
+import { useModalPanelClasses } from '../hooks/use_mobile_layout.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import Modal from './ui/Modal.js';
 import InfoTooltip from './ui/InfoTooltip.js';
@@ -38,6 +39,11 @@ export default function MainMenuFtueModal() {
   const llmConfigs = useSettingsStore((s) => s.llmConfigs);
   const mainMenuFtueSeen = useSettingsStore((s) => s.mainMenuFtueSeen);
   const setSettings = useSettingsStore((s) => s.setSettings);
+  const { outerClassName, panelClassName } = useModalPanelClasses({
+    maxWidthClassName: 'max-w-3xl',
+    surfaceClassName: 'bg-inset',
+    desktopPanelClassName: 'rounded-xl border border-border-default shadow-xl p-5 sm:p-7 space-y-6',
+  });
 
   const imageSelection = useImageScriptSelection();
 
@@ -136,14 +142,9 @@ export default function MainMenuFtueModal() {
   const handleTestConnection = () => testLlmConnectionFromHook(llmUrlDraft, llmAuthTokenDraft);
 
   return (
-    <Modal
-      open={open}
-      onClose={closeModal}
-      className="h-full overflow-y-auto p-4 sm:p-8"
-      closeOnBackdropClick={false}
-    >
-      <div className="mx-auto my-4 w-full max-w-3xl rounded-xl border border-border-default bg-inset shadow-xl">
-        <div className="space-y-6 p-5 sm:p-7">
+    <Modal open={open} onClose={closeModal} closeOnBackdropClick={false}>
+      <div className={outerClassName}>
+        <div className={panelClassName}>
           <header className="space-y-2">
             <YozakuraLogo showWordmark={false} className="mx-auto" />
             <h2 className="text-2xl font-semibold text-center">Welcome to Yozakura</h2>

@@ -1,4 +1,4 @@
-import Modal from '../ui/Modal.js';
+import RoutedModalFrame from '../ui/RoutedModalFrame.js';
 import ImplicitWardrobeEditor from '../wardrobe/ImplicitWardrobeEditor.js';
 import SettingFieldLabel from '../settings/ui/SettingFieldLabel.js';
 import type { Character } from '../../engine/types.js';
@@ -8,6 +8,7 @@ import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
 import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
+import CharacterLocationSelect from '../CharacterLocationSelect.js';
 
 interface CharacterChatSettingsProps {
   open: boolean;
@@ -27,6 +28,7 @@ export default function CharacterChatSettings({
   const chatInstructionsByCharacterId = useTurnMachineStore((state) => state.chatInstructionsByCharacterId);
   const { showCharacterOverview } = useCharacterOverview();
   const isCharacterSyncing = useIsEntityInDeferredSync(settingsCharacterId);
+  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
 
   if (!settingsCharacterId || !scenario) {
     return undefined;
@@ -45,89 +47,91 @@ export default function CharacterChatSettings({
   };
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="bg-emphasized rounded-sm p-4 space-y-4">
-          <>
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">
-                {character.firstName} {character.lastName}
-              </h3>
-              <div className="flex gap-2">
-                {participants.length > 2 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      ChatCoordinator.removeParticipant(settingsCharacterId);
-                      onClose();
-                    }}
-                  >
-                    Remove from Chat
-                  </button>
-                )}
-                <button type="button" onClick={onClose}>
-                  Close
-                </button>
-              </div>
-            </div>
-
-            {character.externalDescription && (
-              <div className={`border rounded-sm p-3`}>{character.externalDescription}</div>
-            )}
-
-            {!isUserCharacter && (
-              <div className="space-y-2">
-                <SettingFieldLabel
-                  text="Chat Instructions"
-                  htmlFor="character-chat-instructions"
-                  tooltipHtml={`Anything you enter here will be included in the system prompt for just ${character.firstName} during this chat. Use it to steer this character specifically. Applies only to this chat.`}
-                />
-                <textarea
-                  id="character-chat-instructions"
-                  value={chatInstructionsByCharacterId[settingsCharacterId] ?? ''}
-                  onChange={(event) =>
-                    ChatCoordinator.setCharacterChatInstructions(settingsCharacterId, event.target.value)
-                  }
-                  rows={4}
-                  className="w-full border rounded-sm p-2 bg-inset"
-                  placeholder={`Instructions for ${character.firstName} in this chat`}
-                />
-              </div>
-            )}
-
-            <ImplicitWardrobeEditor
-              wardrobes={character.wardrobes}
-              onChange={persistWardrobes}
-              disabled={isCharacterSyncing}
-              enableNewWardrobes={true}
-            />
-
-            <button
-              onClick={() =>
-                showCharacterOverview({
-                  selectedIds: [settingsCharacterId],
-                  scrolldown: true,
-                })
-              }
-            >
-              Character Overview
-            </button>
-            {!isUserCharacter && (
-              <button
-                className="ml-3"
-                onClick={() =>
-                  showCharacterOverview({
-                    selectedIds: [settingsCharacterId, scenario.userCharacterId],
-                    scrolldown: true,
-                  })
-                }
-              >
-                Relationship Overview
-              </button>
-            )}
-          </>
-        </div>
+    <RoutedModalFrame open={open} onClose={onClose} maxWidthClassName="max-w-2xl">
+      <div className="flex justify-between items-center gap-2">
+        <h3 className="text-lg font-semibold">
+          {character.firstName} {character.lastName}
+        </h3>
+        {participants.length > 2 && (
+          <button
+            type="button"
+            onClick={() => {
+              ChatCoordinator.removeParticipant(settingsCharacterId);
+              onClose();
+            }}
+          >
+            Remove from Chat
+          </button>
+        )}
       </div>
-    </Modal>
+
+      {character.externalDescription && (
+        <div className={`border rounded-sm p-3`}>{character.externalDescription}</div>
+      )}
+
+      {activeMap && activeMap.locations.length > 0 && (
+        <div className="space-y-1">
+          <label htmlFor="character-chat-location" className="block text-sm font-medium">
+            Location
+          </label>
+          <CharacterLocationSelect
+            id="character-chat-location"
+            characterId={character.id}
+            className="w-full"
+          />
+        </div>
+      )}
+
+      {!isUserCharacter && (
+        <div className="space-y-2">
+          <SettingFieldLabel
+            text="Chat Instructions"
+            htmlFor="character-chat-instructions"
+            tooltipHtml={`Anything you enter here will be included in the system prompt for just ${character.firstName} during this chat. Use it to steer this character specifically. Applies only to this chat.`}
+          />
+          <textarea
+            id="character-chat-instructions"
+            value={chatInstructionsByCharacterId[settingsCharacterId] ?? ''}
+            onChange={(event) =>
+              ChatCoordinator.setCharacterChatInstructions(settingsCharacterId, event.target.value)
+            }
+            rows={4}
+            className="w-full border rounded-sm p-2 bg-inset"
+            placeholder={`Instructions for ${character.firstName} in this chat`}
+          />
+        </div>
+      )}
+
+      <ImplicitWardrobeEditor
+        wardrobes={character.wardrobes}
+        onChange={persistWardrobes}
+        disabled={isCharacterSyncing}
+        enableNewWardrobes={true}
+      />
+
+      <button
+        onClick={() =>
+          showCharacterOverview({
+            selectedIds: [settingsCharacterId],
+            scrolldown: true,
+          })
+        }
+      >
+        Character Overview
+      </button>
+      {!isUserCharacter && (
+        <button
+          className="ml-3"
+          onClick={() =>
+            showCharacterOverview({
+              selectedIds: [settingsCharacterId, scenario.userCharacterId],
+              scrolldown: true,
+            })
+          }
+        >
+          Relationship Overview
+        </button>
+      )}
+    </RoutedModalFrame>
   );
 }

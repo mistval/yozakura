@@ -445,6 +445,10 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
 
   const runButtonTitle = getRunButtonTitle();
   const endChatButtonTitle = getEndChatButtonTitle();
+  const actionBarContainerClassName = isMobileLayout ? 'gap-2 text-2xl h-12 px-2' : 'gap-1 text-xs h-7 px-1';
+  const actionBarButtonClassName = isMobileLayout
+    ? 'px-1! py-0! h-10 w-10 flex items-center justify-center'
+    : 'px-1! py-0! h-5 w-5 flex items-center justify-center';
 
   const participantCards = (
     <div className={isMobileLayout ? 'grid grid-cols-1 @[420px]:grid-cols-2 gap-2 items-start' : 'space-y-2'}>
@@ -532,7 +536,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   return (
     <div
       className={`bg-emphasized h-full w-full flex min-h-0 ${
-        isMobileLayout ? 'flex-col p-2.5 gap-2' : 'flex-row border-r border-border-default p-3 gap-3'
+        isMobileLayout ? 'flex-col p-1 gap-1.5' : 'flex-row border-r border-border-default p-3 gap-3'
       }`}
     >
       <ResponsiveDrawerSidebar
@@ -617,7 +621,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
             }
           }}
           style={{ overflowAnchor: 'none' }}
-          className="border rounded-sm p-2 overflow-y-auto space-y-2 flex-1 min-h-0"
+          className={`border rounded-sm ${isMobileLayout ? 'p-1' : 'p-2'} overflow-y-auto space-y-2 flex-1 min-h-0`}
         >
           <div ref={transcriptContainerInnerRef} className="space-y-3">
             {transcript.countAllMessages() === 0 && (
@@ -656,7 +660,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                       event.preventDefault();
                     }
                   }}
-                  className="relative group flow-root text-left rounded-sm px-1 py-0.5"
+                  className={`relative group flow-root text-left rounded-sm ${isMobileLayout ? 'px-0.5' : 'px-1'} py-0.5`}
                 >
                   {editingMessageId === entryId && isCharacterMessage ? (
                     <div className="space-y-2">
@@ -732,7 +736,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
 
                   {userCanInputChat && !editingMessageId && (
                     <div
-                      className={`absolute bottom-1 right-1 transition-opacity flex items-center gap-1 text-xs h-7 px-1 rounded-sm border border-border-default bg-emphasized/95 shadow-sm leading-none ${
+                      className={`absolute bottom-1 right-1 transition-opacity flex items-center ${actionBarContainerClassName} rounded-sm border border-border-default bg-emphasized/95 shadow-sm leading-none ${
                         isActionBarActive
                           ? 'opacity-100 pointer-events-auto'
                           : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'
@@ -743,7 +747,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                         onClick={() => deleteMessage(entryId)}
                         title="Delete message"
                         aria-label="Delete message"
-                        className="px-1! py-0! h-5 w-5 flex items-center justify-center"
+                        className={actionBarButtonClassName}
                       >
                         🗑
                       </button>
@@ -758,7 +762,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                           disabled={!canGenerateImages}
                           title="Generate image"
                           aria-label="Generate image"
-                          className="px-1! py-0! h-5 w-5 flex items-center justify-center"
+                          className={actionBarButtonClassName}
                         >
                           🖼️
                         </button>
@@ -770,7 +774,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                           onClick={() => redoMessage(entryId)}
                           title="Retry message"
                           aria-label="Retry message"
-                          className="px-1! py-0! h-5 w-5 flex items-center justify-center"
+                          className={actionBarButtonClassName}
                         >
                           ↻
                         </button>
@@ -786,7 +790,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                           }}
                           title="Edit message"
                           aria-label="Edit message"
-                          className="px-1! py-0! h-5 w-5 flex items-center justify-center"
+                          className={actionBarButtonClassName}
                         >
                           ✎
                         </button>

@@ -14,8 +14,8 @@ import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store
 import { assertNonNullish } from '../../errors/application_error.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
 import { useQueryParams } from '../../util/queryParams.js';
-import { getRequiredRandomChoice } from '../../util/array.js';
 import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
+import CharacterLocationSelect from '../CharacterLocationSelect.js';
 
 type CharacterOverviewSingleDataProps = {
   selectedSingleCharacter: Character;
@@ -30,7 +30,6 @@ export default function CharacterOverviewSingleData({
 }: CharacterOverviewSingleDataProps) {
   const scenario = useScenarioStore((state) => state.activeScenario);
   const activeMap = useScenarioStore((state) => state.activeScenarioMap);
-  const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const characters = useScenarioCharacterStore((state) => state.scenarioCharacters);
   const saveScenarioCharacterFields = useScenarioCharacterStore((state) => state.saveScenarioCharacterFields);
   const setUserCharacter = useScenarioStore((state) => state.setUserCharacter);
@@ -58,14 +57,6 @@ export default function CharacterOverviewSingleData({
     [selectedSingleCharacter.groupIds, groups]
   );
 
-  const sortedLocations = useMemo(() => {
-    if (activeMap) {
-      return [...activeMap.locations].sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    return [];
-  }, [activeMap?.locations]);
-
   const otherCharactersArr = useMemo(
     () => characters.filter((c) => c.id !== selectedSingleCharacter.id),
     [selectedSingleCharacter]
@@ -87,12 +78,6 @@ export default function CharacterOverviewSingleData({
   if (!selectedSingleCharacter) {
     return undefined;
   }
-
-  const setCharacterLocation = (characterId: string, locationId: string) => {
-    saveScenarioCharacterFields(characterId, {
-      locationId: locationId.trim(),
-    });
-  };
 
   return (
     <div className="space-y-3">
@@ -157,32 +142,7 @@ export default function CharacterOverviewSingleData({
         </button>
         <label className="flex flex-col items-center gap-2 text-sm">
           <span>Location</span>
-          <select
-            value={charactersById[selectedSingleCharacter.id]?.locationId || ''}
-            disabled={isCharacterSyncing}
-            onChange={(event) => {
-              const locationId =
-                event.target.value === 'random'
-                  ? getRequiredRandomChoice(
-                      sortedLocations.filter(
-                        (l) => l.id !== charactersById[selectedSingleCharacter.id]?.locationId
-                      )
-                    ).id
-                  : event.target.value;
-
-              setCharacterLocation(selectedSingleCharacter.id, locationId);
-            }}
-            className="border rounded-sm px-2 py-1 bg-inset"
-          >
-            {sortedLocations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.name}
-              </option>
-            ))}
-            <option key="random" value="random">
-              Random Location
-            </option>
-          </select>
+          <CharacterLocationSelect characterId={selectedSingleCharacter.id} />
         </label>
         <label className="flex flex-col items-center gap-2 text-sm">
           {!isUser && (

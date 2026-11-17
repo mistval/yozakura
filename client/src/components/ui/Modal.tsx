@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useMemo, useRef } from 'react';
+import { useIsMobileLayout } from '../../hooks/use_mobile_layout.js';
 
 type ModalScrollApi = {
   scrollToTop: (behavior?: ScrollBehavior) => void;
@@ -21,6 +22,7 @@ interface ModalProps {
   contentRef?: React.Ref<HTMLDivElement | undefined> | undefined;
   closeOnBackdropClick?: boolean;
   zIndex?: number | undefined;
+  fullScreenOnMobile?: boolean | undefined;
 }
 
 export default function Modal({
@@ -31,7 +33,10 @@ export default function Modal({
   contentRef,
   closeOnBackdropClick = true,
   zIndex,
+  fullScreenOnMobile = true,
 }: ModalProps) {
+  const isMobileLayout = useIsMobileLayout();
+  const isFullScreenMobile = isMobileLayout && fullScreenOnMobile;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mouseDownOutside = useRef<boolean>(false);
 
@@ -95,13 +100,17 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-overlay mt-0! mb-0"
+      className={`fixed inset-0 z-50 mt-0! mb-0 ${isFullScreenMobile ? 'bg-emphasized' : 'bg-overlay'}`}
       style={zIndex !== undefined ? { zIndex } : undefined}
     >
       <ModalScrollContext.Provider value={scrollApi}>
         <div
           ref={setContainerRef}
-          className={`h-full overflow-y-auto ${className}`}
+          className={
+            isFullScreenMobile
+              ? 'h-full overflow-y-auto [&>*]:max-w-none! [&>*]:my-0! [&>*]:rounded-none! [&>*]:border-0! [&>*]:shadow-none!'
+              : `h-full overflow-y-auto ${className}`
+          }
           onClick={handleOutsideClick}
           onMouseDown={handleMouseDown}
         >

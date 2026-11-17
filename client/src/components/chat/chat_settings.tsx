@@ -1,4 +1,4 @@
-import Modal from '../ui/Modal.js';
+import RoutedModalFrame from '../ui/RoutedModalFrame.js';
 import SettingFieldLabel from '../settings/ui/SettingFieldLabel.js';
 import { settingsTooltips } from '../settings/settings_tooltips.js';
 import { useSettingsStore } from '../../state/settings_store.js';
@@ -37,126 +37,117 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
   }
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="bg-emphasized rounded-sm p-4 space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Chat Settings</h3>
-            <button type="button" onClick={onClose}>
-              Close
-            </button>
-          </div>
+    <RoutedModalFrame open={open} onClose={onClose} maxWidthClassName="max-w-2xl">
+      <h3 className="text-lg font-semibold">Chat Settings</h3>
 
-          <div className="space-y-2">
-            <SettingFieldLabel
-              text="Next Speaker Selection Mode"
-              htmlFor="chat-next-speaker-selection-mode"
-              tooltipHtml={settingsTooltips['speakerSelectionMode']}
-            />
-            <select
-              id="chat-next-speaker-selection-mode"
-              value={speakerSelectionMode}
-              onChange={(event) => updateSpeakerSelectionMode(event.target.value as SpeakerSelectionMode)}
-              className="rounded-input bg-inset"
-            >
-              <option value="round_robin">Round Robin</option>
-              <option value="intelligent">Intelligent</option>
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <SettingFieldLabel
-              text="Layout"
-              htmlFor="chat-pane-width"
-              tooltipHtml={settingsTooltips['chat.paneWidth']}
-            />
-            <select
-              id="chat-pane-width"
-              value={chatPaneWidth}
-              onChange={(event) => updateChatPaneWidth(event.target.value as ChatPaneWidth)}
-              className="rounded-input bg-inset"
-            >
-              <option value="mobile">Mobile</option>
-              <option value="narrow">Desktop Narrow</option>
-              <option value="medium">Desktop Medium</option>
-              <option value="wide">Desktop Wide</option>
-              <option value="extra_wide">Desktop Extra Wide</option>
-              <option value="unconstrained">Desktop Limit Breaker</option>
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <SettingFieldLabel
-              text="Chat instructions"
-              htmlFor="chat-instructions"
-              tooltipHtml="Anything you enter here will be included in the system prompt for all characters in this chat. Use it to steer the whole conversation (e.g. tone, topic, or scenario constraints). Applies only to this chat."
-            />
-            <textarea
-              id="chat-instructions"
-              value={chatInstructions}
-              onChange={(event) => ChatCoordinator.setChatInstructions(event.target.value)}
-              rows={4}
-              className="w-full border rounded-sm p-2 bg-inset"
-              placeholder="Instructions for every character in this chat"
-            />
-          </div>
-
-          <label className="block space-y-2">
-            <SettingFieldLabel
-              text="Location Name"
-              htmlFor="chat-location-name"
-              tooltipHtml="Override the location name used in prompts for this chat. If characters are in different locations, changing this (or description) will cause them all to consider themselves to be in the updated location."
-            />
-            <input
-              id="chat-location-name"
-              value={initiatorLocation.name}
-              onChange={(event: ChangeEvent<HTMLInputElement, HTMLInputElement>) => {
-                ChatCoordinator.setEphemeralLocation((prevLocation) => ({
-                  ...prevLocation,
-                  name: event.target.value,
-                }));
-              }}
-              className="w-full border rounded-sm p-2 bg-inset"
-              placeholder="Name this location"
-            />
-          </label>
-
-          <label className="block space-y-2">
-            <SettingFieldLabel
-              text="Location Description"
-              htmlFor="chat-location-description"
-              tooltipHtml="Override the location description used in prompts for this chat."
-            />
-            <textarea
-              id="chat-location-description"
-              value={initiatorLocation.description}
-              onChange={(event) => {
-                ChatCoordinator.setEphemeralLocation((prevLocation) => ({
-                  ...prevLocation,
-                  description: event.target.value,
-                }));
-              }}
-              rows={5}
-              className="w-full border rounded-sm p-2 bg-inset"
-              placeholder="Describe the location for scene image prompts"
-            />
-          </label>
-
-          <label className="gap-3">
-            <button
-              onClick={() => submitChatRequestEnd({ forceNoEffect: true })}
-              disabled={!canEndChat}
-              className="mr-3"
-            >
-              End chat without memories
-            </button>
-            <InfoTooltip
-              label="End chat immediately"
-              html="End the chat immediately without generating memory updates or saving the conversation log."
-            />
-          </label>
-        </div>
+      <div className="space-y-2">
+        <SettingFieldLabel
+          text="Next Speaker Selection Mode"
+          htmlFor="chat-next-speaker-selection-mode"
+          tooltipHtml={settingsTooltips['speakerSelectionMode']}
+        />
+        <select
+          id="chat-next-speaker-selection-mode"
+          value={speakerSelectionMode}
+          onChange={(event) => updateSpeakerSelectionMode(event.target.value as SpeakerSelectionMode)}
+          className="rounded-input bg-inset"
+        >
+          <option value="round_robin">Round Robin</option>
+          <option value="intelligent">Intelligent</option>
+        </select>
       </div>
-    </Modal>
+
+      <div className="space-y-2">
+        <SettingFieldLabel
+          text="Layout"
+          htmlFor="chat-pane-width"
+          tooltipHtml={settingsTooltips['chat.paneWidth']}
+        />
+        <select
+          id="chat-pane-width"
+          value={chatPaneWidth}
+          onChange={(event) => updateChatPaneWidth(event.target.value as ChatPaneWidth)}
+          className="rounded-input bg-inset"
+        >
+          <option value="mobile">Mobile</option>
+          <option value="narrow">Desktop Narrow</option>
+          <option value="medium">Desktop Medium</option>
+          <option value="wide">Desktop Wide</option>
+          <option value="extra_wide">Desktop Extra Wide</option>
+          <option value="unconstrained">Desktop Limit Breaker</option>
+        </select>
+      </div>
+
+      <div className="space-y-2">
+        <SettingFieldLabel
+          text="Chat instructions"
+          htmlFor="chat-instructions"
+          tooltipHtml="Anything you enter here will be included in the system prompt for all characters in this chat. Use it to steer the whole conversation (e.g. tone, topic, or scenario constraints). Applies only to this chat."
+        />
+        <textarea
+          id="chat-instructions"
+          value={chatInstructions}
+          onChange={(event) => ChatCoordinator.setChatInstructions(event.target.value)}
+          rows={4}
+          className="w-full border rounded-sm p-2 bg-inset"
+          placeholder="Instructions for every character in this chat"
+        />
+      </div>
+
+      <label className="block space-y-2">
+        <SettingFieldLabel
+          text="Location Name"
+          htmlFor="chat-location-name"
+          tooltipHtml="Override the location name used in prompts for this chat. If characters are in different locations, changing this (or description) will cause them all to consider themselves to be in the updated location."
+        />
+        <input
+          id="chat-location-name"
+          value={initiatorLocation.name}
+          onChange={(event: ChangeEvent<HTMLInputElement, HTMLInputElement>) => {
+            ChatCoordinator.setEphemeralLocation((prevLocation) => ({
+              ...prevLocation,
+              name: event.target.value,
+            }));
+          }}
+          className="w-full border rounded-sm p-2 bg-inset"
+          placeholder="Name this location"
+        />
+      </label>
+
+      <label className="block space-y-2">
+        <SettingFieldLabel
+          text="Location Description"
+          htmlFor="chat-location-description"
+          tooltipHtml="Override the location description used in prompts for this chat."
+        />
+        <textarea
+          id="chat-location-description"
+          value={initiatorLocation.description}
+          onChange={(event) => {
+            ChatCoordinator.setEphemeralLocation((prevLocation) => ({
+              ...prevLocation,
+              description: event.target.value,
+            }));
+          }}
+          rows={5}
+          className="w-full border rounded-sm p-2 bg-inset"
+          placeholder="Describe the location for scene image prompts"
+        />
+      </label>
+
+      <label className="gap-3">
+        <button
+          onClick={() => submitChatRequestEnd({ forceNoEffect: true })}
+          disabled={!canEndChat}
+          className="mr-3"
+        >
+          End chat without memories
+        </button>
+        <InfoTooltip
+          label="End chat immediately"
+          html="End the chat immediately without generating memory updates or saving the conversation log."
+        />
+      </label>
+    </RoutedModalFrame>
   );
 }

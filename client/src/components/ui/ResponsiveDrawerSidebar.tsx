@@ -1,10 +1,10 @@
 import { useEffect, type ReactNode } from 'react';
 import { useModalQueryParam } from '../../hooks/useModalQueryParam.js';
-import { useSettingsStore } from '../../state/settings_store.js';
+import { useIsMobileLayout } from '../../hooks/use_mobile_layout.js';
 import RoutedModalFrame from './RoutedModalFrame.js';
 
 export function useMobileDrawer(queryParam: string, enabled = true) {
-  const isMobileLayout = useSettingsStore((s) => s.chatPaneWidth === 'mobile');
+  const isMobileLayout = useIsMobileLayout();
   const { open, openModal, closeModal } = useModalQueryParam(queryParam);
 
   useEffect(() => {
