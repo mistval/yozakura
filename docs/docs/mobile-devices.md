@@ -28,37 +28,15 @@ Termux lets you run Yozakura directly on Android without a separate computer.
 The Google Play Store version of Termux is outdated and unmaintained, which causes package installation failures. Download Termux from **[F-Droid](https://f-droid.org/packages/com.termux/)** or the **[Termux GitHub Releases](https://github.com/termux/termux-app/releases)** page instead.
 :::
 
-### 2. Install dependencies, clone, and start Yozakura
+### 2. Install and start Yozakura
 
-Open Termux and paste the following commands:
+Open Termux and run:
 
 ```bash
-pkg update
-pkg upgrade -y
-pkg install -y git nodejs-lts python3 make clang binutils sqlite
-git clone -b mistval_dev https://github.com/mistval/yozakura.git
-
-cat <<'EOF' > start_yozakura.sh
-#!/bin/bash
-
-set -e
-set -x
-
-cd yozakura
-git pull
-npm remove electron @electron-forge/cli @electron-forge/maker-zip @electron-forge/plugin-auto-unpack-natives
-npm install
-GYP_DEFINES="android_ndk_path=''" npm --prefix server install
-npm run install:all
-npm run build:web
-PORT=4396 npm run start --prefix server
-EOF
-
-chmod +x start_yozakura.sh
-./start_yozakura.sh
+curl -fsSL https://raw.githubusercontent.com/mistval/yozakura/main/scripts/install_termux.sh | bash
 ```
 
-After running this, Termux will work for a short time (usually under a minute) and then pause with `~ $ ./start_yozakura.sh` at the bottom. **Press Enter** to continue. It will keep building and installing for roughly 5 minutes.
+This installs the required Termux packages, clones Yozakura into `~/yozakura`, creates `~/start_yozakura.sh`, builds the app, and starts the server. First-time setup takes roughly 5 minutes.
 
 When you see `Server listening on port 4396`, Yozakura is ready. Open your phone's browser and go to:
 
