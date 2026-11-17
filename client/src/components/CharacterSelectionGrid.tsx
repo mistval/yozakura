@@ -139,13 +139,15 @@ export default function CharacterSelectionGrid({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-[repeat(2,minmax(0,210px))] sm:grid-cols-[repeat(auto-fill,minmax(180px,210px))] gap-2.5 sm:gap-3 items-start">
         {characters.map((character) => {
           const isUser = userCharacterId === character.id;
           return (
             <CharacterCard
               key={character.id}
               character={character}
+              className="w-full p-2 sm:p-3"
+              imageClassName="h-44 sm:h-52 object-cover object-top"
               selected={selectedCharacterIdsSet.has(character.id)}
               onClick={() => toggleSelected(character)}
             >

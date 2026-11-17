@@ -38,12 +38,12 @@ export default function MainMenu() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
       <MainMenuFtueModal />
 
       {mainMenuFtueSeen && (
         <>
-          <YozakuraLogo className="mx-auto w-96" size={360} />
+          <YozakuraLogo className="mx-auto w-full max-w-96 h-auto" size={360} />
 
           <section className="space-y-3">
             <h2 className="text-xl font-semibold">Load</h2>

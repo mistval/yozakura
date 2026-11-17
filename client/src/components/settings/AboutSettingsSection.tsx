@@ -12,7 +12,7 @@ const LINKS = {
 export default function AboutSettingsSection() {
   return (
     <div className="flex flex-col items-center space-y-4 justify-center">
-      <YozakuraLogo className="w-96" />
+      <YozakuraLogo className="w-full max-w-96 h-auto" />
 
       <div className="bordered-section space-y-3 w-full flex flex-col items-center">
         <div className="text-sm text-secondary">
