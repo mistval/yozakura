@@ -59,7 +59,7 @@ export default function RoutedModalFrame({
         <div className={innerPanelClassName}>
           {(showClose || (showBack && onBack) || headerActions) && (
             <div
-              className={`sticky ${stickyBarPositionClassName} z-20 flex flex-wrap items-center justify-between gap-2`}
+              className={`sticky ${stickyBarPositionClassName} z-20 flex shrink-0 flex-wrap items-center justify-between gap-2`}
             >
               {headerActions && (
                 <div className="inline-flex flex-wrap gap-2 rounded-sm border border-border-default bg-surface-frosted p-1 shadow-xs backdrop-blur-sm">
