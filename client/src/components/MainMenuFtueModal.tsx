@@ -29,6 +29,9 @@ const FTUE_AUTH_TOKEN_TOOLTIP_HTML =
 const FTUE_MODEL_TOOLTIP_HTML =
   'If your API accepts a <code>model</code> field in request bodies to specify the model to use, you can set that model here.';
 
+const MOBILE_DEFAULT_COMPLETIONS_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const MOBILE_DEFAULT_MODEL = 'deepseek/deepseek-v4.1-flash-1017';
+
 export default function MainMenuFtueModal() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -70,8 +73,23 @@ export default function MainMenuFtueModal() {
       return;
     }
 
-    const defaultLayout: ChatPaneWidth = window.innerWidth < 768 ? 'mobile' : 'medium';
-    setSettings({ chatPaneWidth: defaultLayout });
+    const isMobile = window.innerWidth < 768;
+    const defaultLayout: ChatPaneWidth = isMobile ? 'mobile' : 'medium';
+
+    if (!isMobile) {
+      setSettings({ chatPaneWidth: defaultLayout });
+      return;
+    }
+
+    setSettings((previous: Settings) => ({
+      chatPaneWidth: defaultLayout,
+      llmConfigs: updateLLMConfigsWithBaseDefaultsConnection(
+        previous.llmConfigs,
+        MOBILE_DEFAULT_COMPLETIONS_URL,
+        findBaseDefaultsLLMConfig(previous.llmConfigs)?.llmAuthToken ?? '',
+        MOBILE_DEFAULT_MODEL
+      ),
+    }));
   }, [open, setSettings]);
 
   const markFtueSeen = () => {

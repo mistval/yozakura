@@ -119,21 +119,21 @@ function MapModalInner() {
             className={view === 'characters' ? 'button-emphasized' : ''}
             onClick={() => setView('characters')}
           >
-            Locations
+            Location
           </button>
           <button
             type="button"
             className={view === 'zones' ? 'button-emphasized' : ''}
             onClick={() => setView('zones')}
           >
-            Zones
+            Zone
           </button>
           <button
             type="button"
             className={view === 'log' ? 'button-emphasized' : ''}
             onClick={() => setView('log')}
           >
-            Movements
+            Movement
           </button>
         </>
       }
