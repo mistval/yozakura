@@ -6,6 +6,7 @@ export const settingsTooltips = {
     'Change the map description, just for this scenario. Your global map will remain unchanged. You can use this to influence narrative directionality too, for example by adding "it\'s Winter now and everyone is trying to find food."',
   'appearance.theme':
     'Select a theme. <strong>System</strong> chooses either Sakura or Yozakura based on your system light/dark setting.',
+  'appearance.conversationLogWidth': 'Controls the width of the conversation log dialog on desktop.',
   'image.promptPrefix': 'This text is prepended to all image generation prompts.',
   'image.apiUrl':
     'Image API endpoint URL. For AUTOMATIC1111, typically you should use the <code>/sdapi/v1/txt2img</code> endpoint. For OpenRouter (or similar), use the <code>/v1/chat/completions</code> endpoint.',

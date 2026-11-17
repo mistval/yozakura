@@ -2,7 +2,7 @@ import RoutedModalFrame from '../ui/RoutedModalFrame.js';
 import SettingFieldLabel from '../settings/ui/SettingFieldLabel.js';
 import { settingsTooltips } from '../settings/settings_tooltips.js';
 import { useSettingsStore } from '../../state/settings_store.js';
-import type { ChatPaneWidth, SpeakerSelectionMode } from '../../state/settings_store.js';
+import type { SpeakerSelectionMode } from '../../state/settings_store.js';
 import { useTurnMachineStore, useChatInitiatorLocation } from '../../state/turn_machine_store.js';
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
@@ -17,7 +17,6 @@ interface ChatSettingsProps {
 
 export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
   const speakerSelectionMode = useSettingsStore((s) => s.speakerSelectionMode);
-  const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
   const setSettings = useSettingsStore((s) => s.setSettings);
   const chatInstructions = useTurnMachineStore((s) => s.chatInstructions);
   const initiatorLocation = useChatInitiatorLocation();
@@ -26,10 +25,6 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
 
   const updateSpeakerSelectionMode = (nextMode: SpeakerSelectionMode) => {
     setSettings({ speakerSelectionMode: nextMode });
-  };
-
-  const updateChatPaneWidth = (nextWidth: ChatPaneWidth) => {
-    setSettings({ chatPaneWidth: nextWidth });
   };
 
   if (!initiatorLocation) {
@@ -54,27 +49,6 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
         >
           <option value="round_robin">Round Robin</option>
           <option value="intelligent">Intelligent</option>
-        </select>
-      </div>
-
-      <div className="space-y-2">
-        <SettingFieldLabel
-          text="Layout"
-          htmlFor="chat-pane-width"
-          tooltipHtml={settingsTooltips['chat.paneWidth']}
-        />
-        <select
-          id="chat-pane-width"
-          value={chatPaneWidth}
-          onChange={(event) => updateChatPaneWidth(event.target.value as ChatPaneWidth)}
-          className="rounded-input bg-inset"
-        >
-          <option value="mobile">Mobile</option>
-          <option value="narrow">Desktop Narrow</option>
-          <option value="medium">Desktop Medium</option>
-          <option value="wide">Desktop Wide</option>
-          <option value="extra_wide">Desktop Extra Wide</option>
-          <option value="unconstrained">Desktop Limit Breaker</option>
         </select>
       </div>
 

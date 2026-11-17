@@ -1,6 +1,5 @@
 import { SpoilerSection } from '../ui/SpoilerSection.js';
 import type { StoredConversation, ConversationStateUpdateNode } from '../../engine/types.js';
-import { useSettingsStore, type ConversationLogWidth } from '../../state/settings_store.js';
 import { ConversationTranscript } from '../../engine/chat/transcript.js';
 import { useMemo } from 'react';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
@@ -11,14 +10,6 @@ import ResponsiveDrawerSidebar, {
   ParticipantsDrawerButton,
   useMobileDrawer,
 } from '../ui/ResponsiveDrawerSidebar.js';
-
-const CHAT_PANE_WIDTH_OPTIONS: Array<{ value: ConversationLogWidth; label: string }> = [
-  { value: 'narrow', label: 'Narrow' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'wide', label: 'Wide' },
-  { value: 'extra_wide', label: 'Extra Wide' },
-  { value: 'unconstrained', label: 'Limit Breaker' },
-];
 
 type ConversationLogViewProps = {
   userId: string;
@@ -75,11 +66,9 @@ function StateUpdateNodeView({ node, pathKey }: { node: ConversationStateUpdateN
 }
 
 export default function ConversationLogView({ userId, selectedEntry, onBack }: ConversationLogViewProps) {
-  const conversationLogWidth = useSettingsStore((s) => s.conversationLogWidth);
   const { showCharacterOverview } = useCharacterOverview();
   const { closeConversationLog } = useConversationLog();
   const charactersById = useScenarioCharacterStore((s) => s.scenarioCharactersById);
-  const setSettings = useSettingsStore((s) => s.setSettings);
   const {
     isMobileLayout,
     openDrawer: openParticipantsDrawer,
@@ -87,10 +76,6 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
   } = useMobileDrawer('cl_participants');
 
   if (!selectedEntry) return undefined;
-
-  const updateConversationLogWidth = (nextWidth: ConversationLogWidth) => {
-    setSettings({ conversationLogWidth: nextWidth });
-  };
 
   const transcript = useMemo(() => {
     return ConversationTranscript.deserialize(selectedEntry.serializedTranscript);
@@ -151,21 +136,6 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
           View Relationship
         </button>
       )}
-
-      <label className="block space-y-1 text-sm">
-        <div className="font-medium">Conversation Width</div>
-        <select
-          value={conversationLogWidth}
-          onChange={(event) => updateConversationLogWidth(event.target.value as ConversationLogWidth)}
-          className="w-full rounded-input bg-inset"
-        >
-          {CHAT_PANE_WIDTH_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
     </div>
   );
 

@@ -9,7 +9,7 @@ keywords:
   - tailscale
 ---
 
-Yozakura works on mobile browsers and automatically selects the mobile layout during first-time setup on narrow screens (you can also switch between Mobile and Desktop layouts anytime under **Chat Settings → Layout**).
+Yozakura works on mobile browsers and automatically selects the mobile layout during first-time setup on narrow screens (you can also switch between Mobile and Desktop layouts anytime under [Appearance Settings → Layout](yozakura://?settings=true&settingspath=appearance)).
 
 There are two main ways to run Yozakura on mobile:
 
