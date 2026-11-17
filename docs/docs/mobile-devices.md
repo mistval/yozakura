@@ -99,12 +99,10 @@ Verify Yozakura is running on your computer at `http://localhost:4396`.
 http://<your-computer-tailscale-ip>:4396
 ```
 
-:::info Is Tailscale secure (even with an `http://` address)?
-Yes—even though the URL starts with `http://`, Tailscale encrypts all traffic directly between your devices and keeps Yozakura off the public internet, so Wi-Fi networks, cell carriers, and outsiders cannot read your chats. Tailscale is widely trusted to keep traffic private, though you do need to place some level of trust in Tailscale's servers. If that concerns you, look into the self-hosted options below.
-:::
+**Q:** Is Tailscale secure (even with an `http://` address)?
+**A:** Yes, even though the URL starts with `http://`, Tailscale encrypts all traffic directly between your devices and keeps Yozakura off the public internet, so Wi-Fi networks, cell carriers, and outsiders cannot read your chats. Tailscale is widely trusted to keep traffic private, though you do need to place some level of trust in Tailscale's servers. If that concerns you, look into the self-hosted options below.
 
-:::tip Other private options (Same Wi-Fi, WireGuard, or Headscale)
+### Other private options (Same Wi-Fi, WireGuard, or Headscale)
 
 - **Same Wi-Fi only:** If you only play on your home Wi-Fi, you don't need Tailscale—open `http://<your-computer-local-ip>:4396` directly (you may need to allow port `4396` in your firewall).
 - **Zero third-party servers:** If you don't want to rely on Tailscale's servers at all, look into setting up **WireGuard** directly or self-hosting **Headscale** (an open-source alternative to Tailscale's coordination server). Both require more manual networking setup and are beyond the scope of this guide.
-  :::
