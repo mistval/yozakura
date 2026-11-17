@@ -217,9 +217,6 @@ export default function ConversationSearchList({
                         scenarioCharactersById={scenarioCharactersById}
                       />
                     </div>
-                    <span className="text-xs text-muted shrink-0 ml-2">
-                      {new Date(entry.createdAt).toLocaleString()}
-                    </span>
                   </button>
                 ))}
               </div>
@@ -246,9 +243,6 @@ export default function ConversationSearchList({
                   scenarioCharactersById={scenarioCharactersById}
                 />
               </div>
-              <span className="text-xs text-muted shrink-0 ml-2">
-                {new Date(entry.createdAt).toLocaleString()}
-              </span>
             </button>
           ))}
         </div>
