@@ -68,7 +68,7 @@ export default function MapEditor() {
   };
 
   return (
-    <div className="p-6 px-16 space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold">Edit Map</h1>
         <div className="flex gap-2">

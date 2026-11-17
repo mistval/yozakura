@@ -30,7 +30,6 @@ export default function CharacterList() {
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="flex justify-between mb-4">
-        <h1 className="text-2xl font-semibold">Characters</h1>
         <div className="flex gap-2">
           <button type="button" onClick={() => navigate('/')}>
             Back
