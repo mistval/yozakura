@@ -935,6 +935,60 @@
   --app-success-border-strong: #5eb585;
 }
 
+.ember {
+  --app-background: #120b08;
+  --app-emphasized: #1c110c;
+  --app-inset: #150d09;
+  --app-surface-soft: rgb(28 17 12 / 0.94);
+  --app-surface-frosted: rgb(18 11 8 / 0.93);
+  --app-surface-subtle: #241610;
+  --app-surface-subtle-soft: rgb(36 22 16 / 0.8);
+  --app-surface-hover: rgb(62 34 21 / 0.5);
+  --app-surface-hover-strong: #352016;
+  --app-surface-hover-soft: #21130d;
+
+  --app-text-primary: #fde6cc;
+  --app-text-secondary: #eab88c;
+  --app-text-secondary-strong: #f4caa0;
+  --app-text-muted: #c9946b;
+  --app-text-muted-soft: #8e6144;
+  --app-text-on-accent: #1a0d06;
+
+  --app-border-default: #492a1b;
+  --app-border-strong: #5c3623;
+  --app-border-muted: #6e422b;
+  --app-border-accent: #d97a38;
+  --app-border-accent-hover: #f0954d;
+
+  --app-overlay: rgb(10 5 3 / 0.72);
+  --app-focus-ring: #f29d52;
+
+  --app-danger-bg: rgb(88 22 18 / 0.45);
+  --app-danger-text: #f9b6ad;
+  --app-danger-border: #a84238;
+  --app-danger-border-accent: #d4594c;
+  --app-danger-solid: #bd483b;
+  --app-danger-solid-hover: #d4594c;
+  --app-danger-border-strong: #b64a3e;
+
+  --app-warning-bg: rgb(94 56 16 / 0.45);
+  --app-warning-text: #fce2a6;
+  --app-warning-text-strong: #f6cd77;
+  --app-warning-border: #bd7c2e;
+  --app-warning-border-soft: #d4923e;
+
+  --app-success-bg: rgb(42 64 32 / 0.42);
+  --app-success-text: #cde5a8;
+  --app-success-border: #769c56;
+  --app-success-ring: #f59e42;
+  --app-success-solid: #7d9e56;
+  --app-success-solid-hover: #8fb465;
+  --app-success-border-strong: #769c56;
+
+  --app-button-emphasized-bg: #e07b39;
+  --app-button-emphasized-text: #160a04;
+}
+
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
@@ -1082,6 +1136,14 @@
   filter: brightness(0.86) saturate(0.88) contrast(1.08);
   -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.96));
   mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.96));
+}
+
+.ember-svg {
+  position: absolute;
+  transform: translate(0%, -100%);
+  width: 100vw;
+  height: 100vh;
+  opacity: 0.78;
 }
 
 .center-pulse-anim {

@@ -12,6 +12,7 @@ import TempestBackground from '../theme/tempest.js';
 import WinnipesaukeeBackground from '../theme/winnipesaukee.js';
 import YozakuraBackground from '../theme/yozakura.js';
 import MpkBackground from '../theme/mpk.js';
+import EmberBackground from '../theme/ember.js';
 
 type ResolvedTheme = Exclude<Settings['theme'], 'system'>;
 type ThemeSetting = Settings['theme'];
@@ -35,6 +36,7 @@ export const THEMES: ReadonlyArray<{
   { theme: 'mercurial', classes: ['dark', 'mercurial'], svg: <LunarBackground /> },
   { theme: 'agape', classes: ['light', 'agape'], svg: <AgapeBackground /> },
   { theme: 'mpk', classes: ['dark', 'mpk'], svg: <MpkBackground /> },
+  { theme: 'ember', classes: ['dark', 'ember'], svg: <EmberBackground /> },
   { theme: 'light', classes: ['light'] },
   { theme: 'dark', classes: ['dark'] },
   { theme: 'black', classes: ['dark', 'black'] },

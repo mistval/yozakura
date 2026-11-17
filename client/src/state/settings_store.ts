@@ -99,6 +99,7 @@ export const settingsSchema = z.object({
     'yozakura',
     'mpk',
     'mercurial',
+    'ember',
   ]),
   mainMenuFtueSeen: z.boolean(),
   templateGroupData: templateGroupDataSchema,

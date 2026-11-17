@@ -61,6 +61,7 @@ export const GRAPH_THEMES = {
   yozakura: makeTheme('#0d101a', '#b96b95', '#5f9b73', '#ffd8e6', '#43304b', '#59405d'),
   mercurial: makeTheme('#151107', '#a07a3e', '#8da66e', '#f5e7c1', '#5a4727', '#6b562f'),
   mpk: makeTheme('#040805', '#5da97f', '#d7ffe3', '#d7ffe3', '#244734', '#2f6046'),
+  ember: makeTheme('#120b08', '#d97a38', '#f59e42', '#fde6cc', '#492a1b', '#5c3623'),
 };
 
 export function useGraphTheme(): Theme {
