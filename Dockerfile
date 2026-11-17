@@ -14,7 +14,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY server/package*.json ./server/
-RUN npm ci --prefix server
+RUN npm ci --prefix server --ignore-scripts
 
 COPY server/index.ts server/tsconfig.json ./server/
 COPY server/src ./server/src
