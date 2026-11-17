@@ -3,9 +3,10 @@ import type { StoredConversation, ConversationStateUpdateNode } from '../../engi
 import { useSettingsStore, type ConversationLogWidth } from '../../state/settings_store.js';
 import { ConversationTranscript } from '../../engine/chat/transcript.js';
 import { useMemo } from 'react';
-import Markdown from 'react-markdown';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
 import { useConversationLog } from './ConversationLogContext.js';
+import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
+import TranscriptMessageContent from '../chat/TranscriptMessageContent.js';
 import ResponsiveDrawerSidebar, {
   ParticipantsDrawerButton,
   useMobileDrawer,
@@ -77,6 +78,7 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
   const conversationLogWidth = useSettingsStore((s) => s.conversationLogWidth);
   const { showCharacterOverview } = useCharacterOverview();
   const { closeConversationLog } = useConversationLog();
+  const charactersById = useScenarioCharacterStore((s) => s.scenarioCharactersById);
   const setSettings = useSettingsStore((s) => s.setSettings);
   const {
     isMobileLayout,
@@ -93,6 +95,14 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
   const transcript = useMemo(() => {
     return ConversationTranscript.deserialize(selectedEntry.serializedTranscript);
   }, [selectedEntry.serializedTranscript]);
+
+  const participantById = useMemo(
+    () =>
+      Object.fromEntries(
+        selectedEntry.serializedTranscript.participants.map((participant) => [participant.id, participant])
+      ),
+    [selectedEntry.serializedTranscript.participants]
+  );
 
   const sidebarContent = (
     <div className="space-y-3">
@@ -184,18 +194,24 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
         >
           {sidebarContent}
         </ResponsiveDrawerSidebar>
-        <div className="border rounded-sm p-3 overflow-y-auto space-y-2 flex-1 min-h-0">
+        <div className="border rounded-sm p-3 overflow-y-auto space-y-3 flex-1 min-h-0">
           {transcript.getVisibleMessages(userId).map((message) => {
-            const isUserMessage = message.isSentByCharacter(userId);
+            const isCharacterMessage = message.isCharacterChatMessage();
+            const senderId = isCharacterMessage ? message.asCharacterChatMessage().senderId : undefined;
+            const avatarImagePath = senderId
+              ? (participantById[senderId]?.imagePath ?? charactersById[senderId]?.imagePath)
+              : undefined;
+
             return (
-              <div key={`${message.getId()}`} className={isUserMessage ? 'text-right' : ''}>
-                {message.isImageMessage() ? (
-                  <img src={message.imageUrl()} alt="Generated" className="rounded-sm border inline-block" />
-                ) : (
-                  <>
-                    <strong>{message.getSpeakerName()}:</strong> <Markdown>{message.getContent()}</Markdown>
-                  </>
-                )}
+              <div key={message.getId()} className="flow-root text-left px-1 py-0.5">
+                <TranscriptMessageContent
+                  isImageMessage={message.isImageMessage()}
+                  isCharacterMessage={isCharacterMessage && Boolean(senderId)}
+                  imageUrl={message.isImageMessage() ? message.imageUrl() : undefined}
+                  speakerName={message.getSpeakerName()}
+                  content={message.getContent()}
+                  avatarImagePath={avatarImagePath}
+                />
               </div>
             );
           })}

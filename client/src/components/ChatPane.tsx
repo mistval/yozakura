@@ -1,4 +1,3 @@
-import Markdown from 'react-markdown';
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useSettingsStore } from '../state/settings_store.js';
 import { assertNonNullish } from '../errors/application_error.js';
@@ -24,7 +23,7 @@ import {
   useIsChatFinalizing,
 } from '../state/chat_state.js';
 import ChatTopBarStatus from './chat/ChatTopBarStatus.js';
-import CharacterAvatar from './CharacterAvatar.js';
+import TranscriptMessageContent from './chat/TranscriptMessageContent.js';
 import ResponsiveDrawerSidebar, {
   ParticipantsDrawerButton,
   useMobileDrawer,
@@ -659,13 +658,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                   }}
                   className="relative group flow-root text-left rounded-sm px-1 py-0.5"
                 >
-                  {entry.isImageMessage() ? (
-                    <img
-                      src={entry.imageUrl()}
-                      alt="Generated"
-                      className="rounded-sm border inline-block max-w-full"
-                    />
-                  ) : editingMessageId === entryId && isCharacterMessage ? (
+                  {editingMessageId === entryId && isCharacterMessage ? (
                     <div className="space-y-2">
                       <div>
                         <strong>{entry.getSpeakerName()}:</strong>
@@ -694,52 +687,47 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                         </button>
                       </div>
                     </div>
-                  ) : isCharacterMessage && senderId ? (
-                    <div className="flow-root">
-                      <button
-                        type="button"
-                        onPointerDown={(event) =>
-                          handleAvatarPointerDown(event, senderId, canLongPressAvatarToSpeak)
-                        }
-                        onPointerMove={handleAvatarPointerMove}
-                        onPointerUp={() => clearLongPress(avatarPressRef)}
-                        onPointerCancel={() => clearLongPress(avatarPressRef)}
-                        onContextMenu={(event) => event.preventDefault()}
-                        onClick={() => {
-                          if (suppressAvatarClickRef.current) {
-                            suppressAvatarClickRef.current = false;
-                            return;
-                          }
-                          setSettingsCharacterId(senderId);
-                        }}
-                        title={
-                          canLongPressAvatarToSpeak
-                            ? `Tap for ${entry.getSpeakerName()} settings, hold to speak`
-                            : `${entry.getSpeakerName()} settings`
-                        }
-                        aria-label={`${entry.getSpeakerName()} avatar`}
-                        className="float-left mr-2.5 mb-0.5 p-0! border-0! rounded-full! bg-transparent! shrink-0 select-none touch-manipulation"
-                      >
-                        <CharacterAvatar
-                          imagePath={senderCharacter?.imagePath}
-                          name={entry.getSpeakerName()}
-                          className="h-10 w-10 border-border-strong bg-surface-subtle"
-                        />
-                      </button>
-                      <div className="text-base leading-relaxed wrap-break-word">
-                        <strong>{entry.getSpeakerName()}: </strong>
-                        <div className="inline [&>p:first-child]:inline [&>p+p]:mt-2">
-                          <Markdown>{entry.getContent()}</Markdown>
-                        </div>
-                      </div>
-                    </div>
                   ) : (
-                    <div className="text-base leading-relaxed wrap-break-word">
-                      <strong>{entry.getSpeakerName()}: </strong>
-                      <div className="inline [&>p:first-child]:inline [&>p+p]:mt-2">
-                        <Markdown>{entry.getContent()}</Markdown>
-                      </div>
-                    </div>
+                    <TranscriptMessageContent
+                      isImageMessage={entry.isImageMessage()}
+                      isCharacterMessage={isCharacterMessage && Boolean(senderId)}
+                      imageUrl={entry.isImageMessage() ? entry.imageUrl() : undefined}
+                      speakerName={entry.getSpeakerName()}
+                      content={entry.getContent()}
+                      avatarImagePath={senderCharacter?.imagePath}
+                      renderAvatarWrapper={
+                        senderId
+                          ? (avatar) => (
+                              <button
+                                type="button"
+                                onPointerDown={(event) =>
+                                  handleAvatarPointerDown(event, senderId, canLongPressAvatarToSpeak)
+                                }
+                                onPointerMove={handleAvatarPointerMove}
+                                onPointerUp={() => clearLongPress(avatarPressRef)}
+                                onPointerCancel={() => clearLongPress(avatarPressRef)}
+                                onContextMenu={(event) => event.preventDefault()}
+                                onClick={() => {
+                                  if (suppressAvatarClickRef.current) {
+                                    suppressAvatarClickRef.current = false;
+                                    return;
+                                  }
+                                  setSettingsCharacterId(senderId);
+                                }}
+                                title={
+                                  canLongPressAvatarToSpeak
+                                    ? `Tap for ${entry.getSpeakerName()} settings, hold to speak`
+                                    : `${entry.getSpeakerName()} settings`
+                                }
+                                aria-label={`${entry.getSpeakerName()} avatar`}
+                                className="float-left mr-2.5 mb-0.5 p-0! border-0! rounded-full! bg-transparent! shrink-0 select-none touch-manipulation"
+                              >
+                                {avatar}
+                              </button>
+                            )
+                          : undefined
+                      }
+                    />
                   )}
 
                   {userCanInputChat && !editingMessageId && (
