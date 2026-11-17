@@ -72,7 +72,7 @@ You should see the Yozakura welcome screen (on mobile, it defaults to the Mobile
 
 - **Next time you launch**: Open Termux and run `./start_yozakura.sh`.
 - **Keep Termux from being killed in the background**: Android aggressively suspends background apps. Disable battery optimization for Termux in Android Settings and tap **Acquire wake lock** in Termux's notification shade while running chats.
-- **App-like shortcut**: In Chrome on Android, open the menu (`⋮`) and tap **Add to Home screen** while on `http://localhost:4396`.
+- **Full-screen app (PWA)**: In Chrome on Android, open the menu (`⋮`) on `http://localhost:4396` and tap **Add to Home screen** → **Install** (or **Install app**) to hide the browser address bar and tab strip. Updating Yozakura later via `./start_yozakura.sh` automatically updates the PWA—you do not need to delete and reinstall it.
 
 ---
 
@@ -101,6 +101,24 @@ http://<your-computer-tailscale-ip>:4396
 
 **Q:** Is Tailscale secure (even with an `http://` address)?
 **A:** Yes, even though the URL starts with `http://`, Tailscale encrypts all traffic directly between your devices and keeps Yozakura off the public internet, so Wi-Fi networks, cell carriers, and outsiders cannot read your chats. Tailscale is widely trusted to keep traffic private, though you do need to place some level of trust in Tailscale's servers. If that concerns you, look into the self-hosted options below.
+
+### 3. Install as a full-screen app (PWA, optional)
+
+Installing Yozakura as a Progressive Web App (PWA) hides the mobile browser's address bar and tab strip so you get the full screen for chat. On Android Chrome, full-screen PWA installation requires an `https://` address rather than `http://<tailscale-ip>:4396`:
+
+1. Open the **[Tailscale Admin Console → DNS](https://console.tailscale.com/admin/dns)** page, make sure **MagicDNS** is enabled, and click **Enable HTTPS** under **HTTPS Certificates**. (Tailscale notes that enabling HTTPS publishes your machine's `*.ts.net` name to Certificate Transparency logs, though only your Tailscale devices can actually connect to it.)
+2. On your computer, expose Yozakura over HTTPS on a non-443 port such as `4443` (avoiding common Windows/OS port `443` conflicts):
+
+```bash
+tailscale serve --bg --https=4443 http://localhost:4396
+```
+
+3. Run `tailscale serve status` to view your private `https://<machine>.<tailnet>.ts.net:4443` URL, and open it on your phone.
+4. Install it as an app from your phone's browser:
+   - **Android (Chrome):** Open the menu (`⋮`) and tap **Add to Home screen** → **Install** (or **Install app**).
+   - **iOS (Safari):** Tap **Share** → **Add to Home Screen**.
+
+Updating Yozakura on your computer later should **not** require deleting or reinstalling the app.
 
 ### Other private options (Same Wi-Fi, WireGuard, or Headscale)
 
