@@ -32,7 +32,7 @@ export default function CharacterAvatar({
           alt={name || 'Character'}
           draggable={false}
           onError={() => setImageError(true)}
-          className="h-full w-full object-cover object-top scale-200 origin-top pointer-events-none"
+          className="h-full w-full object-cover object-top scale-185 origin-[50%_30%] pointer-events-none"
         />
       ) : (
         <span

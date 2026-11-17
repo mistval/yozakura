@@ -24,8 +24,10 @@ Termux lets you run Yozakura directly on Android without a separate computer.
 
 ### 1. Install Termux
 
-:::warning Do not install Termux from Google Play
+:::warning[Do not install Termux from Google Play]
+
 The Google Play Store version of Termux is outdated and unmaintained, which causes package installation failures. Download Termux from **[F-Droid](https://f-droid.org/packages/com.termux/)** or the **[Termux GitHub Releases](https://github.com/termux/termux-app/releases)** page instead.
+
 :::
 
 ### 2. Install and start Yozakura
