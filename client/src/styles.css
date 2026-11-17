@@ -100,12 +100,12 @@
   --app-warning-border-soft: #fde68a;
 
   --app-success-bg: #ecfdf5;
-  --app-success-text: #16a34a;
+  --app-success-text: #15803d;
   --app-success-border: #059669;
   --app-success-ring: #22c55e;
-  --app-success-solid: #059669;
-  --app-success-solid-hover: #047857;
-  --app-success-border-strong: #059669;
+  --app-success-solid: #047857;
+  --app-success-solid-hover: #065f46;
+  --app-success-border-strong: #047857;
 }
 
 .dark {
@@ -150,7 +150,7 @@
   --app-warning-border-soft: #b45309;
 
   --app-success-bg: rgb(6 78 59 / 0.35);
-  --app-success-text: #16a34a;
+  --app-success-text: #34d399;
   --app-success-border: #10b981;
   --app-success-ring: #22c55e;
   --app-success-solid: #10b981;
@@ -409,10 +409,10 @@
   --app-success-bg: #dae5e1;
   --app-success-text: #3d6360;
   --app-success-border: #5f8782;
-  --app-success-ring: #000000;
-  --app-success-solid: #5f8782;
-  --app-success-solid-hover: #557b76;
-  --app-success-border-strong: #557d78;
+  --app-success-ring: #3d6360;
+  --app-success-solid: #436662;
+  --app-success-solid-hover: #385753;
+  --app-success-border-strong: #436662;
 }
 
 .oceanic {
@@ -430,7 +430,7 @@
   --app-text-primary: #223447;
   --app-text-secondary: #3d5469;
   --app-text-secondary-strong: #31475d;
-  --app-text-muted: #546b82;
+  --app-text-muted: #4b6278;
   --app-text-muted-soft: #74889c;
   --app-text-on-accent: #f3f8fc;
 
@@ -460,10 +460,10 @@
   --app-success-bg: #dceae7;
   --app-success-text: #366468;
   --app-success-border: #548992;
-  --app-success-ring: #0bda51;
-  --app-success-solid: #548992;
-  --app-success-solid-hover: #4a7b84;
-  --app-success-border-strong: #4e818a;
+  --app-success-ring: #2b8c7c;
+  --app-success-solid: #3f6e77;
+  --app-success-solid-hover: #355f68;
+  --app-success-border-strong: #3f6e77;
 }
 
 .littoral {
@@ -616,9 +616,9 @@
   --app-success-text: #1a6f49;
   --app-success-border: #2a9161;
   --app-success-ring: #2fa66d;
-  --app-success-solid: #2a9161;
-  --app-success-solid-hover: #22784f;
-  --app-success-border-strong: #248256;
+  --app-success-solid: #21784f;
+  --app-success-solid-hover: #1a6341;
+  --app-success-border-strong: #21784f;
 }
 
 .smokies {
@@ -636,7 +636,7 @@
   --app-text-primary: #4c3620;
   --app-text-secondary: #6f4f2f;
   --app-text-secondary-strong: #603f22;
-  --app-text-muted: #8e6b4b;
+  --app-text-muted: #735336;
   --app-text-muted-soft: #a98464;
   --app-text-on-accent: #fffdf8;
 
@@ -666,10 +666,10 @@
   --app-success-bg: #e7f3df;
   --app-success-text: #3f6d3f;
   --app-success-border: #66925d;
-  --app-success-ring: #ff782a;
-  --app-success-solid: #6e9e64;
-  --app-success-solid-hover: #628f58;
-  --app-success-border-strong: #5e8a54;
+  --app-success-ring: #c96124;
+  --app-success-solid: #4a7842;
+  --app-success-solid-hover: #3f6838;
+  --app-success-border-strong: #4a7842;
 }
 
 .sakura {
@@ -715,14 +715,14 @@
   --app-warning-border-soft: #edc7ab;
 
   --app-success-bg: #edf7ee;
-  --app-success-text: #4d835f;
+  --app-success-text: #3d704f;
   --app-success-border: #69a579;
-  --app-success-ring: #ff00ff;
+  --app-success-ring: #c83e87;
   --app-success-solid: #69a579;
   --app-success-solid-hover: #5b956c;
   --app-success-border-strong: #679c76;
 
-  --app-button-emphasized-bg: var(--app-border-accent);
+  --app-button-emphasized-bg: #a84e79;
 }
 
 .agape {
@@ -815,7 +815,7 @@
   --app-danger-solid-hover: #cc7394;
   --app-danger-border-strong: #b05d7f;
 
-  --app-warning-bg: rgb(106 85 62 / 0.9);
+  --app-warning-bg: rgb(92 66 36 / 0.48);
   --app-warning-text: #ffd8e6;
   --app-warning-text-strong: #e4b580;
   --app-warning-border: #aa7d45;
@@ -824,7 +824,7 @@
   --app-success-bg: rgb(22 56 46 / 0.42);
   --app-success-text: #b4d8be;
   --app-success-border: #5f9b73;
-  --app-success-ring: #cf10c0;
+  --app-success-ring: #c9449c;
   --app-success-solid: #5f9b73;
   --app-success-solid-hover: #4f8a66;
   --app-success-border-strong: #5c9070;
