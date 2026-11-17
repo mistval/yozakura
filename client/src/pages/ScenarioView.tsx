@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import CharacterCard from '../components/CharacterCard';
 import ChatPane from '../components/ChatPane';
@@ -86,6 +86,9 @@ export default function ScenarioView() {
   const canReturnToMainMenu = useUserCanInputChat() || !hasActiveChatSession;
   const previousUserIdRef = useRef<string | null>(null);
   const visibleRelationships = useCachedCharacterRelationships();
+  const [mobileViewportRect, setMobileViewportRect] = useState<{ top: number; height: number } | undefined>(
+    undefined
+  );
 
   const { openDrawer: openMobileMenu, closeDrawer: closeMobileMenu } = useMobileDrawer(
     'scenariomenu',
@@ -126,6 +129,33 @@ export default function ScenarioView() {
       previousUserIdRef.current = scenario.userCharacterId;
     }
   }, [scenario?.userCharacterId]);
+
+  useEffect(() => {
+    if (!isMobileLayout || !hasActiveChatSession) {
+      setMobileViewportRect(undefined);
+      return;
+    }
+
+    const viewport = window.visualViewport;
+    if (!viewport) {
+      return;
+    }
+
+    const updateViewportRect = () => {
+      setMobileViewportRect({
+        top: viewport.offsetTop,
+        height: viewport.height,
+      });
+    };
+
+    updateViewportRect();
+    viewport.addEventListener('resize', updateViewportRect);
+    viewport.addEventListener('scroll', updateViewportRect);
+    return () => {
+      viewport.removeEventListener('resize', updateViewportRect);
+      viewport.removeEventListener('scroll', updateViewportRect);
+    };
+  }, [isMobileLayout, hasActiveChatSession]);
 
   const user: Character | undefined = scenario
     ? (charactersById[scenario.userCharacterId] ?? undefined)
@@ -432,9 +462,14 @@ export default function ScenarioView() {
 
   return (
     <div
+      style={
+        isMobileLayout && mobileViewportRect
+          ? { top: `${mobileViewportRect.top}px`, height: `${mobileViewportRect.height}px` }
+          : undefined
+      }
       className={
         isMobileLayout
-          ? 'w-full h-dvh overflow-hidden'
+          ? 'fixed inset-x-0 top-0 h-dvh overflow-hidden'
           : 'w-full h-dvh flex overflow-x-auto overflow-y-hidden'
       }
     >
