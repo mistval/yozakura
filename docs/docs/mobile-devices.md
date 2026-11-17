@@ -14,7 +14,7 @@ Yozakura works on mobile browsers and automatically selects the mobile layout du
 There are two main ways to run Yozakura on mobile:
 
 1. **[Directly on Android with Termux](#android-via-termux)**: Everything runs locally on your phone. Best if you use cloud LLM providers (like OpenRouter) and don't want to leave a computer running.
-2. **[Hosted on a Computer](#hosted-on-a-computer)**: Run Yozakura on your PC/Mac/Linux machine and connect from your phone. Best if you run local models on your computer, want to share scenarios and saves between desktop and mobile, or prefer not to set up Termux.
+2. **[Hosted on a Computer](#hosted-on-a-computer)**: Run Yozakura on your PC/Mac/Linux machine and connect from your phone. Best if you run local models on your computer, want to share Yozakura data between desktop and mobile, or if you're on iOS which does not support Termux.
 
 ---
 
@@ -100,13 +100,8 @@ http://<your-computer-tailscale-ip>:4396
 ```
 
 :::info Is Tailscale secure (even with an `http://` address)?
-Yes—for most users, Tailscale offers strong privacy without complex setup:
-
-- **Encrypted between your devices:** Even though your browser shows `http://`, Tailscale wraps all traffic in an encrypted tunnel directly between your phone and computer. Your Wi-Fi network, mobile carrier, and Tailscale's servers cannot read your chats, API keys, or images.
-- **Private to your devices:** Yozakura is never given a public web address, so strangers on the internet cannot find or reach it.
-- **Some trust still remains:** Although Tailscale is widely trusted, it isn't 100% trustless. Tailscale's servers still coordinate your private network—they can see basic metadata (like your account and which devices are connected), and if Tailscale were ever compromised or acted maliciously, it could theoretically add an unauthorized device to your network. Enabling **Tailnet Lock** in Tailscale reduces this risk by requiring your own device's approval before any new device can connect.
-- **Optional `https://` address:** If you want a lock icon in your browser or want to add Yozakura cleanly to your phone's home screen, enable **MagicDNS** and **HTTPS Certificates** in the Tailscale admin console and run `tailscale serve --bg http://127.0.0.1:4396` on your computer for a private `https://<machine>.<tailnet>.ts.net` URL.
-  :::
+Yes—even though the URL starts with `http://`, Tailscale encrypts all traffic directly between your devices and keeps Yozakura off the public internet, so Wi-Fi networks, cell carriers, and outsiders cannot read your chats. Tailscale is widely trusted to keep traffic private, though you do need to place some level of trust in Tailscale's servers. If that concerns you, look into the self-hosted options below.
+:::
 
 :::tip Other private options (Same Wi-Fi, WireGuard, or Headscale)
 
