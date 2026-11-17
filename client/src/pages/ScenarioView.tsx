@@ -33,8 +33,7 @@ import { useSettingsStore, type ChatPaneWidth } from '../state/settings_store';
 import { useUserCanInputChat, useIsChatFinalizing } from '../state/chat_state';
 import { globalParallelJobManager } from '../engine/parallelization/job_manager';
 import { UserStopSignalException } from '../engine/scenario_loop/flow_control';
-import RoutedModalFrame from '../components/ui/RoutedModalFrame';
-import { useModalQueryParam } from '../hooks/useModalQueryParam';
+import ResponsiveDrawerSidebar, { useMobileDrawer } from '../components/ui/ResponsiveDrawerSidebar';
 
 const DESKTOP_CHAT_PANE_WIDTH_CLASSES: Record<Exclude<ChatPaneWidth, 'mobile'>, string> = {
   narrow: 'w-[min(44rem,max(28rem,calc(100vw-22rem)))] shrink-0',
@@ -88,11 +87,10 @@ export default function ScenarioView() {
   const previousUserIdRef = useRef<string | null>(null);
   const visibleRelationships = useCachedCharacterRelationships();
 
-  const {
-    open: mobileMenuOpen,
-    openModal: openMobileMenu,
-    closeModal: closeMobileMenu,
-  } = useModalQueryParam('scenariomenu');
+  const { openDrawer: openMobileMenu, closeDrawer: closeMobileMenu } = useMobileDrawer(
+    'scenariomenu',
+    hasActiveChatSession
+  );
 
   useEffect(() => {
     if (!scenarioId) {
@@ -128,12 +126,6 @@ export default function ScenarioView() {
       previousUserIdRef.current = scenario.userCharacterId;
     }
   }, [scenario?.userCharacterId]);
-
-  useEffect(() => {
-    if ((!isMobileLayout || !hasActiveChatSession) && mobileMenuOpen) {
-      closeMobileMenu();
-    }
-  }, [isMobileLayout, hasActiveChatSession, mobileMenuOpen, closeMobileMenu]);
 
   const user: Character | undefined = scenario
     ? (charactersById[scenario.userCharacterId] ?? undefined)
@@ -427,38 +419,42 @@ export default function ScenarioView() {
     </div>
   );
 
-  if (isMobileLayout) {
-    if (!hasActiveChatSession) {
-      return <div className="w-full min-h-dvh p-3">{renderScenarioPanel({ compact: true })}</div>;
-    }
-
+  if (!hasActiveChatSession) {
     return (
-      <div className="w-full h-dvh overflow-hidden">
-        <ChatPane onOpenScenarioMenu={openMobileMenu} />
-
-        <RoutedModalFrame queryParam="scenariomenu" onClose={closeMobileMenu} drawerSide="right" zIndex={40}>
-          {renderScenarioPanel({ compact: true })}
-        </RoutedModalFrame>
+      <div className={isMobileLayout ? 'w-full min-h-dvh p-3' : 'w-full min-h-dvh p-4 sm:p-6'}>
+        {renderScenarioPanel({ compact: isMobileLayout })}
       </div>
     );
   }
 
-  if (!hasActiveChatSession) {
-    return <div className="w-full min-h-dvh p-4 sm:p-6">{renderScenarioPanel({ compact: false })}</div>;
-  }
-
-  const desktopChatPaneWidthClass = DESKTOP_CHAT_PANE_WIDTH_CLASSES[chatPaneWidth];
+  const desktopChatPaneWidthClass =
+    chatPaneWidth === 'mobile' ? '' : DESKTOP_CHAT_PANE_WIDTH_CLASSES[chatPaneWidth];
   const desktopRightPanelWidthClass =
     chatPaneWidth === 'unconstrained' ? 'w-[min(31rem,40vw)] shrink-0' : 'flex-1 min-w-[20rem]';
 
   return (
-    <div className="w-full h-dvh flex overflow-x-auto overflow-y-hidden">
-      <div className={`h-full min-h-0 ${desktopChatPaneWidthClass}`}>
-        <ChatPane />
+    <div
+      className={
+        isMobileLayout
+          ? 'w-full h-dvh overflow-hidden'
+          : 'w-full h-dvh flex overflow-x-auto overflow-y-hidden'
+      }
+    >
+      <div
+        className={isMobileLayout ? 'h-full w-full min-h-0' : `h-full min-h-0 ${desktopChatPaneWidthClass}`}
+      >
+        <ChatPane onOpenScenarioMenu={isMobileLayout ? openMobileMenu : undefined} />
       </div>
-      <div className={`h-full overflow-y-auto p-4 ${desktopRightPanelWidthClass}`}>
+      <ResponsiveDrawerSidebar
+        isDrawer={isMobileLayout}
+        queryParam="scenariomenu"
+        onClose={closeMobileMenu}
+        drawerSide="right"
+        zIndex={40}
+        inlineClassName={`h-full overflow-y-auto p-4 ${desktopRightPanelWidthClass}`}
+      >
         {renderScenarioPanel({ compact: true })}
-      </div>
+      </ResponsiveDrawerSidebar>
     </div>
   );
 }

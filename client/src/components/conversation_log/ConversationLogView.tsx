@@ -2,12 +2,14 @@ import { SpoilerSection } from '../ui/SpoilerSection.js';
 import type { StoredConversation, ConversationStateUpdateNode } from '../../engine/types.js';
 import { useSettingsStore, type ConversationLogWidth } from '../../state/settings_store.js';
 import { ConversationTranscript } from '../../engine/chat/transcript.js';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import Markdown from 'react-markdown';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
 import { useConversationLog } from './ConversationLogContext.js';
-import RoutedModalFrame from '../ui/RoutedModalFrame.js';
-import { useModalQueryParam } from '../../hooks/useModalQueryParam.js';
+import ResponsiveDrawerSidebar, {
+  ParticipantsDrawerButton,
+  useMobileDrawer,
+} from '../ui/ResponsiveDrawerSidebar.js';
 
 const CHAT_PANE_WIDTH_OPTIONS: Array<{ value: ConversationLogWidth; label: string }> = [
   { value: 'narrow', label: 'Narrow' },
@@ -73,21 +75,14 @@ function StateUpdateNodeView({ node, pathKey }: { node: ConversationStateUpdateN
 
 export default function ConversationLogView({ userId, selectedEntry, onBack }: ConversationLogViewProps) {
   const conversationLogWidth = useSettingsStore((s) => s.conversationLogWidth);
-  const isMobileLayout = useSettingsStore((s) => s.chatPaneWidth === 'mobile');
   const { showCharacterOverview } = useCharacterOverview();
   const { closeConversationLog } = useConversationLog();
   const setSettings = useSettingsStore((s) => s.setSettings);
   const {
-    open: participantsDrawerOpen,
-    openModal: openParticipantsDrawer,
-    closeModal: closeParticipantsDrawer,
-  } = useModalQueryParam('cl_participants');
-
-  useEffect(() => {
-    if (!isMobileLayout && participantsDrawerOpen) {
-      closeParticipantsDrawer();
-    }
-  }, [isMobileLayout, participantsDrawerOpen, closeParticipantsDrawer]);
+    isMobileLayout,
+    openDrawer: openParticipantsDrawer,
+    closeDrawer: closeParticipantsDrawer,
+  } = useMobileDrawer('cl_participants');
 
   if (!selectedEntry) return undefined;
 
@@ -168,29 +163,7 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
     <>
       <div className="flex justify-between items-center gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          {isMobileLayout && (
-            <button
-              type="button"
-              onClick={openParticipantsDrawer}
-              aria-label="Open participants"
-              title="Participants"
-              className="p-1.5! flex items-center justify-center shrink-0"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.8}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
-                />
-              </svg>
-            </button>
-          )}
+          {isMobileLayout && <ParticipantsDrawerButton onClick={openParticipantsDrawer} />}
           {onBack && (
             <button type="button" onClick={onBack} aria-label="Back" title="Back">
               ←
@@ -201,7 +174,16 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
         <div className="text-sm text-muted shrink-0">Turn {selectedEntry.turnNumber || 0}</div>
       </div>
       <div className="flex gap-3 min-h-104">
-        {!isMobileLayout && <div className="w-44 shrink-0 min-h-0 flex flex-col gap-3">{sidebarContent}</div>}
+        <ResponsiveDrawerSidebar
+          isDrawer={isMobileLayout}
+          queryParam="cl_participants"
+          onClose={closeParticipantsDrawer}
+          drawerSide="left"
+          headerActions={<span className="px-2 py-1 text-sm font-semibold">Participants</span>}
+          inlineClassName="w-44 shrink-0 min-h-0 flex flex-col gap-3"
+        >
+          {sidebarContent}
+        </ResponsiveDrawerSidebar>
         <div className="border rounded-sm p-3 overflow-y-auto space-y-2 flex-1 min-h-0">
           {transcript.getVisibleMessages(userId).map((message) => {
             const isUserMessage = message.isSentByCharacter(userId);
@@ -232,17 +214,6 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
           </div>
         </div>
       </div>
-
-      {isMobileLayout && (
-        <RoutedModalFrame
-          queryParam="cl_participants"
-          onClose={closeParticipantsDrawer}
-          drawerSide="left"
-          headerActions={<span className="px-2 py-1 text-sm font-semibold">Participants</span>}
-        >
-          <div className="@container">{sidebarContent}</div>
-        </RoutedModalFrame>
-      )}
     </>
   );
 }

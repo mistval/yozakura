@@ -25,14 +25,16 @@ import {
 } from '../state/chat_state.js';
 import ChatTopBarStatus from './chat/ChatTopBarStatus.js';
 import CharacterAvatar from './CharacterAvatar.js';
-import RoutedModalFrame from './ui/RoutedModalFrame.js';
-import { useModalQueryParam } from '../hooks/useModalQueryParam.js';
+import ResponsiveDrawerSidebar, {
+  ParticipantsDrawerButton,
+  useMobileDrawer,
+} from './ui/ResponsiveDrawerSidebar.js';
 
 const LONG_PRESS_MS = 450;
 const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
 
 type ChatPaneProps = {
-  onOpenScenarioMenu?: () => void;
+  onOpenScenarioMenu?: (() => void) | undefined;
 };
 
 type LongPressOrigin = {
@@ -42,8 +44,11 @@ type LongPressOrigin = {
 };
 
 export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
-  const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
-  const isMobileLayout = chatPaneWidth === 'mobile';
+  const {
+    isMobileLayout,
+    openDrawer: openCharacterTray,
+    closeDrawer: closeCharacterTray,
+  } = useMobileDrawer('chatparticipants');
   const selectedSceneImageTemplateChainId = useSettingsStore((s) => s.selectedSceneImageTemplateChainId);
   const generateImagesInParallelWithText = useSettingsStore((s) => s.generateImagesInParallelWithText);
   const setSettings = useSettingsStore((s) => s.setSettings);
@@ -57,11 +62,6 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
 
   const [inputIsNonEmpty, setInputIsNonEmpty] = useState(false);
   const [showChatSettings, setShowChatSettings] = useState(false);
-  const {
-    open: characterTrayOpen,
-    openModal: openCharacterTray,
-    closeModal: closeCharacterTray,
-  } = useModalQueryParam('chatparticipants');
   const [settingsCharacterId, setSettingsCharacterId] = useState<string | undefined>(undefined);
   const [editingMessageId, setEditingMessageId] = useState<string | undefined>(undefined);
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
@@ -143,12 +143,6 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
 
   const primaryNpc = nonUserParticipants[0];
   assertNonNullish(primaryNpc);
-
-  useEffect(() => {
-    if (!isMobileLayout && characterTrayOpen) {
-      closeCharacterTray();
-    }
-  }, [isMobileLayout, characterTrayOpen, closeCharacterTray]);
 
   useEffect(() => {
     if (!activeActionMessageId) {
@@ -515,33 +509,27 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
         isMobileLayout ? 'flex-col p-2.5 gap-2' : 'flex-row border-r border-border-default p-3 gap-3'
       }`}
     >
-      {!isMobileLayout && <div className="w-44 shrink-0 overflow-y-auto pr-1">{participantCards}</div>}
+      <ResponsiveDrawerSidebar
+        isDrawer={isMobileLayout}
+        queryParam="chatparticipants"
+        onClose={closeCharacterTray}
+        drawerSide="left"
+        zIndex={40}
+        headerActions={<span className="px-2 py-1 text-sm font-semibold">Participants</span>}
+        inlineClassName="w-44 shrink-0 overflow-y-auto pr-1"
+      >
+        {participantCards}
+      </ResponsiveDrawerSidebar>
 
       <div className="flex-1 min-w-0 flex flex-col min-h-0 gap-2">
         {isMobileLayout ? (
           <div className="space-y-2 shrink-0">
             <div className="flex items-center justify-between gap-2">
-              <button
-                type="button"
+              <ParticipantsDrawerButton
                 onClick={openCharacterTray}
-                aria-label="Open character tray"
+                ariaLabel="Open character tray"
                 title="Chat participants"
-                className="p-1.5! flex items-center justify-center shrink-0"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.8}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
-                  />
-                </svg>
-              </button>
+              />
 
               <div className="flex-1 min-w-0 flex justify-center text-center truncate">
                 {hasRunningJobs ? (
@@ -909,18 +897,6 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
           </ButtonOptions>
         </div>
       </div>
-
-      {isMobileLayout && (
-        <RoutedModalFrame
-          queryParam="chatparticipants"
-          onClose={closeCharacterTray}
-          drawerSide="left"
-          zIndex={40}
-          headerActions={<span className="px-2 py-1 text-sm font-semibold">Participants</span>}
-        >
-          <div className="@container">{participantCards}</div>
-        </RoutedModalFrame>
-      )}
 
       <ImagePromptModal
         open={Boolean(pendingImagePromptEdit)}
