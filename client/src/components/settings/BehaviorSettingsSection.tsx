@@ -23,10 +23,12 @@ type NumericSettingRowConfig = {
   apply: (nextValue: number) => SettingsPatch;
 };
 
-function TwoColGrid({ children, colSpan = 1 }: { children: React.ReactNode; colSpan?: number }) {
+function TwoColGrid({ children, colSpan = 1 }: { children: React.ReactNode; colSpan?: 1 | 2 }) {
   return (
     <div
-      className={`rounded-lg border p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface-soft col-span-${colSpan}`}
+      className={`rounded-lg border p-4 grid grid-cols-1 md:grid-cols-2 gap-4 bg-surface-soft ${
+        colSpan === 2 ? 'md:col-span-2' : ''
+      }`}
     >
       {children}
     </div>
@@ -494,7 +496,7 @@ export default function BehaviorSettingsSection() {
         {numericSettingRows.map(renderNumericSettingRow)}
 
         <TwoColGrid colSpan={2}>
-          <div className="space-y-2 col-span-2">
+          <div className="space-y-2 md:col-span-2">
             <SettingFieldLabel
               text="NPC chat end mode"
               htmlFor="npc-chat-end-mode"
