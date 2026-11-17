@@ -9,6 +9,7 @@ type RoutedModalFrameProps = {
   showBack?: boolean | undefined;
   showClose?: boolean | undefined;
   drawerSide?: 'left' | 'right' | undefined;
+  zIndex?: number | undefined;
   className?: string | undefined;
   maxWidthClassName?: string | undefined;
   panelClassName?: string | undefined;
@@ -25,6 +26,7 @@ export default function RoutedModalFrame({
   showBack = false,
   showClose = true,
   drawerSide,
+  zIndex: zIndexProp,
   className,
   maxWidthClassName = 'max-w-5xl',
   panelClassName = '',
@@ -37,7 +39,7 @@ export default function RoutedModalFrame({
   const derivedZIndex = useModalStackZIndex(queryParam ?? '');
 
   const open = queryParam !== undefined ? derivedOpen : (openProp ?? true);
-  const zIndex = drawerSide ? 40 : queryParam !== undefined ? derivedZIndex : undefined;
+  const zIndex = zIndexProp ?? (queryParam !== undefined ? derivedZIndex : undefined);
 
   const isDrawer = Boolean(drawerSide);
   const modalClassName = isDrawer

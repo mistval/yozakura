@@ -53,11 +53,12 @@ export function ConversationLogProvider({ children }: { children: ReactNode }) {
       conversationlog: undefined,
       cl_conversation: undefined,
       cl_page: undefined,
+      cl_participants: undefined,
     });
   }, [setParams]);
 
   const backToConversationLog = useCallback(() => {
-    setParams({ cl_conversation: undefined, cl_page: routePage });
+    setParams({ cl_conversation: undefined, cl_page: routePage, cl_participants: undefined });
   }, [setParams, routePage]);
 
   const setConversationLogPage = useCallback(

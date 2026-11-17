@@ -436,7 +436,7 @@ export default function ScenarioView() {
       <div className="w-full h-dvh overflow-hidden">
         <ChatPane onOpenScenarioMenu={openMobileMenu} />
 
-        <RoutedModalFrame queryParam="scenariomenu" onClose={closeMobileMenu} drawerSide="right">
+        <RoutedModalFrame queryParam="scenariomenu" onClose={closeMobileMenu} drawerSide="right" zIndex={40}>
           {renderScenarioPanel({ compact: true })}
         </RoutedModalFrame>
       </div>

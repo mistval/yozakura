@@ -105,7 +105,6 @@ export function SpoilerSection({
       >
         <span>{revealed ? '▾' : '▸'}</span>
         <span>{title}</span>
-        {!revealed && <span className="text-xs text-muted-soft ml-auto">click to reveal</span>}
       </button>
       {revealed && editable ? (
         <div className="mt-2 space-y-2">

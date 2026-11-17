@@ -915,6 +915,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
           queryParam="chatparticipants"
           onClose={closeCharacterTray}
           drawerSide="left"
+          zIndex={40}
           headerActions={<span className="px-2 py-1 text-sm font-semibold">Participants</span>}
         >
           <div className="@container">{participantCards}</div>
