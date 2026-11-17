@@ -70,7 +70,31 @@ function App() {
   );
 }
 
+function registerServiceWorker() {
+  if (
+    !('serviceWorker' in navigator) ||
+    !window.isSecureContext ||
+    navigator.userAgent.includes('Electron')
+  ) {
+    return;
+  }
+
+  const register = () => {
+    void navigator.serviceWorker.register('/sw.js').catch((error) => {
+      console.error('Failed to register service worker:', error);
+    });
+  };
+
+  if (document.readyState === 'complete') {
+    register();
+    return;
+  }
+
+  window.addEventListener('load', register, { once: true });
+}
+
 async function bootstrap() {
+  registerServiceWorker();
   await hydrateSettings();
 
   ReactDOM.createRoot(document.getElementById('root')!).render(
