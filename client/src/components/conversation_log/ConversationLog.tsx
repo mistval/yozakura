@@ -103,7 +103,6 @@ export default function ConversationLog() {
       {...(showBackButton ? { onBack: backToConversationLog } : {})}
     >
       <>
-        {!showDetail && <h2 className="text-xl font-semibold">Conversation Log</h2>}
         <ConversationSearchList
           open={!showDetail}
           scenarioId={scenario?.id ?? ''}

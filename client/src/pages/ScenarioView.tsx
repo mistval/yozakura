@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import CharacterCard from '../components/CharacterCard';
 import ChatPane from '../components/ChatPane';
@@ -33,6 +33,8 @@ import { useSettingsStore, type ChatPaneWidth } from '../state/settings_store';
 import { useUserCanInputChat, useIsChatFinalizing } from '../state/chat_state';
 import { globalParallelJobManager } from '../engine/parallelization/job_manager';
 import { UserStopSignalException } from '../engine/scenario_loop/flow_control';
+import RoutedModalFrame from '../components/ui/RoutedModalFrame';
+import { useModalQueryParam } from '../hooks/useModalQueryParam';
 
 const DESKTOP_CHAT_PANE_WIDTH_CLASSES: Record<Exclude<ChatPaneWidth, 'mobile'>, string> = {
   narrow: 'w-[min(44rem,max(28rem,calc(100vw-22rem)))] shrink-0',
@@ -86,7 +88,11 @@ export default function ScenarioView() {
   const previousUserIdRef = useRef<string | null>(null);
   const visibleRelationships = useCachedCharacterRelationships();
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const {
+    open: mobileMenuOpen,
+    openModal: openMobileMenu,
+    closeModal: closeMobileMenu,
+  } = useModalQueryParam('scenariomenu');
 
   useEffect(() => {
     if (!scenarioId) {
@@ -124,25 +130,10 @@ export default function ScenarioView() {
   }, [scenario?.userCharacterId]);
 
   useEffect(() => {
-    if (!isMobileLayout || !hasActiveChatSession) {
-      setMobileMenuOpen(false);
+    if ((!isMobileLayout || !hasActiveChatSession) && mobileMenuOpen) {
+      closeMobileMenu();
     }
-  }, [isMobileLayout, hasActiveChatSession]);
-
-  useEffect(() => {
-    if (!mobileMenuOpen) {
-      return undefined;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setMobileMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [mobileMenuOpen]);
+  }, [isMobileLayout, hasActiveChatSession, mobileMenuOpen, closeMobileMenu]);
 
   const user: Character | undefined = scenario
     ? (charactersById[scenario.userCharacterId] ?? undefined)
@@ -443,32 +434,11 @@ export default function ScenarioView() {
 
     return (
       <div className="w-full h-dvh overflow-hidden">
-        <ChatPane onOpenScenarioMenu={() => setMobileMenuOpen(true)} />
+        <ChatPane onOpenScenarioMenu={openMobileMenu} />
 
-        {mobileMenuOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-overlay flex justify-end"
-            onClick={(event) => {
-              if (event.target === event.currentTarget) {
-                setMobileMenuOpen(false);
-              }
-            }}
-          >
-            <div className="w-[80vw] max-w-[800px] h-full bg-emphasized border-l border-border-default p-3 flex flex-col gap-3 shadow-xl">
-              <div className="flex justify-end shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setMobileMenuOpen(false)}
-                  aria-label="Close menu"
-                  className="px-2! py-0.5! text-sm"
-                >
-                  ✕
-                </button>
-              </div>
-              <div className="flex-1 min-h-0 overflow-y-auto">{renderScenarioPanel({ compact: true })}</div>
-            </div>
-          </div>
-        )}
+        <RoutedModalFrame queryParam="scenariomenu" onClose={closeMobileMenu} drawerSide="right">
+          {renderScenarioPanel({ compact: true })}
+        </RoutedModalFrame>
       </div>
     );
   }

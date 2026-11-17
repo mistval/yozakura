@@ -25,6 +25,8 @@ import {
 } from '../state/chat_state.js';
 import ChatTopBarStatus from './chat/ChatTopBarStatus.js';
 import CharacterAvatar from './CharacterAvatar.js';
+import RoutedModalFrame from './ui/RoutedModalFrame.js';
+import { useModalQueryParam } from '../hooks/useModalQueryParam.js';
 
 const LONG_PRESS_MS = 450;
 const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
@@ -55,7 +57,11 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
 
   const [inputIsNonEmpty, setInputIsNonEmpty] = useState(false);
   const [showChatSettings, setShowChatSettings] = useState(false);
-  const [showCharacterTray, setShowCharacterTray] = useState(false);
+  const {
+    open: characterTrayOpen,
+    openModal: openCharacterTray,
+    closeModal: closeCharacterTray,
+  } = useModalQueryParam('chatparticipants');
   const [settingsCharacterId, setSettingsCharacterId] = useState<string | undefined>(undefined);
   const [editingMessageId, setEditingMessageId] = useState<string | undefined>(undefined);
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
@@ -139,25 +145,10 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   assertNonNullish(primaryNpc);
 
   useEffect(() => {
-    if (!isMobileLayout) {
-      setShowCharacterTray(false);
+    if (!isMobileLayout && characterTrayOpen) {
+      closeCharacterTray();
     }
-  }, [isMobileLayout]);
-
-  useEffect(() => {
-    if (!showCharacterTray) {
-      return undefined;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setShowCharacterTray(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [showCharacterTray]);
+  }, [isMobileLayout, characterTrayOpen, closeCharacterTray]);
 
   useEffect(() => {
     if (!activeActionMessageId) {
@@ -532,7 +523,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
-                onClick={() => setShowCharacterTray(true)}
+                onClick={openCharacterTray}
                 aria-label="Open character tray"
                 title="Chat participants"
                 className="p-1.5! flex items-center justify-center shrink-0"
@@ -919,30 +910,15 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
         </div>
       </div>
 
-      {isMobileLayout && showCharacterTray && (
-        <div
-          className="fixed inset-0 z-40 bg-overlay flex"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              setShowCharacterTray(false);
-            }
-          }}
+      {isMobileLayout && (
+        <RoutedModalFrame
+          queryParam="chatparticipants"
+          onClose={closeCharacterTray}
+          drawerSide="left"
+          headerActions={<span className="px-2 py-1 text-sm font-semibold">Participants</span>}
         >
-          <div className="w-[80vw] max-w-[800px] h-full bg-emphasized border-r border-border-default p-3 flex flex-col gap-3 shadow-xl">
-            <div className="flex items-center justify-between shrink-0">
-              <h3 className="font-semibold text-sm">Participants</h3>
-              <button
-                type="button"
-                onClick={() => setShowCharacterTray(false)}
-                aria-label="Close character tray"
-                className="px-2! py-0.5! text-sm"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="@container flex-1 min-h-0 overflow-y-auto">{participantCards}</div>
-          </div>
-        </div>
+          <div className="@container">{participantCards}</div>
+        </RoutedModalFrame>
       )}
 
       <ImagePromptModal
