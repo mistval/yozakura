@@ -473,7 +473,7 @@ export default function LlmSettingsSection() {
       </div>
 
       <div className="bordered-section">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-wrap justify-between items-center gap-2">
           <h3 className="font-medium">LLM Prompt Options</h3>
           <button type="button" onClick={addConfig} className="px-3 py-1 border rounded-sm">
             Add Option Group
@@ -495,54 +495,54 @@ export default function LlmSettingsSection() {
             return (
               <div key={config.id} className="border rounded-sm p-3 space-y-2 bg-inset">
                 {!editing ? (
-                  <div className="flex justify-between items-start gap-3">
-                    <div>
-                      <div className="font-medium">{config.name}</div>
-                      <div className="text-sm text-muted">
-                        Completions API URL: {config.llmUrl || '(inherit)'}
-                      </div>
-                      <div className="text-sm text-muted">
-                        Bearer Token: {config.llmAuthToken ? maskToken(config.llmAuthToken) : '(inherit)'}
-                      </div>
-                      <div className="text-sm text-muted">Rule: {config.rule || '(none)'}</div>
-                      <div className="text-sm text-muted">
-                        Response Pre-parser: {formatResponsePreParserPreview(config.responsePreParserSource)}
-                      </div>
-                      <div className="text-sm text-muted">
-                        Meta Options: {formatMetaOptionsPreview(config.llmMetaOptions)}
-                      </div>
-                      {config.concurrencyGroupName && (
-                        <div className="text-sm text-muted">
-                          Concurrency: {config.concurrencyGroupName}{' '}
-                          {config.concurrencyGroupLimit ? `(Limit: ${config.concurrencyGroupLimit})` : ''}
-                        </div>
-                      )}
-                      <div className="text-sm text-muted">
-                        Token Streaming:{' '}
-                        {config.tokenStreamingEnabled === 'enabled'
-                          ? 'Enabled'
-                          : config.tokenStreamingEnabled === 'disabled'
-                            ? 'Disabled'
-                            : '(inherit)'}
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="font-medium min-w-0 wrap-break-word">{config.name}</div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(config.id)}
+                          className="px-3 py-1 border rounded-sm"
+                        >
+                          Edit
+                        </button>
+                        <DeleteButton
+                          className="px-3 py-1 border rounded-sm"
+                          label="Delete"
+                          disabled={!canDelete}
+                          confirmTitle="Delete Options Group"
+                          confirmLabel="Delete"
+                          confirmMessage={`Are you sure you want to delete this options group? ("${config.name}")`}
+                          onConfirm={() => removeConfig(config.id)}
+                        />
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(config.id)}
-                        className="px-3 py-1 border rounded-sm"
-                      >
-                        Edit
-                      </button>
-                      <DeleteButton
-                        className="px-3 py-1 border rounded-sm"
-                        label="Delete"
-                        disabled={!canDelete}
-                        confirmTitle="Delete Options Group"
-                        confirmLabel="Delete"
-                        confirmMessage={`Are you sure you want to delete this options group? ("${config.name}")`}
-                        onConfirm={() => removeConfig(config.id)}
-                      />
+                    <div className="text-sm text-muted wrap-break-word">
+                      Completions API URL: {config.llmUrl || '(inherit)'}
+                    </div>
+                    <div className="text-sm text-muted wrap-break-word">
+                      Bearer Token: {config.llmAuthToken ? maskToken(config.llmAuthToken) : '(inherit)'}
+                    </div>
+                    <div className="text-sm text-muted wrap-break-word">Rule: {config.rule || '(none)'}</div>
+                    <div className="text-sm text-muted wrap-break-word">
+                      Response Pre-parser: {formatResponsePreParserPreview(config.responsePreParserSource)}
+                    </div>
+                    <div className="text-sm text-muted wrap-break-word">
+                      Meta Options: {formatMetaOptionsPreview(config.llmMetaOptions)}
+                    </div>
+                    {config.concurrencyGroupName && (
+                      <div className="text-sm text-muted wrap-break-word">
+                        Concurrency: {config.concurrencyGroupName}{' '}
+                        {config.concurrencyGroupLimit ? `(Limit: ${config.concurrencyGroupLimit})` : ''}
+                      </div>
+                    )}
+                    <div className="text-sm text-muted wrap-break-word">
+                      Token Streaming:{' '}
+                      {config.tokenStreamingEnabled === 'enabled'
+                        ? 'Enabled'
+                        : config.tokenStreamingEnabled === 'disabled'
+                          ? 'Disabled'
+                          : '(inherit)'}
                     </div>
                   </div>
                 ) : (
