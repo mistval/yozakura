@@ -1,12 +1,11 @@
 ---
 title: Mobile Devices
 sidebar_position: 4
-description: Run Yozakura on Android with Termux or host it on your computer and access it securely from mobile via ngrok with Google OAuth or Tailscale.
+description: Run Yozakura on Android with Termux or host it on your computer and access it privately from mobile via Tailscale.
 keywords:
   - yozakura mobile
   - yozakura android
   - termux
-  - ngrok google oauth
   - tailscale
 ---
 
@@ -87,38 +86,27 @@ Follow the [Getting Started](getting-started.md) guide and choose **either [Dock
 
 Verify Yozakura is running on your computer at `http://localhost:4396`.
 
-### 2. Connect securely with ngrok + Google OAuth
+### 2. Connect privately with Tailscale
 
-[ngrok](https://ngrok.com/) gives your local server an HTTPS URL you can open from anywhere, and its free tier supports **Google OAuth** via a Traffic Policy file (capped at 5 Monthly Active Users, 1 GB egress/month, and 20,000 requests/month—plenty for single-user play).
+[Tailscale](https://tailscale.com/) creates a private mesh network between your own devices (free for personal use, no router port forwarding needed, and works over both Wi-Fi and cellular data).
 
-1. Install ngrok and authenticate your agent (`ngrok config add-authtoken <YOUR_TOKEN>`).
-2. Create a file named `policy.yml` restricting access to your Google account (replace `your.email@gmail.com` with your email):
+1. Install **[Tailscale](https://tailscale.com/download)** on your computer and sign in.
+2. Install the **Tailscale** app on your phone (from Google Play or the App Store) and sign in with the **same account**.
+3. Find your computer's Tailscale IP address (`100.x.y.z`) in the Tailscale app/tray menu (or by running `tailscale ip -4`).
+4. Make sure Tailscale is toggled **On** on both devices, then open your phone's browser and go to:
 
-```yaml
-on_http_request:
-  - actions:
-      - type: oauth
-        config:
-          provider: google
-  - expressions:
-      - "actions.ngrok.oauth.identity.email != 'your.email@gmail.com'"
-    actions:
-      - type: deny
+```text
+http://<your-computer-tailscale-ip>:4396
 ```
 
-3. Start the tunnel pointing to Yozakura's port:
+:::info Why Tailscale is secure (even with an `http://` address)
+Your browser will show `http://` in the address bar when connecting to a Tailscale IP, **but your traffic is still fully encrypted end-to-end**:
 
-```bash
-ngrok http 4396 --traffic-policy-file=policy.yml
-```
+- **Device-to-device WireGuard encryption:** Tailscale encrypts all network traffic on your phone and decrypts it only on your computer using keys that stay strictly on your own devices. Neither your Wi-Fi/mobile carrier nor Tailscale's servers can read your chats, API keys, or images—even if traffic passes through a Tailscale relay.
+- **No public internet exposure:** Unlike port forwarding or public tunneling services, Yozakura is not given a public URL. Only devices signed into your personal Tailscale account can reach your computer's Tailscale IP at all.
+- **Optional `https://` URL:** If you prefer a green lock / `https://` address (e.g., to avoid browser "Not secure" warnings or add to your home screen as a web app), enable **MagicDNS** and **HTTPS Certificates** in your Tailscale admin console and run `tailscale serve --bg http://127.0.0.1:4396` on your computer. That gives you a `https://<machine>.<tailnet>.ts.net` URL that still stays private to your Tailscale devices and terminates TLS directly on your own computer.
+  :::
 
-4. Open the `https://...ngrok-free.app` URL shown by ngrok on your phone and sign in with your Google account.
-
-:::note Privacy & security note for ngrok
-With `ngrok http` + Google OAuth, connections are encrypted in transit over HTTPS and blocked for anyone except your Google email. However, because ngrok terminates TLS at its edge to enforce Google OAuth, ngrok's edge servers briefly see the unencrypted HTTP traffic in memory. If you want strict device-to-device encryption with no third-party TLS termination, use **Tailscale** below instead.
+:::tip Same Wi-Fi alternative
+If you only ever play while your phone and computer are on the same trusted home Wi-Fi, you don't even need Tailscale—you can connect directly to `http://<your-computer-local-ip>:4396` (you may need to allow port `4396` through your computer's firewall).
 :::
-
-### Alternative: Tailscale (or Local Wi-Fi)
-
-- **[Tailscale](https://tailscale.com/)** (recommended alternative to ngrok): Free for personal use, no 1 GB/month transfer cap, nothing exposed to the public internet, and end-to-end WireGuard encryption using keys that stay strictly on your own devices. Install Tailscale on your computer and phone, then open `http://<your-computer-tailscale-ip>:4396` from your phone anywhere.
-- **Same Wi-Fi network**: If your phone and computer are on the same trusted home Wi-Fi, you can connect directly to `http://<your-computer-local-ip>:4396` (you may need to allow port `4396` in your computer's firewall).
