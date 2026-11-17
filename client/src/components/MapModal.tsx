@@ -133,7 +133,7 @@ function MapModalInner() {
             className={view === 'log' ? 'button-emphasized' : ''}
             onClick={() => setView('log')}
           >
-            Movement Log
+            Movements
           </button>
         </>
       }

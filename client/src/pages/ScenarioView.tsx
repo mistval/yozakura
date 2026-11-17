@@ -363,8 +363,6 @@ export default function ScenarioView() {
         </div>
       )}
 
-      <hr className="border-border-default" />
-
       <div className="@container space-y-2">
         <div className="flex justify-between items-center">
           <h3 className="font-semibold">Characters here</h3>

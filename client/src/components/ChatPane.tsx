@@ -32,6 +32,8 @@ import ResponsiveDrawerSidebar, {
 
 const LONG_PRESS_MS = 450;
 const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
+const USER_SCROLL_INTERACTION_WINDOW_MS = 1500;
+const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' ']);
 
 type ChatPaneProps = {
   onOpenScenarioMenu?: (() => void) | undefined;
@@ -70,6 +72,8 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   const transcriptContainerOuterRef = useRef<HTMLDivElement | null>(null);
   const transcriptContainerInnerRef = useRef<HTMLDivElement | null>(null);
   const autoScrollUnlockedRef = useRef(true);
+  const lastUserScrollInteractionAtRef = useRef(-Infinity);
+  const lastProgrammaticScrollTopRef = useRef<number | undefined>(undefined);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const messagePressRef = useRef<LongPressOrigin | undefined>(undefined);
@@ -194,20 +198,25 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   }, [transcript?.countAllMessages() === 0]);
 
   useEffect(() => {
-    if (!transcriptContainerInnerRef.current) {
+    const outer = transcriptContainerOuterRef.current;
+    const inner = transcriptContainerInnerRef.current;
+    if (!outer || !inner) {
       return;
     }
 
     const observer = new ResizeObserver(() => {
       if (autoScrollUnlockedRef.current && transcriptContainerOuterRef.current) {
-        transcriptContainerOuterRef.current.scrollTop = transcriptContainerOuterRef.current.scrollHeight;
+        const container = transcriptContainerOuterRef.current;
+        container.scrollTop = container.scrollHeight;
+        lastProgrammaticScrollTopRef.current = container.scrollTop;
       }
     });
 
-    observer.observe(transcriptContainerInnerRef.current);
+    observer.observe(inner);
+    observer.observe(outer);
 
     return () => observer.disconnect();
-  }, [transcriptContainerInnerRef.current]);
+  }, [Boolean(transcript && primaryNpc && scenario)]);
 
   if (!transcript || !primaryNpc || !scenario) {
     return undefined;
@@ -233,6 +242,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
       return;
     }
 
+    autoScrollUnlockedRef.current = true;
     ChatCoordinator.addParticipant(userCharacter.id);
     submitChatMessage(message);
   };
@@ -296,13 +306,30 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
     return remaining <= 24;
   };
 
+  const markUserScrollInteraction = () => {
+    lastUserScrollInteractionAtRef.current = performance.now();
+  };
+
   const handleTranscriptScroll = () => {
     const container = transcriptContainerOuterRef.current;
     if (!container) {
       return;
     }
 
-    autoScrollUnlockedRef.current = isNearTranscriptBottom(container);
+    if (isNearTranscriptBottom(container)) {
+      autoScrollUnlockedRef.current = true;
+      return;
+    }
+
+    const lastProgrammatic = lastProgrammaticScrollTopRef.current;
+    const movedFromProgrammatic =
+      lastProgrammatic === undefined || Math.abs(container.scrollTop - lastProgrammatic) > 2;
+    const recentUserScroll =
+      performance.now() - lastUserScrollInteractionAtRef.current <= USER_SCROLL_INTERACTION_WINDOW_MS;
+
+    if (recentUserScroll && movedFromProgrammatic) {
+      autoScrollUnlockedRef.current = false;
+    }
   };
 
   const clearLongPress = (ref: React.MutableRefObject<LongPressOrigin | undefined>) => {
@@ -531,7 +558,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                 title="Chat participants"
               />
 
-              <div className="flex-1 min-w-0 flex justify-center text-center truncate">
+              <div className="flex-1 min-w-0 flex justify-center text-center">
                 {hasRunningJobs ? (
                   <ChatTopBarStatus />
                 ) : (
@@ -577,9 +604,23 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
         <div
           ref={transcriptContainerOuterRef}
           onScroll={handleTranscriptScroll}
+          onWheel={markUserScrollInteraction}
+          onTouchMove={markUserScrollInteraction}
+          onPointerDown={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            if (event.clientX >= rect.left + event.currentTarget.clientWidth) {
+              markUserScrollInteraction();
+            }
+          }}
+          onKeyDown={(event) => {
+            if (SCROLL_KEYS.has(event.key)) {
+              markUserScrollInteraction();
+            }
+          }}
+          style={{ overflowAnchor: 'none' }}
           className="border rounded-sm p-2 overflow-y-auto space-y-2 flex-1 min-h-0"
         >
-          <div ref={transcriptContainerInnerRef} onScroll={handleTranscriptScroll} className="space-y-3">
+          <div ref={transcriptContainerInnerRef} className="space-y-3">
             {transcript.countAllMessages() === 0 && (
               <div className="text-sm text-muted">
                 {participants[0]!.id === userCharacter.id
