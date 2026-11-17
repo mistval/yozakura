@@ -147,7 +147,7 @@ export default function CharacterSelectionGrid({
               key={character.id}
               character={character}
               className="w-full p-2 sm:p-3"
-              imageClassName="h-44 sm:h-52 object-cover object-top"
+              imageClassName="h-auto"
               selected={selectedCharacterIdsSet.has(character.id)}
               onClick={() => toggleSelected(character)}
             >
