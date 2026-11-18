@@ -35,7 +35,7 @@ Both **Speaker selection mode** and **NPC chat end mode** in [yozakura://?settin
 
 ## Be particular with your LLM provider
 
-If you're using OpenRouter, you can control which provider your prompts get routed to, and the prices between different providers vary significantly. At the time of this writing, **Wafer** is one of the most cost-effective providers for DeepSeek V4.1 Flash and also has great speed and availability. They are my personal recommendation at this time if you're using DeepSeek V4.1 Flash. But prices change, so check OpenRouter's [comparison](https://openrouter.ai/deepseek/deepseek-v4.1-flash#providers).
+If you're using OpenRouter, you can control which provider your prompts get routed to, and the prices between different providers vary significantly. At the time of this writing, **Wafer** is one of the most cost-effective providers for DeepSeek V4.1 Flash and also has good speed and availability. They are my personal recommendation at this time if you're using DeepSeek V4.1 Flash. But prices change, so check OpenRouter's [comparison](https://openrouter.ai/deepseek/deepseek-v4.1-flash#providers).
 
 To use Wafer US only, add a comma on the end of the `model` line in the [advanced settings of your default LLM options](yozakura://?settings=true&settingspath=llm&llmoptionsid=base&llmoptionsadvanced=true), then paste this right after that comma:
 
@@ -78,3 +78,11 @@ After you do that, your settings there should look something like this (possibly
 You can sometimes save a little bit by skipping OpenRouter and going directly to the source. You can make an API key for Wafer for example [here](https://app.wafer.ai/login).
 
 However don't assume this is the case, **OpenRouter is often cheaper**. Make sure to compare price lists closely.
+
+## Don't use reasoning
+
+Reasoning might increase quality a bit, but it uses dramatically more tokens. Yozakura's default configuration in the [advanced settings of your default LLM options](yozakura://?settings=true&settingspath=llm&llmoptionsid=base&llmoptionsadvanced=true) disables reasoning if you're using OpenRouter. If you've enabled reasoning, or if you're using another provider that enables it by default, you should turn it off if you're at all cost conscious.
+
+## Use cheaper models for certain tasks
+
+You can use a strong/expensive model for certain cases, and a cheap model for everything else. [This guide](how-to-different-models-per-prompt.md) covers some ways to do that.
