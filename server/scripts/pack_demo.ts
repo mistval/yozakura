@@ -298,12 +298,6 @@ function compileDemoSource(): void {
       }
     }
 
-    if (everydayAutoselectCount < 2) {
-      throw new Error(
-        `Character "${data.slug}" must have at least 2 wardrobes tagged with both "daily_autoselect:default" and "everyday"`
-      );
-    }
-
     for (const requiredTag of REQUIRED_LOCATION_WARDROBE_TAGS) {
       if (!data.wardrobes.some((w) => w.tags.includes(requiredTag))) {
         throw new Error(
