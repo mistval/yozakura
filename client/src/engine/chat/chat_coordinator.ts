@@ -52,7 +52,11 @@ import {
 import { wait } from '../../util/promise';
 import { getRequiredRandomChoice, weightedRandomChoice } from '../../util/array';
 import { clamp } from '../../util/numeric.js';
-import { rethrowSignalException, SignalException } from '../scenario_loop/flow_control';
+import {
+  rethrowSignalException,
+  SignalException,
+  UserAbortCurrentGenerationSignalException,
+} from '../scenario_loop/flow_control';
 import { persistTurn } from '../scenario_loop/turn_persistence';
 import type { PromptTemplateChain } from '../prompt_templates/prompt_template_chain.js';
 import type { PromptExecutionContext } from '../prompt_templates/prompt_template_context_fields.js';
@@ -316,20 +320,25 @@ export class ChatCoordinator {
     opts?: { afterMessageId?: string | undefined }
   ) {
     const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
-    const files = await generateChatImage({
+    await generateChatImage({
       fullPrompt,
       saveTo,
+      options: {
+        onPutComplete: (path: string) => {
+          this.setTranscript(this.transcript().addImageMessage(path, opts).updatedTranscript);
+          persistTurn();
+        },
+      },
     });
-
-    const firstFile = files[0];
-    assertNonNullish(firstFile, 'No file returned from image generation call');
-
-    this.setTranscript(this.transcript().addImageMessage(firstFile, opts).updatedTranscript);
-    persistTurn();
   }
 
   public static async endActiveChat(noEffect: boolean) {
-    if (!noEffect) {
+    if (noEffect) {
+      await globalParallelJobManager.cancelJobsByTag(
+        ChatJobTags.chatJob,
+        new UserAbortCurrentGenerationSignalException()
+      );
+    } else {
       const scenario = getRequiredActiveScenario();
       const characterStore = useScenarioCharacterStore.getState();
       const relationshipStore = useScenarioCharacterRelationshipStore.getState();
