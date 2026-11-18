@@ -298,6 +298,12 @@ function compileDemoSource(): void {
       }
     }
 
+    if (everydayAutoselectCount < 1) {
+      throw new Error(
+        `Character "${data.slug}" must have at least 1 wardrobe tagged with both "daily_autoselect:default" and "everyday"`
+      );
+    }
+
     for (const requiredTag of REQUIRED_LOCATION_WARDROBE_TAGS) {
       if (!data.wardrobes.some((w) => w.tags.includes(requiredTag))) {
         throw new Error(
@@ -306,10 +312,16 @@ function compileDemoSource(): void {
       }
     }
 
-    charsBySlug.set(data.slug, data);
     if (data.scenarioCharacterId === scenario.userCharacterId) {
+      if (data.globalMemories !== '') {
+        throw new Error(`User character "${data.slug}" must have empty globalMemories`);
+      }
       userChar = data;
+    } else if (!data.globalMemories.trim()) {
+      throw new Error(`NPC character "${data.slug}" must have non-empty globalMemories`);
     }
+
+    charsBySlug.set(data.slug, data);
   }
 
   if (!userChar) {

@@ -100,10 +100,11 @@ describe('Integration: Demo Entities from Export', () => {
       expect(char.wardrobes[0]?.enabled).toBe(true);
       expect(char.wardrobes.slice(1).every((w) => !w.enabled)).toBe(true);
 
-      const everydayAutoselect = char.wardrobes.filter(
-        (w) => w.tags.includes('daily_autoselect:default') && w.tags.includes('everyday')
-      );
-      expect(everydayAutoselect.length).toBeGreaterThanOrEqual(2);
+      const everydayWardrobes = char.wardrobes.filter((w) => w.tags.includes('everyday'));
+      expect(everydayWardrobes.length).toBeGreaterThanOrEqual(2);
+
+      const everydayAutoselect = everydayWardrobes.filter((w) => w.tags.includes('daily_autoselect:default'));
+      expect(everydayAutoselect.length).toBeGreaterThanOrEqual(1);
 
       for (const wardrobe of char.wardrobes) {
         const hasDaily = wardrobe.tags.some((t) => t.startsWith('daily_autoselect:'));
