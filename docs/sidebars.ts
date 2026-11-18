@@ -22,6 +22,7 @@ const sidebars: SidebarsConfig = {
         'suggested-models',
         'reasoning-models',
         'how-to-different-models-per-prompt',
+        'budget-optimization',
       ],
     },
     {
