@@ -21,6 +21,8 @@ import {
 import { newId } from '../util/id.js';
 import { buildCharacterEditorContext } from './prompt_templates/prompt_context_builder.js';
 
+export const CHARACTER_GEN_JOB_TAG = 'character_gen';
+
 export async function generateCharacterInternalDescription(character: Character): Promise<string> {
   return characterDescriptionGenerationTemplateChain.renderAndExecute(buildCharacterEditorContext(character));
 }
@@ -71,7 +73,7 @@ export async function extractCharacterCard(
   const charTag = `extract_character_${newId()}`;
   const makeJobConfig = (name: string): ParallelPromptJobConfig => ({
     name,
-    tags: [charTag],
+    tags: [CHARACTER_GEN_JOB_TAG, charTag],
     exclusiveWithTags: [charTag],
     onStart: () => onStep?.(name),
   });
@@ -132,7 +134,7 @@ export async function extractCharacterCard(
         onFieldGenerated?.('wardrobes', [
           createWardrobe({
             text: wardrobeText,
-            tags: [formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')],
+            tags: [CHARACTER_GEN_JOB_TAG, formatPrefixedTag(DAILY_AUTOSELECT_TAG_PREFIX, 'default')],
             enabled: true,
           }),
         ]);
