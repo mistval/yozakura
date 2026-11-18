@@ -170,7 +170,7 @@ export const DEFAULT_LLM_CONFIGS: LLMConfigById = {
     id: 'conversation-rolling-summary',
     name: 'Chat Memory: Summarize Conversation',
     rule: "context.promptTemplateGroup === 'gen_convo_summary'",
-    llmMetaOptions: JSON.stringify({ max_tokens: 500 }),
+    llmMetaOptions: JSON.stringify({ max_tokens: 650 }),
   },
   'offscreen-memory-extraction': {
     id: 'offscreen-memory-extraction',
@@ -182,19 +182,19 @@ export const DEFAULT_LLM_CONFIGS: LLMConfigById = {
     id: 'rolling-pairwise-memory-rewrite',
     name: 'Chat Memory: Pairwise Memory Rewrite',
     rule: "context.promptTemplateGroup === 'gen_pairwise_memory'",
-    llmMetaOptions: JSON.stringify({ max_tokens: 800 }),
+    llmMetaOptions: JSON.stringify({ max_tokens: 1200 }),
   },
   'offscreen-conversation-goal': {
     id: 'offscreen-conversation-goal',
     name: 'Chat Memory: Offscreen Character Conversation Goal Update',
     rule: "context.promptTemplateGroup === 'gen_offscreen_character_binary_update_next_convo_goal'",
-    llmMetaOptions: JSON.stringify({ max_tokens: 250 }),
+    llmMetaOptions: JSON.stringify({ max_tokens: 400 }),
   },
   'next-conversation-goal': {
     id: 'next-conversation-goal',
     name: 'Chat Memory: Onscreen Character Conversation Goal Update',
     rule: "context.promptTemplateGroup === 'gen_convo_goal'",
-    llmMetaOptions: JSON.stringify({ max_tokens: 250 }),
+    llmMetaOptions: JSON.stringify({ max_tokens: 400 }),
   },
   'relationship-tag-update': {
     id: 'relationship-tag-update',
