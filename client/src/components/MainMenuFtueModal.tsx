@@ -3,7 +3,7 @@ import { useStateRef } from '../hooks/useStateRef.js';
 import { useDraft } from '../hooks/useDraft.js';
 import { useLocation, useNavigate } from 'react-router';
 import YozakuraLogo from '../theme/yozakura_logo.js';
-import { useSettingsStore, type ChatPaneWidth, type Settings } from '../state/settings_store.js';
+import { useSettingsStore, type Settings } from '../state/settings_store.js';
 import { useModalPanelClasses } from '../hooks/use_mobile_layout.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import Modal from './ui/Modal.js';
@@ -80,22 +80,18 @@ export default function MainMenuFtueModal() {
     }
 
     const isMobile = window.innerWidth < 768;
-    const defaultLayout: ChatPaneWidth | null = isMobile ? 'mobile' : null;
 
-    if (!isMobile) {
-      setSettings({ chatPaneWidth: defaultLayout });
-      return;
+    if (isMobile) {
+      setSettings((previous: Settings) => ({
+        chatPaneWidth: 'mobile',
+        llmConfigs: updateLLMConfigsWithBaseDefaultsConnection(
+          previous.llmConfigs,
+          MOBILE_DEFAULT_COMPLETIONS_URL,
+          findBaseDefaultsLLMConfig(previous.llmConfigs)?.llmAuthToken ?? '',
+          MOBILE_DEFAULT_MODEL
+        ),
+      }));
     }
-
-    setSettings((previous: Settings) => ({
-      chatPaneWidth: defaultLayout,
-      llmConfigs: updateLLMConfigsWithBaseDefaultsConnection(
-        previous.llmConfigs,
-        MOBILE_DEFAULT_COMPLETIONS_URL,
-        findBaseDefaultsLLMConfig(previous.llmConfigs)?.llmAuthToken ?? '',
-        MOBILE_DEFAULT_MODEL
-      ),
-    }));
   }, [open, setSettings]);
 
   const markFtueSeen = () => {

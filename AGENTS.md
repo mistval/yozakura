@@ -1,6 +1,6 @@
 # Coding Agent Instructions
 
-- Do not run prettier (formatting).
+- Do not run prettier (it runs automatically on commit).
 - Only run tests or builds when you reasonably suspect you might have broken one.
 - Do not use `any` or explicit casting except when really necessary. Use Zod when complex casting is needed.
 - Never swallow errors indiscriminately. Prefer failing loudly.
