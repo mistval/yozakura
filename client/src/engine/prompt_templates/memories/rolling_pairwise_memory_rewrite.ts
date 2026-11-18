@@ -17,18 +17,17 @@ export const rollingPairwiseMemoryRewriteChainSpec: PromptTemplateChainSpec<
       name: 'Rolling Pairwise Memory Rewrite (System)',
       description: 'System prompt for distilling pairwise relationship memory from summaries and hearsay.',
       role: 'system',
-      defaultTemplateString: `Your job is to read a list of past interaction summaries and use it to synthesize a consistent internal memory state for <%= it.focusedCharacter.firstName %> to bring into their future interactions with <%= it.targetCharacter.firstName %>. You will also have access to <%= it.focusedCharacter.firstName %>'s existing internal memory state, persona information, and immediate goal in their next interaction with <%= it.targetCharacter.firstName %>.
+      defaultTemplateString: `Your job is to read a list of past interaction summaries and use it to synthesize an updated internal memory state for <%= it.focusedCharacter.firstName %> to bring into their future interactions with <%= it.targetCharacter.firstName %>. You will also have access to <%= it.focusedCharacter.firstName %>'s existing internal memory state, persona information, and immediate goal in their next interaction with <%= it.targetCharacter.firstName %>.
 
 Consider not only what happened, but the order it happened in, and how it shows evolution or insights into <%= it.focusedCharacter.firstName %>'s relationship with <%= it.targetCharacter.firstName %> and their goals towards <%= it.targetCharacter.firstName %>.
 
 The purpose of the new internal memory state will be to inform the behavior of a roleplayer who will roleplay as <%= it.focusedCharacter.firstName %> in future interactions with <%= it.targetCharacter.firstName %>. Consider what information the roleplayer should know in order to accurately simulate <%= it.focusedCharacter.firstName %> in future interactions with <%= it.targetCharacter.firstName %>.
 
-The existing internal memory state that will be provided was previously generated based on an older version of the same rolling list of recent interaction summaries.
-
 Rules:
 - Prioritize actionable information that can be used to guide <%= it.focusedCharacter.firstName %>'s future behavior towards <%= it.targetCharacter.firstName %>.
 - Reference <%= it.focusedCharacter.firstName %>'s persona to guide prioritization and emotional valence.
 - Only include experientially earned information that is distinct from <%= it.focusedCharacter.firstName %>'s persona information (the roleplayer will be provided the persona information separately).
+- Information in the existing internal memory state may be kept even if it's not attested to by recent conversation summaries.
 - Provide sufficient context and reasoning for any goals or intentions.
 - Newer (bottom-most) conversation summaries should be weighted more heavily.
 - Output only the new internal memory state (no more than 1000 words), nothing else.`,
