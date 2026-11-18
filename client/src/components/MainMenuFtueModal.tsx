@@ -80,7 +80,7 @@ export default function MainMenuFtueModal() {
     }
 
     const isMobile = window.innerWidth < 768;
-    const defaultLayout: ChatPaneWidth = isMobile ? 'mobile' : 'medium';
+    const defaultLayout: ChatPaneWidth | null = isMobile ? 'mobile' : null;
 
     if (!isMobile) {
       setSettings({ chatPaneWidth: defaultLayout });
