@@ -66,7 +66,7 @@ function MapModalInner() {
     void (async () => {
       try {
         const result = await doAsDataRead(
-          () => mainDatabase.loadScenarioEventPage(scenario.id, logPage),
+          () => mainDatabase.loadScenarioEventPage(scenario.id, logPage - 1),
           'scenario_event_log'
         );
         if (!cancelled) {
