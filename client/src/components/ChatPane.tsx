@@ -464,7 +464,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
             src={participant.imagePath}
             alt={`${participant.firstName} ${participant.lastName}`}
             className={
-              isTwoParticipantChat
+              isTwoParticipantChat || isMobileLayout
                 ? 'w-full h-auto border rounded-sm'
                 : 'w-full h-36 object-cover object-top border rounded-sm'
             }
