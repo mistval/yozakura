@@ -1,0 +1,17 @@
+{
+  "charASlug": "rhea_nocturne",
+  "charBSlug": "soren_lindqvist",
+  "familiarity": 54,
+  "aToB": {
+    "id": "e100000000000a0d01",
+    "descriptor": "Quiet Accomplice",
+    "memory": "Rhea knows perfectly well Soren clocks the hairline shadow-flickers on Mooncrest's north stairwell hinge rune at two in the morning—yet instead of snitching, he calmly re-tunes the ward by dawn and leaves warm cardamom knots near her landing at three. Out of quiet, unsentimental gratitude, she occasionally drops rare Earth vanilla beans and coarse sea salt beside his Aetherium Workshop chisel rack.",
+    "nextConversationGoal": "Rhea wants to slip a small foil packet of imported Earth Madagascar vanilla pods onto Soren's Aetherium Workshop bench without making a speech of it, and quietly confirm which stairwell ward he re-chalked last night."
+  },
+  "bToA": {
+    "id": "e100000000000d0a02",
+    "descriptor": "Moonlight Smuggler",
+    "memory": "Soren notices every tiny shadow-seam Rhea slips through along Mooncrest Hall's north stairwell and silently seals the hairline fractures every morning so unsafe things stay out while harmless noodle tins go unmentioned. He quietly appreciates the rare baking chocolate and vanilla pods that mysteriously land beside his workshop tools afterward.",
+    "nextConversationGoal": "Soren wants to let Rhea know in three dry words that the north stairwell hinge rune was tightened tightly enough to pinch careless shadow-folds, and quietly leave a warm honey-almond tart where she usually checks."
+  }
+}

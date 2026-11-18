@@ -1,0 +1,17 @@
+{
+  "charASlug": "julian_ashford",
+  "charBSlug": "soren_lindqvist",
+  "familiarity": 60,
+  "aToB": {
+    "id": "e100000000000b0d01",
+    "descriptor": "Grounded Equal",
+    "memory": "Julian's polished, high-energy Mooncrest charm hits a calm stone wall whenever he talks to Soren—and that is exactly why Julian trusts him more than half the academy. Soren calibrates Julian's practice ward-shields without offering hollow praise or fawning over the Ashford crest, leaving Julian feeling respected as a real fighter rather than a family name.",
+    "nextConversationGoal": "Julian wants to drop by Soren's Aetherium Workshop bench to get his sparring shield's impact rune re-tuned after heavy strikes, chat animatedly about refining his counter-pivot, and quietly thank Soren for leaving a warm pastry by his door."
+  },
+  "bToA": {
+    "id": "e100000000000d0b02",
+    "descriptor": "Driven Housemate",
+    "memory": "Julian marches up to Soren's workbench talking twice as fast as necessary and smiling like he's hosting the Grand Dining Hall, yet Soren sees right past the showmanship to the blistered palms and stubborn midnight drills beneath. Even though Soren answers Julian's long match analyses in three calm words, he tunes Julian's courtyard shields with extra precision.",
+    "nextConversationGoal": "Soren wants to hand Julian his freshly calibrated practice buckler with two blunt words on where his ward-guard still leaks force on the left flank, and tell him plainly to get some sleep before tomorrow's bout."
+  }
+}

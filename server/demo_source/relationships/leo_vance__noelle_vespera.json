@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "noelle_vespera",
+  "familiarity": 6,
+  "aToB": {
+    "id": "e10000000000010601",
+    "descriptor": "Stranger",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e10000000000060102",
+    "descriptor": "Uncharted Transfer",
+    "memory": "Noelle heard sleepy murmurs around Mooncrest Hall about a new Earth transfer enrolling without a traditional magical background, and noticed an oddly blank, static smudge in the Skyglass Observatory star charts right around his arrival window. She hasn't spoken to Leo yet, though she finds an unscripted star thread fascinating.",
+    "nextConversationGoal": "Noelle wants to drift over to Leo in a quiet moment—perhaps around Waystone Quad or before Herbology Class—introduce herself softly, and ask when he crossed the campus threshold so she can figure out why his probability chart looks strangely blurred."
+  }
+}

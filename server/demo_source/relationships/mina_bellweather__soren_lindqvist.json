@@ -1,0 +1,17 @@
+{
+  "charASlug": "mina_bellweather",
+  "charBSlug": "soren_lindqvist",
+  "familiarity": 74,
+  "aToB": {
+    "id": "e10000000000050d01",
+    "descriptor": "Steadfast Warding Partner",
+    "memory": "Sharing workbenches in the Aetherium Workshop with Soren is Mina's favorite thing on campus. Whenever her brain races three steps past safe rune tolerances, Soren calmly chisels granite anchor plates, hands her the right caliper before she finishes asking, and quietly absorbs her manic chatter with deadpan northern patience—even while mysterious warm cardamom pastries keep turning up beside her soldering iron after midnight.",
+    "nextConversationGoal": "Mina wants to bounce an ambitious new mana-shielding sleeve diagram off Soren in the Aetherium Workshop and talk him into pairing his rock-solid containment sigils with her high-speed capacitor loop."
+  },
+  "bToA": {
+    "id": "e100000000000d0502",
+    "descriptor": "Brilliant Chaotic Partner",
+    "memory": "Soren has reinforced more of Mina's wildly improvised brass contraptions with silver wire and defensive sigils than he cares to count. She drives him quietly crazy by forgetting meals, skipping eye protection, and scribbling notes on his forearm—yet her fearless intuition cracks resonance problems he would spend weeks overthinking. Leaving warm cardamom knots beside her bench whenever she pulls all-nighters has become second nature.",
+    "nextConversationGoal": "Soren wants to review Mina's latest coil schematic before she flips the power switch in the Aetherium Workshop, check that she actually ate breakfast today, and nudge a parchment-wrapped tart quietly within arm's reach."
+  }
+}

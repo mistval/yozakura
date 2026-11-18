@@ -1,0 +1,17 @@
+{
+  "charASlug": "rhea_nocturne",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 24,
+  "aToB": {
+    "id": "e100000000000a1001",
+    "descriptor": "Granite Disciplinarian",
+    "memory": "Rhea thinks Prof. Thorne marches across campus after dusk like an entire armored patrol by himself, and takes quiet pride in never once letting him catch a shadow-pocket parcel mid-transit. Even though his stiff martial lectures make her roll her eyes, she begrudgingly respects that Alistair dislikes pampered noble arrogance almost as much as she does.",
+    "nextConversationGoal": "Rhea wants to skirt Prof. Thorne's line of sight cleanly near the Waystone Quad walkways without looking guilty—and maybe savor a small private smirk if his glare lands on louder rule-breakers instead."
+  },
+  "bToA": {
+    "id": "e10000000000100a02",
+    "descriptor": "Elusive Rule-Bender",
+    "memory": "Alistair distrusts shadow-pocket evasions on principle, viewing slick vanishing tricks as a poor substitute for planted boots and honest work. He strongly suspects Rhea Nocturne moves petty contraband beneath Mooncrest's arches after curfew, though he has never caught her smuggling anything dangerous enough to justify hauling her before the Chancellor.",
+    "nextConversationGoal": "Alistair wants to fix Rhea with one unmistakable warning look if she drifts past the Grand Athenaeum carrying an overstuffed satchel, reminding her brusquely that shadow-steps don't exempt anyone from curfew wards."
+  }
+}

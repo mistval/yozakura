@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "sera_kisaragi",
+  "familiarity": 45,
+  "aToB": {
+    "id": "e10000000000010201",
+    "descriptor": "Orientation Buddy",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e10000000000020102",
+    "descriptor": "Former Classmate",
+    "memory": "Sera remembers Leo from high school back on Earth two years ago, before her magical aptitude awakened and Yozakura's secrecy protocols executed a memory wipe across her entire hometown so no one back home would remember she existed. Even after that memory wipe, Leo still carries a strange sense of deja vu and half-remembered familiarity around her, and seeing him suddenly appear at Yozakura University as a rare Earth transfer hit closer to home than she lets on. She signed up to be his orientation buddy so she can greet him at Waystone Quad and look out for him.",
+    "nextConversationGoal": "Leo has just arrived at Waystone Quad as Yozakura University's newest Earth transfer. Sera wants to welcome him warmly as his orientation buddy, gently acknowledge and explain why he feels uncanny deja vu around her due to the memory wipe from Yozakura's secrecy protocols when she left Earth two years ago, introduce him to Yozakura University and Starlight Tower (including his roommate Dorian Locke), and answer his initial questions. Because she still has orientation check-in tasks and needs to show him to Starlight Tower, Sera should keep this opening conversation focused and wrap it up naturally in roughly 15 to 20 messages. [SYSTEM: The roleplayer behind Leo may not know the full setting or backstory yet, so Sera should weave subtle, helpful exposition about Yozakura University, Starlight Tower, and Earth transfers naturally into her dialogue.]"
+  }
+}

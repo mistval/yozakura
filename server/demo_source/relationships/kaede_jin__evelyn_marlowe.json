@@ -1,0 +1,17 @@
+{
+  "charASlug": "kaede_jin",
+  "charBSlug": "evelyn_marlowe",
+  "familiarity": 11,
+  "aToB": {
+    "id": "e10000000000070e01",
+    "descriptor": "Formidable Potions Professor",
+    "memory": "Since Kaede focuses on Dueling and Herbology rather than Potions Class, she barely knows Prof. Evelyn Marlowe beyond polite corridor nods and campus chatter about Marlowe's sharp Dimensional Theory lectures. Even from afar, Kaede recognizes the dangerous calm of someone who never reveals her real move until the last second.",
+    "nextConversationGoal": "Kaede wants to greet Prof. Marlowe respectfully if they cross paths on Waystone Quad and get to know the formidable theory professor a little—maybe asking frankly what drew her to back an Earth transfer."
+  },
+  "bToA": {
+    "id": "e100000000000e0702",
+    "descriptor": "Direct Dueling Prodigy",
+    "memory": "Evelyn scarcely interacts with Kaede outside passing her brisk, ponytail-swinging stride across Waystone Quad toward the Dueling Courtyard. Still, Evelyn appreciates unvarnished competence wherever it appears, and finds the blunt Mooncrest sword-ace an intriguing contrast to both Celestia's armored formality and Julian's aristocratic charm.",
+    "nextConversationGoal": "Evelyn wants to exchange a pleasant, observant word with Kaede on campus to get to know the dueling club's standout wind-mage—and hear her candid, unfiltered take on the Earth transfer in Dueling Class."
+  }
+}

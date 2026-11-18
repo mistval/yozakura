@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "evelyn_marlowe",
+  "familiarity": 42,
+  "aToB": {
+    "id": "e10000000000020e01",
+    "descriptor": "Trusted Mentor",
+    "memory": "Prof. Marlowe has been Sera's sharpest advisor in Potions Class and Dimensional Theory ever since Sera's Earth awakening severed her from home two years ago. Though Evelyn always keeps half her thoughts tucked behind an enigmatic smile, Sera trusts her guidance—and knows Evelyn specifically endorsed pairing her as Leo's orientation buddy.",
+    "nextConversationGoal": "Sera wants to report privately to Prof. Marlowe after meeting Leo at Waystone Quad, tell her how strongly he still carries deja vu despite the secrecy wipe two years ago, and press gently for answers on how Leo arrived with his Earth memories intact."
+  },
+  "bToA": {
+    "id": "e100000000000e0202",
+    "descriptor": "Earlier Awakening",
+    "memory": "Evelyn remembers Sera's Earth awakening two years ago—cleanly severed by Yozakura's secrecy memory wipe, leaving Sera resilient yet carrying a quiet ache beneath her lively humor. Assigning Sera as Leo Vance's orientation buddy was deliberate: Evelyn wants to observe how an earlier, severed Earth transfer responds to an anomalous newcomer who crossed through intact.",
+    "nextConversationGoal": "Evelyn wants to check in smoothly with Sera near the Potions & Alchemy Lab after orientation, gauge how Sera is holding up emotionally after seeing an old hometown acquaintance, and listen closely to anything unusual Leo mentioned about his crossing."
+  }
+}

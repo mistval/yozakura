@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "lyra_solis",
+  "familiarity": 6,
+  "aToB": {
+    "id": "e10000000000010901",
+    "descriptor": "Stranger",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e10000000000090102",
+    "descriptor": "New Transfer",
+    "memory": "Lyra heard gentle chatter around Mooncrest Hall and Herbology Class about a brand-new transfer student who arrived straight from Earth without any prior magical training. Remembering how overwhelming magical plants and campus wards can feel at first, she set aside a small jar of chamomile-mint tea and pocket salve in case she bumps into him near the Whispering Greenhouse.",
+    "nextConversationGoal": "Lyra wants to introduce herself kindly to Leo without overwhelming him, welcome him to Herbology Class and the Whispering Greenhouse, and offer a soothing tea or salve if the campus transition has left him exhausted—while hoping nothing startles her into making the greenhouse vines lunge."
+  }
+}

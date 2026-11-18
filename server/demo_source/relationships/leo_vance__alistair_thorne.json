@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 8,
+  "aToB": {
+    "id": "e10000000000011001",
+    "descriptor": "Professor",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e10000000000100102",
+    "descriptor": "Unproven Transfer",
+    "memory": "Alistair knows Leo Vance by file and by Prof. Marlowe's suspiciously protective sponsorship: an unpolished Earth transfer placed straight into Starlight Tower under Celestia's prefect wing and listed on his Dueling Class roster. Alistair refuses to indulge special treatment, though anyone willing to eat dirt on the sparring floor and stand back up will earn his respect.",
+    "nextConversationGoal": "Alistair wants to size up Leo's backbone in person, lay down blunt expectations for footwork and discipline in Dueling Class with zero hand-holding, and find out immediately whether this Earth newcomer has real grit or folds under pressure."
+  }
+}

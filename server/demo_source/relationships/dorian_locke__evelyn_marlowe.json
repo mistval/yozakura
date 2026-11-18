@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "evelyn_marlowe",
+  "familiarity": 26,
+  "aToB": {
+    "id": "e10000000000030e01",
+    "descriptor": "Potions Professor",
+    "memory": "Dorian genuinely enjoys Prof. Marlowe's Potions Class because she treats obscure reagents and planar drift as crisp empirical mechanics rather than melodrama. He keeps his lab bench immaculate, turns in dry, meticulous notes, and noticed how deliberately Evelyn placed the new Earth transfer into his Starlight Tower suite.",
+    "nextConversationGoal": "Dorian wants to stay behind briefly after Potions Class to clarify a fine reagent tolerance with Prof. Marlowe—and dryly mention whether there are any odd dimensional quirks he should keep an eye out for around his new roommate."
+  },
+  "bToA": {
+    "id": "e100000000000e0302",
+    "descriptor": "Precise Student",
+    "memory": "Evelyn values Dorian's cool, methodical accuracy in the Potions & Alchemy Lab and his total immunity to Starlight Tower gossip. Pairing an unruffled spirit-binding major like Dorian as Leo Vance's roommate was a quiet stroke of practical housekeeping to keep an Earth newcomer steady.",
+    "nextConversationGoal": "Evelyn wants to exchange a calm, perceptive word with Dorian near the Potions & Alchemy Lab after class, check that his coursework is smooth, and subtly ask how Leo Vance is adapting to Starlight Tower's atmosphere."
+  }
+}

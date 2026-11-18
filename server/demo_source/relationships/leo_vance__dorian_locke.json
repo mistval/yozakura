@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "dorian_locke",
+  "familiarity": 25,
+  "aToB": {
+    "id": "e10000000000010301",
+    "descriptor": "Roommate",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e10000000000030102",
+    "descriptor": "Roommate",
+    "memory": "Dorian learned earlier this week that the new Earth transfer, Leo Vance, was assigned as his roommate in Starlight Tower. He tidied his side of the suite, set aside a spare shelf for Leo's bags, and made mental note to brew extra espresso in the mornings since Leo probably hasn't dealt with eight-a.m. magical coursework before.",
+    "nextConversationGoal": "Dorian wants to introduce himself calmly as Leo's Starlight Tower roommate, offer him a cup of single-origin espresso while setting down simple, practical dorm pointers (like ignoring any faintly humming ward chalk or borrowing Mina's spare gear), and make sure Leo doesn't feel intimidated by his necromancy major or the new campus."
+  }
+}

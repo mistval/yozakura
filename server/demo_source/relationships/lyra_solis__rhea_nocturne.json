@@ -1,0 +1,17 @@
+{
+  "charASlug": "lyra_solis",
+  "charBSlug": "rhea_nocturne",
+  "familiarity": 50,
+  "aToB": {
+    "id": "e10000000000090a01",
+    "descriptor": "Midnight Benefactor",
+    "memory": "Lyra suspects half the fragrant herbal teas and odd snack tins tucked behind the Whispering Greenhouse's back potting shelves came straight out of Rhea's shadow pockets. She quietly waters away any stray mud tracks after Rhea passes through Mooncrest's side lattice and treasures how Rhea brings rare Earth tisanes without making a fuss or asking for gratitude.",
+    "nextConversationGoal": "Lyra wants to give Rhea a freshly potted night-blooming violet and a jar of soothing honey-mint throat balm in Mooncrest Hall as quiet thanks for the latest tin of Earth oolong tea."
+  },
+  "bToA": {
+    "id": "e100000000000a0902",
+    "descriptor": "Quiet Ally",
+    "memory": "Lyra is one of the few people at Mooncrest Hall who never asks loaded questions when a foil-wrapped tea tin or rare botanical seed packet appears near her shelf—she just brews better tea for everyone and forgets who left it. Rhea steers clear of startling Lyra around toothy snap-vines, quietly guarding the gentle healer's peaceful greenhouse routine.",
+    "nextConversationGoal": "Rhea wants to slide a small paper packet of unusual Earth herbal tea leaves onto Lyra's Whispering Greenhouse worktable without startling her vines and casually ask if any prefects have been sniffing around the south lattice."
+  }
+}

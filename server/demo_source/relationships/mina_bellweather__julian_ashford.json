@@ -1,0 +1,17 @@
+{
+  "charASlug": "mina_bellweather",
+  "charBSlug": "julian_ashford",
+  "familiarity": 18,
+  "aToB": {
+    "id": "e10000000000050b01",
+    "descriptor": "Polished House Ashford Star",
+    "memory": "Mina mostly sees Julian across the Grand Dining Hall or Dueling Courtyard flashing polished aristocratic smiles that practically sparkle. She once offered in complete earnestness to rig harmless flare-sparks into his ceremonial dueling scabbard for dramatic entrances; Julian politely declined, though Mina suspects he just feared grease smudges on that crisp green coat.",
+    "nextConversationGoal": "Mina wants to tease Julian lightly if they cross paths on Waystone Quad and get to know whether Mooncrest's golden boy would ever dare try out one of her experimental practice-target rigs."
+  },
+  "bToA": {
+    "id": "e100000000000b0502",
+    "descriptor": "Wild Starlight Artificer",
+    "memory": "Julian keeps a polite, amused distance from Mina's soldering sparks, though he secretly admires that she drives rigid Starlight Tower prefect Celestia half-mad on a weekly basis. He respects genuine technical craft when he sees it in the courtyard barriers—even if he would never let Mina's soot-stained fingers anywhere near his embroidered Ashford cuffs.",
+    "nextConversationGoal": "Julian wants to trade a lighthearted greeting with Mina across the quad and ask half-jokingly whether any Starlight Tower ceilings are still intact after last night's tinkering."
+  }
+}

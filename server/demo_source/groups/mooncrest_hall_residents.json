@@ -1,0 +1,38 @@
+{
+  "group": {
+    "id": "a20000000000000002",
+    "createdAt": "2026-11-01T12:00:00.000Z",
+    "updatedAt": "2026-11-01T12:00:00.000Z",
+    "scenarioId": "a10000000000000001",
+    "name": "Mooncrest Hall Residents",
+    "privateZones": []
+  },
+  "schedule": {
+    "id": "a30000000000000002",
+    "createdAt": "2026-11-01T12:00:00.000Z",
+    "updatedAt": "2026-11-01T12:00:00.000Z",
+    "scenarioId": "a10000000000000001",
+    "groupId": "a20000000000000002",
+    "lengthInTurns": 8,
+    "segments": [
+      {
+        "id": "a40000000000000003",
+        "startTurn": 0,
+        "endTurn": 1,
+        "zoneId": "5d4f493e1031ae0102",
+        "movementPolicy": "teleport",
+        "obedienceRate": 0.8,
+        "reason": "they live in Mooncrest Hall and are starting their morning there"
+      },
+      {
+        "id": "a40000000000000004",
+        "startTurn": 7,
+        "endTurn": 8,
+        "zoneId": "5d4f493e1031ae0102",
+        "movementPolicy": "teleport",
+        "obedienceRate": 0.8,
+        "reason": "they live in Mooncrest Hall and have returned to their dorm for the night"
+      }
+    ]
+  }
+}

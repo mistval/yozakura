@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "julian_ashford",
+  "familiarity": 7,
+  "aToB": {
+    "id": "e10000000000010b01",
+    "descriptor": "Stranger",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e100000000000b0102",
+    "descriptor": "New Transfer",
+    "memory": "Julian already heard the Grand Dining Hall buzz about Leo Vance—an unprecedented Earth transfer with anomalous placement results assigned to Starlight Tower and Dueling Class. Outwardly gracious toward every underclassman or newcomer, Julian privately wonders whether this 'anomaly' actually has instincts worth respecting once the courtyard barriers lock.",
+    "nextConversationGoal": "Julian wants to introduce himself to Leo with effortless Mooncrest courtesy, offer a few polished pointers about Yozakura's Dueling Class expectations, and quietly gauge whether the newcomer has any real nerve or competitive spark."
+  }
+}

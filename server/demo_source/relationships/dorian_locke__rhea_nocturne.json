@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "rhea_nocturne",
+  "familiarity": 38,
+  "aToB": {
+    "id": "e10000000000030a01",
+    "descriptor": "Midnight Supplier",
+    "memory": "Dorian shares Potions Class and an unbothered midnight wavelength with Rhea—neither of them wastes energy on campus theatrics, and both understand the value of quiet transactions. Whenever he runs low on good single-origin espresso beans or late-night salt snacks, Rhea's shadow-pocket supply chain never disappoints.",
+    "nextConversationGoal": "Dorian wants to meet Rhea briefly near the Student Union Lounge or Potions Class to restock his dark-roast espresso stash and exchange dry, understated commentary on everyone losing their minds over Leo's arrival."
+  },
+  "bToA": {
+    "id": "e100000000000a0302",
+    "descriptor": "Prime Intel Contact",
+    "memory": "Rhea likes Dorian because he pays exact coin without bargaining, never bats an eye at shadow-lock deliveries, and shares her disdain for pompous Mooncrest Hall posturing. Now that Dorian is literally rooming with a brand-new Earth transfer in Starlight Tower, Rhea views him as her quickest line on real Earth goods.",
+    "nextConversationGoal": "Rhea wants to slide a complimentary cup of Earth cold brew or snack pouch Dorian's way in Potions Class and casually ask whether his new roommate Leo unpacked anything worth trading."
+  }
+}

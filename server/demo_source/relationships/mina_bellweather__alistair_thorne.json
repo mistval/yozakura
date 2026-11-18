@@ -1,0 +1,17 @@
+{
+  "charASlug": "mina_bellweather",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 16,
+  "aToB": {
+    "id": "e10000000000051001",
+    "descriptor": "Stern Dueling Professor",
+    "memory": "Mina keeps her mechanical contraptions strictly clear of Prof. Alistair Thorne's sightlines since the afternoon a runaway clockwork sparring beetle skittered across the Dueling Courtyard mid-critique. He didn't shout—just waited until the beetle finished its little hop and pinned it silently with the tip of his boot while staring straight through Mina's goggles.",
+    "nextConversationGoal": "Mina wants to slip politely past Prof. Thorne without dropping any loose screws—or, if spoken to, get to know the intimidating dueling master a bit better by offering to service the courtyard's mechanical target racks."
+  },
+  "bToA": {
+    "id": "e10000000000100502",
+    "descriptor": "Noisy Tower Tinkerer",
+    "memory": "Alistair barely knows Mina beyond Celestia's weary prefect complaints and the faint smell of scorched copper clinging to Starlight Tower's stairwell. He has zero patience for mechanical shortcuts in combat, though he grudgingly admitted Soren and Mina's joint repair of the Dueling Courtyard's perimeter emitters was remarkably solid engineering.",
+    "nextConversationGoal": "Alistair wants to remind Mina tersely to keep experimental gadgets out of his courtyard—while sparing a gruff, fair word of acknowledgment if she keeps Celestia's dorm nights reasonably quiet."
+  }
+}

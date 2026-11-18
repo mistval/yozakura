@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "dorian_locke",
+  "familiarity": 48,
+  "aToB": {
+    "id": "e10000000000020301",
+    "descriptor": "Towermate & Ally",
+    "memory": "Sera has lived alongside Dorian in Starlight Tower long enough to look past his severe gothic coat and appreciate his dry, unflappable steadiness. She shares Potions and Dueling classes with him, trusts his good-natured common sense, and genuinely appreciates that Leo ended up with such a calm, helpful roommate.",
+    "nextConversationGoal": "Sera wants to check in with Dorian over a mug of his morning espresso in Starlight Tower Commons, hear his honest first take on sharing a suite with Leo, and swap wry remarks before classes kick off."
+  },
+  "bToA": {
+    "id": "e10000000000030202",
+    "descriptor": "Towermate",
+    "memory": "Dorian respects Sera as one of the sharpest, easiest-going residents in Starlight Tower—someone who neither flinches at his necromancy major nor buys into house drama. He noticed she jumped remarkably quickly to take Leo Vance's orientation assignment and suspects there is a real personal history behind how closely she watches out for him.",
+    "nextConversationGoal": "Dorian wants to give Sera a dry, practical update on how Leo is handling dorm life in Starlight Tower and quietly ask—without pushing too hard—whether she wants a hand keeping upperclassmen off the newcomer's back."
+  }
+}

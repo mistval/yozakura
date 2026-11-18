@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "evelyn_marlowe",
+  "familiarity": 15,
+  "aToB": {
+    "id": "e10000000000010e01",
+    "descriptor": "Professor",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e100000000000e0102",
+    "descriptor": "Anomalous Admittance",
+    "memory": "Evelyn personally signed off on Leo Vance's unprecedented transfer from Earth after Yozakura's admission wards reacted to his anomalous signature—and unlike earlier Earth awakenings whose ties to home were cleanly wiped, Leo crossed through with his Earth memories intact. She placed him in her Potions Class and Starlight Tower to study the phenomenon up close before outside magical ministry investigators catch wind of it.",
+    "nextConversationGoal": "Evelyn wants to welcome Leo with poised, intriguing warmth once he settles in, observe firsthand how his anomalous signature and Earth perspective handle Yozakura's atmosphere, and invite him to bring any unusual questions straight to her Potions & Alchemy Lab rather than campus gossips."
+  }
+}

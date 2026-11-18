@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "celestia_thorne",
+  "familiarity": 12,
+  "aToB": {
+    "id": "e10000000000010401",
+    "descriptor": "Prefect",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e10000000000040102",
+    "descriptor": "New Transfer",
+    "memory": "As Starlight Tower prefect, Celestia reviewed Leo Vance's placement notice ahead of his arrival: an anomalous Earth transfer from a non-magical background assigned to share a suite with Dorian Locke and attend Dueling Class alongside upperclassmen. She expects an uninitiated newcomer to require strict supervision around tower bylaws and sparring etiquette.",
+    "nextConversationGoal": "Celestia wants to set crisp, unmistakable expectations with Leo as Starlight Tower's prefect—making sure he understands tower curfew, safety standards, and Dueling Courtyard conduct—while quietly gauging whether he shrinks under her reputation or talks to her like a grounded person."
+  }
+}

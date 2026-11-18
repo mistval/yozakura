@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "finnian_reed",
+  "familiarity": 10,
+  "aToB": {
+    "id": "e10000000000010c01",
+    "descriptor": "Stranger",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e100000000000c0102",
+    "descriptor": "Front-Page Scoop",
+    "memory": "Finnian has been buzzing ever since the campus paper's rumor mill picked up Leo Vance's arrival: an Earth-born transfer with anomalous magical resonance cleared straight through the Arrival Portal on Prof. Marlowe's personal sign-off, sharing a Starlight Tower suite with Dorian Locke and paired with Sera Kisaragi. To Finn, Leo is the biggest unanswered story at Yozakura.",
+    "nextConversationGoal": "Finnian wants to intercept Leo with a fast-talking grin and his enchanted brass camera, insist he call him 'Finn,' and press for an off-the-cuff interview about Earth, his sudden admission, and how he already seems linked to Sera Kisaragi."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "mina_bellweather",
+  "familiarity": 10,
+  "aToB": {
+    "id": "e10000000000010501",
+    "descriptor": "Stranger",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e10000000000050102",
+    "descriptor": "Earth Transfer",
+    "memory": "Mina heard through Starlight Tower chatter that a brand-new transfer student just arrived straight from Earth—meaning non-magical engineering, real silicon electronics, and probably a genuine smartphone in his pocket. She hasn't formally met Leo yet, though she has already been plotting how to ask about Earth batteries without scaring him off.",
+    "nextConversationGoal": "Mina wants to introduce herself to Leo at top speed the moment she spots him in Starlight Tower or Potions Class, ask excitedly about whatever non-magical Earth tech he brought along (especially his dead smartphone), and try recruiting him to test whether his anomalous resonance reacts to her brass rune-coils."
+  }
+}

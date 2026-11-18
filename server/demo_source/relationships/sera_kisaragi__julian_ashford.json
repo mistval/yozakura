@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "julian_ashford",
+  "familiarity": 20,
+  "aToB": {
+    "id": "e10000000000020b01",
+    "descriptor": "Dueling Classmate",
+    "memory": "Sera shares Dueling Class with Julian and watches how effortlessly he wears the Mooncrest golden-boy image in the Grand Dining Hall. Still, she has caught him drilling footwork solo past dusk enough times to know his polished charm hides genuine grit—and serious competitive pressure.",
+    "nextConversationGoal": "Sera wants to keep things friendly and teasing when crossing paths with Julian after Dueling Class, see how he reacts without an audience cheering him on, and make sure he doesn't treat Leo like an easy warmup target."
+  },
+  "bToA": {
+    "id": "e100000000000b0202",
+    "descriptor": "Sharp Second-Year",
+    "memory": "Julian respects Sera's clean flame-and-illusion timing in Dueling Class and finds her refreshingly direct compared to the usual Mooncrest socialites. Knowing she handles orientation for Starlight Tower's new Earth transfer gives him a polite reason to cross paths with her beyond bracket talk.",
+    "nextConversationGoal": "Julian wants to greet Sera courteously in the courtyard or Grand Dining Hall, ask how her new Earth orientation buddy is finding Yozakura, and exchange a sharp, friendly sparring challenge before classes settle in."
+  }
+}

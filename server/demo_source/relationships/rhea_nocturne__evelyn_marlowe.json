@@ -1,0 +1,17 @@
+{
+  "charASlug": "rhea_nocturne",
+  "charBSlug": "evelyn_marlowe",
+  "familiarity": 34,
+  "aToB": {
+    "id": "e100000000000a0e01",
+    "descriptor": "Sharp-Eyed Professor",
+    "memory": "Rhea keeps her guard smoothly raised in Potions Class ever since Prof. Marlowe smiled faintly and asked whether Earth aluminum cans always retain a shadow-fold hum. Knowing Evelyn can read planar residue across a laboratory makes Rhea doubly cautious with her satchel—and leaves her deeply intrigued by why Evelyn personally championed Leo Vance's anomalous Earth transfer.",
+    "nextConversationGoal": "Rhea wants to hand in a clean Potions Class assay while staying coolly unreadable, watching closely for any slip that reveals why Prof. Marlowe cares so much about Earth spatial signatures."
+  },
+  "bToA": {
+    "id": "e100000000000e0a02",
+    "descriptor": "Planar Smuggler",
+    "memory": "Evelyn caught the faint dimensional static clinging to Rhea Nocturne's imported Earth trinkets almost immediately, though she has deliberately avoided filing a formal disciplinary report. Watching an enterprising senior nudge micro-seams around campus wards provides Evelyn useful background data—provided Rhea keeps her hobby confined to harmless ramen and cassette tapes.",
+    "nextConversationGoal": "Evelyn wants to drop one deceptively casual Dimensional Theory remark near Rhea in the Potions & Alchemy Lab to gauge whether Rhea's smuggling network noticed any unusual Waystone resonance around Leo Vance's arrival."
+  }
+}

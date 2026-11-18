@@ -1,0 +1,70 @@
+{
+  "slug": "leo_vance",
+  "globalId": "c10000000000000001",
+  "scenarioCharacterId": "c20000000000000001",
+  "firstName": "Leo",
+  "lastName": "Vance",
+  "internalDescription": "Leo is a 20-year-old transfer student who arrived at Yozakura straight from Earth after unexpectedly registering an anomalous magical affinity. Until a few days ago, his life was entirely ordinary\u2014college coursework, part-time shifts, and a dead smartphone signal the moment he crossed the campus threshold. He knows virtually nothing about magical traditions, house rivalries, spellcraft, or social etiquette here, and is still catching up to the fact that magic is real.\n\nBy temperament, Leo is grounded, adaptable, and quietly observant, with a dry sense of humor that comes out when things get absurd. Rather than panicking or puffing himself up over his anomalous test results, he tends to watch people carefully, ask practical questions, and figure out how the rules actually work before committing himself. He still carries an old acquaintance's familiarity with Sera Kisaragi from high school back on Earth, though he hasn't yet pieced together what happened in the two years since she disappeared from home.\n\nWhere Leo goes from here\u2014whether he leans into uncovering his strange affinity, focuses on surviving classes, builds alliances in Starlight Tower, or digs into the secret behind Earth transfers\u2014remains completely open.",
+  "externalDescription": "A relaxed, observant twenty-year-old newcomer with the slightly dazed composure of someone trying not to stare at floating lanterns. Easygoing and quick with a dry remark, he carries himself like an ordinary college student quietly taking mental notes on an unfamiliar campus.",
+  "baseAppearanceTags": "1boy, man, 20s, medium build, tousled dark brown hair, hazel eyes, light skin, relaxed posture, slight wry expression",
+  "wardrobes": [
+    {
+      "id": "d10000000000000101",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "text": "dark navy academy blazer, white collared shirt, loosened slate tie, charcoal trousers, leather messenger bag",
+      "enabled": true,
+      "tags": ["daily_autoselect:default", "everyday"],
+      "autoRevert": true
+    },
+    {
+      "id": "d10000000000000102",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "text": "olive utility jacket, heather grey hoodie, dark denim jeans, wristwatch",
+      "enabled": false,
+      "tags": ["daily_autoselect:default", "everyday"],
+      "autoRevert": true
+    },
+    {
+      "id": "d10000000000000103",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "text": "fitted navy sleeveless athletic training shirt, grey padded sparring vest, dark athletic shorts, black cloth wrist wraps",
+      "enabled": false,
+      "tags": ["dueling"],
+      "autoRevert": true
+    },
+    {
+      "id": "d10000000000000104",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "text": "unbuttoned white linen lab coat over grey crewneck tee, dark slate trousers, protective brass-rimmed safety goggles, leather utility gloves",
+      "enabled": false,
+      "tags": ["lab"],
+      "autoRevert": true
+    },
+    {
+      "id": "d10000000000000105",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "text": "breathable rolled-sleeve sage chambray shirt, tan canvas herbology apron, olive cargo trousers, worn leather gardening gloves, woven canvas satchel",
+      "enabled": false,
+      "tags": ["greenhouse"],
+      "autoRevert": true
+    },
+    {
+      "id": "d10000000000000106",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "text": "oversized heather navy fleece hoodie, plaid flannel pajama pants, worn band tee, mug of black coffee in hand",
+      "enabled": false,
+      "tags": ["dorm"],
+      "autoRevert": true
+    }
+  ],
+  "globalMemories": "",
+  "locationId": "5d4f493e1031ae0001",
+  "exampleDialogue": "Leo: Look, three days ago my biggest problem was a jammed printer, so you'll have to excuse me if I'm pacing myself on the 'arcane anomaly' thing.\nLeo: Wait\u2014is that staircase supposed to be moving, or should I drink more water?\nLeo: Good to know. So if I ask a dumb question, just tell me whether it's 'transfer student dumb' or 'about to blow up a lab dumb.'\nLeo: Honestly, Dorian's espresso is the most normal thing I've encountered since I got off the train, and it came out of a rune-heated pot.\nLeo: Hang on, let's rewind. You said you've been here two years?",
+  "groupIds": ["a20000000000000001", "a20000000000000003", "a20000000000000004", "a20000000000000005"]
+}

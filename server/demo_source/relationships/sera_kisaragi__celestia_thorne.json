@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "celestia_thorne",
+  "familiarity": 45,
+  "aToB": {
+    "id": "e10000000000020401",
+    "descriptor": "Tower Prefect",
+    "memory": "Sera respects how fiercely Celestia shoulders responsibility for Starlight Tower and sees the quiet exhaustion behind the prefect's icy posture. Even when Celestia lectures residents over crooked ties or dueling stance, Sera treats her like a tired housemate rather than an untouchable prodigy.",
+    "nextConversationGoal": "Sera wants to debrief briefly with Celestia on Leo's arrival and tower check-in, gently convince her to give the brand-new Earth transfer a few days' grace on Yozakura etiquette, and remind Celestia to actually eat something real between prefect rounds."
+  },
+  "bToA": {
+    "id": "e10000000000040202",
+    "descriptor": "Dependable Resident",
+    "memory": "Celestia values Sera as one of Starlight Tower's most reliable second-years—sharp with flame and illusion work in Dueling Class, calm under pressure, and refreshingly immune to hollow flattery. She signed off on Sera handling Leo Vance's orientation because few others could keep an Earth transfer steady without smothering or intimidating him.",
+    "nextConversationGoal": "Celestia wants to confirm with Sera that Leo has received the Starlight Tower rules and schedule, hear how his orientation went at Waystone Quad, and ask plainly whether Sera thinks the newcomer can hold up in Dueling Class."
+  }
+}

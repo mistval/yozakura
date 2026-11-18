@@ -1,0 +1,17 @@
+{
+  "charASlug": "kaede_jin",
+  "charBSlug": "lyra_solis",
+  "familiarity": 44,
+  "aToB": {
+    "id": "e10000000000070901",
+    "descriptor": "Gentle Hallmate & Healer",
+    "memory": "Between Mooncrest Hall, Herbology Class, and too many aggressive sparring dives in the Dueling Courtyard, Kaede relies heavily on Lyra's steady bandages and soothing liniment. Knowing how easily loud noises spook Lyra's pocket snap-vines, Kaede always wipes her boots clean, knocks softly on the Whispering Greenhouse frame, and drops her voice to an easy calm whenever checking in.",
+    "nextConversationGoal": "Kaede wants to check in warmly with Lyra, thank her for the soothing wrist tape before yesterday's drills, and ask if she needs a hand hauling heavy soil bags for Herbology Class."
+  },
+  "bToA": {
+    "id": "e10000000000090702",
+    "descriptor": "Thoughtful, Kind Hallmate",
+    "memory": "Unlike loud upperclassmen who barge into the Whispering Greenhouse trailing sparks and impatience, fellow Mooncrest resident Kaede always waits gently by the brick path and respects Lyra's rest instructions after tough bouts. Kaede's blunt cheerfulness warms the conservatory, and Lyra's protective vines rarely even bristle when Kaede steps beside her potting table.",
+    "nextConversationGoal": "Lyra wants to check softly whether Kaede's bruised shoulder from Dueling Class eased up overnight and press a fresh jar of restorative mint-salve into her hands."
+  }
+}

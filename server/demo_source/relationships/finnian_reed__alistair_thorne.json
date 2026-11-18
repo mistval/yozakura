@@ -1,0 +1,17 @@
+{
+  "charASlug": "finnian_reed",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 30,
+  "aToB": {
+    "id": "e100000000000c1001",
+    "descriptor": "Camera-Hating Veteran",
+    "memory": "Prof. Thorne has threatened to lock Finn's enchanted brass camera inside a warded supply chest at least three times outside the Dueling Courtyard for attempting to turn tournament tension into snappy copy. Even when Alistair's granite scowl sends him retreating behind a pillar, Finn secretly longs to land one candid History of Magic interview with the scarred veteran.",
+    "nextConversationGoal": "Finn wants to sidle near Prof. Thorne in the Grand Athenaeum with his camera safely strapped down, pitching a respectful historical profile on past Yozakura dueling champions in hopes of coaxing out one unguarded comment on Celestia and Julian."
+  },
+  "bToA": {
+    "id": "e10000000000100c02",
+    "descriptor": "Tabloid Nuisance",
+    "memory": "Alistair despises cheap gossip hovering around the Dueling Courtyard and considers Finnian Reed's buzzing flashbulbs a distraction from serious discipline. Yet despite snapping regularly at the fast-talking Mooncrest reporter to keep his notebook out of sparring drills, Alistair grudgingly respects someone who takes a scolding upright instead of skulking.",
+    "nextConversationGoal": "Alistair wants to warn Finnian Reed bluntly in the Grand Athenaeum to keep sensational ranking chatter out of Dueling Class—unless he wants extra History of Magic essays stacked beside his inkwell."
+  }
+}

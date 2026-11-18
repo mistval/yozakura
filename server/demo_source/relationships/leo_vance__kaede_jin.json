@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "kaede_jin",
+  "familiarity": 6,
+  "aToB": {
+    "id": "e10000000000010701",
+    "descriptor": "Stranger",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e10000000000070102",
+    "descriptor": "New Transfer",
+    "memory": "Kaede caught word from the dueling club that Yozakura admitted a transfer student straight from a non-magical world, and saw his name listed on the roster for Dueling Class and Herbology. Having trained with blades and wind magic all her life, she is bluntly curious how someone without mana habits handles himself on his feet.",
+    "nextConversationGoal": "Kaede wants to introduce herself to Leo directly without Mooncrest formality, size up his balance and reflexes, and offer to put a wooden practice sword in his hands at the Dueling Courtyard so he doesn't walk into Dueling Class completely unprepared."
+  }
+}

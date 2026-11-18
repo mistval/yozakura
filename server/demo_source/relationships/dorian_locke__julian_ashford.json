@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "julian_ashford",
+  "familiarity": 16,
+  "aToB": {
+    "id": "e10000000000030b01",
+    "descriptor": "Polished Classmate",
+    "memory": "Dorian shares Dueling Class with Julian and watches Mooncrest's golden boy absorb cheers in the Grand Dining Hall before sneaking back to drill parries until midnight. Dorian finds ornate house pride mildly tiring, though he respects Julian's genuine work ethic beneath the sunlit smile.",
+    "nextConversationGoal": "Dorian wants to trade a quiet, unhurried exchange with Julian outside the Dueling Courtyard without sycophants hovering around, get to know the real person behind the Ashford crest, and gauge how Julian feels about the new Starlight Tower transfer."
+  },
+  "bToA": {
+    "id": "e100000000000b0302",
+    "descriptor": "Unfazed Classmate",
+    "memory": "Julian has crossed blades and exchanged formal greetings with Dorian in Dueling Class—always struck by how utterly immune Dorian is to Ashford prestige or crowd applause. Now that Dorian is rooming with the anomalous Earth transfer everyone is talking about, Julian is quietly curious what Dorian actually thinks of him.",
+    "nextConversationGoal": "Julian wants to greet Dorian with smooth courtyard courtesy after Dueling Class, strike up a genuine conversation past polite formalities, and ask casually how Starlight Tower's newest arrival is holding up."
+  }
+}

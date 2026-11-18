@@ -1,0 +1,17 @@
+{
+  "charASlug": "mina_bellweather",
+  "charBSlug": "finnian_reed",
+  "familiarity": 40,
+  "aToB": {
+    "id": "e10000000000050c01",
+    "descriptor": "Fast-Talking Scoop Hound",
+    "memory": "Sitting near Finn in Potions Class means enduring rapid-fire questions about every glowing gizmo on Mina's belt—and watching him magically appear outside the Aetherium Workshop whenever a capacitor pops loudly enough to rattle glass. Mina actually loves explaining how her inventions work to him, though she has learned that offhand jokes become bold campus headlines by Friday.",
+    "nextConversationGoal": "Mina wants to geek out briefly with Finn over the optical enchantment inside his battered brass bellows camera—while making sure he doesn't exaggerate last night's tiny blue workshop spark into a front-page disaster."
+  },
+  "bToA": {
+    "id": "e100000000000c0502",
+    "descriptor": "Explosive Quote Machine",
+    "memory": "Finn adores Mina because unlike tight-lipped upperclassmen, she genuinely loves showing off weird inventions—provided nobody tips off Celestia or Headmistress Sterling about her off-hours tests. Plus, Mina knows half of Starlight Tower's gossip purely by proximity, and her obsession with non-magical Earth technology makes her an instant lead on the Leo Vance beat.",
+    "nextConversationGoal": "Finn wants to corner Mina over a pastry near Familiar's Perch Cafe, let her inspect his brass camera shutter, and ask what she's discovered so far about Leo Vance's Earth smartphone and anomalous resonance."
+  }
+}

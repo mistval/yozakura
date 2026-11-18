@@ -1,0 +1,17 @@
+{
+  "charASlug": "rhea_nocturne",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 22,
+  "aToB": {
+    "id": "e100000000000a0f01",
+    "descriptor": "All-Seeing Chancellor",
+    "memory": "Rhea makes a quiet habit of keeping low visibility whenever Headmistress Sterling glides through Mooncrest Hall or the Grand Athenaeum, convinced those serene slate-blue eyes miss very little beneath the canopy. She strongly suspects Aurelia knows Mooncrest harbors midnight snacks and simply chooses not to waste chancellor authority on instant noodles unless Ministry envoys poke around.",
+    "nextConversationGoal": "Rhea wants to offer Headmistress Sterling a polite, unremarkable nod if they pass near the Grand Athenaeum, staying neatly above suspicion while quietly clocking whether the Chancellor seems relaxed or bracing for Ministry inspectors."
+  },
+  "bToA": {
+    "id": "e100000000000f0a02",
+    "descriptor": "Enterprising Senior",
+    "memory": "Aurelia knows perfectly well why suspiciously fragrant noodle broth and Earth tea keep cheering up stressed Mooncrest students during exam season, yet treats Rhea's small-scale smuggling with measured restraint. As long as Rhea never compromises university ward security or draws Ministry scrutiny, Aurelia prefers guiding an intelligent student quietly rather than forcing a showdown.",
+    "nextConversationGoal": "Aurelia wants to greet Rhea calmly if their paths cross near the Grand Athenaeum and remind her gently, without naming specifics, to keep Mooncrest's late-night doors properly latched with Ministry visitors on campus."
+  }
+}

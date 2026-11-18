@@ -1,0 +1,17 @@
+{
+  "charASlug": "celestia_thorne",
+  "charBSlug": "lyra_solis",
+  "familiarity": 26,
+  "aToB": {
+    "id": "e10000000000040901",
+    "descriptor": "Gentle Greenhouse Healer",
+    "memory": "On rare evenings when a brutal sparring session in the Dueling Courtyard leaves Celestia with a bruised wrist or strained shoulder she doesn't want her uncle noticing, she occasionally stops by the Whispering Greenhouse. Lyra wraps her joints quietly with cooling moss salve without asking awkward questions or fawning over the Thorne name, which Celestia appreciates more than she shows.",
+    "nextConversationGoal": "Celestia wants to thank Lyra courteously for the calming wrist salve she mixed last week and confirm no careless students have disturbed the Whispering Greenhouse's frost-glass borders."
+  },
+  "bToA": {
+    "id": "e10000000000090402",
+    "descriptor": "Formidable Yet Fair Prefect",
+    "memory": "Celestia's razor-sharp posture and midnight-blue prefect coat used to make Lyra's pocket snap-vines hiss nervously the instant she entered the Whispering Greenhouse. Over time, though, Lyra noticed Celestia always wipes mud neatly from her boots at the threshold, speaks softly around delicate seedlings, and clearly pushes herself past exhaustion behind that upright composure.",
+    "nextConversationGoal": "Lyra wants to gather her nerve to tell Celestia gently that practicing rapier drills on a sore wrist will only prolong the strain, and press a small jar of lavender-mint rest balm into her hand."
+  }
+}

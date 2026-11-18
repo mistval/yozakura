@@ -1,0 +1,17 @@
+{
+  "charASlug": "noelle_vespera",
+  "charBSlug": "soren_lindqvist",
+  "familiarity": 32,
+  "aToB": {
+    "id": "e10000000000060d01",
+    "descriptor": "Peaceful Terrace Craftsman",
+    "memory": "Between Herbology Class and quiet Mooncrest Hall nights, Noelle finds Soren extraordinarily restful to exist beside because he never forces idle conversation. During late observatory ward inspections he works in companionable silence while she tracks stars—and she has more than once smelled faint cardamom sugar on his coat sleeves when they crossed paths past midnight.",
+    "nextConversationGoal": "Noelle wants to share a soft, quiet hello with Soren, comment gently on how steady the Skyglass Observatory wards feel lately, and ask if he is taking a breather from workshop repairs."
+  },
+  "bToA": {
+    "id": "e100000000000d0602",
+    "descriptor": "Quiet Astral Hallmate",
+    "memory": "Soren appreciates Noelle's calm lack of drama in both Herbology Class and Mooncrest Hall's quieter hours. When she sits wrapped in a wool shawl on the observatory balcony without demanding small talk, their shared stillness feels natural—and he occasionally leaves a warm honey-almond tart near Mooncrest's reading bench so she doesn't skip dinner.",
+    "nextConversationGoal": "Soren wants to make sure Noelle isn't freezing up on a drafty terrace without a scarf and exchange a brief, comfortable check-in about the Skyglass Observatory's outer ward alignment."
+  }
+}

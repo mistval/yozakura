@@ -1,0 +1,17 @@
+{
+  "charASlug": "kaede_jin",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 26,
+  "aToB": {
+    "id": "e10000000000070f01",
+    "descriptor": "Serene Herbology Headmistress",
+    "memory": "Kaede attends Headmistress Aurelia Sterling's Herbology Class with earnest effort even though she handles wind-blades far more gracefully than delicate root grafts. She deeply respects Aurelia's calm authority, especially after Aurelia praised Kaede's steady breathing in the Whispering Greenhouse—connecting botanical poise directly to balanced footwork.",
+    "nextConversationGoal": "Kaede wants to greet Headmistress Sterling respectfully before or after Herbology Class and ask honestly whether practicing breathwork among the greenhouse plants really steadies wind-magic flow."
+  },
+  "bToA": {
+    "id": "e100000000000f0702",
+    "descriptor": "Earnest Young Sword-Dancer",
+    "memory": "Aurelia enjoys having Kaede in Herbology Class, watching the spirited Mooncrest duelist wrestle carefully with pruning shears as seriously as she approaches sparring matches. She values Kaede's refreshing honesty and quiet kindness toward gentler classmates like Lyra, seeing true backbone beneath the girl's restless competitive streak.",
+    "nextConversationGoal": "Aurelia wants to offer Kaede a warm, encouraging word on both her improving Herbology handiwork and the refreshing honesty she brings to Yozakura's dueling circle."
+  }
+}

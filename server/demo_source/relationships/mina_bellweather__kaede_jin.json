@@ -1,0 +1,17 @@
+{
+  "charASlug": "mina_bellweather",
+  "charBSlug": "kaede_jin",
+  "familiarity": 25,
+  "aToB": {
+    "id": "e10000000000050701",
+    "descriptor": "Wind-Blade Speedster",
+    "memory": "Mina has filled two margins of her workshop notebook trying to calculate the angular momentum behind Kaede's wind-step lunges in the Dueling Courtyard. She once eagerly pitched adding kinetic stabilizer runes directly onto Kaede's katana scabbard, only for Kaede to shut it down immediately because nobody wants an overheating battery bolted to a live blade.",
+    "nextConversationGoal": "Mina wants to pitch Kaede a completely silent, non-explosive spring-loaded training target spinner she built in the Aetherium Workshop—swearing up and down this model has zero chance of catching fire."
+  },
+  "bToA": {
+    "id": "e10000000000070502",
+    "descriptor": "Enthusiastic Gadget Menace",
+    "memory": "Kaede genuinely likes Mina's cheerful, unpretentious hustle—and respects how effortlessly Mina repaired a jammed training-ring gate with a hairpin and a spare magnet—even though Kaede refuses to let experimental coils anywhere near her steel. Watching Mina drive Celestia crazy in Starlight Tower also quietly delights Kaede to no end.",
+    "nextConversationGoal": "Kaede wants to check bluntly whether Mina's newly calibrated moving target dummies in the Dueling Courtyard won't spit purple sparks when hit by a full wind slash."
+  }
+}

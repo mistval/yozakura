@@ -1,0 +1,124 @@
+{
+  "id": "77857aab9e47d2d6d5",
+  "createdAt": "2026-01-01T00:00:03.000Z",
+  "updatedAt": "2026-01-01T00:00:03.000Z",
+  "name": "Paradise Island",
+  "description": "A tropical island resort connected to a colorful nearby town, with beaches, jungle trails, and lively nightlife.",
+  "locations": [
+    {
+      "id": "bebec280b16b77476c",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "updatedAt": "2026-01-01T00:00:03.000Z",
+      "name": "Ferry Pier",
+      "description": "The arrival dock where ferries come and go with visitors, luggage, and local deliveries.",
+      "adjacency": ["ae2c14b5db625fd580", "47b7b91ce99988dc78"],
+      "isEphemeral": false
+    },
+    {
+      "id": "ae2c14b5db625fd580",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "updatedAt": "2026-01-01T00:00:03.000Z",
+      "name": "Marina Boardwalk",
+      "description": "A palm-lined waterfront promenade with cafes, charter boats, and sunset views.",
+      "adjacency": ["bebec280b16b77476c", "b794814b2e0d5d7f09", "3df4fb510d5942337f", "8725fc2bda99a82672"],
+      "isEphemeral": false
+    },
+    {
+      "id": "b794814b2e0d5d7f09",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "updatedAt": "2026-01-01T00:00:03.000Z",
+      "name": "Resort Lobby",
+      "description": "An open-air lobby with breezy lounges, concierge desks, and polished stone floors.",
+      "adjacency": ["ae2c14b5db625fd580", "a3205eef41bcf98e6f", "30c5ceec3ba8b73170", "47b7b91ce99988dc78"],
+      "isEphemeral": false
+    },
+    {
+      "id": "8725fc2bda99a82672",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "updatedAt": "2026-01-01T00:00:03.000Z",
+      "name": "Beachfront",
+      "description": "A wide crescent of white sand with umbrellas, volleyball nets, and gentle surf.",
+      "adjacency": ["ae2c14b5db625fd580", "a3205eef41bcf98e6f", "2192afd4be04af1000", "133852adc371fa4af0"],
+      "isEphemeral": false
+    },
+    {
+      "id": "a3205eef41bcf98e6f",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "updatedAt": "2026-01-01T00:00:03.000Z",
+      "name": "Infinity Pool",
+      "description": "A glass-edged pool terrace overlooking the sea, popular for afternoon socializing.",
+      "adjacency": ["b794814b2e0d5d7f09", "8725fc2bda99a82672", "30c5ceec3ba8b73170"],
+      "isEphemeral": false
+    },
+    {
+      "id": "30c5ceec3ba8b73170",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "updatedAt": "2026-01-01T00:00:03.000Z",
+      "name": "Overwater Bungalows",
+      "description": "Private villas perched above clear water, connected by narrow wooden walkways.",
+      "adjacency": ["b794814b2e0d5d7f09", "a3205eef41bcf98e6f", "133852adc371fa4af0"],
+      "isEphemeral": false
+    },
+    {
+      "id": "3df4fb510d5942337f",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "updatedAt": "2026-01-01T00:00:03.000Z",
+      "name": "Night Market",
+      "description": "A dense lane of food stalls, handmade crafts, music, and bright lanterns after dark.",
+      "adjacency": ["ae2c14b5db625fd580", "47b7b91ce99988dc78"],
+      "isEphemeral": false
+    },
+    {
+      "id": "47b7b91ce99988dc78",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "updatedAt": "2026-01-01T00:00:03.000Z",
+      "name": "Old Town Square",
+      "description": "A historic plaza surrounded by low-rise shops, balconies, and shaded courtyards.",
+      "adjacency": [
+        "bebec280b16b77476c",
+        "3df4fb510d5942337f",
+        "b794814b2e0d5d7f09",
+        "99f492f4de7252cc81",
+        "dd2ba3cf8a75ca8c96"
+      ],
+      "isEphemeral": false
+    },
+    {
+      "id": "99f492f4de7252cc81",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "updatedAt": "2026-01-01T00:00:03.000Z",
+      "name": "Hillside Temple",
+      "description": "A quiet stone temple on a ridge, reached by worn steps and flowering trees.",
+      "adjacency": ["47b7b91ce99988dc78", "133852adc371fa4af0"],
+      "isEphemeral": false
+    },
+    {
+      "id": "dd2ba3cf8a75ca8c96",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "updatedAt": "2026-01-01T00:00:03.000Z",
+      "name": "Jungle Trail",
+      "description": "A humid path through thick tropical growth, alive with birds and insects.",
+      "adjacency": ["47b7b91ce99988dc78", "2192afd4be04af1000"],
+      "isEphemeral": false
+    },
+    {
+      "id": "2192afd4be04af1000",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "updatedAt": "2026-01-01T00:00:03.000Z",
+      "name": "Waterfall Lagoon",
+      "description": "A secluded freshwater pool fed by a rocky waterfall deep in the island interior.",
+      "adjacency": ["dd2ba3cf8a75ca8c96", "8725fc2bda99a82672", "133852adc371fa4af0"],
+      "isEphemeral": false
+    },
+    {
+      "id": "133852adc371fa4af0",
+      "createdAt": "2026-01-01T00:00:03.000Z",
+      "updatedAt": "2026-01-01T00:00:03.000Z",
+      "name": "Cliff Lookout",
+      "description": "A windswept overlook with dramatic ocean panoramas and a steep drop below.",
+      "adjacency": ["99f492f4de7252cc81", "2192afd4be04af1000", "8725fc2bda99a82672", "30c5ceec3ba8b73170"],
+      "isEphemeral": false
+    }
+  ],
+  "zones": []
+}

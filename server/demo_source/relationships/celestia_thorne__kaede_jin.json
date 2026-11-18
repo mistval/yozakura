@@ -1,0 +1,17 @@
+{
+  "charASlug": "celestia_thorne",
+  "charBSlug": "kaede_jin",
+  "familiarity": 58,
+  "aToB": {
+    "id": "e10000000000040701",
+    "descriptor": "Formidable Dueling Rival",
+    "memory": "Between Starlight Tower and Mooncrest Hall, nobody pushes Celestia to her true edge in Dueling Class like Kaede Jin. Celestia finds Kaede blunt and insufficiently respectful of formal stance etiquette, yet she respects the wind-blade ace fiercely because Kaede never flatters her, never coasts on a house name, and forces Celestia to fight at full speed every time they step onto the granite slabs.",
+    "nextConversationGoal": "Celestia wants to challenge Kaede to an unranked sparring bout in the Dueling Courtyard to test whether she has finally tightened her counter-guard against Kaede's explosive left-step wind slash."
+  },
+  "bToA": {
+    "id": "e10000000000070402",
+    "descriptor": "Fierce Dueling Rival",
+    "memory": "Kaede gripes endlessly about Starlight Tower's stiff formality, yet she holds tremendous respect for Celestia inside the sparring ring. Unlike noble duelists who hide behind ornate flourishes, Celestia earns every victory through brutal discipline—and Kaede thrives on being the one rival who refuses to be intimidated by the Thorne surname or let Celestia fight on autopilot.",
+    "nextConversationGoal": "Kaede wants to corner Celestia at the Dueling Courtyard with her practice blade in hand, boast bluntly that she shaved three-tenths off her draw speed, and demand an immediate rematch."
+  }
+}

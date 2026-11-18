@@ -1,0 +1,17 @@
+{
+  "charASlug": "rhea_nocturne",
+  "charBSlug": "julian_ashford",
+  "familiarity": 45,
+  "aToB": {
+    "id": "e100000000000a0b01",
+    "descriptor": "Polished Customer",
+    "memory": "Mooncrest's golden-boy duelist maintains dignified distance from Rhea's shadow-pocket errands in the Grand Dining Hall, yet whenever tournament brackets stretch past midnight he quietly slips her exact silver for spicy tonkotsu ramen and Earth matcha chews. Rhea keeps a completely straight face around his aristocratic scruples, mildly amused by how ruthlessly Julian drills once the spotlight clicks off.",
+    "nextConversationGoal": "Rhea wants to slide a fresh cup of Earth instant ramen and a pocket pack of caffeine gummies into Julian's coat corridor-side without blowing his pristine image, and tease him mildly about whether Celestia Thorne's streak has him burning midnight oil again."
+  },
+  "bToA": {
+    "id": "e100000000000b0a02",
+    "descriptor": "Discreet Supplier",
+    "memory": "Publicly Julian keeps polite formality around Rhea's rule-bending so no one links House Ashford to contraband chatter, yet privately he relies on her flawless discretion when midnight footwork drills leave him starving after the kitchens close. He respects that Rhea never gossips about her buyers or milks favors once coin changes hands.",
+    "nextConversationGoal": "Julian wants to settle his latest snack tab quietly with Rhea in the Student Union Lounge while keeping up casual small talk, and ask offhand if she happened to notice any new Earth items worth knowing about around Leo Vance."
+  }
+}

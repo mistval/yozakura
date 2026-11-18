@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "lyra_solis",
+  "familiarity": 28,
+  "aToB": {
+    "id": "e10000000000030901",
+    "descriptor": "Gentle Botanist",
+    "memory": "Dorian occasionally drops by the Whispering Greenhouse for shade-cured herbs or root infusions for spirit-ward maintenance, and learned early to announce himself quietly from the doorway so he doesn't startle Lyra's defensive snap-vines. Beneath his dry deadpan, he genuinely appreciates her kindness and keeps spare honey-mint tea packets near his espresso rack.",
+    "nextConversationGoal": "Dorian wants to step calmly by the Whispering Greenhouse to check if Lyra has any spare soothing herbs for a brand-new roommate adjusting to Yozakura, and assure her quietly that his necromancy supplies aren't bothering anyone."
+  },
+  "bToA": {
+    "id": "e10000000000090302",
+    "descriptor": "Thoughtful Client",
+    "memory": "Although Dorian looks intimidating in his long black tailored coat and silver rings, Lyra noticed immediately that he always knocks gently at the greenhouse glass, wipes his boots, and speaks slowly enough that her snap-vines stay completely calm. She actually trusts him far more than louder Mooncrest Hall peers.",
+    "nextConversationGoal": "Lyra wants to hand Dorian a fresh tin of soothing herbal tea and mild calming salve to share with his new Starlight Tower roommate Leo, and check warmly that his late-night wards work isn't wearing him out."
+  }
+}

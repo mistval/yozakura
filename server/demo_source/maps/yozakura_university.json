@@ -1,0 +1,230 @@
+{
+  "id": "5d4f493e1031ae6f32",
+  "createdAt": "2026-11-01T12:00:00.000Z",
+  "updatedAt": "2026-11-01T12:00:00.000Z",
+  "name": "Yozakura University",
+  "description": "A lush, enchanting magical university campus set amid twilight-kissed cherry blossom courtyards, ancient stone spires, arcane laboratories, and glass observatories.",
+  "locations": [
+    {
+      "id": "5d4f493e1031ae0001",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Waystone Quad",
+      "description": "The ceremonial heart of Yozakura University, an expansive cobblestone plaza framed by ancient night-blooming cherry trees whose pale blossoms drift across brass-inlaid waystone circles. At its center stands the shimmering Arrival Portal arch, flanked by iron spirit-lanterns and covered stone walkways leading toward the academic halls, dormitories, and campus commons.",
+      "adjacency": [
+        "5d4f493e1031ae0002",
+        "5d4f493e1031ae0003",
+        "5d4f493e1031ae0004",
+        "5d4f493e1031ae0005",
+        "5d4f493e1031ae0006",
+        "5d4f493e1031ae0007",
+        "5d4f493e1031ae0008",
+        "5d4f493e1031ae000a"
+      ],
+      "isEphemeral": false
+    },
+    {
+      "id": "5d4f493e1031ae0002",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Starlight Tower Commons",
+      "description": "The high-ceilinged hearth room at the base of Starlight Tower, a slender stone spire favored by celestial scholars, spell-theorists, and restless dreamers. Deep armchairs cluster around a softly crackling blue-flame fireplace beneath floating astrolabe chandeliers, tall arched windows facing the quad, and winding stairs rising into the dormitory floors above.",
+      "adjacency": ["5d4f493e1031ae0001", "5d4f493e1031ae0008", "5d4f493e1031ae0009"],
+      "isEphemeral": false
+    },
+    {
+      "id": "5d4f493e1031ae0003",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Mooncrest Hall",
+      "description": "A stately silver-stone residence hall ringed by manicured bamboo courtyards and quiet cedar verandas. Inside its main parlor, warm timber paneling, lacquered study tables, and softly glowing paper lanterns create an orderly, serene sanctuary for Mooncrest's residents.",
+      "adjacency": ["5d4f493e1031ae0001", "5d4f493e1031ae0008", "5d4f493e1031ae0009"],
+      "isEphemeral": false
+    },
+    {
+      "id": "5d4f493e1031ae0004",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Potions & Alchemy Lab",
+      "description": "A vaulted stone laboratory scented with crushed star-anise, ozone, and simmering botanical infusions. Long slate workbenches hold copper alembics, crystalline mortar sets, and racks of labeled reagent phials while enchanted ventilation hoods draw iridescent wisps of vapor toward the rafters.",
+      "adjacency": ["5d4f493e1031ae0001", "5d4f493e1031ae0005", "5d4f493e1031ae000b"],
+      "isEphemeral": false
+    },
+    {
+      "id": "5d4f493e1031ae0005",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Whispering Greenhouse",
+      "description": "A sprawling conservatory of wrought-iron ribs and misted glass panes overflowing with luminous ferns, silver-petaled moonflowers, and softly rustling botanical curiosities. Narrow brick walkways wind past stone watering basins and hanging moss baskets where herbology students tend temperamental magical flora.",
+      "adjacency": ["5d4f493e1031ae0001", "5d4f493e1031ae0004", "5d4f493e1031ae0006"],
+      "isEphemeral": false
+    },
+    {
+      "id": "5d4f493e1031ae0006",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Dueling Courtyard",
+      "description": "An open-air sunken arena paved in rune-scored granite slabs engineered to absorb stray sparks and kinetic shockwaves. Wooden practice racks, chalked ward circles, and tiered stone spectator benches ring the sparring floor beneath overhanging cherry boughs.",
+      "adjacency": ["5d4f493e1031ae0001", "5d4f493e1031ae0005", "5d4f493e1031ae0009"],
+      "isEphemeral": false
+    },
+    {
+      "id": "5d4f493e1031ae0007",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Familiar's Perch Cafe",
+      "description": "A cozy timber-and-brick campus coffeehouse tucked under an ivy-draped arcade, rich with the scent of roasted chestnuts, whisked matcha, and warm pastries. Brass perches and cushioned window ledges welcome owls, spirit foxes, and other student familiars while mismatched tables host study groups and late-night conversation.",
+      "adjacency": ["5d4f493e1031ae0001", "5d4f493e1031ae0009", "5d4f493e1031ae000a"],
+      "isEphemeral": false
+    },
+    {
+      "id": "5d4f493e1031ae0008",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Grand Dining Hall",
+      "description": "A cavernous hall of dark oak beams, stained-glass clerestories, and enchanted ceiling rafters that mirror the twilight sky outside. Long communal tables clatter with porcelain bowls, steaming cauldrons of broth, and self-warming teapots as students from every tower gather for meals.",
+      "adjacency": ["5d4f493e1031ae0001", "5d4f493e1031ae0002", "5d4f493e1031ae0003"],
+      "isEphemeral": false
+    },
+    {
+      "id": "5d4f493e1031ae0009",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Student Union Lounge",
+      "description": "A bustling campus crossroads of scuffed floorboards, cork noticeboards bristling with club flyers, and worn leather sofas tucked into alcoves. Between enchanted tea dispensers and tabletop strategy boards, students trade lecture notes, duel rumors, and weekend plans.",
+      "adjacency": ["5d4f493e1031ae0002", "5d4f493e1031ae0003", "5d4f493e1031ae0006", "5d4f493e1031ae0007"],
+      "isEphemeral": false
+    },
+    {
+      "id": "5d4f493e1031ae000a",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Grand Athenaeum",
+      "description": "Yozakura University's towering multi-tiered library, where mahogany bookshelves climb three stories beneath a painted celestial rotunda. Rolling brass ladders, quiet reading carrels lit by amber mage-lamps, and hushed mezzanine archives shelter centuries of grimoires and arcane treatises.",
+      "adjacency": ["5d4f493e1031ae0001", "5d4f493e1031ae0007", "5d4f493e1031ae000b", "5d4f493e1031ae000c"],
+      "isEphemeral": false
+    },
+    {
+      "id": "5d4f493e1031ae000b",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Aetherium Workshop",
+      "description": "An industrious stone annex humming with resonant mana-coils, brass gearworks, and half-assembled arcane automata. Heavy oak workbenches strewn with engraved rune-plates, calipers, and glowing aether crystals serve artificers and spell-engineers refining experimental enchantments.",
+      "adjacency": ["5d4f493e1031ae0004", "5d4f493e1031ae000a", "5d4f493e1031ae000c"],
+      "isEphemeral": false
+    },
+    {
+      "id": "5d4f493e1031ae000c",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Skyglass Observatory",
+      "description": "The highest glass-domed chamber on campus, crowned by a sweeping brass telescope and suspended armillary rings calibrated to distant constellations. From its wraparound stone balcony, the spirit-lanterns of Waystone Quad and the twilight-violet cherry groves stretch out far below.",
+      "adjacency": ["5d4f493e1031ae000a", "5d4f493e1031ae000b"],
+      "isEphemeral": false
+    }
+  ],
+  "zones": [
+    {
+      "id": "5d4f493e1031ae0101",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Starlight Tower",
+      "locationIds": ["5d4f493e1031ae0002"],
+      "wardrobeTriggers": [
+        {
+          "command": "disable",
+          "tag": "everyday"
+        },
+        {
+          "command": "enable_one",
+          "tag": "dorm"
+        }
+      ]
+    },
+    {
+      "id": "5d4f493e1031ae0102",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Mooncrest Dormitory",
+      "locationIds": ["5d4f493e1031ae0003"],
+      "wardrobeTriggers": [
+        {
+          "command": "disable",
+          "tag": "everyday"
+        },
+        {
+          "command": "enable_one",
+          "tag": "dorm"
+        }
+      ]
+    },
+    {
+      "id": "5d4f493e1031ae0103",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Potions Classroom",
+      "locationIds": ["5d4f493e1031ae0004"],
+      "wardrobeTriggers": [
+        {
+          "command": "disable",
+          "tag": "everyday"
+        },
+        {
+          "command": "enable_one",
+          "tag": "lab"
+        }
+      ]
+    },
+    {
+      "id": "5d4f493e1031ae0104",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Herbology Classroom",
+      "locationIds": ["5d4f493e1031ae0005"],
+      "wardrobeTriggers": [
+        {
+          "command": "disable",
+          "tag": "everyday"
+        },
+        {
+          "command": "enable_one",
+          "tag": "greenhouse"
+        }
+      ]
+    },
+    {
+      "id": "5d4f493e1031ae0105",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Dueling Grounds",
+      "locationIds": ["5d4f493e1031ae0006"],
+      "wardrobeTriggers": [
+        {
+          "command": "disable",
+          "tag": "everyday"
+        },
+        {
+          "command": "enable_one",
+          "tag": "dueling"
+        }
+      ]
+    },
+    {
+      "id": "5d4f493e1031ae0106",
+      "createdAt": "2026-11-01T12:00:00.000Z",
+      "updatedAt": "2026-11-01T12:00:00.000Z",
+      "name": "Aetherium Workshop Zone",
+      "locationIds": ["5d4f493e1031ae000b"],
+      "wardrobeTriggers": [
+        {
+          "command": "disable",
+          "tag": "everyday"
+        },
+        {
+          "command": "enable_one",
+          "tag": "lab"
+        }
+      ]
+    }
+  ]
+}

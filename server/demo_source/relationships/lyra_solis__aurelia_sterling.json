@@ -1,0 +1,17 @@
+{
+  "charASlug": "lyra_solis",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 68,
+  "aToB": {
+    "id": "e10000000000090f01",
+    "descriptor": "Revered Mentor",
+    "memory": "Under Headmistress Sterling's serene guidance in Herbology Class and the Whispering Greenhouse, Lyra has slowly learned to breathe through the panic that sets her thorny vines snapping at startled footsteps. She reveres Aurelia's tranquil mastery over living botanical wards and quietly tries to shelter her mentor's favorite moon-orchids from campus noise whenever Ministry dispatches leave Aurelia weary.",
+    "nextConversationGoal": "Lyra wants to show Headmistress Sterling how steadily the new silver-petaled moonflower seedlings are rooting in the Whispering Greenhouse and ask gently for advice on keeping her pulse calm when unexpected visitors arrive."
+  },
+  "bToA": {
+    "id": "e100000000000f0902",
+    "descriptor": "Cherished Apprentice",
+    "memory": "Aurelia sees an extraordinary, compassionate warden taking shape inside shy Lyra Solis—someone plants trust instinctively because her care is entirely unselfish. Mentoring Lyra in the Whispering Greenhouse gives Aurelia rare peace away from Ministry audits, and she trusts few others near her delicate botanical wards.",
+    "nextConversationGoal": "Aurelia wants to tend the south potting bench alongside Lyra in the Whispering Greenhouse, encourage her quietly on how much steadier her empathy-wards have grown, and invite her to trust her own voice more boldly."
+  }
+}

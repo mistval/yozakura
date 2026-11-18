@@ -1,0 +1,17 @@
+{
+  "charASlug": "mina_bellweather",
+  "charBSlug": "rhea_nocturne",
+  "familiarity": 54,
+  "aToB": {
+    "id": "e10000000000050a01",
+    "descriptor": "Prime Tech & Snack Source",
+    "memory": "Between sharing Potions Class and swapping favors after hours, Rhea has become Mina's absolute favorite supplier across the quad. Rhea fuels Mina's marathon builds with smuggled cans of Earth cold brew, sour gummies, and intriguing non-magical relics like cassette tapes and clicky ballpoint pens—and in return Mina builds custom shadow-shielded lockboxes that pass Starlight Tower inspections.",
+    "nextConversationGoal": "Mina wants to track Rhea down at the Student Union Lounge to trade three custom-wound resonance coils for that mysterious Earth cassette tape Rhea mentioned—plus a stash of spicy snacks."
+  },
+  "bToA": {
+    "id": "e100000000000a0502",
+    "descriptor": "Favorite Gadget Client",
+    "memory": "Rhea loves doing quiet business with Mina because Mina pays reliably in ingenious clockwork latches, whisper-sealed tins, and miniature flash-beads while never preaching about smuggling rules. Watching Mina enthusiastically try to reverse-engineer a cheap plastic ballpoint pen or trade mana-coils for magnetic ribbon keeps Rhea endlessly amused in Potions Class.",
+    "nextConversationGoal": "Rhea wants to deliver Mina's latest batch of canned cold brew and Earth curios, collect the quiet shadow-box latch Mina promised, and trade wry notes on surviving Prof. Marlowe's next Potions lab."
+  }
+}

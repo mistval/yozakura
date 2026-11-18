@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "noelle_vespera",
+  "familiarity": 28,
+  "aToB": {
+    "id": "e10000000000030601",
+    "descriptor": "Quiet Night-Owl",
+    "memory": "Dorian often crosses paths with Noelle in the hushed late hours at the Grand Athenaeum or near Skyglass Observatory, when most of campus is asleep. He likes that she speaks softly, never gets dramatic over his necromancy studies, and shares his appreciation for peaceful stillness.",
+    "nextConversationGoal": "Dorian wants to offer Noelle a quiet mug of warm tea or espresso during an evening run-in near the Grand Athenaeum and ask dryly whether her sky charts predicted anything strange about his new Earth roommate."
+  },
+  "bToA": {
+    "id": "e10000000000060302",
+    "descriptor": "Calm Starlight Owl",
+    "memory": "Noelle finds Dorian's low, unhurried voice and neat dark presence surprisingly restful compared to louder Mooncrest Hall socialites. She has exchanged quiet evening remarks with him near the Grand Athenaeum and noticed how calm and grounded his spirit-binding aura feels.",
+    "nextConversationGoal": "Noelle wants to drift by Dorian for a quiet late-afternoon chat, mention softly that the probability pattern around his suite looks unusually interesting this week, and ask how Leo is settling in."
+  }
+}

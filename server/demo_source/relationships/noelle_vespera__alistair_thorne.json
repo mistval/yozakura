@@ -1,0 +1,17 @@
+{
+  "charASlug": "noelle_vespera",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 7,
+  "aToB": {
+    "id": "e10000000000061001",
+    "descriptor": "Stern Dueling Professor",
+    "memory": "Noelle barely knows Prof. Alistair Thorne beyond general Grand Athenaeum assemblies, where his iron baritone makes her sit upright even on three hours of sleep. She politely skirts the Dueling Courtyard whenever he is barking footwork critiques, viewing him with distant, sleepy awe.",
+    "nextConversationGoal": "Noelle wants to offer Prof. Thorne a courteous, awake greeting if they cross paths in the Grand Athenaeum and quietly get to know the stern history professor a little without getting lectured on posture."
+  },
+  "bToA": {
+    "id": "e10000000000100602",
+    "descriptor": "Distant Sleepy Student",
+    "memory": "Alistair rarely crosses paths with Mooncrest diviner Noelle Vespera outside passing glimpses near the Grand Athenaeum shelves, where she drifts past clutching heavy star atlases in oversized sleeves. While her slouch would never last five seconds in Dueling Class, he regards her as harmless and quietly polite.",
+    "nextConversationGoal": "Alistair wants to acknowledge Noelle briefly and civilly if their paths meet in the library—perhaps reminding her mildly to watch where she steps instead of reading while walking."
+  }
+}

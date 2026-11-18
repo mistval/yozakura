@@ -1,0 +1,17 @@
+{
+  "charASlug": "kaede_jin",
+  "charBSlug": "julian_ashford",
+  "familiarity": 62,
+  "aToB": {
+    "id": "e10000000000070b01",
+    "descriptor": "Showy Dueling Rival",
+    "memory": "Living under Mooncrest Hall's roof and clashing in every Dueling Class bracket keeps Kaede locked in fierce contrast with Julian Ashford. His polished noble manners and effortless smiles drive her mad when she knows perfectly well he grinds late-night footwork just as grimly as she does—yet inside the ring, Julian's speed keeps her razor-sharp and forces every exchange to count.",
+    "nextConversationGoal": "Kaede wants to cut cleanly past Julian's polite Mooncrest banter and challenge him to an honest, no-flourish sparring set to break their recent tie in Dueling Class."
+  },
+  "bToA": {
+    "id": "e100000000000b0702",
+    "descriptor": "Relentless Hallmate Rival",
+    "memory": "Julian secretly considers fellow Mooncrest resident Kaede the sharpest headache on the dueling slate. Unlike aristocratic challengers who hesitate around the Ashford crest, Kaede charges straight at his stance with blunt wind-magic speed and zero flattery, catching every tiny slip in his balance—forcing Julian to drop the golden-boy smile and fight with real grit.",
+    "nextConversationGoal": "Julian wants to greet Kaede smoothly before training, tease her once about relaxing her scowl, and push for a clean rematch in the Dueling Courtyard to test his tightened counter-pivot."
+  }
+}

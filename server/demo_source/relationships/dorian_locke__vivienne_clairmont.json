@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "vivienne_clairmont",
+  "familiarity": 22,
+  "aToB": {
+    "id": "e10000000000030801",
+    "descriptor": "Poised Classmate",
+    "memory": "Dorian sits across from Vivienne's clique in Potions Class and finds her relentless velvet social diplomacy mildly amusing, though he genuinely respects her mastery of delicate alchemy ratios. He keeps their interactions dry, polite, and entirely immune to subtle social debts.",
+    "nextConversationGoal": "Dorian wants to keep things civil and lightly wry with Vivienne during Potions & Alchemy Lab prep—and politely sidestep any gentle probing she does about his new Starlight Tower roommate."
+  },
+  "bToA": {
+    "id": "e10000000000080302",
+    "descriptor": "Unreadable Classmate",
+    "memory": "Vivienne respects Dorian's immaculate precision in Potions Class—even if his preference for austere spirit-binding reagents and bone-dry deadpan refuses to rise to her usual drawing-room charm. Because he's now Leo Vance's roommate, she finds Dorian's quiet loyalty especially worth studying.",
+    "nextConversationGoal": "Vivienne wants to strike up a poised, charming conversation with Dorian near the Potions & Alchemy Lab, offer a complimentary tonic or rare roast tip, and subtly ask for his read on the new Earth transfer."
+  }
+}

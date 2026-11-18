@@ -1,0 +1,17 @@
+{
+  "charASlug": "evelyn_marlowe",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 64,
+  "aToB": {
+    "id": "e100000000000e1001",
+    "descriptor": "Intellectual Adversary",
+    "memory": "Evelyn and Prof. Thorne have traded sharp academic debates across the Grand Athenaeum for years—her push for experimental Dimensional Theory and adaptive ward curricula clashing head-on with his traditionalist insistence on proven rune-dueling doctrine and conservative caution. Now that Alistair suspects her backing of Earth transfer Leo Vance hides more than scholarly philanthropy, their tea-hour arguments crackle twice as briskly, though she respects that he challenges her directly instead of whispering to Ministry bureaucrats.",
+    "nextConversationGoal": "Evelyn wants to meet Prof. Thorne's gruff skepticism in the Grand Athenaeum with effortless Dimensional Theory logic, defend keeping Leo Vance in open classes rather than under lock, and bait Alistair smoothly over whether rigid historical dogma actually builds stronger mages."
+  },
+  "bToA": {
+    "id": "e10000000000100e02",
+    "descriptor": "Secretive Theorist",
+    "memory": "Alistair has argued philosophy and pedagogy with Prof. Marlowe for years—grudgingly respecting her razor-sharp intellect even while opposing her eagerness to bend foundational ward protocols in the name of Dimensional Theory. He sees straight through her velvet poise to the stubborn secrecy surrounding Earth transfer Leo Vance, and refuses to hold his tongue if an unvetted planar anomaly risks sparking across his Dueling Courtyard.",
+    "nextConversationGoal": "Alistair wants to pin Evelyn down bluntly in the Grand Athenaeum over her guarded stewardship of Leo Vance's placement, demanding straight answers on what planar instabilities his Dueling Class wards might absorb rather than letting her parry behind silky theory."
+  }
+}

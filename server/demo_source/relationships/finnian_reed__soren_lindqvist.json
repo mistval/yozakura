@@ -1,0 +1,17 @@
+{
+  "charASlug": "finnian_reed",
+  "charBSlug": "soren_lindqvist",
+  "familiarity": 44,
+  "aToB": {
+    "id": "e100000000000c0d01",
+    "descriptor": "Stone-Walled Housemate",
+    "memory": "Finn has thrown every fast-talking interview angle in his shorthand notebook at Mooncrest housemate Soren—only to bounce straight off a calm wall of two-word replies. Still, Finn once caught Soren's ears turning crimson near the Mooncrest stairwell carrying a flour-dusted cooling rack, and he's torn between breaking the campus mystery of the midnight cardamom knots and protecting his own free pastry supply.",
+    "nextConversationGoal": "Finn wants to corner Soren briefly near the Aetherium Workshop or Mooncrest kitchen with an innocent question about late-night stairwell ward surges, hoping one accidental slip gives away either his ward audit notes or a warm cardamom knot."
+  },
+  "bToA": {
+    "id": "e100000000000d0c02",
+    "descriptor": "Chattering Reporter",
+    "memory": "Soren regards Mooncrest housemate Finn as a relentless, ink-smudged sparrow who generates more noise before breakfast than the Aetherium Workshop coils generate all afternoon. Whenever Finn starts prying into two-a.m. hinge-rune glitches or mysterious parchment-wrapped pastries, Soren deflects him calmly in three dry syllables and hands over a plain rye heel to send him packing.",
+    "nextConversationGoal": "Soren wants to tell Finn plainly to keep his buzzing camera strap away from fresh silver-wire runes if he wanders through the workshop, and quietly slide one warm cardamom bun across the table so Finn talks with his mouth full instead."
+  }
+}

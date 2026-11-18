@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "soren_lindqvist",
+  "familiarity": 34,
+  "aToB": {
+    "id": "e10000000000030d01",
+    "descriptor": "Reliable Wardsmith",
+    "memory": "Dorian shares Dueling Class with Soren and relies on him whenever Starlight Tower's spirit-binding containment seals or doorway threshold wards need precision calibration. He appreciates Soren's total lack of small talk—and keeps his mouth diplomatically shut whenever a suspiciously fresh rye loaf or cardamom knot turns up after ward checks.",
+    "nextConversationGoal": "Dorian wants to check in quietly with Soren near the Dueling Courtyard or Aetherium Workshop to confirm the Starlight Tower room threshold runes are settled for Leo—and offer a cup of good black espresso in unspoken trade."
+  },
+  "bToA": {
+    "id": "e100000000000d0302",
+    "descriptor": "Tidy Spirit-Mage",
+    "memory": "Soren trusts Dorian far more than most flashier spellcasters because Dorian keeps his spirit-binding wards clean, sweeps his own chalk dust, and maintains quiet steadiness in Dueling Class. He knows Dorian was assigned to room with the unwarded Earth transfer and respects that Dorian takes suite safety seriously.",
+    "nextConversationGoal": "Soren wants to give Dorian a brief, low-key nod that the Starlight Tower suite boundary wards are holding cleanly for a non-magical roommate, and quietly ask how Leo Vance is handling his first days."
+  }
+}

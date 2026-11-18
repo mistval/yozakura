@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 12,
+  "aToB": {
+    "id": "e10000000000010f01",
+    "descriptor": "Headmistress",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e100000000000f0102",
+    "descriptor": "Irregular Transfer",
+    "memory": "As Chancellor and Herbology instructor, Headmistress Aurelia Sterling approved Leo Vance's irregular Waystone admission under Prof. Marlowe's sponsorship—fully aware that external magical ministries are already sending sealed inquiries over Earth threshold crossings. She has yet to speak with Leo in person, though she intends to protect his right to learn peacefully at Yozakura.",
+    "nextConversationGoal": "Aurelia wants to greet Leo calmly and warmly when they cross paths in the Grand Athenaeum or Herbology Class, welcome him personally to Yozakura University, and quietly take the measure of his character so she knows what she is defending to the Ministry."
+  }
+}

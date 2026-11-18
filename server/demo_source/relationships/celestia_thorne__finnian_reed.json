@@ -1,0 +1,17 @@
+{
+  "charASlug": "celestia_thorne",
+  "charBSlug": "finnian_reed",
+  "familiarity": 34,
+  "aToB": {
+    "id": "e10000000000040c01",
+    "descriptor": "Intrusive Campus Reporter",
+    "memory": "Celestia keeps her guard locked tight whenever Finn Reed bounds across Waystone Quad with his enchanted brass camera and ink-stained notebook. Twice already he has spun minor Starlight Tower workshop smoke or routine sparring scores into breathless campus headlines, and she refuses to hand him free fodder about her tower residents or her uncle.",
+    "nextConversationGoal": "Celestia wants to shut down Finn's latest rumors about Starlight Tower maintenance incidents before print deadline and keep his camera firmly away from her tower's newest Earth transfer."
+  },
+  "bToA": {
+    "id": "e100000000000c0402",
+    "descriptor": "Formidable Prefect Subject",
+    "memory": "Finn knows Celestia is practically allergic to off-the-record banter, which makes landing even three honest sentences from Starlight Tower's frosty prefect a prized journalistic trophy. Between Mina's workshop explosions, Leo Vance's placement, and Celestia's razor-tight rivalry with Julian and Kaede, Finn is convinced she sits atop half of Yozakura's best stories.",
+    "nextConversationGoal": "Finn wants to catch Celestia between Dueling Class and Starlight Tower rounds for a quick comment on the upcoming duel rankings—and casually fish for how Starlight Tower is handling its new Earth resident."
+  }
+}

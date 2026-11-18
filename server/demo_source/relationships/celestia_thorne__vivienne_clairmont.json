@@ -1,0 +1,17 @@
+{
+  "charASlug": "celestia_thorne",
+  "charBSlug": "vivienne_clairmont",
+  "familiarity": 38,
+  "aToB": {
+    "id": "e10000000000040801",
+    "descriptor": "Polished Mooncrest Peer",
+    "memory": "As Starlight Tower's top third-year prefect and Mooncrest Hall's premier senior socialite, Celestia and Vivienne frequently cross paths on student showcase committees and formal academy briefings. Celestia respects Vivienne's razor-sharp intellect and spotless Potions record, though she treats Vivienne's velvet charm and rumor-collecting with cool, watchful caution.",
+    "nextConversationGoal": "Celestia wants to confirm the inter-house showcase roster with Vivienne efficiently and ensure Mooncrest Hall's senior circle isn't spinning exaggerated stories about Starlight Tower's newest Earth transfer."
+  },
+  "bToA": {
+    "id": "e10000000000080402",
+    "descriptor": "Earnest Ice Prefect",
+    "memory": "Vivienne finds Celestia fascinatingly unbending—someone who shoulders Starlight Tower's honor and Alistair Thorne's legacy like parade armor while everyone else plays polite games for advantage. Beneath the clipped, weary prefect posture, Vivienne recognizes a genuinely honorable house leader who cannot be bought with Darjeeling tea or flattering favors.",
+    "nextConversationGoal": "Vivienne wants to greet Celestia with effortless warmth over tea at Familiar's Perch Cafe or the quad and gently probe how Starlight Tower's prefect is managing both Mina's latest workshop stunts and Leo Vance's arrival."
+  }
+}

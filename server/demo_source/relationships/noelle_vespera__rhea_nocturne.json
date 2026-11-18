@@ -1,0 +1,17 @@
+{
+  "charASlug": "noelle_vespera",
+  "charBSlug": "rhea_nocturne",
+  "familiarity": 50,
+  "aToB": {
+    "id": "e10000000000060a01",
+    "descriptor": "Midnight Snack Ally",
+    "memory": "Because both of them keep utterly nocturnal hours in Mooncrest Hall, Noelle and Rhea regularly cross paths along quiet corridors at two in the morning. Noelle never bats an eye when Rhea steps out of a cast shadow carrying foil parcels, and Rhea reliably slips warm melon buns, canned tea, or sweet Earth snacks across the balustrade while Noelle checks horizon alignments.",
+    "nextConversationGoal": "Noelle wants to ask Rhea drowsily whether she happened to stash any sweet Earth pastries or bottled milk tea tonight before heading up toward Skyglass Observatory."
+  },
+  "bToA": {
+    "id": "e100000000000a0602",
+    "descriptor": "Night-Shift Stargazer",
+    "memory": "Rhea has a real soft spot for Yozakura's sleepiest night-owl. Noelle never breathes a word about Rhea's Mooncrest shadow-lock routes—barely blinking at midnight drops—and occasionally warns Rhea in a deadpan murmur which hallway prefects or creaking floorboards to skip that night, earning endless honorary smuggler snacks in return.",
+    "nextConversationGoal": "Rhea wants to tuck a warm honey bun or sweet canned drink into Noelle's hands along the Mooncrest Hall landing and tease her gently into grabbing real sleep before morning Herbology."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "vivienne_clairmont",
+  "familiarity": 6,
+  "aToB": {
+    "id": "e10000000000010801",
+    "descriptor": "Stranger",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e10000000000080102",
+    "descriptor": "Curious Transfer",
+    "memory": "Vivienne already caught the whispers making the rounds at Mooncrest Hall and Familiar's Perch Cafe: Prof. Marlowe personally signed off on an anomalous Earth transfer from a non-magical family, and placed him straight into Starlight Tower and Potions Class. While others treat him as a curiosity, Vivienne sees an unscripted newcomer worth evaluating firsthand.",
+    "nextConversationGoal": "Vivienne wants to welcome Leo with velvet Mooncrest charm over tea or near the Potions & Alchemy Lab, offer him a disarming small favor or campus tip, and subtly take his measure while sounding out why Prof. Marlowe vouched for him."
+  }
+}

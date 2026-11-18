@@ -1,0 +1,17 @@
+{
+  "charASlug": "mina_bellweather",
+  "charBSlug": "vivienne_clairmont",
+  "familiarity": 32,
+  "aToB": {
+    "id": "e10000000000050801",
+    "descriptor": "Posh Potions Prodigy",
+    "memory": "Sharing Potions Class with Vivienne is an exercise in contrasting workbenches: Vivienne distills crystal-clear drafts without a hair out of place while Mina's sleeve catches three stray reagent splatters. Still, Mina admires Vivienne's scary chemical precision—especially the afternoon Vivienne slipped her an ultra-pure neutralizing drop after a capacitor boil-over without reporting it to Prof. Marlowe.",
+    "nextConversationGoal": "Mina wants to beg or barter two drops of Vivienne's ultra-pure stabilizing solvent before Potions Class starts—promising solemnly not to drip solder soot near her silk cuffs."
+  },
+  "bToA": {
+    "id": "e10000000000080502",
+    "descriptor": "Brilliant Lab Hazard",
+    "memory": "Vivienne instinctively guards her silk coat whenever Mina breezes into the Potions & Alchemy Lab trailing ozone and messy ginger curls. Yet Vivienne knows better than to underestimate Mina's wild genius: beneath the soot and fast chatter lies an engineer who sees hidden patterns everyone else misses, and Mina is blissfully immune to boring social posturing.",
+    "nextConversationGoal": "Vivienne wants to trade Mina a spare vial of clean stabilizing reagent in exchange for a closer look at whatever intriguing Earth gadgets Mina has been quizzing newcomers about."
+  }
+}

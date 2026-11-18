@@ -1,0 +1,17 @@
+{
+  "charASlug": "vivienne_clairmont",
+  "charBSlug": "lyra_solis",
+  "familiarity": 50,
+  "aToB": {
+    "id": "e10000000000080901",
+    "descriptor": "Gentle Botanist",
+    "memory": "Vivienne relies on her Mooncrest Hall housemate Lyra for immaculate silverleaf, moonflower cuttings, and calming herbal infusions from the Whispering Greenhouse—ingredients no commercial supplier delivers half as fresh. She treats Lyra with warm aristocratic protectiveness, though she keeps a calm hand near her teacup whenever Lyra's nervousness sets nearby potted vines snapping.",
+    "nextConversationGoal": "Vivienne wants to drop by the Whispering Greenhouse to request a fresh bundle of moonflower petals for an advanced Potions Class brew and gently reassure Lyra that nobody minds a few overprotective snap-vines."
+  },
+  "bToA": {
+    "id": "e10000000000090802",
+    "descriptor": "Poised Senior",
+    "memory": "Lyra admires how effortlessly Vivienne blends high-society grace with genuine apothecary mastery, and appreciates that Vivienne always asks politely before taking greenhouse cuttings instead of trampling flowerbeds. She still occasionally leaves chamomile-mint tea outside Vivienne's Mooncrest door after late potions labs, even if Vivienne's parlor polish leaves her slightly shy.",
+    "nextConversationGoal": "Lyra wants to hand Vivienne a freshly dried sachet of silverleaf and lavender without accidentally triggering any defensive vines, and ask timidly whether the last tea blend helped ease her post-lab throat irritation."
+  }
+}

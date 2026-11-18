@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "soren_lindqvist",
+  "familiarity": 5,
+  "aToB": {
+    "id": "e10000000000010d01",
+    "descriptor": "Stranger",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e100000000000d0102",
+    "descriptor": "New Transfer",
+    "memory": "Soren noticed Leo Vance's name when checking the arrival threshold runes and Dueling Courtyard barrier logs—an unawakened Earth transfer registering an anomalous signature at Waystone Quad. He hasn't spoken to Leo yet, though he privately made note to make sure the newcomer knows when an anchor sigil is still cooling.",
+    "nextConversationGoal": "Soren wants to introduce himself briefly and plainly if he crosses paths with Leo in Herbology Class, Dueling Class, or near a freshly chalked archway, give him practical safety sense around live campus wards, and leave him a warm parchment-wrapped cardamom pastry without making a fuss."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "kaede_jin",
+  "familiarity": 18,
+  "aToB": {
+    "id": "e10000000000030701",
+    "descriptor": "Dueling Classmate",
+    "memory": "Dorian shares Dueling Class with Kaede and has watched her dismantle opponents with crisp wind-step slashes while he keeps strictly to defensive spirit wards and minimal wasted motion. Though her brisk intensity is the polar opposite of his unhurried calm, he respects how straightforward and honest she is.",
+    "nextConversationGoal": "Dorian wants to exchange a calm, unhurried word with Kaede near the Dueling Courtyard, get to know her better outside sparring brackets, and ask dryly if she wouldn't mind demonstrating wind-footwork fundamentals for an Earth newcomer."
+  },
+  "bToA": {
+    "id": "e10000000000070302",
+    "descriptor": "Cool-Headed Classmate",
+    "memory": "Kaede knows Dorian from Dueling Class as the tall Starlight Tower necromancer who somehow parries full-speed strikes without spilling his patience or wrinkling his coat. She hasn't talked to him much one-on-one because he seems reserved, though she appreciates that he never indulges in Mooncrest gossip.",
+    "nextConversationGoal": "Kaede wants to walk up to Dorian plainly after Dueling Class, ask how his new non-magical roommate is taking to Yozakura, and see if she can tempt Dorian into an actual full-effort sparring match sometime."
+  }
+}

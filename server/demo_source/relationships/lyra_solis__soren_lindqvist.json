@@ -1,0 +1,17 @@
+{
+  "charASlug": "lyra_solis",
+  "charBSlug": "soren_lindqvist",
+  "familiarity": 56,
+  "aToB": {
+    "id": "e10000000000090d01",
+    "descriptor": "Gentle Anchor",
+    "memory": "Soren is one of the very few people whose unhurried presence in the Whispering Greenhouse never startles Lyra's nervous plants—even her touchiest snap-vines stay curled peacefully while he kneels by the stone sills checking frost-wards. She deeply treasures the quiet evenings they share without forced small talk and keeps small jars of marigold burn-salve ready for his workshop-scarred knuckles.",
+    "nextConversationGoal": "Lyra wants to offer Soren a warm mug of honey-mint tea when he checks the Whispering Greenhouse frost-sigils, press a fresh jar of healing salve into his hand, and quietly thank him for the almond tart left outside her door."
+  },
+  "bToA": {
+    "id": "e100000000000d0902",
+    "descriptor": "Quiet Kindred",
+    "memory": "Soren feels completely at ease beside Lyra in the misted quiet of the Whispering Greenhouse, where nobody expects clever speeches and the only sounds are dripping water basins and rustling night-ferns. He checks her frost-wards twice as carefully as any hallway barrier and regularly leaves still-warm cardamom knots beside her Mooncrest door.",
+    "nextConversationGoal": "Soren wants to inspect the eastern glasshouse frost-sigils for Lyra, confirm her night-blooming ferns are holding temperature cleanly, and discreetly set a parchment-wrapped pastry beside her watering bench."
+  }
+}

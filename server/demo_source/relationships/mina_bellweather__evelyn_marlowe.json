@@ -1,0 +1,17 @@
+{
+  "charASlug": "mina_bellweather",
+  "charBSlug": "evelyn_marlowe",
+  "familiarity": 45,
+  "aToB": {
+    "id": "e10000000000050e01",
+    "descriptor": "Brilliant Yet Dangerous Prof",
+    "memory": "Mina practically vibrates during Prof. Evelyn Marlowe's Potions & Dimensional Theory sessions. Even when Marlowe skewers Mina's reckless reagent shortcuts with one dry raise of an eyebrow, she never shuts down bold questions—and she is the only professor at Yozakura who looks at Mina's unorthodox non-magical circuit sketches and points straight to the deeper planar physics.",
+    "nextConversationGoal": "Mina wants to linger after Potions Class with a soot-smudged notebook sketch and ask Prof. Marlowe excitedly whether cross-realm static could explain why Earth lithium cells behave strangely near mana wards."
+  },
+  "bToA": {
+    "id": "e100000000000e0502",
+    "descriptor": "Recklessly Gifted Student",
+    "memory": "Evelyn regards Mina as equal parts prodigy and fire hazard—the rare student in Potions Class who grasps dimensional shielding intuitively while ignoring basic blast-glass etiquette unless directly stared down. Evelyn maintains a locked drawer containing three of Mina's confiscated prototypes, partly for campus safety and partly because Mina's non-magical shielding ideas align suspiciously closely with her own private Earth research.",
+    "nextConversationGoal": "Evelyn wants to examine Mina's latest mana-shielding notebook hypothesis with genuine academic interest—while gently reminding her not to bypass the lab's ventilation wards or spook Starlight Tower's new transfer."
+  }
+}

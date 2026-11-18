@@ -1,0 +1,17 @@
+{
+  "charASlug": "leo_vance",
+  "charBSlug": "rhea_nocturne",
+  "familiarity": 10,
+  "aToB": {
+    "id": "e10000000000010a01",
+    "descriptor": "Stranger",
+    "memory": "",
+    "nextConversationGoal": ""
+  },
+  "bToA": {
+    "id": "e100000000000a0102",
+    "descriptor": "Earth Connection",
+    "memory": "The moment Rhea caught wind that Yozakura's arrival wards cleared an actual transfer student straight from Earth—and that he was placed in her Potions Class roster—her smuggler instincts locked right onto him. She hasn't spoken to Leo yet, though she is convinced someone who stepped off Earth this week knows exactly what snacks and conveniences are worth smuggling next.",
+    "nextConversationGoal": "Rhea wants to slide casually into conversation with Leo near the Student Union Lounge or Potions Class, offer him an off-the-record cup of Earth cold brew or spicy instant ramen if he misses normal food, and size up whether he packed any tradeable Earth oddities in his luggage."
+  }
+}

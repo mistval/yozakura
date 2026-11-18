@@ -1,0 +1,17 @@
+{
+  "charASlug": "noelle_vespera",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 36,
+  "aToB": {
+    "id": "e10000000000060f01",
+    "descriptor": "Serene Herbology Mentor",
+    "memory": "Noelle genuinely loves Headmistress Aurelia Sterling's Herbology Class in the Whispering Greenhouse, where the damp earth smells calming and Aurelia never snaps at students who move unhurriedly. Once, after restless astral visions left Noelle drained, Aurelia quietly invited her to sit beside the lemon-verbena beds until her breathing steadied without prying.",
+    "nextConversationGoal": "Noelle wants to greet Headmistress Sterling softly and ask whether any calming night-bloom leaves in the Whispering Greenhouse help quiet persistent astral dreams."
+  },
+  "bToA": {
+    "id": "e100000000000f0602",
+    "descriptor": "Gentle Young Seer",
+    "memory": "Aurelia watches quietly over Noelle in Herbology Class, recognizing how tiring keen astral sensitivity becomes when a young student absorbs every restless current on campus. She gently encourages Noelle's bond with Lyra in the Whispering Greenhouse, trusting warm soil and afternoon sunlight to anchor a night-owl seer.",
+    "nextConversationGoal": "Aurelia wants to check warmly on how Noelle has been sleeping this week and gently encourage her to spend an unhurried afternoon among the greenhouse benches."
+  }
+}

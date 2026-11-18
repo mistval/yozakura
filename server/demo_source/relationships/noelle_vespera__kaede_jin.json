@@ -1,0 +1,17 @@
+{
+  "charASlug": "noelle_vespera",
+  "charBSlug": "kaede_jin",
+  "familiarity": 32,
+  "aToB": {
+    "id": "e10000000000060701",
+    "descriptor": "Lively Hallmate & Sparrer",
+    "memory": "Living in Mooncrest Hall and sharing Herbology Class with Kaede feels a bit like living next to a crisp morning breeze. While Kaede's blunt dawn energy occasionally startles Noelle out of a warm half-nap, Noelle enjoys watching Kaede practice wind-step blade forms in the courtyard mist below Skyglass Observatory—finding a quiet, meditative cadence beneath all that athletic speed.",
+    "nextConversationGoal": "Noelle wants to murmur a sleepy compliment on Kaede's dawn wind-blade forms earlier and casually warn her not to bet on clear skies during afternoon practice."
+  },
+  "bToA": {
+    "id": "e10000000000070602",
+    "descriptor": "Eerie Sleepy Hallmate",
+    "memory": "Kaede knows Mooncrest hallmate Noelle as the pale, silver-haired night owl who shows up to Herbology Class looking half-dreaming yet casually predicts sudden squalls before a single cloud forms. Kaede once caught Noelle by the elbow just before she walked straight into a bamboo garden lantern at dawn and has quietly looked out for her around stairs ever since.",
+    "nextConversationGoal": "Kaede wants to ask directly whether Noelle actually slept more than three hours last night and drag her toward warm breakfast before Herbology Class starts."
+  }
+}

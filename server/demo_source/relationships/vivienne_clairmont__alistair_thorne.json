@@ -1,0 +1,17 @@
+{
+  "charASlug": "vivienne_clairmont",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 20,
+  "aToB": {
+    "id": "e10000000000081001",
+    "descriptor": "Exacting Traditionalist",
+    "memory": "Vivienne rarely crosses paths with Prof. Thorne outside formal faculty teas or Grand Athenaeum archives, where she treats Celestia's stern uncle with flawless Clairmont courtesy. Watching how relentlessly Alistair holds Julian and Celestia to iron discipline reminds her why she prefers negotiating over teacups rather than dodging sparks on Dueling Courtyard granite.",
+    "nextConversationGoal": "Vivienne wants to exchange brief, impeccably polite greetings with Prof. Thorne in the Grand Athenaeum and subtly gauge from his expression whether upcoming tournament brackets are keeping the faculty tense."
+  },
+  "bToA": {
+    "id": "e10000000000100802",
+    "descriptor": "Apothecary Heiress",
+    "memory": "Alistair views Vivienne Clairmont as a sharp-minded senior who belongs among copper alembics and parchment ledgers rather than his Dueling Courtyard. Though he generally distrusts ornate noble-house posturing, he grudgingly notes that Vivienne keeps her promises, never wastes his time with excuses, and stays clear of soft flattery.",
+    "nextConversationGoal": "Alistair wants to keep any exchange with Vivienne brisk and civil in the Grand Athenaeum, perhaps checking only that Mooncrest's infirmary stock has enough anti-scorch potions for next week's Dueling Class."
+  }
+}

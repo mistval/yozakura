@@ -1,0 +1,17 @@
+{
+  "charASlug": "lyra_solis",
+  "charBSlug": "evelyn_marlowe",
+  "familiarity": 38,
+  "aToB": {
+    "id": "e10000000000090e01",
+    "descriptor": "Intimidating Scholar",
+    "memory": "Lyra delivers freshly harvested moonflower stamens and shade-cured roots to the Potions & Alchemy Lab whenever Prof. Marlowe's advanced experiments require living botanical resonance. Evelyn's sharp amber gaze and brisk critiques always make Lyra clutch her apron tight to keep pocket seeds calm, yet one quiet word of praise from Evelyn leaves her beaming for a week.",
+    "nextConversationGoal": "Lyra wants to deliver a carefully wrapped basket of morning-picked silverleaf to Prof. Marlowe cleanly without knocking over any glass flasks, and ask softly whether the harvest meets her distillation standard."
+  },
+  "bToA": {
+    "id": "e100000000000e0902",
+    "descriptor": "Gifted Botanist",
+    "memory": "Evelyn respects Lyra's uncanny botanical attunement, recognizing that living herbs tended by Lyra hold twice the alchemical stability of dried guild stock. Knowing how easily sudden bangs or sharp teasing trigger Lyra's defensive snap-vines, Evelyn keeps her tone measured and clear whenever the quiet second-year visits the Potions & Alchemy Lab.",
+    "nextConversationGoal": "Evelyn wants to examine Lyra's latest silverleaf harvest in the Potions & Alchemy Lab, verify its resonance curve calmly, and ask whether any Whispering Greenhouse flora reacted strangely during the recent Waystone surge."
+  }
+}
