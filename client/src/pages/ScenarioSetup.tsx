@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import CharacterSelectionGrid from '../components/CharacterSelectionGrid.js';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
+import ConfirmDialog from '../components/ui/ConfirmDialog.js';
 import { createPersistedObject } from '../backend_bridge/database.js';
 import type { Character } from '../engine/types';
 import { getErrorMessage } from '../errors/error_util.js';
@@ -40,6 +41,8 @@ export default function ScenarioSetup() {
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([]);
   const [error, setError] = useState<string>('');
   const [installingDemo, setInstallingDemo] = useState(false);
+  const [confirmDemoOpen, setConfirmDemoOpen] = useState(false);
+  const [launchingDemo, setLaunchingDemo] = useState(false);
 
   const sortedCharacters = useMemo(() => sortCharacters(globalCharacters), [globalCharacters]);
 
@@ -132,11 +135,30 @@ export default function ScenarioSetup() {
     }
   };
 
+  const handleLaunchDemoScenario = async () => {
+    if (launchingDemo) return;
+    setLaunchingDemo(true);
+    setError('');
+    try {
+      const { newScenarioId } = await useScenarioStore.getState().importDemoScenario();
+      setConfirmDemoOpen(false);
+      navigate(`/scenario/${newScenarioId}`);
+    } catch (err) {
+      setError(getErrorMessage(err));
+      setConfirmDemoOpen(false);
+    } finally {
+      setLaunchingDemo(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-4">
       <div className="flex flex-wrap justify-between items-center gap-2">
         <h1 className="text-2xl font-semibold">Select Characters</h1>
         <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => setConfirmDemoOpen(true)} disabled={launchingDemo}>
+            Demo Scenario
+          </button>
           <button type="button" onClick={() => navigate('/')}>
             Back
           </button>
@@ -230,6 +252,20 @@ export default function ScenarioSetup() {
           <StartScenarioButton canStart={canStart} onClick={startScenario} />
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmDemoOpen}
+        onClose={() => {
+          if (!launchingDemo) {
+            setConfirmDemoOpen(false);
+          }
+        }}
+        title="Launch Demo Scenario"
+        message="This will launch the demo scenario."
+        confirmLabel={launchingDemo ? 'Launching...' : 'Launch Demo Scenario'}
+        confirmDisabled={launchingDemo}
+        onConfirm={() => void handleLaunchDemoScenario()}
+      />
     </div>
   );
 }
