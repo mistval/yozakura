@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useCopyToClipboard } from '../../hooks/use_copy_to_clipboard.js';
 import Modal from './Modal.js';
 
 export default function AIAssistantInstructionsButton({
@@ -16,6 +17,7 @@ export default function AIAssistantInstructionsButton({
 }) {
   const [documentationOpen, setDocumentationOpen] = useState(false);
   const [documentation, setDocumentation] = useState('');
+  const { copied, copy } = useCopyToClipboard();
 
   return (
     <>
@@ -66,11 +68,10 @@ export default function AIAssistantInstructionsButton({
             <button
               type="button"
               className="px-3 py-1 border rounded-sm"
-              onClick={async () => {
-                await navigator.clipboard.writeText(documentation);
-              }}
+              aria-label={copied ? 'Copied' : undefined}
+              onClick={() => void copy(documentation)}
             >
-              Copy
+              {copied ? '✓' : 'Copy'}
             </button>
             <button
               type="button"
