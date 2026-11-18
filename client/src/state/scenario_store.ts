@@ -23,7 +23,7 @@ type ScenarioStoreState = {
   setTemporalSelectedScriptId: (scriptId: string) => void;
   setTemporalControlValue: (scriptId: string, controlId: string, value: string) => void;
   resetTemporalControlValues: (scriptId: string) => void;
-  deleteInactiveScenario: (scenarioId: string) => void;
+  deleteScenario: (scenarioId: string) => void;
   saveImmediateBlankInactiveScenario: (mapId: string) => Promise<Scenario>;
   saveImmediateInactiveScenario: (
     scenario: Scenario,
@@ -248,18 +248,28 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     }
   },
 
-  deleteInactiveScenario: (scenarioId: string) => {
-    const newScenarioSummaries = get().scenarioSummaries.filter((s) => s.scenario.id !== scenarioId);
+  deleteScenario: (scenarioId: string) => {
+    const { scenarioSummaries, activeScenario, activeScenarioMap, pendingScenarioId } = get();
+    const newScenarioSummaries = scenarioSummaries.filter((s) => s.scenario.id !== scenarioId);
+    const isActive = activeScenario?.id === scenarioId;
+    const isPending = pendingScenarioId === scenarioId;
 
-    if (newScenarioSummaries.length !== get().scenarioSummaries.length) {
+    if (newScenarioSummaries.length !== scenarioSummaries.length || isActive || isPending) {
       set({
         scenarioSummaries: newScenarioSummaries,
+        activeScenario: isActive ? undefined : activeScenario,
+        activeScenarioMap: isActive ? undefined : activeScenarioMap,
+        pendingScenarioId: isPending ? undefined : pendingScenarioId,
       });
 
-      void doAsDataWrite(async () => {
-        await mainDatabase.deleteScenarioDatabase(scenarioId);
-        await Files.deleteScenarioFolder(scenarioId);
-      }, 'scenario');
+      void doAsDataWrite(
+        async () => {
+          await mainDatabase.deleteScenarioDatabase(scenarioId);
+          await Files.deleteScenarioFolder(scenarioId);
+        },
+        'scenario',
+        { debouncerKey: scenarioId }
+      );
     }
   },
 

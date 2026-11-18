@@ -329,9 +329,8 @@ export class ChatCoordinator {
   }
 
   public static async endActiveChat(noEffect: boolean) {
-    const scenario = getRequiredActiveScenario();
-
     if (!noEffect) {
+      const scenario = getRequiredActiveScenario();
       const characterStore = useScenarioCharacterStore.getState();
       const relationshipStore = useScenarioCharacterRelationshipStore.getState();
       const characterUpdates: Array<Awaited<ReturnType<typeof generateCharacterEndOfChatUpdates>>> = [];

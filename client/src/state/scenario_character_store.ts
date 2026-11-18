@@ -384,6 +384,14 @@ function updateCharacterLocationsForMapChange(map: WorldMap) {
 }
 
 useScenarioStore.subscribe(async (newScenario, prevScenario) => {
+  if (!newScenario.activeScenario && prevScenario.activeScenario) {
+    useScenarioCharacterStore.setState({
+      scenarioCharactersAreLoaded: false,
+      ...getCharacterDataStructuresFromArray([]),
+    });
+    return;
+  }
+
   if (newScenario.activeScenario && prevScenario.activeScenario?.id !== newScenario.activeScenario.id) {
     await useScenarioCharacterStore.getState().loadScenarioCharacters();
   }

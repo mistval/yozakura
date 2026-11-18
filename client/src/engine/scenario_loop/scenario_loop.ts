@@ -12,10 +12,20 @@ import { loadPersistedTurn } from './turn_persistence';
 import { runTurnLoop } from './turn_loop';
 
 function stopScenarioLoop() {
+  scenarioLoopPromiseCallbacks.userTurnAction?.reject(new ScenarioLoopAbortSignalException());
+  scenarioLoopPromiseCallbacks.userChatAction?.reject(new ScenarioLoopAbortSignalException());
   scenarioLoopPromiseCallbacks.userTurnAction = undefined;
   scenarioLoopPromiseCallbacks.userChatAction = undefined;
+  useScenarioLoopStateStore.getState().setScenario(undefined);
   useScenarioLoopStateStore.getState().resetLoopState();
+  useTurnMachineStore.getState().reset();
 }
+
+useScenarioStore.subscribe((newState, prevState) => {
+  if (prevState.activeScenario && !newState.activeScenario) {
+    stopScenarioLoop();
+  }
+});
 
 function shouldPauseOnHydrate(hydratedState: ReturnType<typeof useTurnMachineStore.getState>): boolean {
   if (hydratedState.chatState !== 'inactive' && hydratedState.userIsParticipant()) {

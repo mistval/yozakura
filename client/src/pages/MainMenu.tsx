@@ -34,7 +34,7 @@ export default function MainMenu() {
   const removeScenario = async (summary: ScenarioSummary) => {
     setScenarioPendingDelete(undefined);
 
-    useScenarioStore.getState().deleteInactiveScenario(summary.scenario.id);
+    useScenarioStore.getState().deleteScenario(summary.scenario.id);
   };
 
   return (

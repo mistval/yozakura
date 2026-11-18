@@ -13,4 +13,5 @@
 - KISS YAGNI. Don't add unrequested extra functionality/dynamism/flexibility that we don't need right now.
 - Avoid introducing complexity to solve practical non-issues.
 - JSX files should be named with Pascal case, all others with snake case.
+- Avoid conditional object spreading (`...(cond ? { prop: val } : {})`). Instead, set properties directly (e.g., `prop: cond ? val : prevVal`).
 - You may install Ubuntu packages and tools to help you do your job.
