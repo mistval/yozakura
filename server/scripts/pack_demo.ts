@@ -261,11 +261,25 @@ function compileDemoSource(): void {
 
   const REQUIRED_LOCATION_WARDROBE_TAGS = ['dueling', 'lab', 'greenhouse', 'dorm'] as const;
 
+  const seenFirstNames = new Set<string>();
+  const seenLastNames = new Set<string>();
   const charsBySlug = new Map<string, SourceCharacter>();
   let userChar: SourceCharacter | undefined;
   for (const { file, data } of characters) {
     if (`${data.slug}.json` !== file) {
       throw new Error(`Character file "${file}" must match slug "${data.slug}"`);
+    }
+    const normalizedFirstName = data.firstName.trim().toLowerCase();
+    if (seenFirstNames.has(normalizedFirstName)) {
+      throw new Error(`Duplicate firstName "${data.firstName}" on character "${data.slug}"`);
+    }
+    seenFirstNames.add(normalizedFirstName);
+    if (data.lastName.trim()) {
+      const normalizedLastName = data.lastName.trim().toLowerCase();
+      if (seenLastNames.has(normalizedLastName)) {
+        throw new Error(`Duplicate lastName "${data.lastName}" on character "${data.slug}"`);
+      }
+      seenLastNames.add(normalizedLastName);
     }
     registerUniqueId(seenIds, data.globalId, `character:${data.slug}`);
     registerUniqueId(seenIds, data.scenarioCharacterId, `scenario_character:${data.slug}`);

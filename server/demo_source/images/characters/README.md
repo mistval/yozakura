@@ -8,7 +8,7 @@ Expected filenames (`globalId`):
 - `c10000000000000001.png` (`leo_vance`)
 - `c10000000000000002.png` (`sera_kisaragi`)
 - `c10000000000000003.png` (`dorian_locke`)
-- `c10000000000000004.png` (`celestia_thorne`)
+- `c10000000000000004.png` (`celestia_sinclair`)
 - `c10000000000000005.png` (`mina_bellweather`)
 - `c10000000000000006.png` (`noelle_vespera`)
 - `c10000000000000007.png` (`kaede_jin`)
