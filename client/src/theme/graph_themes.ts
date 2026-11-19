@@ -58,7 +58,7 @@ export const GRAPH_THEMES = {
   smokies: makeTheme('#f8efe3', '#bd8f5d', '#6e9e64', '#4c3620', '#e6c9a8', '#d9b48b'),
   sakura: makeTheme('#fdebf1', '#c96f98', '#69a579', '#4f0014', '#e6bfd0', '#d89bb4'),
   agape: makeTheme('#f6e6c8', '#aa7639', '#618b53', '#2a0d00', '#ddb887', '#cda06a'),
-  yozakura: makeTheme('#0d101a', '#b96b95', '#5f9b73', '#ffd8e6', '#43304b', '#59405d'),
+  yozakura: makeTheme('#06040f', '#6b3ea6', '#b873cc', '#d8c8eb', '#261c38', '#34264d'),
   mercurial: makeTheme('#151107', '#a07a3e', '#8da66e', '#f5e7c1', '#5a4727', '#6b562f'),
   mpk: makeTheme('#040805', '#5da97f', '#d7ffe3', '#d7ffe3', '#244734', '#2f6046'),
   ember: makeTheme('#120b08', '#d97a38', '#ffff62', '#fde6cc', '#492a1b', '#5c3623'),

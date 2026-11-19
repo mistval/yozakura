@@ -84,7 +84,7 @@ export default function LocationPanel(props: LocationPanelProps) {
     <div className="space-y-3">
       <div>
         <h2 className="text-xl font-semibold">🌍 {location.name}</h2>
-        <p className="font-semibold">{location.description}</p>
+        <p className="font-semibold text-secondary!">{location.description}</p>
       </div>
 
       {canMove && <MoveButtons {...props} />}
