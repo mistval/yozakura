@@ -80,7 +80,23 @@ html[data-theme='dark'],
 
 [data-theme='dark'] .navbar {
   border-bottom: 1px solid var(--yoz-border);
+  background-color: transparent;
+}
+
+/* Keep backdrop-filter off .navbar itself so it does not create a containing
+ * block that clips position: fixed descendants (.navbar-sidebar) on mobile. */
+[data-theme='dark'] .navbar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--ifm-navbar-background-color);
   backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+[data-theme='dark'] .navbar-sidebar {
+  background-color: var(--yoz-bg);
 }
 
 [data-theme='dark'] .navbar__brand,

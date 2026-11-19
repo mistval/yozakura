@@ -13,13 +13,13 @@ keywords:
 
 There are three main ways to run Yozakura. The native electron application is the fastest to set up for most users and is dead easy. The Docker image has some advantages for more advanced users who are familiar with Docker, especially on Linux or MacOS. Cloning from GitHub is mainly intended for development and modifications, but is also a viable way to install and run Yozakura if that's your preference.
 
-Looking to play on your phone? See the [Mobile Devices](mobile-devices.md) guide for running directly on Android via Termux or connecting to your computer from mobile.
+Looking to use Yozakura on your phone? See the [Mobile Devices](mobile-devices.md) guide for running directly on Android via Termux or connecting to your computer from mobile (works on iOS too).
 
 ## Electron
 
 Prerequisites:
 
-1. You need access to an LLM via a completions API. Check out the [API setup](api-setup.md) guide if you don't have this already.
+1. You need access to an LLM via a completions API. Check out the [model setup](api-setup.md) guide if you don't have this already.
 
 Installation:
 
@@ -43,7 +43,10 @@ Installation:
 
 In both cases, your data will be saved to a `yozakura_data` folder in the current working directory.
 
-Both methods use host network mode in order to have access to APIs you're running on your local machine. If you are not running text completions or image generation APIs on your local machine, you can remove the host network mode option. Note that host network mode **might not work at all on Windows**.
+Both methods use host network mode in order to have access to APIs you're running on your local machine. On **Windows (where host network mode may not work) you may need to make some changes**:
+
+1. Replace `network_mode: host` with `ports: ["4396:4396"]` in `docker-compose.yml` (or replace `--network host` with `-p 4396:4396` in `docker run`).
+2. When configuring local APIs in Yozakura's settings, use `host.docker.internal` instead of `localhost` or `127.0.0.1` (for example, `http://host.docker.internal:5001/v1/chat/completions`).
 
 Give it just a few moments to start, then visit `http://localhost:4396` in your web browser.
 

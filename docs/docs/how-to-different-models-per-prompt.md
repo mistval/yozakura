@@ -15,13 +15,15 @@ Yozakura sends a lot of different kinds of prompts to your LLM. Some of them are
 
 This is handled by the **LLM Settings** section. Open the settings cog and go to **LLM Settings**. Under **LLM Prompt Options** you'll find a list of option groups. Out of the box there's already a separate group for each prompt type, so you don't need to create a new one except for advanced use cases.
 
+The links in this article will open the relevant area of the Yozakura electron app if you have it installed and have run it at least once.
+
 ## A common setup: fast for memory, slow for roleplay
 
 A very common change is to use a big, slow model that's good at character roleplay for the actual chat responses, while using a small, fast model for all the memory processing so it finishes quickly and doesn't hold things up. Here's how to do it:
 
-1. Open the settings cog and go to **LLM Settings**, or if you're using the Electron app, [follow this link](yozakura://?settings=true&settingspath=llm).
+1. Open the settings cog and go to **LLM Settings**, or if you're using the Electron app, [follow this link](yozakura://?settings=true&settingspath=llm&llmoptionsid=base).
 2. Find the **Base Defaults** group (should be at the top), click **Edit**, and set the **Model** field to your preferred fast model. Because `Base Defaults` applies to every prompt type that doesn't have a more specific group overriding it, all the memory processing steps will now use this fast model. Click **Save**.
-3. Find the **Chat: NPC Respond** group, click **Edit**, and set its **Model** field to a slow model that's good at character roleplay. Click **Save**.
+3. Find the **Chat: NPC Respond** group ([here](yozakura://?settings=true&settingspath=llm&llmoptionsid=npc-respond) if you're using the electron app), click **Edit**, and set its **Model** field to a slow model that's good at character roleplay. Click **Save**.
 
 ## Keeping the good stuff for yourself
 

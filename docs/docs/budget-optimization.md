@@ -1,37 +1,37 @@
 ---
 title: Budget Optimization
 sidebar_position: 4
-description: Yozakura uses a lot of tokens by default. This document discusses settings to change if you want to spend fewer tokens.
+description: Yozakura uses a lot of tokens by default. This article discusses settings to change if you want to spend fewer tokens.
 keywords:
   - yozakura settings
   - budget
 ---
 
-Yozakura uses a lot of tokens by default. This document discusses settings to change if you want to spend less.
+Yozakura uses a lot of tokens by default. This article discusses settings to change if you want to spend less. The links in this article will open the relevant area of the Yozakura electron app if you have it installed and have run it at least once.
 
 ## Disable Group Chat
 
 Group chats, especially larger ones, can be expensive. After a group chat ends, all participants update their memories towards all other participants. For a three-NPC chat, that means 3 x 2 = 6 complete relationship updates. For a four-NPC chat, it's 4 x 3 = 12. For five NPCs, 5*4 = 20 which will result in well over 100 completions requests. This assumes they don't mention any characters who aren't participating. If they do, that goes even higher.
 
-To disable group chats, open [yozakura://?settings=true&settingspath=behavior](behavior settings) and set **NPC group chat rate** to 0%, or whatever percentage you're comfortable with. NPCs will no longer start group chats (you can still start them though).
+To disable group chats, open [behavior settings](yozakura://?settings=true&settingspath=behavior) and set **NPC group chat rate** to 0%, or whatever percentage you're comfortable with. NPCs will no longer start group chats (you can still start them though).
 
 ## Disable offscreen mentions
 
 When participants in a chat mention a character who isn't participating, their memories towards that character get updated too. By default, there can be up to two non-participant ("offscreen") mentions per chat.
 
-To reduce this number to 1 or 0, open [yozakura://?settings=true&settingspath=behavior](behavior settings) and change **Offscreen mention limit**.
+To reduce this number to 1 or 0, open [behavior settings](yozakura://?settings=true&settingspath=behavior) and change **Offscreen mention limit**.
 
 ## Be selective about NPC chats
 
-In [yozakura://?settings=true&settingspath=behavior](behavior settings), enable **pause at NPC chat start**. Then when NPCs chat, you can choose whether to cancel the chat and save your tokens, or click **start chat** to let the chat happen.
+In [behavior settings](yozakura://?settings=true&settingspath=behavior), enable **pause at NPC chat start**. Then when NPCs chat, you can choose whether to cancel the chat and save your tokens, or click **start chat** to let the chat happen.
 
 ## Cancel automatic NPC chats altogether
 
-In [yozakura://?settings=true&settingspath=behavior](behavior settings), you can set **Rich interaction rate** to 0% (or a lower number you're comfortable with) and then NPCs will never try to talk to each other at all. Note that they can still talk to _you_. If you want certain NPCs to talk, you can use [yozakura://?characteroverview=true](Character Overview)'s **Add to Chat** button to add them to a chat, then remove yourself from the chat and click **start chat** to let them rip.
+In [behavior settings](yozakura://?settings=true&settingspath=behavior), you can set **Rich interaction rate** to 0% (or a lower number you're comfortable with) and then NPCs will never try to talk to each other at all. Note that they can still talk to _you_. If you want certain NPCs to talk, you can use [Character Overview](yozakura://?characteroverview=true)'s **Add to Chat** button to add them to a chat, then remove yourself from the chat and click **start chat** to let them rip.
 
 ## Disable intelligent moderation
 
-Both **Speaker selection mode** and **NPC chat end mode** in [yozakura://?settings=true&settingspath=behavior](behavior settings) can be set to "Intelligent" (though this is disabled by default). "Intelligent" adds extra LLM calls for more intelligent behavior, but the dumb modes ("Round Robin" and "Fixed Length" respectively) work fine too and save on cost.
+Both **Speaker selection mode** and **NPC chat end mode** in [behavior settings](yozakura://?settings=true&settingspath=behavior) can be set to "Intelligent" (though this is disabled by default). "Intelligent" adds extra LLM calls for more intelligent behavior, but the dumb modes ("Round Robin" and "Fixed Length" respectively) work fine too and save on cost.
 
 ## Be particular with your LLM provider
 

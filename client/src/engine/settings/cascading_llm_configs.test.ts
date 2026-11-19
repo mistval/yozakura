@@ -26,7 +26,7 @@ describe('cascading_llm_configs', () => {
       DEFAULT_LLM_CONFIGS,
       'https://openrouter.ai/api/v1/chat/completions',
       'test-token',
-      'deepseek/deepseek-chat'
+      'deepseek/deepseek-v4.1-flash-1017'
     );
     const base = findBaseDefaultsLLMConfig(updated);
     expect(base?.concurrencyGroupLimit).toBe(6);

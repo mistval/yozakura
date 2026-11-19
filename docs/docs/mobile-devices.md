@@ -48,11 +48,14 @@ http://localhost:4396
 
 You should see the Yozakura welcome screen (on mobile, it defaults to the Mobile layout and pre-fills OpenRouter defaults for convenience).
 
-### 3. Starting Yozakura later & keeping it alive
+### 3. Full-Screen App
+
+In Chrome on Android, open the menu (`⋮`) on `http://localhost:4396` and tap **Add to Home screen** → **Install** (or **Install app**). This adds Yozakura to the home screen for easy access, and also removes the browser top bar and bottom bar, so you have more screen real-estate to take advantage of. Even if you install Yozakura to the home screen, you still need to keep it running in Termux or it will fail to launch. Updating Yozakura later via `./start_yozakura.sh` automatically updates the PWA. You'll need to restart the app, but it's not necessary to delete and re-install it.
+
+### 4. Starting Yozakura later & keeping it alive
 
 - **To start Yozakura again**: Open Termux and run `./start_yozakura.sh`.
 - **Keep Termux from being killed in the background**: Android aggressively suspends background apps. If Yozakura is getting killed frequently while you're using it, try disabling battery optimization for Termux in Android Settings and tap **Acquire wake lock** in Termux's notification shade while running chats.
-- **Full-screen app (PWA)**: In Chrome on Android, open the menu (`⋮`) on `http://localhost:4396` and tap **Add to Home screen** → **Install** (or **Install app**). This adds Yozakura to home screen for easy access, and also removes the browser top bar and bottom bar, so you have more screen real-estate to take advantage of. Even if you install Yozakura to the home screen, you still need to run it in Termux or it will fail to launch. Updating Yozakura later via `./start_yozakura.sh` automatically updates the PWA, so you do not need to delete and reinstall it.
 
 ---
 
@@ -79,8 +82,11 @@ Verify Yozakura is running on your computer at `http://localhost:4396`.
 http://<your-computer-tailscale-ip>:4396
 ```
 
-**Q:** Is Tailscale secure (even with an `http://` address)?  
-**A:** Yes, even though the URL starts with `http://`, Tailscale encrypts all traffic directly between your devices and keeps Yozakura off the public internet, so Wi-Fi networks, cell carriers, and outsiders cannot read your chats. However, Tailscale itself behaving maliciously or being hacked could result in eavesdropping. Tailscale is widely trusted, but if this concerns you, there are some self-hosted options listed below though they take more setup.
+:::info[Is Tailscale secure?]
+
+Short answer: yes. Even though the URL starts with `http://`, Tailscale encrypts all traffic directly between your devices and keeps Yozakura off the public internet, so Wi-Fi networks, cell carriers, and outsiders cannot read your chats. However, Tailscale itself behaving maliciously or being hacked could result in eavesdropping. Tailscale is widely trusted, including by large corporations, but if this concerns you, there are some self-hosted options listed below though they take more setup.
+
+:::
 
 ### 3. Install as a full-screen app (PWA, optional)
 
@@ -98,9 +104,9 @@ tailscale serve --bg --https=4443 http://localhost:4396
    - **Android (Chrome):** Open the menu (`⋮`) and tap **Add to Home screen** → **Install** (or **Install app**).
    - **iOS (Safari):** Tap **Share** → **Add to Home Screen**.
 
-Note that even after installing Yozakura to the home screen, you will still need to run Yozakura on your computer and it needs to be accessible via Tailscale, or else the app will fail to launch. Updating Yozakura on your computer later does **not** require deleting or reinstalling the app.
+Note that even after installing Yozakura to the home screen, you will still need to run Yozakura on your computer and it needs to be accessible via Tailscale, or else the app will fail to launch. When you update Yozakura on your computer, you'll have to restart the app, but you should **not** need to delete and re-install it.
 
 ### Other private options (Same Wi-Fi, WireGuard, or Headscale)
 
-- **Same Wi-Fi only:** If you only play on your home Wi-Fi, you don't need Tailscale—open `http://<your-computer-local-ip>:4396` directly (you may need to allow port `4396` in your firewall).
+- **Same Wi-Fi only:** If you only use Yozakura on your home Wi-Fi and it's acceptable for other people on your Wi-Fi network to have access to your Yozakura install, then you can open `http://<your-computer-local-ip>:4396` directly (you may need to allow port `4396` in your firewall).
 - **Zero third-party servers:** If you don't want to rely on Tailscale's servers at all, look into setting up **WireGuard** directly or self-hosting **Headscale** (an open-source alternative to Tailscale's coordination server). Both require more manual networking setup and are beyond the scope of this guide.

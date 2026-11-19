@@ -208,7 +208,7 @@ export default function MainMenuFtueModal() {
                 value={llmModelDraft}
                 onChange={(event) => setLlmModelDraft(event.target.value)}
                 onBlur={saveConnectionDetails}
-                placeholder="deepseek/deepseek-chat"
+                placeholder="deepseek/deepseek-v4.1-flash-1017"
                 className="w-full rounded-sm border px-3 py-2"
               />
             </div>

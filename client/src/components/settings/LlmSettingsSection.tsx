@@ -248,7 +248,7 @@ function ConfigEditor({
                 }) satisfies typeof prev
             )
           }
-          placeholder="deepseek/deepseek-chat"
+          placeholder="deepseek/deepseek-v4.1-flash-1017"
           className="rounded-input"
         />
       </div>
