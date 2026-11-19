@@ -18,7 +18,7 @@ keywords:
 
 Yozakura is an AI-powered social simulation in which characters (including the user) move around a map, interact with each other via the user's LLM of choice, and form memories and intentions towards each other, creating a dynamically evolving narrative with up to dozens or even hundreds of characters.
 
-This article gives a brief peek at the main features of Yozakura via screenshots. There's also a [YouTube](https://www.youtube.com/watch?v=DqU5ZbXK8JY) video showing some of the same features in action (turn on subtitles) (it's a little outdated and doesn't show some newer features, but covers the core ideas).
+This article gives a brief peek at the main features of Yozakura via screenshots. There's also a [YouTube video](https://www.youtube.com/watch?v=ukt4ZJnV1Ks) showing most of the main features in action (turn on subtitles).
 
 ## Chat
 
@@ -52,6 +52,10 @@ You can also of course create new characters from scratch.
 
 The [wardrobe](wardrobes.md) system can automatically enable different combinations of image model tags each day and in different map zones.
 
+The bulk importer enables you to import a whole library of SillyTavern cards in one go.
+
+![bulk importer](/img/bulk_import.png)
+
 ## Create Your Own Worlds
 
 Maps in Yozakura are just a list of locations, their names, descriptions, and which other locations they are connected to. It's the character interactions that add all the color. You can create your own map in no time with the map editor.
@@ -77,6 +81,14 @@ Yozakura [prompt templates](template-system.md) can be edited and the templating
 ![prompt template](/img/template.png)
 
 ![AI context doc for prompt templates](/img/ai_assist.png)
+
+## Mobile Support
+
+Full mobile-friendly layout and [installation paths](mobile-devices.md).
+
+import MyImage from '/img/mobile.png';
+
+<img src={MyImage} alt="Description" style={{ maxWidth: '400px', display: 'block' }} />
 
 ## Get Started
 
