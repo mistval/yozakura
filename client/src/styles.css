@@ -1168,6 +1168,11 @@
   }
 }
 
+html,
+body {
+  overscroll-behavior-y: none;
+}
+
 body {
   @apply bg-background text-primary transition-colors duration-300;
 }
