@@ -11,6 +11,10 @@ keywords:
 
 Yozakura works on mobile browsers and automatically selects the mobile layout during first-time setup on narrow screens (you can also switch between Mobile and Desktop layouts anytime under [Appearance Settings → Layout](yozakura://?settings=true&settingspath=appearance)).
 
+import MyImage from '/img/mobile.png';
+
+<img src={MyImage} alt="Description" style={{ maxWidth: '200px', display: 'block', margin: '30px 0px' }} />
+
 There are two main ways to run Yozakura on mobile:
 
 1. **[Directly on Android with Termux](#android-via-termux)**: Everything runs locally on your phone. Best if you use cloud LLM providers (like OpenRouter) and don't want to leave a computer running.
@@ -50,7 +54,7 @@ You should see the Yozakura welcome screen (on mobile, it defaults to the Mobile
 
 ### 3. Full-Screen App
 
-In Chrome on Android, open the menu (`⋮`) on `http://localhost:4396` and tap **Add to Home screen** → **Install** (or **Install app**). This adds Yozakura to the home screen for easy access, and also removes the browser top bar and bottom bar, so you have more screen real-estate to take advantage of. Even if you install Yozakura to the home screen, you still need to keep it running in Termux or it will fail to launch. Updating Yozakura later via `./start_yozakura.sh` automatically updates the PWA. You'll need to restart the app, but it's not necessary to delete and re-install it.
+In Chrome on Android, open the menu (`⋮`) on `http://localhost:4396` and tap **Add to Home screen** → **Install** (or **Install app**). This adds Yozakura to the home screen for easy access, and also removes the browser top bar and bottom bar, so you have more screen real-estate to take advantage of. Even if you install Yozakura to the home screen, you still need to keep it running in Termux or it will fail to launch. Updating Yozakura later via `./start_yozakura.sh` automatically updates the app. You'll need to restart the app, but it's not necessary to delete and re-install it.
 
 ### 4. Starting Yozakura later & keeping it alive
 
@@ -65,7 +69,7 @@ If you run local LLMs/image models on your computer, want shared data between PC
 
 ### 1. Run Yozakura
 
-Follow the [Getting Started](getting-started.md) guide to install and start Yozakura (the **Electron** app is the easiest option — just keep the Yozakura window open or minimized on your computer while using it from your phone). Enter [Appearance Settings](yozakura://?settings=true&settingspath=appearance) and set **Layout** to **Mobile** so that when you open Yozakura on your phone, it will already be using mobile layout.
+Follow the [Getting Started](getting-started.md) guide to install and start Yozakura (the **Electron** app is the easiest option. Just keep the Yozakura window open or minimized on your computer while using it from your phone). Enter [Appearance Settings](yozakura://?settings=true&settingspath=appearance) and set **Layout** to **Mobile** so that when you open Yozakura on your phone, it will already be using mobile layout.
 
 ### 2. Connect privately with Tailscale
 
