@@ -12,6 +12,7 @@ import {
 import { useScenarioStore } from '../state/scenario_store.js';
 import ChatSettings from './chat/chat_settings.js';
 import CharacterChatSettings from './chat/character_chat_settings.js';
+import CharacterAvatar from './CharacterAvatar.js';
 import { useModalQueryParam } from '../hooks/useModalQueryParam.js';
 import { useQueryParam } from '../util/queryParams.js';
 import { useScenarioCharacterStore, useUserCharacter } from '../state/scenario_character_store.js';
@@ -665,32 +666,41 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                   className={`relative group flow-root text-left rounded-sm ${isMobileLayout ? 'px-0.5' : 'px-1'} py-0.5`}
                 >
                   {editingMessageId === entryId && isCharacterMessage ? (
-                    <div className="space-y-2">
-                      <div>
-                        <strong>{entry.getSpeakerName()}:</strong>
-                      </div>
-                      <textarea
-                        value={editingMessageDraft}
-                        onChange={(event) => setEditingMessageDraft(event.target.value)}
-                        rows={3}
-                        className="w-full border rounded-sm p-2 bg-inset text-sm"
-                        disabled={!userCanInputChat}
-                      />
-                      <div className="flex justify-end gap-2 text-xs">
-                        <button
-                          type="button"
-                          onClick={() => setEditingMessageId(undefined)}
+                    <div className="flex items-start gap-2.5">
+                      {senderId && (
+                        <CharacterAvatar
+                          imagePath={senderCharacter?.imagePath}
+                          name={entry.getSpeakerName()}
+                          className="h-10 w-10 border-border-strong bg-surface-subtle"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div>
+                          <strong>{entry.getSpeakerName()}:</strong>
+                        </div>
+                        <textarea
+                          value={editingMessageDraft}
+                          onChange={(event) => setEditingMessageDraft(event.target.value)}
+                          className="w-full min-h-20 border rounded-sm p-2 bg-inset text-sm field-sizing-content"
+                          className="w-full min-h-20 border rounded-sm p-2 bg-inset text-base leading-relaxed field-sizing-content"
                           disabled={!userCanInputChat}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={saveEditingMessageEdit}
-                          disabled={!userCanInputChat || !editingMessageDraft.trim()}
-                        >
-                          Save
-                        </button>
+                        />
+                        <div className="flex justify-end gap-2 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => setEditingMessageId(undefined)}
+                            disabled={!userCanInputChat}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={saveEditingMessageEdit}
+                            disabled={!userCanInputChat || !editingMessageDraft.trim()}
+                          >
+                            Save
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -786,6 +796,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                         <button
                           type="button"
                           onClick={() => {
+                            lastUserScrollInteractionAtRef.current = -Infinity;
                             setActiveActionMessageId(undefined);
                             setEditingMessageId(entryId);
                             setEditingMessageDraft(entry.getContent());
