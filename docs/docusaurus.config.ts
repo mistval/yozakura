@@ -101,7 +101,8 @@ const config: Config = {
       { name: 'twitter:card', content: 'summary_large_image' },
     ],
     colorMode: {
-      respectPrefersColorScheme: true,
+      defaultMode: 'dark',
+      respectPrefersColorScheme: false,
     },
     navbar: {
       title: 'Yozakura',
