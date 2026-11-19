@@ -325,7 +325,7 @@ async function recomputeTemporalContextAndAutoselectWardrobes() {
 }
 
 function incrementTurnNumber() {
-  useScenarioStore.getState().updateScenario((prev) => ({
+  useScenarioStore.getState().updateActiveScenario((prev) => ({
     ...prev,
     turnNumber: prev.turnNumber + 1,
   }));
