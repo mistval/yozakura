@@ -183,9 +183,19 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
     }
   > = [];
 
+  const oldGlobalMemory = getResolvedCharacter(fromCharacterPerspective.id).globalMemories;
+
+  // Global memory only depends on the character's conversation summaries, so run it
+  // in parallel with the pairwise updates.
+  const globalMemoryPromise = buildFocusedChatTemplateContext(fromCharacterPerspective.id).then((context) =>
+    rollingGlobalMemoryRewriteChain.renderAndExecute(context, {
+      jobConfig: createMemoryJobConfig(`Updating global memory for ${fromCharacterPerspective.firstName}`),
+    })
+  );
+
   // For each character we decided to update fromCharacterPerspective's memories towards,
   // generate updates in parallel
-  const pairwiseUpdateResults = await Promise.all(
+  const pairwiseUpdatesPromise = Promise.all(
     memoryUpdateTargets.map(async (otherCharacter) => {
       const initialPairwiseRelationship = await getResolvedRelationship(
         fromCharacterPerspective.id,
@@ -378,16 +388,13 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
     })
   );
 
+  const [pairwiseUpdateResults, newGlobalMemory] = await Promise.all([
+    pairwiseUpdatesPromise,
+    globalMemoryPromise,
+  ]);
+
   pairwiseUpdates.push(
     ...pairwiseUpdateResults.filter((result): result is NonNullable<typeof result> => result !== undefined)
-  );
-
-  const oldGlobalMemory = getResolvedCharacter(fromCharacterPerspective.id).globalMemories;
-  const newGlobalMemory = await rollingGlobalMemoryRewriteChain.renderAndExecute(
-    await buildFocusedChatTemplateContext(fromCharacterPerspective.id),
-    {
-      jobConfig: createMemoryJobConfig(`Updating global memory for ${fromCharacterPerspective.firstName}`),
-    }
   );
 
   stageCharacterFields(fromCharacterPerspective.id, {
