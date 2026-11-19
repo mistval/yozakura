@@ -86,7 +86,7 @@ tailscale serve --bg --https=4443 http://localhost:4396
 
 :::info[Is Tailscale secure?]
 
-Short answer: yes. Tailscale encrypts all traffic directly between your devices and keeps Yozakura off the public internet, so Wi-Fi networks, cell carriers, and outsiders cannot read your chats. However, Tailscale itself behaving maliciously or being hacked could result in eavesdropping. Tailscale is widely trusted, including by large corporations, but if this concerns you, there are some self-hosted options listed below though they take more setup.
+In a word: yes. Tailscale encrypts all traffic directly between your devices and keeps Yozakura off the public internet, so Wi-Fi networks, cell carriers, and outsiders cannot read your chats. However, Tailscale itself behaving maliciously or being hacked could result in eavesdropping. Tailscale is widely trusted, including by large corporations, but if this concerns you, there are some self-hosted options listed below though they take more setup.
 
 :::
 

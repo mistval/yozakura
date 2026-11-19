@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export type InteractiveRetryOperationId = number;
 
-type InteractiveRetryMode = 'retry_enabled' | 'retry_disabled';
+type InteractiveRetryMode = 'retry_enabled' | 'retry_disabled' | 'session_superseded';
 
 type InteractiveRetryStatus =
   'waiting_for_retry' | 'retrying' | 'waiting_for_user_ack' | 'waiting_for_user_cancel_or_retry';

@@ -34,6 +34,35 @@ function RetryCard({
   nowMs: number;
   onAction: (id: number, action: InteractiveRetryAction) => void;
 }) {
+  if (card.mode === 'session_superseded') {
+    return (
+      <div className="w-120 max-w-[calc(100vw-2rem)] rounded-sm border border-border-strong bg-inset p-3 shadow-md">
+        <div className="space-y-3">
+          <div className="text-sm font-semibold text-primary">Session Active Elsewhere</div>
+          <div className="rounded-sm border border-warning-border bg-warning-bg px-2 py-2 text-sm text-warning-text">
+            {card.errorMessage}
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => onAction(card.id, 'cancel')}
+              className="rounded-sm border border-border-strong px-2 py-1 text-sm hover:bg-surface-hover-soft dark:border-border-muted"
+            >
+              Not Now
+            </button>
+            <button
+              type="button"
+              onClick={() => onAction(card.id, 'confirm')}
+              className="rounded-sm border border-border-strong px-3 py-1 text-sm font-medium hover:bg-surface-hover-soft dark:border-border-muted"
+            >
+              Yes, Resume Here
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const isRetrying = card.status === 'retrying';
 
   return (

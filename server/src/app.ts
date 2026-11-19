@@ -56,6 +56,45 @@ function resolveDataDir(dataDirOption?: string): string {
   return candidates.find((candidate) => fs.existsSync(candidate)) ?? firstCandidate;
 }
 
+const SESSION_ID_HEADER = 'x-yozakura-session-id';
+const SESSION_SUPERSEDED_HEADER = 'X-Yozakura-Session-Superseded';
+
+function createSingleActiveSessionMiddleware() {
+  let activeSessionId: string | undefined;
+  const seenSessionIds = new Set<string>();
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+      next();
+      return;
+    }
+
+    const sessionId = req.get(SESSION_ID_HEADER)?.trim();
+    if (!sessionId) {
+      next();
+      return;
+    }
+
+    if (sessionId === activeSessionId) {
+      next();
+      return;
+    }
+
+    if (!seenSessionIds.has(sessionId)) {
+      seenSessionIds.add(sessionId);
+      activeSessionId = sessionId;
+      next();
+      return;
+    }
+
+    res.setHeader(SESSION_SUPERSEDED_HEADER, '1');
+    res.status(409).json({
+      code: 'SESSION_SUPERSEDED',
+      error: 'You seem to be using Yozakura elsewhere.',
+    });
+  };
+}
+
 export function createApp(options: CreateAppOptions = {}): Express {
   const corsOrigin = process.env.YOZAKURA_CORS_ALLOWED_ORIGINS?.trim()
     ? process.env.YOZAKURA_CORS_ALLOWED_ORIGINS.split(',').map((s) => s.trim())
@@ -83,6 +122,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   fs.mkdirSync(tempDir, { recursive: true });
 
   const app = express();
+  app.use('/api', createSingleActiveSessionMiddleware());
   app.use('/api', proxyRouter());
   app.use(express.json({ limit: '10mb' }));
 
