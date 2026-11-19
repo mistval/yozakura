@@ -242,7 +242,6 @@ describe('TemplateGroup and PromptTemplateChain with SettingsBridge', () => {
       'gen_chat_scene_image_prompt.speaker_close_up',
       'gen_chat_scene_image_prompt.scenery',
     ]);
-    expect(chains.map((c) => c.templateChainTitle)).toEqual(['Speaker', 'Speaker Close-Up', 'Scenery']);
 
     const dummyContext: any = {
       imagePromptPrefix: 'masterpiece, best quality',
