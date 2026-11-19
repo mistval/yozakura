@@ -681,7 +681,6 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                         <textarea
                           value={editingMessageDraft}
                           onChange={(event) => setEditingMessageDraft(event.target.value)}
-                          className="w-full min-h-20 border rounded-sm p-2 bg-inset text-sm field-sizing-content"
                           className="w-full min-h-20 border rounded-sm p-2 bg-inset text-base leading-relaxed field-sizing-content"
                           disabled={!userCanInputChat}
                         />
