@@ -7,7 +7,7 @@ export const settingsTooltips = {
   'scenario.activeMapDescription':
     'Change the map description, just for this scenario. Your global map will remain unchanged. You can use this to influence narrative directionality too, for example by adding "it\'s Winter now and everyone is trying to find food."',
   'scenario.remoteChatMedium':
-    'Describes how characters communicate when chatting across different locations (for example, "text messaging", "telepathy", or "carrier pigeons"). Available to prompt templates as <code>scenario.remoteChatMedium</code>.',
+    'Describes how characters communicate when chatting across different locations (for example, "text messaging", "telepathy", or "carrier pigeons"). Available to prompt templates as <code>it.scenario.remoteChatMedium</code>.',
   'appearance.theme':
     'Select a theme. <strong>System</strong> chooses either Sakura or Yozakura based on your system light/dark setting.',
   'appearance.conversationLogWidth': 'Controls the width of the conversation log dialog on desktop.',

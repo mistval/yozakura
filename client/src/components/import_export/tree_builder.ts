@@ -26,7 +26,7 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
             const scenId = summary.scenario.id;
             return {
               id: TreeEntityIds.scenario(scenId),
-              label: `${summary.userCharacterName} on ${summary.mapName}`,
+              label: summary.scenario.saveName || `${summary.userCharacterName} on ${summary.mapName}`,
               subtitle: `Turn ${summary.scenario.turnNumber}`,
               getChildren: async () => {
                 const children: TreeNode[] = [];
@@ -54,7 +54,6 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                   children.push({
                     id: characterGroupsId,
                     label: 'Character Groups',
-                    subtitle: 'Zones and groups',
                   });
                 }
 
@@ -71,6 +70,7 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
                   children.push({
                     id: TreeEntityIds.scenarioMemories(scenId),
                     label: 'Character Memories & Relationships',
+                    subtitle: '(Requires Characters)',
                     requiredSiblingNodeIds: [charactersNodeId],
                   });
                 }

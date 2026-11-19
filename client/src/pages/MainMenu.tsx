@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import ConfirmDialog from '../components/ui/ConfirmDialog.js';
 import MainMenuFtueModal from '../components/MainMenuFtueModal.js';
@@ -26,6 +26,10 @@ export default function MainMenu() {
   const scenarioSummaries = useScenarioStore((s) => s.scenarioSummaries);
   const scenarioSummariesAreLoaded = useScenarioStore((s) => s.scenarioSummariesAreLoaded);
   const mainMenuFtueSeen = useSettingsStore((s) => s.mainMenuFtueSeen);
+
+  useEffect(() => {
+    void useScenarioStore.getState().refreshScenarioSummaries();
+  }, []);
 
   const sortedScenarioSummaries = useMemo(() => {
     return scenarioSummaries.concat().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
