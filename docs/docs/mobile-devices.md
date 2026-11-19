@@ -38,7 +38,7 @@ Open Termux and run:
 curl -fsSL https://raw.githubusercontent.com/mistval/yozakura/main/scripts/install_termux.sh | bash
 ```
 
-This installs the required Termux packages, clones Yozakura into `~/yozakura`, creates `~/start_yozakura.sh`, builds the app, and starts the server. First-time setup takes roughly 5 minutes.
+This downloads Yozakura and other required packages, installs, and starts the server. First-time setup takes roughly 5 minutes. A `./start_yozakura.sh` script is also created for you to run to start Yozakura later (if your phone reboots or Android kills it or whatever). Running this script will also update Yozakura.
 
 When you see `Server listening on port 4396`, Yozakura is ready. Open your phone's browser and go to:
 
@@ -50,9 +50,9 @@ You should see the Yozakura welcome screen (on mobile, it defaults to the Mobile
 
 ### 3. Starting Yozakura later & keeping it alive
 
-- **Next time you launch**: Open Termux and run `./start_yozakura.sh`.
-- **Keep Termux from being killed in the background**: Android aggressively suspends background apps. Disable battery optimization for Termux in Android Settings and tap **Acquire wake lock** in Termux's notification shade while running chats.
-- **Full-screen app (PWA)**: In Chrome on Android, open the menu (`⋮`) on `http://localhost:4396` and tap **Add to Home screen** → **Install** (or **Install app**) to hide the browser address bar and tab strip. Updating Yozakura later via `./start_yozakura.sh` automatically updates the PWA—you do not need to delete and reinstall it.
+- **To start Yozakura again**: Open Termux and run `./start_yozakura.sh`.
+- **Keep Termux from being killed in the background**: Android aggressively suspends background apps. If Yozakura is getting killed frequently while you're using it, try disabling battery optimization for Termux in Android Settings and tap **Acquire wake lock** in Termux's notification shade while running chats.
+- **Full-screen app (PWA)**: In Chrome on Android, open the menu (`⋮`) on `http://localhost:4396` and tap **Add to Home screen** → **Install** (or **Install app**). This adds Yozakura to home screen for easy access, and also removes the browser top bar and bottom bar, so you have more screen real-estate to take advantage of. Even if you install Yozakura to the home screen, you still need to run it in Termux or it will fail to launch. Updating Yozakura later via `./start_yozakura.sh` automatically updates the PWA, so you do not need to delete and reinstall it.
 
 ---
 
@@ -62,7 +62,7 @@ If you run local LLMs/image models on your computer, want shared data between PC
 
 ### 1. Run Yozakura (Docker or Git clone)
 
-Follow the [Getting Started](getting-started.md) guide and choose **either [Docker](getting-started.md#docker) or [Git clone](getting-started.md#git-clone)**—do **not** use the Electron app, since the Electron desktop build does not expose the web server the same way for remote browser access.
+Follow the [Getting Started](getting-started.md) guide and choose **either [Docker](getting-started.md#docker) or [Git clone](getting-started.md#git-clone)**. Do **not** use the Electron app, since the Electron desktop build does not expose the web server the same way for remote browser access.
 
 Verify Yozakura is running on your computer at `http://localhost:4396`.
 
@@ -79,8 +79,8 @@ Verify Yozakura is running on your computer at `http://localhost:4396`.
 http://<your-computer-tailscale-ip>:4396
 ```
 
-**Q:** Is Tailscale secure (even with an `http://` address)?
-**A:** Yes, even though the URL starts with `http://`, Tailscale encrypts all traffic directly between your devices and keeps Yozakura off the public internet, so Wi-Fi networks, cell carriers, and outsiders cannot read your chats. Tailscale is widely trusted to keep traffic private, though you do need to place some level of trust in Tailscale's servers. If that concerns you, look into the self-hosted options below.
+**Q:** Is Tailscale secure (even with an `http://` address)?  
+**A:** Yes, even though the URL starts with `http://`, Tailscale encrypts all traffic directly between your devices and keeps Yozakura off the public internet, so Wi-Fi networks, cell carriers, and outsiders cannot read your chats. However, Tailscale itself behaving maliciously or being hacked could result in eavesdropping. Tailscale is widely trusted, but if this concerns you, there are some self-hosted options listed below though they take more setup.
 
 ### 3. Install as a full-screen app (PWA, optional)
 
@@ -98,7 +98,7 @@ tailscale serve --bg --https=4443 http://localhost:4396
    - **Android (Chrome):** Open the menu (`⋮`) and tap **Add to Home screen** → **Install** (or **Install app**).
    - **iOS (Safari):** Tap **Share** → **Add to Home Screen**.
 
-Updating Yozakura on your computer later should **not** require deleting or reinstalling the app.
+Note that even after installing Yozakura to the home screen, you will still need to run Yozakura on your computer and it needs to be accessible via Tailscale, or else the app will fail to launch. Updating Yozakura on your computer later does **not** require deleting or reinstalling the app.
 
 ### Other private options (Same Wi-Fi, WireGuard, or Headscale)
 

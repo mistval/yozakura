@@ -13,7 +13,7 @@ Yozakura uses a lot of tokens by default. This document discusses settings to ch
 
 Group chats, especially larger ones, can be expensive. After a group chat ends, all participants update their memories towards all other participants. For a three-NPC chat, that means 3 x 2 = 6 complete relationship updates. For a four-NPC chat, it's 4 x 3 = 12. For five NPCs, 5*4 = 20 which will result in well over 100 completions requests. This assumes they don't mention any characters who aren't participating. If they do, that goes even higher.
 
-To disable group chats, open [yozakura://?settings=true&settingspath=behavior](behavior settings) and set **NPC group chat rate** to 0%, or whatever percentage you're comfortable with.
+To disable group chats, open [yozakura://?settings=true&settingspath=behavior](behavior settings) and set **NPC group chat rate** to 0%, or whatever percentage you're comfortable with. NPCs will no longer start group chats (you can still start them though).
 
 ## Disable offscreen mentions
 
@@ -31,7 +31,7 @@ In [yozakura://?settings=true&settingspath=behavior](behavior settings), you can
 
 ## Disable intelligent moderation
 
-Both **Speaker selection mode** and **NPC chat end mode** in [yozakura://?settings=true&settingspath=behavior](behavior settings) can be set to "Intelligent" (though this is disabled by default). "Intelligent" adds extra LLM calls for more intelligent behavior, but the dumb modes ("Round Robin" and "Fixed Length" respectively) work fine too.
+Both **Speaker selection mode** and **NPC chat end mode** in [yozakura://?settings=true&settingspath=behavior](behavior settings) can be set to "Intelligent" (though this is disabled by default). "Intelligent" adds extra LLM calls for more intelligent behavior, but the dumb modes ("Round Robin" and "Fixed Length" respectively) work fine too and save on cost.
 
 ## Be particular with your LLM provider
 
@@ -73,11 +73,13 @@ After you do that, your settings there should look something like this (possibly
 }
 ```
 
+In addition to getting a good per-token price, locking to one provider may also enable better utilization of token caching, which further saves cost.
+
 ## BYOK / Cut out the Middleman
 
 You can sometimes save a little bit by skipping OpenRouter and going directly to the source. You can make an API key for Wafer for example [here](https://app.wafer.ai/login).
 
-However don't assume this is the case, **OpenRouter is often cheaper**. Make sure to compare price lists closely.
+However don't assume this will save you money, **OpenRouter is often cheaper**. Make sure to compare price lists closely.
 
 ## Don't use reasoning
 
