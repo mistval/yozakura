@@ -12,6 +12,8 @@ import {
 import { useScenarioStore } from '../state/scenario_store.js';
 import ChatSettings from './chat/chat_settings.js';
 import CharacterChatSettings from './chat/character_chat_settings.js';
+import { useModalQueryParam } from '../hooks/useModalQueryParam.js';
+import { useQueryParam } from '../util/queryParams.js';
 import { useScenarioCharacterStore, useUserCharacter } from '../state/scenario_character_store.js';
 import ButtonOptions from './ui/ButtonOptions.js';
 import { chatSceneImageTemplatesGroup } from '../engine/prompt_templates/chat/group.js';
@@ -61,9 +63,9 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   const userCharacter = useUserCharacter();
   const scenario = useScenarioStore((state) => state.activeScenario);
 
+  const { openModal: openChatSettings } = useModalQueryParam('chatsettings');
+  const [, setCharacterChatSettingsId] = useQueryParam('characterchatsettings');
   const [inputIsNonEmpty, setInputIsNonEmpty] = useState(false);
-  const [showChatSettings, setShowChatSettings] = useState(false);
-  const [settingsCharacterId, setSettingsCharacterId] = useState<string | undefined>(undefined);
   const [editingMessageId, setEditingMessageId] = useState<string | undefined>(undefined);
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
   const [activeActionMessageId, setActiveActionMessageId] = useState<string | undefined>(undefined);
@@ -457,7 +459,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
           key={participant.id}
           className="border rounded-sm p-2 bg-surface-subtle cursor-pointer"
           onClick={() => {
-            setSettingsCharacterId(participant.id);
+            setCharacterChatSettingsId(participant.id);
           }}
         >
           <img
@@ -499,7 +501,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
       {!isFinalizingChat && (
         <button
           type="button"
-          onClick={() => setShowChatSettings(true)}
+          onClick={openChatSettings}
           className={isMobileLayout ? 'flex-1 text-xs px-2! py-1.5!' : 'text-sm'}
         >
           Chat Settings
@@ -716,7 +718,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                                     suppressAvatarClickRef.current = false;
                                     return;
                                   }
-                                  setSettingsCharacterId(senderId);
+                                  setCharacterChatSettingsId(senderId);
                                 }}
                                 title={
                                   canLongPressAvatarToSpeak
@@ -943,13 +945,9 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
         onConfirm={confirmImagePrompt}
       />
 
-      <ChatSettings open={showChatSettings} onClose={() => setShowChatSettings(false)} />
+      <ChatSettings />
 
-      <CharacterChatSettings
-        open={Boolean(settingsCharacterId)}
-        onClose={() => setSettingsCharacterId(undefined)}
-        settingsCharacterId={settingsCharacterId}
-      />
+      <CharacterChatSettings />
     </div>
   );
 }
