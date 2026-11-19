@@ -29,7 +29,7 @@ export const settingsTooltips = {
   'image.autoTemplateWeights':
     'Relative weights (<strong>0</strong> to <strong>100</strong>) controlling how often each image prompt template is chosen when auto image triggers. Weights are proportional rather than percentages—if all templates are set to the same value, they have an equal chance of triggering.',
   'image.autoNpcOnly':
-    'When enabled, auto image runs only for NPC-only chats. If the user is a chat participant, auto image will not trigger and images can only be generated via the Image button.',
+    'When enabled, auto image runs only when the user is not a participant in the chat, and the chat is not paused.',
   'image.width': 'Target width (in pixels) for generated chat images.',
   'image.height': 'Target height (in pixels) for generated chat images.',
   'image.cardWidth': 'Target width (in pixels) for character card image generation.',

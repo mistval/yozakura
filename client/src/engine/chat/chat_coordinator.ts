@@ -663,7 +663,7 @@ export class ChatCoordinator {
       }
 
       const autoImageNpcOnly = settings.autoImageNpcOnly;
-      if (autoImageNpcOnly && this.turnMachineStore().userIsParticipant()) {
+      if (autoImageNpcOnly && (this.turnMachineStore().userIsParticipant() || this.isChatPaused())) {
         return;
       }
 
