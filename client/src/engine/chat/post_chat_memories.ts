@@ -55,9 +55,11 @@ function stageCharacterFields(characterId: string, fields: Partial<Character>) {
 
 function stageConversationSummary(characterId: string, summary: ConversationSummary) {
   const character = getResolvedCharacter(characterId);
+  const { rollingConversationSummaryLimit } = useSettingsStore.getState();
   stageCharacterFields(characterId, {
     rollingConversationSummaries: trimNewestByCreatedAt(
-      character.rollingConversationSummaries.concat(summary)
+      character.rollingConversationSummaries.concat(summary),
+      rollingConversationSummaryLimit
     ),
   });
 }
@@ -70,8 +72,12 @@ function stageRelationshipFields(fromId: string, toId: string, fields: Partial<C
 
 async function stagePairwiseConversationSummary(fromId: string, toId: string, summary: ConversationSummary) {
   const relationship = await getResolvedRelationship(fromId, toId);
+  const { rollingConversationSummaryLimit } = useSettingsStore.getState();
   await stageRelationshipFields(fromId, toId, {
-    rollingPairwiseSummaries: trimNewestByCreatedAt(relationship.rollingPairwiseSummaries.concat(summary)),
+    rollingPairwiseSummaries: trimNewestByCreatedAt(
+      relationship.rollingPairwiseSummaries.concat(summary),
+      rollingConversationSummaryLimit
+    ),
   });
 }
 
@@ -81,9 +87,11 @@ async function stagePairwiseLearnedInformation(
   information: OffscreenLearnedInformation
 ) {
   const relationship = await getResolvedRelationship(fromId, toId);
+  const { offscreenLearnedInformationLimit } = useSettingsStore.getState();
   await stageRelationshipFields(fromId, toId, {
     rollingOffscreenLearnedInformation: trimNewestByCreatedAt(
-      relationship.rollingOffscreenLearnedInformation.concat(information)
+      relationship.rollingOffscreenLearnedInformation.concat(information),
+      offscreenLearnedInformationLimit
     ),
   });
 }

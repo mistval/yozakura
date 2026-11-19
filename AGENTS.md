@@ -15,3 +15,4 @@
 - JSX files should be named with Pascal case, all others with snake case.
 - Avoid conditional object spreading (`...(cond ? { prop: val } : {})`). Instead, set properties directly (e.g., `prop: cond ? val : prevVal`).
 - You may install Ubuntu packages and tools to help you do your job.
+- If something is unclear, ask for clarification before proceeding.
