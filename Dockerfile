@@ -20,7 +20,7 @@ COPY server/index.ts server/tsconfig.json ./server/
 COPY server/src ./server/src
 COPY server/scripts ./server/scripts
 COPY server/demo_data ./server/demo_data
-RUN npm run build --prefix server
+RUN npm run pack:demo --prefix server
 
 COPY --from=web-builder /app/client/dist ./client/dist
 
@@ -36,4 +36,4 @@ VOLUME ["/app/data"]
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 CMD node -e "fetch('http://127.0.0.1:4396/health').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"
 
-CMD ["node", "server/dist/index.js"]
+CMD ["./server/node_modules/.bin/tsx", "server/index.ts"]

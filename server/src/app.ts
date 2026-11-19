@@ -23,6 +23,7 @@ export type CreateAppOptions = {
 
 export type StartServerOptions = CreateAppOptions & {
   port?: number | string;
+  host?: string;
 };
 
 export type StartedServer = {
@@ -35,15 +36,32 @@ export type StartedServer = {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DEFAULT_DATA_DIR = path.resolve(__dirname, '..', '..', 'data');
-const DEFAULT_FRONTEND_DIST_DIR = path.resolve(__dirname, '..', '..', 'client', 'dist');
+const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const DEFAULT_DATA_DIR = ['yozakura_data', 'data'].map((dir) => path.resolve(REPO_ROOT, dir)).join(',');
+const DEFAULT_FRONTEND_DIST_DIR = path.resolve(REPO_ROOT, 'client', 'dist');
+
+function resolveDataDir(dataDirOption?: string): string {
+  const spec = dataDirOption ?? process.env.YOZAKURA_DATA_DIR ?? DEFAULT_DATA_DIR;
+  const candidates = spec
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => path.resolve(entry));
+
+  const [firstCandidate] = candidates;
+  if (!firstCandidate) {
+    throw new Error('Data directory configuration is empty');
+  }
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? firstCandidate;
+}
 
 export function createApp(options: CreateAppOptions = {}): Express {
   const corsOrigin = process.env.YOZAKURA_CORS_ALLOWED_ORIGINS?.trim()
     ? process.env.YOZAKURA_CORS_ALLOWED_ORIGINS.split(',').map((s) => s.trim())
     : undefined;
 
-  const dataDir = path.resolve(options.dataDir ?? process.env.YOZAKURA_DATA_DIR ?? DEFAULT_DATA_DIR);
+  const dataDir = resolveDataDir(options.dataDir);
   const staticDir = path.resolve(
     options.frontendDistDir ?? process.env.YOZAKURA_FRONTEND_DIST_DIR ?? DEFAULT_FRONTEND_DIST_DIR
   );
@@ -105,11 +123,12 @@ export function createApp(options: CreateAppOptions = {}): Express {
 }
 
 export function startServer(options: StartServerOptions = {}): StartedServer {
-  const dataDir = path.resolve(options.dataDir ?? process.env.YOZAKURA_DATA_DIR ?? DEFAULT_DATA_DIR);
+  const dataDir = resolveDataDir(options.dataDir);
   const db = options.db ?? openDatabase(dataDir);
   const app = createApp({ ...options, dataDir, db });
   const port = options.port ?? process.env.PORT ?? 3001;
-  const server = app.listen(Number(port), () => {
+  const host = options.host ?? process.env.HOST ?? '127.0.0.1';
+  const server = app.listen(Number(port), host, () => {
     const address = server.address();
     const resolvedPort = typeof address === 'object' && address ? address.port : port;
     console.log(`Server listening on port ${resolvedPort}`);
@@ -127,7 +146,14 @@ export function startServer(options: StartServerOptions = {}): StartedServer {
         return;
       }
 
+      const forceCloseTimer = setTimeout(() => {
+        console.warn('HTTP server close timed out; forcibly closing remaining connections.');
+        server.closeAllConnections();
+      }, 1500);
+
       server.close((error) => {
+        clearTimeout(forceCloseTimer);
+
         try {
           db.close();
         } catch (dbError) {
@@ -144,6 +170,8 @@ export function startServer(options: StartServerOptions = {}): StartedServer {
 
         resolve();
       });
+
+      server.closeIdleConnections();
     });
 
   return { app, server, close, db };

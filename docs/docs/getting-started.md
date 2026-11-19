@@ -11,11 +11,11 @@ keywords:
   - ai simulation
 ---
 
-There are three main ways to run Yozakura. The native electron application is the fastest to set up for most users and is dead easy. The Docker image has some advantages for more advanced users who are familiar with Docker, especially on Linux or MacOS. Cloning from GitHub is mainly intended for development and modifications, but is also a viable way to install and run Yozakura if that's your preference.
+There are three main ways to run Yozakura. The **Electron** app is recommended for most users running Yozakura on a computer.
 
-Looking to use Yozakura on your phone? See the [Mobile Devices](mobile-devices.md) guide for running directly on Android via Termux or connecting to your computer from mobile (works on iOS too).
+Looking to use Yozakura on your phone? Check the [Mobile Devices](mobile-devices.md) guide.
 
-## Electron
+## Electron (Recommended)
 
 Prerequisites:
 
@@ -26,14 +26,15 @@ Installation:
 1. Find the latest release on [GitHub](https://github.com/mistval/yozakura/releases) and download the zip file for your operating system.
 2. Extract the zip file anywhere on your machine.
 3. Run the `yozakura` executable file inside. You might have to click through a warning about running an unsigned executable. Then follow the in-app instructions.
-4. Note that a `yozakura_data` folder will be created next to `yozakura.exe`, this is where generated images live if you want to access those directly.
+4. Note that a `yozakura_data` folder will be created next to the yozakura executable, this is where generated images live if you want to access those directly.
+5. Yozakura launches. That's all, you don't need to read anything below here.
 
 ## Docker
 
 Prerequisites:
 
 1. You need access to an LLM via a completions API.
-2. You need to have [Docker](https://docs.docker.com/desktop/) installed
+2. You need to have [Docker](https://docs.docker.com/desktop/) installed.
 
 Installation:
 
@@ -45,11 +46,11 @@ In both cases, your data will be saved to a `yozakura_data` folder in the curren
 
 Both methods use host network mode in order to have access to APIs you're running on your local machine. On **Windows (where host network mode may not work) you may need to make some changes**:
 
-1. Replace `network_mode: host` with `ports: ["4396:4396"]` in `docker-compose.yml` (or replace `--network host` with `-p 4396:4396` in `docker run`).
+1. Replace `network_mode: host` with `ports: ["127.0.0.1:4396:4396"]` and `environment: ["HOST=0.0.0.0"]` in `docker-compose.yml` (or replace `--network host` with `-p 127.0.0.1:4396:4396 -e HOST=0.0.0.0` in `docker run`).
 2. When configuring local APIs in Yozakura's settings, use `host.docker.internal` instead of `localhost` or `127.0.0.1` (for example, `http://host.docker.internal:5001/v1/chat/completions`).
 
 Give it just a few moments to start, then visit `http://localhost:4396` in your web browser.
 
-## Git clone
+## Git Clone
 
-Check the [README in the GitHub repo](https://github.com/mistval/yozakura) for the latest development setup instructions.
+Check the [README in the GitHub repo](https://github.com/mistval/yozakura) for setup and development instructions.
