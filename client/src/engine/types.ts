@@ -225,6 +225,10 @@ export const scenarioSchema = basePersistedObjectSchema.extend({
   mapId: idSchema,
   userCharacterId: idSchema.or(z.literal('')),
   turnNumber: z.number(),
+  saveName: z.string().meta({
+    description:
+      'Optional display name shown in the main menu load list in place of the user character and map names. Empty string means none.',
+  }),
   remoteChatMedium: z.string().meta({
     description:
       "The medium used when characters in different locations have a remote conversation (e.g. 'text messaging', 'telepathy', 'carrier pigeons').",

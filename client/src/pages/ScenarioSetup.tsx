@@ -91,6 +91,7 @@ export default function ScenarioSetup() {
         mapId: selectedMap.id,
         turnNumber: 0,
         userCharacterId: '',
+        saveName: '',
         remoteChatMedium: DEFAULT_REMOTE_CHAT_MEDIUM,
         temporalContext: createDefaultTemporalSectionState(),
       });

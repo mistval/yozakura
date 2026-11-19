@@ -28,6 +28,7 @@ type ScenarioStoreState = {
   setTemporalSelectedScriptId: (scriptId: string) => void;
   setTemporalControlValue: (scriptId: string, controlId: string, value: string) => void;
   resetTemporalControlValues: (scriptId: string) => void;
+  setSaveName: (saveName: string) => void;
   setRemoteChatMedium: (remoteChatMedium: string) => void;
   deleteScenario: (scenarioId: string) => void;
   saveImmediateBlankInactiveScenario: (mapId: string) => Promise<Scenario>;
@@ -226,6 +227,13 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     });
   },
 
+  setSaveName: (saveName) => {
+    get().updateScenario((prev) => ({
+      ...prev,
+      saveName,
+    }));
+  },
+
   setRemoteChatMedium: (remoteChatMedium) => {
     get().updateScenario((prev) => ({
       ...prev,
@@ -238,6 +246,7 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
       mapId,
       turnNumber: 0,
       userCharacterId: '',
+      saveName: '',
       remoteChatMedium: DEFAULT_REMOTE_CHAT_MEDIUM,
       temporalContext: createDefaultTemporalSectionState(),
     });

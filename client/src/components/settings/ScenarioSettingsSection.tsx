@@ -87,10 +87,13 @@ export default function ScenarioSettingsSection() {
   const activeMap = useScenarioStore((state) => state.activeScenarioMap);
   const setScenarioMap = useScenarioStore((state) => state.setScenarioMap);
   const mergeMapOverrides = useScenarioStore((state) => state.mergeMapOverrides);
+  const setSaveName = useScenarioStore((state) => state.setSaveName);
   const setRemoteChatMedium = useScenarioStore((state) => state.setRemoteChatMedium);
   const temporalSelection = useTemporalScriptSelection();
 
   const temporalSection = scenario?.temporalContext;
+  const saveNameValue = scenario?.saveName ?? '';
+  const hasSaveName = scenario !== undefined && scenario.saveName !== '';
   const remoteChatMediumValue = scenario?.remoteChatMedium ?? DEFAULT_REMOTE_CHAT_MEDIUM;
   const hasCustomRemoteChatMedium =
     scenario !== undefined && scenario.remoteChatMedium !== DEFAULT_REMOTE_CHAT_MEDIUM;
@@ -154,6 +157,18 @@ export default function ScenarioSettingsSection() {
       <div>
         <h2 className="text-2xl font-semibold">Scenario Settings</h2>
       </div>
+      <ResettableTextField
+        id="scenario-save-name"
+        label="Save Name"
+        tooltipHtml={settingsTooltips['scenario.saveName']}
+        value={saveNameValue}
+        placeholder="Leave blank to show User and Map"
+        disabled={!scenarioLoaded}
+        canReset={hasSaveName}
+        onChange={setSaveName}
+        onReset={() => setSaveName('')}
+        className="bordered-section space-y-1"
+      />
       <div className="bordered-section">
         <div className="space-y-1">
           <SettingFieldLabel

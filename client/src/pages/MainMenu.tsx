@@ -55,43 +55,52 @@ export default function MainMenu() {
             )}
 
             <div className="space-y-3">
-              {sortedScenarioSummaries.map((summary) => (
-                <div key={summary.scenario.id} className="relative">
-                  <button
-                    type="button"
-                    className="w-full text-left rounded-sm border px-4 py-3 pr-12 hover:bg-surface-hover disabled:opacity-70"
-                    onClick={() => navigate(`/scenario/${summary.scenario.id}`)}
-                  >
-                    <div className="text-sm text-secondary-strong mb-2">
-                      User: {summary.userCharacterName}
-                    </div>
-                    <div className="text-sm text-secondary-strong mb-2">
-                      Map: {summary.mapName ?? 'Unknown Map'}
-                    </div>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-xs text-secondary">
-                        Updated: {formatDateTime(summary.updatedAt)}
+              {sortedScenarioSummaries.map((summary) => {
+                const saveName = summary.scenario.saveName.trim();
+                return (
+                  <div key={summary.scenario.id} className="relative">
+                    <button
+                      type="button"
+                      className="w-full text-left rounded-sm border px-4 py-3 pr-12 hover:bg-surface-hover disabled:opacity-70"
+                      onClick={() => navigate(`/scenario/${summary.scenario.id}`)}
+                    >
+                      {saveName ? (
+                        <div className="text-sm font-medium text-secondary-strong mb-2">{saveName}</div>
+                      ) : (
+                        <>
+                          <div className="text-sm text-secondary-strong mb-2">
+                            User: {summary.userCharacterName}
+                          </div>
+                          <div className="text-sm text-secondary-strong mb-2">
+                            Map: {summary.mapName ?? 'Unknown Map'}
+                          </div>
+                        </>
+                      )}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-xs text-secondary">
+                          Updated: {formatDateTime(summary.updatedAt)}
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-xs text-secondary mt-1">
-                      Created: {formatDateTime(summary.createdAt)}
-                    </div>
-                  </button>
+                      <div className="text-xs text-secondary mt-1">
+                        Created: {formatDateTime(summary.createdAt)}
+                      </div>
+                    </button>
 
-                  <button
-                    type="button"
-                    className="absolute bottom-3 right-3 text-sm leading-none px-1"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setScenarioPendingDelete(summary);
-                    }}
-                    aria-label={`Delete scenario ${summary.scenario.id}`}
-                    title="Delete scenario"
-                  >
-                    🗑
-                  </button>
-                </div>
-              ))}
+                    <button
+                      type="button"
+                      className="absolute bottom-3 right-3 text-sm leading-none px-1"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setScenarioPendingDelete(summary);
+                      }}
+                      aria-label={`Delete scenario ${summary.scenario.id}`}
+                      title="Delete scenario"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </section>
 
