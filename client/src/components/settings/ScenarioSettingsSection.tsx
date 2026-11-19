@@ -152,6 +152,17 @@ export default function ScenarioSettingsSection() {
     });
   };
 
+  if (!scenario) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-semibold">Scenario Settings</h2>
+        </div>
+        <p>To change scenario settings, you must enter a scenario first.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div>
