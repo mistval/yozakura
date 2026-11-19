@@ -3,6 +3,7 @@ import { useStateRef } from '../../hooks/useStateRef.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
 import { settingsTooltips } from './settings_tooltips.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
+import { DEFAULT_REMOTE_CHAT_MEDIUM } from '../../engine/types.js';
 import { getErrorMessage } from '../../errors/error_util.js';
 import { useMapStore } from '../../state/map_store.js';
 import CustomScriptSettings from './settingsScripts/CustomScriptSettings.js';
@@ -11,14 +12,88 @@ import {
   useTemporalScriptSelection,
 } from './settingsScripts/temporalScriptSection.js';
 
+function ResettableTextField({
+  id,
+  label,
+  tooltipHtml,
+  value,
+  placeholder,
+  disabled,
+  canReset,
+  onChange,
+  onReset,
+  rows,
+  className = 'space-y-1',
+}: {
+  id: string;
+  label: string;
+  tooltipHtml: string;
+  value: string;
+  placeholder: string;
+  disabled: boolean;
+  canReset: boolean;
+  onChange: (value: string) => void;
+  onReset: () => void;
+  rows?: number;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <div className="flex items-center justify-between">
+        <SettingFieldLabel
+          text={label}
+          htmlFor={id}
+          tooltipHtml={tooltipHtml}
+          className="text-sm font-medium text-primary"
+        />
+        {canReset && (
+          <button
+            type="button"
+            className="text-xs text-secondary hover:text-primary"
+            onClick={onReset}
+            disabled={disabled}
+          >
+            Reset to default
+          </button>
+        )}
+      </div>
+      {rows !== undefined ? (
+        <textarea
+          id={id}
+          className="mt-1 w-full border rounded-sm px-2 py-2 bg-inset resize-y"
+          rows={rows}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+        />
+      ) : (
+        <input
+          id={id}
+          type="text"
+          className="mt-1 w-full border rounded-sm px-2 py-2 bg-inset"
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function ScenarioSettingsSection() {
   const scenario = useScenarioStore((state) => state.activeScenario);
   const activeMap = useScenarioStore((state) => state.activeScenarioMap);
   const setScenarioMap = useScenarioStore((state) => state.setScenarioMap);
   const mergeMapOverrides = useScenarioStore((state) => state.mergeMapOverrides);
+  const setRemoteChatMedium = useScenarioStore((state) => state.setRemoteChatMedium);
   const temporalSelection = useTemporalScriptSelection();
 
   const temporalSection = scenario?.temporalContext;
+  const remoteChatMediumValue = scenario?.remoteChatMedium ?? DEFAULT_REMOTE_CHAT_MEDIUM;
+  const hasCustomRemoteChatMedium =
+    scenario !== undefined && scenario.remoteChatMedium !== DEFAULT_REMOTE_CHAT_MEDIUM;
 
   const maps = useMapStore((s) => s.maps);
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
@@ -114,66 +189,44 @@ export default function ScenarioSettingsSection() {
       </div>
 
       <div className="bordered-section space-y-4">
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <SettingFieldLabel
-              text="Map Name"
-              htmlFor="scenario-map-name"
-              tooltipHtml={settingsTooltips['scenario.activeMapName']}
-              className="text-sm font-medium text-primary"
-            />
-            {hasNameOverride && (
-              <button
-                type="button"
-                className="text-xs text-secondary hover:text-primary"
-                onClick={resetNameOverride}
-                disabled={!scenarioLoaded}
-              >
-                Reset to default
-              </button>
-            )}
-          </div>
-          <input
-            id="scenario-map-name"
-            type="text"
-            className="mt-1 w-full border rounded-sm px-2 py-2 bg-inset"
-            value={nameValue}
-            placeholder={baseMap?.name ?? ''}
-            onChange={(e) => handleNameChange(e.target.value)}
-            disabled={!scenarioLoaded}
-          />
-        </div>
+        <ResettableTextField
+          id="scenario-map-name"
+          label="Map Name"
+          tooltipHtml={settingsTooltips['scenario.activeMapName']}
+          value={nameValue}
+          placeholder={baseMap?.name ?? ''}
+          disabled={!scenarioLoaded}
+          canReset={hasNameOverride}
+          onChange={handleNameChange}
+          onReset={resetNameOverride}
+        />
 
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <SettingFieldLabel
-              text="Map Description"
-              htmlFor="scenario-map-description"
-              tooltipHtml={settingsTooltips['scenario.activeMapDescription']}
-              className="text-sm font-medium text-primary"
-            />
-            {hasDescriptionOverride && (
-              <button
-                type="button"
-                className="text-xs text-secondary hover:text-primary"
-                onClick={resetDescriptionOverride}
-                disabled={!scenarioLoaded}
-              >
-                Reset to default
-              </button>
-            )}
-          </div>
-          <textarea
-            id="scenario-map-description"
-            className="mt-1 w-full border rounded-sm px-2 py-2 bg-inset resize-y"
-            rows={4}
-            value={descriptionValue}
-            placeholder={baseMap?.description ?? ''}
-            onChange={(e) => handleDescriptionChange(e.target.value)}
-            disabled={!scenarioLoaded}
-          />
-        </div>
+        <ResettableTextField
+          id="scenario-map-description"
+          label="Map Description"
+          tooltipHtml={settingsTooltips['scenario.activeMapDescription']}
+          value={descriptionValue}
+          placeholder={baseMap?.description ?? ''}
+          disabled={!scenarioLoaded}
+          canReset={hasDescriptionOverride}
+          onChange={handleDescriptionChange}
+          onReset={resetDescriptionOverride}
+          rows={4}
+        />
       </div>
+
+      <ResettableTextField
+        id="scenario-remote-chat-medium"
+        label="Remote Chat Medium"
+        tooltipHtml={settingsTooltips['scenario.remoteChatMedium']}
+        value={remoteChatMediumValue}
+        placeholder={DEFAULT_REMOTE_CHAT_MEDIUM}
+        disabled={!scenarioLoaded}
+        canReset={hasCustomRemoteChatMedium}
+        onChange={setRemoteChatMedium}
+        onReset={() => setRemoteChatMedium(DEFAULT_REMOTE_CHAT_MEDIUM)}
+        className="bordered-section space-y-1"
+      />
 
       {temporalSection && (
         <div className="bordered-section space-y-2">

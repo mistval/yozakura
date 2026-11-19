@@ -15,7 +15,7 @@ const outZipPath = path.join(serverDir, 'demo_data.yozakura_export.zip');
 const TIMESTAMP_ISO = '2026-11-01T12:00:00.000Z';
 const TIMESTAMP_SQL = '2026-11-01 12:00:00Z';
 const EXPORT_NAME = 'yozakura_export_demo';
-const DB_USER_VERSION = 8;
+const DB_USER_VERSION = 9;
 
 const hexIdSchema = z.string().regex(/^[a-f0-9]{18}$/, 'Expected 18-char lowercase hex ID');
 
@@ -132,6 +132,7 @@ const sourceScenarioSchema = z.object({
     mapId: hexIdSchema,
     userCharacterId: hexIdSchema,
     turnNumber: z.number().int().nonnegative(),
+    remoteChatMedium: z.string().min(1),
     temporalContext: z.object({
       selectedScriptId: z.string().min(1),
       controlValues: z.record(z.string(), z.record(z.string(), z.string())),

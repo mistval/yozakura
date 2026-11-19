@@ -1,5 +1,5 @@
 import { assertNonNullish } from '../../errors/application_error.js';
-import type { Character, CharacterRelationship } from '../types.js';
+import { type Character, type CharacterRelationship } from '../types.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
 import { buildAppearanceTags } from '../wardrobes.js';

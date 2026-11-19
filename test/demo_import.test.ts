@@ -30,7 +30,7 @@ describe('Integration: Demo Entities from Export', () => {
     expect(stageResult.success).toBe(true);
     if (!stageResult.success) throw new Error(stageResult.error);
 
-    expect(stageResult.manifest.dbUserVersion).toBe(8);
+    expect(stageResult.manifest.dbUserVersion).toBe(9);
 
     // Staging database should contain the demo entities
     const mapCount = server.db.prepare('SELECT count(*) as c FROM import_staging.map').get() as {

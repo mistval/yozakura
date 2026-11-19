@@ -4,7 +4,7 @@ import CharacterSelectionGrid from '../components/CharacterSelectionGrid.js';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.js';
 import { createPersistedObject } from '../backend_bridge/database.js';
-import type { Character } from '../engine/types';
+import { DEFAULT_REMOTE_CHAT_MEDIUM, type Character } from '../engine/types';
 import { getErrorMessage } from '../errors/error_util.js';
 import { useMapStore } from '../state/map_store.js';
 import { assertNonNullish } from '../errors/application_error.js';
@@ -91,6 +91,7 @@ export default function ScenarioSetup() {
         mapId: selectedMap.id,
         turnNumber: 0,
         userCharacterId: '',
+        remoteChatMedium: DEFAULT_REMOTE_CHAT_MEDIUM,
         temporalContext: createDefaultTemporalSectionState(),
       });
 

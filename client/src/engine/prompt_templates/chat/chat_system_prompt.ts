@@ -25,7 +25,7 @@ export const chatSystemPromptChainSpec: PromptTemplateChainSpec<
 <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> is currently having a one-on-one interaction with <%= otherParticipants[0].firstName + ' ' + otherParticipants[0].lastName %>.
 <% } %>
   
-You are simulating <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> in a <%= it.chatMedium === 'in_person' ? 'face-to-face encounter' : 'text messaging exchange (the participants are in different physical locations)' %>.
+You are simulating <%= it.focusedCharacter.firstName %> <%= it.focusedCharacter.lastName %> in a <%= it.chatMedium === 'in_person' ? 'face-to-face encounter' : it.scenario.remoteChatMedium + ' exchange (the participants are in different physical locations)' %>.
 <%= it.focusedCharacter.firstName %>'s core identity and behavioral law:
 <persona>
 <%= it.focusedCharacter.internalDescription %>
@@ -111,7 +111,7 @@ Your instructions:
 - Stay in character as <%= it.focusedCharacter.firstName %> and make sure to behave as they would.
 - <%= it.chatMedium === 'in_person'
   ? 'Be concise. Output no more than three sentences.'
-  : 'Text messaging style. Be concise. Output no more than three sentences.' %>
+  : it.scenario.remoteChatMedium + ' style. Be concise. Output no more than three sentences.' %>
 
 - Use quotes for speech and asterisks for actions and internal speech.
 - Be aware that other characters' internal speech is not directly known to your character.
@@ -140,7 +140,7 @@ Your instructions:
 - Stay in character as <%= it.focusedCharacter.firstName %> and make sure to behave as they would.
 - <%= it.chatMedium === 'in_person'
   ? 'Be concise. Output no more than three sentences.'
-  : 'Text messaging style. Be concise. Output no more than three sentences.' %>
+  : it.scenario.remoteChatMedium + ' style. Be concise. Output no more than three sentences.' %>
 
 - Use quotes for speech and asterisks for actions and internal speech.
 - Be aware that other characters' internal speech is not directly known to your character.

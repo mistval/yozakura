@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { createPersistedObject, doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database';
 import * as Files from '../backend_bridge/files';
-import { type Scenario, type ScenarioSummary, type WorldMap } from '../engine/types.js';
+import {
+  DEFAULT_REMOTE_CHAT_MEDIUM,
+  type Scenario,
+  type ScenarioSummary,
+  type WorldMap,
+} from '../engine/types.js';
 import * as MapHelper from '../engine/map/world_map.js';
 import { useMapStore } from './map_store.js';
 import { importDemoScenario } from '../backend_bridge/demo_import.js';
@@ -23,6 +28,7 @@ type ScenarioStoreState = {
   setTemporalSelectedScriptId: (scriptId: string) => void;
   setTemporalControlValue: (scriptId: string, controlId: string, value: string) => void;
   resetTemporalControlValues: (scriptId: string) => void;
+  setRemoteChatMedium: (remoteChatMedium: string) => void;
   deleteScenario: (scenarioId: string) => void;
   saveImmediateBlankInactiveScenario: (mapId: string) => Promise<Scenario>;
   saveImmediateInactiveScenario: (
@@ -220,11 +226,19 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     });
   },
 
+  setRemoteChatMedium: (remoteChatMedium) => {
+    get().updateScenario((prev) => ({
+      ...prev,
+      remoteChatMedium,
+    }));
+  },
+
   saveImmediateBlankInactiveScenario: async (mapId) => {
     const scenario = createPersistedObject({
       mapId,
       turnNumber: 0,
       userCharacterId: '',
+      remoteChatMedium: DEFAULT_REMOTE_CHAT_MEDIUM,
       temporalContext: createDefaultTemporalSectionState(),
     });
 

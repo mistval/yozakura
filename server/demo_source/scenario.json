@@ -6,6 +6,7 @@
     "mapId": "5d4f493e1031ae6f32",
     "userCharacterId": "c20000000000000001",
     "turnNumber": 0,
+    "remoteChatMedium": "text messaging",
     "temporalContext": {
       "selectedScriptId": "shizuoka-weather",
       "controlValues": {
