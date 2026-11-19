@@ -65,9 +65,7 @@ If you run local LLMs/image models on your computer, want shared data between PC
 
 ### 1. Run Yozakura
 
-Follow the [Getting Started](getting-started.md) guide to install and start Yozakura (the **Electron** app is the easiest option — just keep the Yozakura window open or minimized on your computer while using it from your phone; if you'd rather run Yozakura in the background without a window open, use **[Docker](getting-started.md#docker)** or **[Git Clone](getting-started.md#git-clone)**).
-
-_(Note: when running via Docker or Git Clone, verify `http://localhost:4396` opens on your computer; with Electron, `http://localhost:4396` is served automatically unless port `4396` was already taken by another process.)_
+Follow the [Getting Started](getting-started.md) guide to install and start Yozakura (the **Electron** app is the easiest option — just keep the Yozakura window open or minimized on your computer while using it from your phone). Enter [Appearance Settings](yozakura://?settings=true&settingspath=appearance) and set **Layout** to **Mobile** so that when you open Yozakura on your phone, it will already be using mobile layout.
 
 ### 2. Connect privately with Tailscale
 
@@ -75,14 +73,10 @@ _(Note: when running via Docker or Git Clone, verify `http://localhost:4396` ope
 
 1. Install **[Tailscale](https://tailscale.com/download)** on your computer and sign in.
 2. Install the **Tailscale** app on your phone (from Google Play or the App Store) and sign in with the **same account**. Make sure Tailscale is toggled **On** on both devices.
-3. Open the **[Tailscale Admin Console → DNS](https://console.tailscale.com/admin/dns)** page, make sure **MagicDNS** is enabled, and click **Enable HTTPS** under **HTTPS Certificates**. (Tailscale notes that enabling HTTPS publishes your machine's `*.ts.net` name to Certificate Transparency logs, though only your Tailscale devices can actually connect to it.)
-4. On your computer, run:
-
-```bash
-tailscale serve --bg --https=4443 http://localhost:4396
-```
-
-5. Run `tailscale serve status` to view your private `https://<machine>.<tailnet>.ts.net:4443` URL, and open it on your phone.
+3. Open the **[Tailscale Admin Console → DNS](https://console.tailscale.com/admin/dns)** page, make sure **MagicDNS** is enabled, and click **Enable HTTPS** under **HTTPS Certificates**.
+4. On your computer in a terminal (Powershell on Windows), run `tailscale serve --bg --https=4443 http://localhost:4396`
+5. Then run `tailscale serve status` to view your private `https://<machine>.<tailnet>.ts.net:4443` URL. Copy that URL and open it on your phone.
+6. Yozakura should appear on your phone and you are good to go.
 
 :::info[Is Tailscale secure?]
 

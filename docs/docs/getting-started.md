@@ -27,7 +27,12 @@ Installation:
 2. Extract the zip file anywhere on your machine.
 3. Run the `yozakura` executable file inside. You might have to click through a warning about running an unsigned executable. Then follow the in-app instructions.
 4. Note that a `yozakura_data` folder will be created next to the yozakura executable, this is where generated images live if you want to access those directly.
-5. Yozakura launches. That's all, you don't need to read anything below here.
+
+:::info[Web Browser]
+
+If you want to use web browser features in Yozakura (like ctrl+f to find), just go to [http://localhost:4396](http://localhost:4396) in your web browser after launching Yozakura.
+
+:::
 
 ## Docker
 
