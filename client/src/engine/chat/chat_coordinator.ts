@@ -87,7 +87,7 @@ export class ChatCoordinator {
     const chatState = this.turnMachineStore();
     const settings = useSettingsStore.getState();
 
-    if (chatState.userIsParticipant() || this.isChatPaused()) {
+    if (this.hasUserChatMessages() || this.isChatPaused()) {
       return false;
     }
 
