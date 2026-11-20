@@ -18,13 +18,21 @@ keywords:
 
 Yozakura is an AI-powered social simulation in which characters (including the user) move around a map, interact with each other via the user's LLM of choice, and form memories and intentions towards each other, creating a dynamically evolving narrative with up to dozens or even hundreds of characters.
 
-This article gives a brief peek at the main features of Yozakura via screenshots. There's also a [YouTube video](https://www.youtube.com/watch?v=ukt4ZJnV1Ks) showing most of the main features in action (turn on subtitles).
+This article gives a brief peek at the main features of Yozakura via screenshots. There's also a [YouTube video](https://www.youtube.com/watch?v=ukt4ZJnV1Ks) showing most of the main features in action (turn on subtitles). The code is fully [open source](https://github.com/mistval/yozakura) on GitHub. There is no paid tier, no advertising, nothing but pure self-hosted open-source goodness.
 
 ## Chat
 
 During the user turn, choose one or more characters to chat with.
 
 ![group chat image](/img/in_chat_image.png)
+
+## Mobile Support
+
+Full mobile-friendly layout and [installation paths](mobile-devices.md).
+
+import MyImage from '/img/mobile.png';
+
+<img src={MyImage} alt="Description" style={{ maxWidth: '400px', display: 'block' }} />
 
 ## Memories
 
@@ -81,14 +89,6 @@ Yozakura [prompt templates](template-system.md) can be edited and the templating
 ![prompt template](/img/template.png)
 
 ![AI context doc for prompt templates](/img/ai_assist.png)
-
-## Mobile Support
-
-Full mobile-friendly layout and [installation paths](mobile-devices.md).
-
-import MyImage from '/img/mobile.png';
-
-<img src={MyImage} alt="Description" style={{ maxWidth: '400px', display: 'block' }} />
 
 ## Get Started
 
