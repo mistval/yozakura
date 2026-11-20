@@ -23,6 +23,7 @@ const sidebars: SidebarsConfig = {
         'reasoning-models',
         'how-to-different-models-per-prompt',
         'budget-optimization',
+        'parallelism',
       ],
     },
     {
