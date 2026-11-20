@@ -18,7 +18,7 @@ keywords:
 
 Yozakura is an AI-powered social simulation in which characters (including the user) move around a map, interact with each other via the user's LLM of choice, and form memories and intentions towards each other, creating a dynamically evolving narrative with up to dozens or even hundreds of characters.
 
-This article gives a brief peek at the main features of Yozakura via screenshots. There's also a [YouTube video](https://www.youtube.com/watch?v=ukt4ZJnV1Ks) showing most of the main features in action (turn on subtitles). The code is fully [open source](https://github.com/mistval/yozakura) on GitHub. There is no paid tier, no advertising, nothing but pure self-hosted open-source goodness.
+This article gives a brief peek at the main features of Yozakura via screenshots. There's also a [YouTube video](https://www.youtube.com/watch?v=ukt4ZJnV1Ks&cc_load_policy=1) showing most of the main features in action (turn on subtitles). The code is fully [open source](https://github.com/mistval/yozakura) on GitHub. There is no paid tier, no advertising, nothing but pure self-hosted open-source goodness.
 
 ## Chat
 
