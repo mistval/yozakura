@@ -2,7 +2,11 @@
 <img src="./docs/static/img/yozakura_logo_horizontal.svg" width="420" />
 </p>
 
-Yozakura is an AI-powered social simulation in which characters (including the user) move around a map, interact with each other via the user's LLM of choice, and form memories and intentions towards each other, creating a dynamically evolving narrative with up to dozens or even hundreds of characters. Read more about core features [here](https://mistval.github.io/yozakura/docs/intro).
+Yozakura is an AI-powered social simulation in which characters (including the user) move around a map, interact with each other via the user's LLM of choice, and form memories and intentions towards each other, creating a dynamically evolving narrative with up to dozens or even hundreds of characters. Read more about core features [here](https://mistval.github.io/yozakura/docs/intro), or check out [this YouTube video](https://www.youtube.com/watch?v=ukt4ZJnV1Ks) that walks through the first time user experience and most major features (make sure to turn on subtitles).
+
+<a href="https://www.youtube.com/watch?v=ukt4ZJnV1Ks" target="_blank" rel="noopener noreferrer">
+  <img src="https://img.youtube.com/vi/ukt4ZJnV1Ks/maxresdefault.jpg" alt="Yozakura demo video" width="100%">
+</a>
 
 ## Installation
 
@@ -12,7 +16,7 @@ If you want to contribute, tinker, or you just prefer the `git clone` installati
 
 ## Requirements
 
-- [Node.js v24](https://nodejs.org/) (see [.nvmrc](.nvmrc) for the exact recommended version)
+- [Node.js v26](https://nodejs.org/) (see [.nvmrc](.nvmrc) for the exact recommended version)
 - [Git](https://git-scm.com/)
 
 ## Quick Start

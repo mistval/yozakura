@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "rhea_nocturne",
+  "familiarity": 38,
+  "aToB": {
+    "id": "e10000000000020a01",
+    "descriptor": "Snack Smuggler",
+    "memory": "Sera discovered Rhea's shadow-pocket stash of imported Earth treats over a year ago and has been one of her discreet regulars in Potions Class ever since. Even though Rhea insists every cup of tonkotsu ramen or sour gummy packet is strictly business, Sera has noticed Rhea quietly slips extra snacks to students going through rough weeks.",
+    "nextConversationGoal": "Sera wants to catch Rhea near the Student Union Lounge or Potions Class to ask what Earth snacks survived the latest run—and playfully warn her not to fleece Leo out of all his spending money or luggage trinkets on day one."
+  },
+  "bToA": {
+    "id": "e100000000000a0202",
+    "descriptor": "Steady Regular",
+    "memory": "Rhea respects Sera as a reliable customer who knows exact change, never gossips about shadow-lock drop spots, and genuinely misses real Earth convenience-store snacks rather than buying them for novelty. Seeing Sera suddenly light up—and tighten up—over Leo Vance stepping onto Waystone Quad piqued Rhea's quiet curiosity.",
+    "nextConversationGoal": "Rhea wants to pass Sera a quiet parcel of Earth sour gummies or cold brew under purely 'business' pretenses and dryly tease her for getting unusually protective over Yozakura's brand-new Earth transfer."
+  }
+}

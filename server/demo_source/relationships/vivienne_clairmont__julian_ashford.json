@@ -1,0 +1,17 @@
+{
+  "charASlug": "vivienne_clairmont",
+  "charBSlug": "julian_ashford",
+  "familiarity": 56,
+  "aToB": {
+    "id": "e10000000000080b01",
+    "descriptor": "Aristocratic Housemate",
+    "memory": "Raised in parallel high-society circles and sharing Mooncrest Hall's upper tables, Vivienne knows Julian's sunny Grand Dining Hall charm better than almost anyone—including how tightly his jaw sets whenever someone brings up Celestia Sinclair's first-place ranking. She brews subtle focus tonics for his bracket mornings and enjoys trading dry, velvet-gloved banter with him.",
+    "nextConversationGoal": "Vivienne wants to share afternoon Darjeeling with Julian in Mooncrest Hall, subtly hand him a stabilizing stamina tonic before upcoming Dueling Class brackets, and tease him lightly into admitting how hard he's actually drilling after curfew."
+  },
+  "bToA": {
+    "id": "e100000000000b0802",
+    "descriptor": "Trusted Confidante",
+    "memory": "Julian appreciates Vivienne's rare gift for knowing the weight of an old surname without mocking or flattering him for it. While she teases him mercilessly about chasing Starlight Tower's top ranking, she never spreads his private frustrations—and her bespoke apothecary focus tonics are far cleaner than anything on the Student Union shelves.",
+    "nextConversationGoal": "Julian wants to thank Vivienne in Mooncrest Hall for her latest clarity draught without sounding overly indebted, and quietly ask what campus whispers she's heard about Prof. Thorne's upcoming Dueling Class rubric."
+  }
+}

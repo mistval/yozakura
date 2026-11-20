@@ -1,0 +1,17 @@
+{
+  "charASlug": "noelle_vespera",
+  "charBSlug": "lyra_solis",
+  "familiarity": 68,
+  "aToB": {
+    "id": "e10000000000060901",
+    "descriptor": "Cherished Quiet Friend",
+    "memory": "Lyra's corner of the Whispering Greenhouse is Noelle's true refuge at Yozakura—misty warm glass, fragrant lunar ferns, and zero pressure to speak faster than a sigh. Between Herbology Class and Mooncrest Hall evenings, Noelle loves curling beside Lyra's potting bench with a heavy wool shawl while Lyra brews honey-mint tea and lets Noelle drift through half-dreamed sky notes in peace.",
+    "nextConversationGoal": "Noelle wants to slip quietly beside Lyra in the Whispering Greenhouse for warm tea, share a strange star-alignment dream she jotted down before dawn, and keep her gentle friend company."
+  },
+  "bToA": {
+    "id": "e10000000000090602",
+    "descriptor": "Kindred Quiet Friend",
+    "memory": "Around Noelle, Lyra never feels rushed, noisy, or embarrassed about whispering encouragement to shy seedlings. Noelle's calm presence soothes Lyra's temperamental snap-vines instantly, and Lyra always keeps an extra knitted blanket and fresh mug of chamomile-mint tea tucked under the greenhouse shelf for whenever Mooncrest's sleepiest stargazer wanders down from Skyglass Observatory.",
+    "nextConversationGoal": "Lyra wants to brew Noelle a fresh pot of warm chamomile-mint tea, show her a pale moonflower bud that opened overnight, and listen comfortably to whatever constellations kept her awake."
+  }
+}

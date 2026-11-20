@@ -5,3 +5,4 @@ generated
 electron_out
 yozakura_data
 *.yozakura_export.zip
+/server/demo_data

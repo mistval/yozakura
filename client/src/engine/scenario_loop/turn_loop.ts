@@ -157,15 +157,11 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
           nextSpeaker = await ChatCoordinator.selectNextSpeaker();
         } else if (input.actionType === 'spoke') {
           nextSpeaker = await ChatCoordinator.selectNextSpeaker();
-        } else if (input.actionType === 'delete_message') {
-          ChatCoordinator.deleteMessageById(input.messageId);
         } else if (input.actionType === 'redo_message') {
           const { deletedMessageSpeakerId } = ChatCoordinator.deleteMessagesAboveAndIncluding(
             input.messageId
           );
           nextSpeaker = await ChatCoordinator.selectNextSpeaker({ forcedSpeakerId: deletedMessageSpeakerId });
-        } else if (input.actionType === 'edit_message') {
-          await ChatCoordinator.editMessageById(input.messageId, input.newContent);
         } else {
           assert(false, 'Unknown chat input action');
         }
@@ -325,7 +321,7 @@ async function recomputeTemporalContextAndAutoselectWardrobes() {
 }
 
 function incrementTurnNumber() {
-  useScenarioStore.getState().updateScenario((prev) => ({
+  useScenarioStore.getState().updateActiveScenario((prev) => ({
     ...prev,
     turnNumber: prev.turnNumber + 1,
   }));

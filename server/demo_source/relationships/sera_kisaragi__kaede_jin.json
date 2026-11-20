@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "kaede_jin",
+  "familiarity": 22,
+  "aToB": {
+    "id": "e10000000000020701",
+    "descriptor": "Sparring Peer",
+    "memory": "Sera sees Kaede constantly across Herbology and Dueling classes—usually rushing in straight from sword drills with her wind-blade discipline still humming. While Kaede belongs to Mooncrest Hall and locks horns with Celestia, Sera appreciates how refreshingly blunt and genuine Kaede is without any aristocratic games.",
+    "nextConversationGoal": "Sera wants to chat with Kaede outside the Dueling Courtyard without tower politics in the way, compliment her recent footwork, and ask her to go a little easy if Leo gets paired near her during early sparring drills."
+  },
+  "bToA": {
+    "id": "e10000000000070202",
+    "descriptor": "Steady Peer",
+    "memory": "Kaede knows Sera from shared Dueling and Herbology rosters as one of the sharpest flame-and-illusion casters in their year—and refreshingly unpretentious for someone from Starlight Tower. She respects how steady Sera keeps herself even around stiff upperclassmen like Celestia.",
+    "nextConversationGoal": "Kaede wants to catch Sera after Dueling or Herbology class for a straightforward chat, ask how her new Earth orientation buddy is holding up, and invite Sera for a proper practice spar soon."
+  }
+}

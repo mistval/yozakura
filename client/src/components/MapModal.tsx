@@ -4,7 +4,7 @@ import { useQueryParam } from '../util/queryParams.js';
 import RoutedModalFrame from './ui/RoutedModalFrame.js';
 import type { Character } from '../engine/types.js';
 import { useScenarioStore } from '../state/scenario_store.js';
-import { useScenarioCharacterStore, useUserCharacter } from '../state/scenario_character_store.js';
+import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
 import { doAsDataRead, mainDatabase } from '../backend_bridge/database.js';
 import type { ScenarioEvent, MovementPolicy } from '../engine/types.js';
 import { useCharacterOverview } from './character_overview/CharacterOverviewContext.js';
@@ -34,7 +34,6 @@ function MapModalInner() {
   const mapName = useScenarioStore((state) => state.activeScenarioMap?.name);
   const scenario = useScenarioStore((state) => state.activeScenario);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
-  const user = useUserCharacter();
   const { showCharacterOverview } = useCharacterOverview();
 
   const [viewParam, setViewParam] = useQueryParam('mapview');
@@ -67,7 +66,7 @@ function MapModalInner() {
     void (async () => {
       try {
         const result = await doAsDataRead(
-          () => mainDatabase.loadScenarioEventPage(scenario.id, logPage),
+          () => mainDatabase.loadScenarioEventPage(scenario.id, logPage - 1),
           'scenario_event_log'
         );
         if (!cancelled) {
@@ -92,11 +91,6 @@ function MapModalInner() {
       characters.sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`))
     );
   }, [charactersById]);
-
-  const highlightedLocationIds = useMemo(
-    () => (user?.locationId ? [user.locationId] : []),
-    [user?.locationId]
-  );
 
   const showCharacter = (character: Character) => {
     showCharacterOverview({
@@ -219,7 +213,6 @@ function MapModalInner() {
             updateMap={(mutator) => updateMap(mapId, mutator)}
             charactersByLocationId={charactersByLocationId}
             onCharacterClick={showCharacter}
-            highlightedLocationIds={highlightedLocationIds}
             leadingElement={({ addLocation }) => (
               <div className="shrink-0 flex flex-col items-start gap-2 rounded-sm border border-border-default bg-inset p-2.5 max-w-52">
                 <h2 className="text-base sm:text-lg font-semibold leading-tight wrap-break-word">

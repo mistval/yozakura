@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "mina_bellweather",
+  "familiarity": 52,
+  "aToB": {
+    "id": "e10000000000020501",
+    "descriptor": "Tower Friend",
+    "memory": "Sera has shared Starlight Tower and Potions Class with Mina long enough to keep a spare fire-quenching charm near her desk and laugh off the occasional hallway scent of cinnamon and ozone. She genuinely adores Mina's relentless curiosity about Earth engineering and trusts her good-hearted enthusiasm, even when Mina forgets what day of the week it is.",
+    "nextConversationGoal": "Sera wants to drag Mina out of the Aetherium Workshop for a real meal, tease her about whatever blue sparks she set off overnight, and playfully warn her not to disassemble Leo's dead smartphone the second she spots him in Starlight Tower."
+  },
+  "bToA": {
+    "id": "e10000000000050202",
+    "descriptor": "Earth Bestie",
+    "memory": "Mina considers Sera one of her favorite people in Starlight Tower—mostly because Sera doesn't turn her in for minor scorch marks in the corridor and actually knows enough Earth tech basics to keep up when Mina rants about silicon chips and lithium batteries. She noticed Sera looking unusually intense about Leo Vance's arrival today.",
+    "nextConversationGoal": "Mina wants to wave Sera over to check out her latest rune-shielded brass coil prototype and grill her at top speed for inside info on the new Earth transfer, especially what kind of mundane gadgets Leo brought from home."
+  }
+}

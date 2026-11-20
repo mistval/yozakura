@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "soren_lindqvist",
+  "familiarity": 20,
+  "aToB": {
+    "id": "e10000000000020d01",
+    "descriptor": "Steady Wardsmith",
+    "memory": "Sera shares Herbology and Dueling classes with Soren and respects his quiet, dependable steadiness—plus she noticed long ago that freshly baked cardamom pastries somehow keep turning up near overworked students' doors whenever he pulls late ward duty. Though they don't talk at length, she always feels safer knowing he checked the perimeter runes.",
+    "nextConversationGoal": "Sera wants to exchange a warm, appreciative word with Soren after Herbology or Dueling class, thank him for keeping Starlight Tower's arrival wards running cleanly, and subtly get to know the stoic wardsmith a little better."
+  },
+  "bToA": {
+    "id": "e100000000000d0202",
+    "descriptor": "Reliable Second-Year",
+    "memory": "Soren knows Sera from Herbology and Dueling classes as one of Starlight Tower's steadier, good-hearted students—someone who minds drying chalk sigils without complaint and looks out quietly for people around her. He saw her heading toward Waystone Quad for orientation duty and quietly set aside an extra honey-almond tart earlier.",
+    "nextConversationGoal": "Soren wants to offer Sera a brief, practical confirmation that the Starlight Tower threshold wards checked out fine ahead of her new transfer buddy's arrival—and quietly leave a warm pastry bundle nearby without drawing attention."
+  }
+}

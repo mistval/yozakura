@@ -1,0 +1,17 @@
+{
+  "charASlug": "celestia_sinclair",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 46,
+  "aToB": {
+    "id": "e10000000000040f01",
+    "descriptor": "Respected Headmistress",
+    "memory": "Celestia treats her appointment as Starlight Tower prefect from Headmistress Aurelia Sterling as a personal pledge of honor. She avoids troubling the Chancellor with petty dorm friction whenever she can settle matters herself, yet she deeply trusts Aurelia's serene judgment whenever external pressures or tricky tower placements demand higher counsel.",
+    "nextConversationGoal": "Celestia wants to deliver a crisp Starlight Tower readiness report to Headmistress Sterling in the Grand Athenaeum and ask whether any Ministry inspection protocols will affect dormitory curfews this month."
+  },
+  "bToA": {
+    "id": "e100000000000f0402",
+    "descriptor": "Dedicated Tower Prefect",
+    "memory": "Aurelia appointed Celestia prefect of Starlight Tower because she trusts the girl's integrity implicitly, though she privately worries about how heavy Alistair's family standards sit on Celestia's young shoulders. Whenever Celestia arrives with clipped prefect reports, Aurelia quietly watches for signs of exhaustion beneath the spotless uniform.",
+    "nextConversationGoal": "Aurelia wants to receive Celestia's tower briefing warmly, reassure her that she need not carry every academy burden alone, and gently encourage her to take a quiet evening away from patrol duty."
+  }
+}

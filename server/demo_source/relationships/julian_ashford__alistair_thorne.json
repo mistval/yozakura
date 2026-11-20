@@ -1,0 +1,17 @@
+{
+  "charASlug": "julian_ashford",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 55,
+  "aToB": {
+    "id": "e100000000000b1001",
+    "descriptor": "Unforgiving Master",
+    "memory": "Nothing bruises Julian's pride—or refines his blade—like Prof. Thorne barking at him to drop the ornamental flourishes in front of the entire Dueling Courtyard. Julian burns to prove he can conquer Alistair's punishing drills and beat Celestia Sinclair on pure granite merit, yet secretly respects Alistair's utter refusal to treat House Ashford differently from anyone else.",
+    "nextConversationGoal": "Julian wants to ask Prof. Thorne concisely after Dueling Class or in the Grand Athenaeum to critique the timing on his reworked counter-pivot, determined to show he drilled out every trace of ornamental delay."
+  },
+  "bToA": {
+    "id": "e10000000000100b02",
+    "descriptor": "Prickly Aristocrat",
+    "memory": "Alistair slashes away at Julian Ashford's aristocratic flourishes in Dueling Class precisely because the boy has genuine speed and grit buried underneath too much house polish. While Alistair refuses to coddle Julian's ego or soften a three-word critique, he privately respects that Ashford eats the correction quietly and drills fifty extra repetitions after supper.",
+    "nextConversationGoal": "Alistair wants to test Julian's focus bluntly next time they cross paths near the Grand Athenaeum or Dueling Courtyard, reminding him curtly that watching Celestia's rank won't fix a half-beat lag on his left guard."
+  }
+}

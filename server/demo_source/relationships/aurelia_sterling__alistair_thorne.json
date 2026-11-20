@@ -1,0 +1,17 @@
+{
+  "charASlug": "aurelia_sterling",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 66,
+  "aToB": {
+    "id": "e100000000000f1001",
+    "descriptor": "Blunt Confidant",
+    "memory": "Behind her serene chancellor poise, Aurelia depends deeply on Prof. Thorne's unvarnished candor in the Grand Athenaeum whenever polished Ministry envoys try to press Yozakura's autonomy. Even when Alistair grumbles bluntly that she grants Prof. Marlowe too much leash over Dimensional Theory and takes dangerous chances leaving Leo Vance's Earth memories unsealed, Aurelia knows his roughness springs entirely from fierce devotion to keeping Yozakura safe.",
+    "nextConversationGoal": "Aurelia wants to talk privately with Alistair in the Grand Athenaeum after handling this week's Ministry dispatches, seeking his blunt read on Dueling Courtyard security and asking how Leo Vance's footing actually looks on granite."
+  },
+  "bToA": {
+    "id": "e10000000000100f02",
+    "descriptor": "Resolute Chancellor",
+    "memory": "Alistair stands squarely behind Headmistress Sterling whenever outside Ministry bureaucrats sniff around Yozakura's Waystone charter, recognizing how heavy a political shield she holds behind silver courtesy. Privately, though, he worries that Aurelia's patient diplomacy lets Prof. Marlowe gamble too freely with an anomalous Earth transfer, and expects the Chancellor to tighten oversight the second ward readings waver.",
+    "nextConversationGoal": "Alistair wants to speak plainly with Aurelia in the Grand Athenaeum once corridor chatter clears, urging her bluntly not to let Evelyn Marlowe's private agenda outrun campus safety while giving an honest assessment of Celestia and the new transfer."
+  }
+}

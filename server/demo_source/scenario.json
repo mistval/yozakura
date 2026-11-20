@@ -1,0 +1,29 @@
+{
+  "scenario": {
+    "id": "a10000000000000001",
+    "createdAt": "2026-11-01T12:00:00.000Z",
+    "updatedAt": "2026-11-01T12:00:00.000Z",
+    "mapId": "5d4f493e1031ae6f32",
+    "userCharacterId": "c20000000000000001",
+    "turnNumber": 0,
+    "saveName": "",
+    "remoteChatMedium": "text messaging",
+    "temporalContext": {
+      "selectedScriptId": "shizuoka-weather",
+      "controlValues": {
+        "shizuoka-weather": {
+          "startDate": "2026-09-07",
+          "jumpByDays": "0"
+        }
+      }
+    }
+  },
+  "openingChat": {
+    "transcriptId": "f10000000000000001",
+    "openingMessageId": "f20000000000000001",
+    "openingImageMessageId": "f20000000000000002",
+    "speakerSlug": "sera_kisaragi",
+    "initiatorSlug": "leo_vance",
+    "message": "*As the Arrival Portal's shimmer fades behind Leo, Sera spots him standing dazed under the cherry blossoms and stops a few paces away with a gentle, patient smile.*\n\"Hey... easy there. Take a second to catch your breath—nobody's legs feel steady right after crossing.\"\n\n\"You're at Yozakura University, and you're safe. If your head feels full of static and you can't quite remember why you walked through that archway, don't panic. The transfer spell they use when bringing someone from Earth always leaves a temporary fog in your head at first. Your memories aren't gone—they just need a little talking to come back into focus. What's the last thing you *do* remember?\""
+  }
+}

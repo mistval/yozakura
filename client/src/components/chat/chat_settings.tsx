@@ -9,15 +9,13 @@ import InfoTooltip from '../ui/InfoTooltip.js';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import type { ChangeEvent } from 'react';
 import { useUserCanInputChat } from '../../state/chat_state.js';
+import { useModalQueryParam } from '../../hooks/useModalQueryParam.js';
 
-interface ChatSettingsProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
+export default function ChatSettings() {
+  const { open, closeModal } = useModalQueryParam('chatsettings');
   const speakerSelectionMode = useSettingsStore((s) => s.speakerSelectionMode);
   const setSettings = useSettingsStore((s) => s.setSettings);
+  const chatState = useTurnMachineStore((s) => s.chatState);
   const chatInstructions = useTurnMachineStore((s) => s.chatInstructions);
   const initiatorLocation = useChatInitiatorLocation();
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
@@ -27,12 +25,12 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
     setSettings({ speakerSelectionMode: nextMode });
   };
 
-  if (!initiatorLocation) {
+  if (!open || chatState !== 'active' || !initiatorLocation) {
     return undefined;
   }
 
   return (
-    <RoutedModalFrame open={open} onClose={onClose} maxWidthClassName="max-w-2xl">
+    <RoutedModalFrame queryParam="chatsettings" onClose={closeModal} maxWidthClassName="max-w-2xl">
       <h3 className="text-lg font-semibold">Chat Settings</h3>
 
       <div className="space-y-2">
@@ -111,7 +109,10 @@ export default function ChatSettings({ open, onClose }: ChatSettingsProps) {
 
       <label className="gap-3">
         <button
-          onClick={() => submitChatRequestEnd({ forceNoEffect: true })}
+          onClick={() => {
+            submitChatRequestEnd({ forceNoEffect: true });
+            closeModal();
+          }}
           disabled={!canEndChat}
           className="mr-3"
         >

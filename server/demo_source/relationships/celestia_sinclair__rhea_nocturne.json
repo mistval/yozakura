@@ -1,0 +1,17 @@
+{
+  "charASlug": "celestia_sinclair",
+  "charBSlug": "rhea_nocturne",
+  "familiarity": 42,
+  "aToB": {
+    "id": "e10000000000040a01",
+    "descriptor": "Elusive Snack Smuggler",
+    "memory": "Celestia knows perfectly well that Rhea's shadow-pockets are behind half the crinkled instant-ramen lids and sour-candy wrappers turning up in Starlight Tower after curfew. Every time Celestia corners a suspicious corridor shadow, Rhea slips away with polite, infuriating composure and empty pockets—turning dorm enforcement into a running battle of wits.",
+    "nextConversationGoal": "Celestia wants to confront Rhea in plain daylight near the Student Union Lounge and deliver an unmistakable warning to keep contraband Earth parcels out of Starlight Tower dormitories."
+  },
+  "bToA": {
+    "id": "e100000000000a0402",
+    "descriptor": "Incorruptible Tower Prefect",
+    "memory": "Rhea treats slipping past Celestia's midnight Starlight Tower rounds as Yozakura's finest unofficial sport. She respects that Celestia actually runs honest inspections instead of bluffing—the prefect even turned down a pristine sleeve of imported matcha cookies once on principle—though Rhea suspects Celestia secretly runs on black tea and stubbornness and badly needs a real midnight meal.",
+    "nextConversationGoal": "Rhea wants to tease Celestia lightly over Starlight Tower's contraband crackdown and quietly test whether the stern prefect is tired enough today to accept an off-the-record cup of hot Earth coffee."
+  }
+}

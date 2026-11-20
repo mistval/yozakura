@@ -6,6 +6,7 @@ import {
   type InteractiveRetryOperationId,
 } from '../state/interactive_retry_store.js';
 import { InteractiveRetryError } from '../errors/interactive_retry_error.js';
+import { SessionSupersededError } from '../errors/session_superseded_error.js';
 import { getErrorMessage } from '../errors/error_util.js';
 import { rethrowSignalException } from './scenario_loop/flow_control.js';
 import { raceWithAbort } from '../util/promise.js';
@@ -34,10 +35,12 @@ type ShowNonRetriableErrorCardOptions = {
 };
 
 export const DEFAULT_RETRY_DELAY_MS = 10_000;
+const SESSION_SUPERSEDED_OPERATION_ID: InteractiveRetryOperationId = 0;
 
 const pendingActionDeferredById = new Map<InteractiveRetryOperationId, Deferred<InteractiveRetryAction>>();
 
 let nextInteractiveRetryOperationId: InteractiveRetryOperationId = 1;
+let activeSessionSupersededPromise: Promise<void> | undefined = undefined;
 
 registerInteractiveRetryActionHandler((id, action) => {
   const pending = pendingActionDeferredById.get(id);
@@ -91,11 +94,49 @@ function removeCard(id: InteractiveRetryOperationId) {
   useInteractiveRetryStore.getState().removeOperation(id);
 }
 
+async function handleSessionSuperseded(error: SessionSupersededError): Promise<void> {
+  if (!activeSessionSupersededPromise) {
+    const deferred = createDeferred<InteractiveRetryAction>();
+    pendingActionDeferredById.set(SESSION_SUPERSEDED_OPERATION_ID, deferred);
+
+    upsertCard({
+      id: SESSION_SUPERSEDED_OPERATION_ID,
+      operationType: 'session.superseded',
+      attempt: 1,
+      mode: 'session_superseded',
+      status: 'waiting_for_user_ack',
+      createdAt: Date.now(),
+      errorMessage: error.message,
+    });
+
+    activeSessionSupersededPromise = deferred.promise
+      .then((action) => {
+        if (action === 'confirm') {
+          window.location.reload();
+        }
+      })
+      .finally(() => {
+        if (pendingActionDeferredById.get(SESSION_SUPERSEDED_OPERATION_ID) === deferred) {
+          pendingActionDeferredById.delete(SESSION_SUPERSEDED_OPERATION_ID);
+        }
+        removeCard(SESSION_SUPERSEDED_OPERATION_ID);
+        activeSessionSupersededPromise = undefined;
+      });
+  }
+
+  await activeSessionSupersededPromise;
+}
+
 export async function showNonRetriableErrorCardIfNeeded(
   options: ShowNonRetriableErrorCardOptions
 ): Promise<boolean> {
   if (options.error instanceof InteractiveRetryError) {
     return false;
+  }
+
+  if (options.error instanceof SessionSupersededError) {
+    await handleSessionSuperseded(options.error);
+    return true;
   }
 
   if (options.error) {
@@ -248,6 +289,13 @@ export async function runWithInteractiveRetry<T>(options: RunWithInteractiveRetr
 
         if (error instanceof InteractiveRetryError) {
           throw error;
+        }
+
+        if (error instanceof SessionSupersededError) {
+          await (options.abortSignal
+            ? raceWithAbort(handleSessionSuperseded(error), options.abortSignal)
+            : handleSessionSuperseded(error));
+          throw new InteractiveRetryError(error);
         }
 
         lastOriginalError = error;

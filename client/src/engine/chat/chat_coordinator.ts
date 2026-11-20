@@ -52,7 +52,11 @@ import {
 import { wait } from '../../util/promise';
 import { getRequiredRandomChoice, weightedRandomChoice } from '../../util/array';
 import { clamp } from '../../util/numeric.js';
-import { rethrowSignalException, SignalException } from '../scenario_loop/flow_control';
+import {
+  rethrowSignalException,
+  SignalException,
+  UserAbortCurrentGenerationSignalException,
+} from '../scenario_loop/flow_control';
 import { persistTurn } from '../scenario_loop/turn_persistence';
 import type { PromptTemplateChain } from '../prompt_templates/prompt_template_chain.js';
 import type { PromptExecutionContext } from '../prompt_templates/prompt_template_context_fields.js';
@@ -83,7 +87,7 @@ export class ChatCoordinator {
     const chatState = this.turnMachineStore();
     const settings = useSettingsStore.getState();
 
-    if (chatState.userIsParticipant() || this.isChatPaused()) {
+    if ((this.turnMachineStore().userIsParticipant() && this.hasUserChatMessages()) || this.isChatPaused()) {
       return false;
     }
 
@@ -176,6 +180,8 @@ export class ChatCoordinator {
     const { deletedMessage, updatedTranscript } = this.transcript().deleteMessageById(messageId);
     this.setTranscript(updatedTranscript);
 
+    persistTurn();
+
     return deletedMessage;
   }
 
@@ -188,9 +194,10 @@ export class ChatCoordinator {
     };
   }
 
-  public static async editMessageById(id: string, newContent: string) {
+  public static editMessageById(id: string, newContent: string) {
     const { updatedTranscript } = this.transcript().editMessageById(id, newContent);
     this.setTranscript(updatedTranscript);
+    persistTurn();
   }
 
   public static addCharacterMessage(
@@ -218,17 +225,27 @@ export class ChatCoordinator {
     return this.buildSceneImageFullPrompt(imageCharacterId, { upToMessageId: afterMessageId });
   }
 
+  private static runImagePipelineJob(run: () => Promise<void>) {
+    return globalParallelJobManager.enqueue({
+      name: 'Image generation pipeline',
+      tags: [ChatJobTags.minor, ChatJobTags.chatJob, ChatJobTags.generatingImagePipeline],
+      job: run,
+    });
+  }
+
   public static async requestSceneImage(afterMessageId: string | undefined) {
     try {
-      const prompt = await this.buildSceneImagePromptForRequest(afterMessageId);
-      if (useSettingsStore.getState().editImagePromptsBeforeDispatch) {
-        useScenarioLoopStateStore.getState().setPendingImagePromptEdit({
-          prompt,
-          afterMessageId,
-        });
-      } else {
-        await this.generateImageFromPrompt(prompt, { afterMessageId });
-      }
+      await this.runImagePipelineJob(async () => {
+        const prompt = await this.buildSceneImagePromptForRequest(afterMessageId);
+        if (useSettingsStore.getState().editImagePromptsBeforeDispatch) {
+          useScenarioLoopStateStore.getState().setPendingImagePromptEdit({
+            prompt,
+            afterMessageId,
+          });
+        } else {
+          await this.generateImageFromPrompt(prompt, { afterMessageId });
+        }
+      });
     } catch (err) {
       if (err instanceof SignalException) {
         return;
@@ -243,7 +260,7 @@ export class ChatCoordinator {
   public static async confirmSceneImagePrompt(prompt: string, afterMessageId: string | undefined) {
     useScenarioLoopStateStore.getState().setPendingImagePromptEdit(undefined);
     try {
-      await this.generateImageFromPrompt(prompt, { afterMessageId });
+      await this.runImagePipelineJob(() => this.generateImageFromPrompt(prompt, { afterMessageId }));
     } catch (err) {
       if (err instanceof SignalException) {
         return;
@@ -260,15 +277,11 @@ export class ChatCoordinator {
     options: { forceSkipAutoImage?: boolean } = {}
   ) {
     if (!options.forceSkipAutoImage) {
-      if (useSettingsStore.getState().generateImagesInParallelWithText) {
-        void this.maybeGenerateAutoImageForMessage(message).catch((err) => {
-          if (!(err instanceof SignalException)) {
-            console.error('Auto image generation error', err);
-          }
-        });
-      } else {
-        await this.maybeGenerateAutoImageForMessage(message);
-      }
+      void this.maybeGenerateAutoImageForMessage(message).catch((err) => {
+        if (!(err instanceof SignalException)) {
+          console.error('Auto image generation error', err);
+        }
+      });
     }
   }
 
@@ -316,22 +329,26 @@ export class ChatCoordinator {
     opts?: { afterMessageId?: string | undefined }
   ) {
     const saveTo = `scenario/${getRequiredActiveScenario().id}/chat_images/${newId()}.png`;
-    const files = await generateChatImage({
+    await generateChatImage({
       fullPrompt,
       saveTo,
+      options: {
+        onPutComplete: (path: string) => {
+          this.setTranscript(this.transcript().addImageMessage(path, opts).updatedTranscript);
+          persistTurn();
+        },
+      },
     });
-
-    const firstFile = files[0];
-    assertNonNullish(firstFile, 'No file returned from image generation call');
-
-    this.setTranscript(this.transcript().addImageMessage(firstFile, opts).updatedTranscript);
-    persistTurn();
   }
 
   public static async endActiveChat(noEffect: boolean) {
-    const scenario = getRequiredActiveScenario();
-
-    if (!noEffect) {
+    if (noEffect) {
+      await globalParallelJobManager.cancelJobsByTag(
+        ChatJobTags.chatJob,
+        new UserAbortCurrentGenerationSignalException()
+      );
+    } else {
+      const scenario = getRequiredActiveScenario();
       const characterStore = useScenarioCharacterStore.getState();
       const relationshipStore = useScenarioCharacterRelationshipStore.getState();
       const characterUpdates: Array<Awaited<ReturnType<typeof generateCharacterEndOfChatUpdates>>> = [];
@@ -390,6 +407,10 @@ export class ChatCoordinator {
   }
 
   public static async speakAsNpc(npcId: string) {
+    if (!useSettingsStore.getState().generateImagesInParallelWithText) {
+      await globalParallelJobManager.waitAllForTag(ChatJobTags.generatingImagePipeline);
+    }
+
     const speaker = useScenarioCharacterStore.getState().getRequiredCharacterById(npcId);
     const wasPaused = this.isChatPaused();
     const completionRequestId = newId();
@@ -479,15 +500,13 @@ export class ChatCoordinator {
     const participants = getActiveChatParticipants();
     const excludedSpeakerId = opts?.notSpeakerId;
     const nonExcludedParticipants = participants.filter((p) => p.id !== excludedSpeakerId);
+    const primarySpeaker = this.primarySpeaker();
 
     try {
-      // If it's the first message, return the initiator (unless they are specifically excluded)
+      // If it's the first message, return the primary speaker (unless they are specifically excluded)
       if (!this.transcript().hasCharacterMessages()) {
-        if (excludedSpeakerId !== this.initiatorId()) {
-          const initiator = this.initiator();
-          if (initiator) {
-            return initiator;
-          }
+        if (excludedSpeakerId !== primarySpeaker.id) {
+          return primarySpeaker;
         } else {
           const firstAvailable = nonExcludedParticipants[0];
           assertNonNullish(firstAvailable, 'No available participant for first message speaker selection');
@@ -570,7 +589,7 @@ export class ChatCoordinator {
         hint: 'Control will be handed to first participant',
       });
 
-      return participants[0]!;
+      return this.primarySpeaker();
     }
   }
 
@@ -655,7 +674,7 @@ export class ChatCoordinator {
       }
 
       const autoImageNpcOnly = settings.autoImageNpcOnly;
-      if (autoImageNpcOnly && this.turnMachineStore().userIsParticipant()) {
+      if (autoImageNpcOnly && (this.turnMachineStore().userIsParticipant() || this.isChatPaused())) {
         return;
       }
 
@@ -681,11 +700,13 @@ export class ChatCoordinator {
         selectedChain = weightedRandomChoice(candidates);
       }
 
-      const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId, {
-        chain: selectedChain,
-        upToMessageId: chatMessage.id,
+      await this.runImagePipelineJob(async () => {
+        const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId, {
+          chain: selectedChain,
+          upToMessageId: chatMessage.id,
+        });
+        await this.generateImageFromPrompt(fullPrompt, { afterMessageId: chatMessage.id });
       });
-      await this.generateImageFromPrompt(fullPrompt, { afterMessageId: chatMessage.id });
     } catch (err) {
       rethrowSignalException(err);
 
@@ -726,11 +747,9 @@ export class ChatCoordinator {
     return this.getCharacterById(this.userCharacterId());
   }
 
-  private static initiatorId() {
-    return this.turnMachineStore().initiatorId;
-  }
-
-  private static initiator() {
-    return getActiveChatParticipants().find((p) => p.id === this.initiatorId());
+  private static primarySpeaker() {
+    const speaker = getActiveChatParticipants()[0];
+    assertNonNullish(speaker, 'No primary speaker');
+    return speaker;
   }
 }

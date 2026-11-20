@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 28,
+  "aToB": {
+    "id": "e10000000000020f01",
+    "descriptor": "Headmistress",
+    "memory": "Sera remembers Headmistress Sterling's quiet, unhurried steadiness from her own disorienting arrival at Yozakura two years ago, and still sits attentively in her Herbology Class. She respects how calmly Aurelia shelters students from outside politics while holding high expectations.",
+    "nextConversationGoal": "Sera wants to greet Headmistress Sterling respectfully after Herbology Class or in the Grand Athenaeum, report that Leo's orientation went smoothly, and draw a little steady encouragement from her calm presence."
+  },
+  "bToA": {
+    "id": "e100000000000f0202",
+    "descriptor": "Resilient Student",
+    "memory": "Aurelia has watched Sera grow from a newly severed Earth arrival two years ago into a vibrant, capable second-year in Starlight Tower and Herbology Class. She trusts Sera's good instincts—even as she watches closely how Sera handles Leo Vance arriving under very different terms than Sera once did.",
+    "nextConversationGoal": "Aurelia wants to share a serene, unhurried word with Sera in the Whispering Greenhouse or Grand Athenaeum, ask warmly how Leo Vance is settling in, and quietly remind Sera that she doesn't have to shoulder old griefs alone."
+  }
+}

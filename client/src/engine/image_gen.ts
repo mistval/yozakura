@@ -43,7 +43,11 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 async function dispatchImageGeneration(
   prompt: string,
   promptType: ImagePromptType,
-  options: { tags?: string[] | undefined } = {}
+  options: {
+    tags?: string[] | undefined;
+    putFilePath?: string;
+    onPutComplete?: (putPath: string) => Promise<void> | void;
+  } = {}
 ): Promise<Blob> {
   return globalParallelJobManager.enqueue({
     name: 'Generating image',
@@ -92,7 +96,14 @@ async function dispatchImageGeneration(
           assertNonNullish(firstStream, 'Image generation returned no image data.');
 
           const bytes = await new Response(firstStream).arrayBuffer();
-          return new Blob([bytes], { type: 'image/png' });
+          const blob = new Blob([bytes], { type: 'image/png' });
+
+          if (options?.putFilePath) {
+            await Api.putFile(options?.putFilePath, blob, 'image/png');
+            await options?.onPutComplete?.(options.putFilePath);
+          }
+
+          return blob;
         },
       }),
   });
@@ -109,13 +120,17 @@ export async function generateCharacterCard(character: Character): Promise<strin
 export async function generateChatImage({
   fullPrompt,
   saveTo,
+  options,
 }: {
   fullPrompt: string;
   saveTo: string;
+  options?: Omit<Parameters<typeof dispatchImageGeneration>[2], 'putFilePath' | 'tags'>;
 }): Promise<string[]> {
-  const blob = await dispatchImageGeneration(fullPrompt, 'scene', { tags: [ChatJobTags.chatJob] });
-  const filePath = `/api/files/${saveTo}`;
-  await Api.putFile(filePath, blob, 'image/png');
-
-  return [filePath];
+  const putFilePath = `/api/files/${saveTo}`;
+  await dispatchImageGeneration(fullPrompt, 'scene', {
+    tags: [ChatJobTags.chatJob],
+    putFilePath,
+    ...options,
+  });
+  return [putFilePath];
 }

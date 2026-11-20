@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { createPersistedObject, doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database';
 import * as Files from '../backend_bridge/files';
-import { type Scenario, type ScenarioSummary, type WorldMap } from '../engine/types.js';
+import {
+  DEFAULT_REMOTE_CHAT_MEDIUM,
+  type Scenario,
+  type ScenarioSummary,
+  type WorldMap,
+} from '../engine/types.js';
 import * as MapHelper from '../engine/map/world_map.js';
 import { useMapStore } from './map_store.js';
 import { importDemoScenario } from '../backend_bridge/demo_import.js';
@@ -14,7 +19,7 @@ type ScenarioStoreState = {
   pendingScenarioId: string | undefined;
   scenarioSummaries: ScenarioSummary[];
   scenarioSummariesAreLoaded: boolean;
-  updateScenario: (updater: (prev: Scenario) => Scenario) => Scenario;
+  updateActiveScenario: (updater: (prev: Scenario) => Scenario) => Scenario;
   setUserCharacter: (characterId: string) => void;
   setScenarioMap: (mapId: string) => void;
   mergeMapOverrides: (
@@ -23,7 +28,9 @@ type ScenarioStoreState = {
   setTemporalSelectedScriptId: (scriptId: string) => void;
   setTemporalControlValue: (scriptId: string, controlId: string, value: string) => void;
   resetTemporalControlValues: (scriptId: string) => void;
-  deleteInactiveScenario: (scenarioId: string) => void;
+  setSaveName: (saveName: string) => void;
+  setRemoteChatMedium: (remoteChatMedium: string) => void;
+  deleteScenario: (scenarioId: string) => void;
   saveImmediateBlankInactiveScenario: (mapId: string) => Promise<Scenario>;
   saveImmediateInactiveScenario: (
     scenario: Scenario,
@@ -101,12 +108,15 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
       activeScenarioMap: applyMapOverrides(selectedMap, nextScenario),
     });
 
-    get().updateScenario(() => nextScenario);
+    get().updateActiveScenario(() => nextScenario);
   },
 
-  updateScenario: (updater) => {
+  updateActiveScenario: (updater) => {
     const scenario = getRequiredActiveScenario();
-    const nextScenario = updater(scenario);
+    const nextScenario: Scenario = {
+      ...updater(scenario),
+      updatedAt: new Date().toISOString(),
+    };
 
     set({
       activeScenario: nextScenario,
@@ -137,7 +147,7 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
       return;
     }
 
-    get().updateScenario(
+    get().updateActiveScenario(
       (prev) =>
         ({
           ...prev,
@@ -153,7 +163,7 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
       throw new Error(`Map not found: ${mapId}`);
     }
 
-    const nextScenario = get().updateScenario(
+    const nextScenario = get().updateActiveScenario(
       (prev) =>
         ({
           ...prev,
@@ -178,7 +188,7 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
       ...overrides,
     };
 
-    const nextScenario = get().updateScenario((prev) => ({
+    const nextScenario = get().updateActiveScenario((prev) => ({
       ...prev,
       mapOverrides: newOverrides,
     }));
@@ -189,14 +199,14 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
   },
 
   setTemporalSelectedScriptId: (scriptId) => {
-    get().updateScenario((prev) => ({
+    get().updateActiveScenario((prev) => ({
       ...prev,
       temporalContext: { ...prev.temporalContext, selectedScriptId: scriptId },
     }));
   },
 
   setTemporalControlValue: (scriptId, controlId, value) => {
-    get().updateScenario((prev) => {
+    get().updateActiveScenario((prev) => {
       const section = prev.temporalContext;
       const forScript = { ...(section.controlValues[scriptId] ?? {}), [controlId]: value };
       return {
@@ -210,7 +220,7 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
   },
 
   resetTemporalControlValues: (scriptId) => {
-    get().updateScenario((prev) => {
+    get().updateActiveScenario((prev) => {
       const controlValues = { ...prev.temporalContext.controlValues };
       delete controlValues[scriptId];
       return {
@@ -220,11 +230,27 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     });
   },
 
+  setSaveName: (saveName) => {
+    get().updateActiveScenario((prev) => ({
+      ...prev,
+      saveName,
+    }));
+  },
+
+  setRemoteChatMedium: (remoteChatMedium) => {
+    get().updateActiveScenario((prev) => ({
+      ...prev,
+      remoteChatMedium,
+    }));
+  },
+
   saveImmediateBlankInactiveScenario: async (mapId) => {
     const scenario = createPersistedObject({
       mapId,
       turnNumber: 0,
       userCharacterId: '',
+      saveName: '',
+      remoteChatMedium: DEFAULT_REMOTE_CHAT_MEDIUM,
       temporalContext: createDefaultTemporalSectionState(),
     });
 
@@ -248,18 +274,28 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     }
   },
 
-  deleteInactiveScenario: (scenarioId: string) => {
-    const newScenarioSummaries = get().scenarioSummaries.filter((s) => s.scenario.id !== scenarioId);
+  deleteScenario: (scenarioId: string) => {
+    const { scenarioSummaries, activeScenario, activeScenarioMap, pendingScenarioId } = get();
+    const newScenarioSummaries = scenarioSummaries.filter((s) => s.scenario.id !== scenarioId);
+    const isActive = activeScenario?.id === scenarioId;
+    const isPending = pendingScenarioId === scenarioId;
 
-    if (newScenarioSummaries.length !== get().scenarioSummaries.length) {
+    if (newScenarioSummaries.length !== scenarioSummaries.length || isActive || isPending) {
       set({
         scenarioSummaries: newScenarioSummaries,
+        activeScenario: isActive ? undefined : activeScenario,
+        activeScenarioMap: isActive ? undefined : activeScenarioMap,
+        pendingScenarioId: isPending ? undefined : pendingScenarioId,
       });
 
-      void doAsDataWrite(async () => {
-        await mainDatabase.deleteScenarioDatabase(scenarioId);
-        await Files.deleteScenarioFolder(scenarioId);
-      }, 'scenario');
+      void doAsDataWrite(
+        async () => {
+          await mainDatabase.deleteScenarioDatabase(scenarioId);
+          await Files.deleteScenarioFolder(scenarioId);
+        },
+        'scenario',
+        { debouncerKey: scenarioId }
+      );
     }
   },
 

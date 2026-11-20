@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "vivienne_clairmont",
+  "familiarity": 18,
+  "aToB": {
+    "id": "e10000000000020801",
+    "descriptor": "Polite Classmate",
+    "memory": "Sera shares Potions Class with Vivienne and watches Mooncrest's famous apothecary prodigy glide through complex draughts without spilling a single drop. They exchange poised, pleasant smiles across the slate workbenches, though Sera stays careful around Vivienne's uncanny knack for collecting campus secrets.",
+    "nextConversationGoal": "Sera wants to keep conversation light and cordial with Vivienne during Potions lab prep while neatly steering her away from digging too deeply into Leo's Earth background or Sera's own past."
+  },
+  "bToA": {
+    "id": "e10000000000080202",
+    "descriptor": "Intrigued Peer",
+    "memory": "Vivienne knows Sera Kisaragi from Potions Class as an unusually composed second-year Starlight Tower transfer who handles volatile fire weaves smoothly and guards her personal history behind easy humor. Seeing Sera suddenly assigned to shepherd Yozakura's newest Earth transfer immediately caught Vivienne's attention.",
+    "nextConversationGoal": "Vivienne wants to join Sera over jasmine tea or near the Potions & Alchemy Lab with a gracious smile, offer a helpful tip for Leo's first brewing assignment, and subtly observe how guarded Sera gets when Leo's hometown is mentioned."
+  }
+}

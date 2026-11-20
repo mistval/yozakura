@@ -1,0 +1,17 @@
+{
+  "charASlug": "vivienne_clairmont",
+  "charBSlug": "soren_lindqvist",
+  "familiarity": 42,
+  "aToB": {
+    "id": "e10000000000080d01",
+    "descriptor": "Dependable Wardsmith",
+    "memory": "Vivienne relies on Soren's precision whenever her private apothecary cabinet at Mooncrest Hall needs tighter containment runes, valuing a housemate who answers concisely and never pries into her reagent ledger. She long ago deduced that the warm parchment-wrapped cardamom knots left by late-night study lamps come from Soren's secret baking shifts, though she has too much grace to embarrass him by mentioning it aloud.",
+    "nextConversationGoal": "Vivienne wants to catch Soren cleanly between the Aetherium Workshop and Mooncrest Hall to ask for a fresh silver-wire lock rune on her travel chest—and casually gift him an extra tin of fine Ceylon vanilla tea leaves without pointing out why."
+  },
+  "bToA": {
+    "id": "e100000000000d0802",
+    "descriptor": "Exact Housemate",
+    "memory": "Soren likes how straightforward Vivienne is when commissioning protective ward-work: she knows exact containment specs, pays promptly, and spares him Mooncrest drawing-room posturing. Because she frequently stays up past midnight brewing in the Potions & Alchemy Lab, he quietly sets an extra honey-almond tart outside her landing whenever he clears the oven racks.",
+    "nextConversationGoal": "Soren wants to confirm with Vivienne that the temperature seal on her apothecary cabinet is holding steady and briefly let her know which night he'll be re-chalking the Mooncrest parlor threshold."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "charASlug": "celestia_sinclair",
+  "charBSlug": "noelle_vespera",
+  "familiarity": 30,
+  "aToB": {
+    "id": "e10000000000040601",
+    "descriptor": "Sleepy Stargazer",
+    "memory": "During late prefect sweeps across Waystone Quad and the Grand Athenaeum steps, Celestia routinely spots Noelle wrapped in a plum cloak drifting half-asleep back from Skyglass Observatory. Because Noelle never causes willful mischief and occasionally murmurs eerily accurate weather warnings before sudden squalls, Celestia quietly nudges her indoors toward Mooncrest Hall rather than issuing curfew demerits.",
+    "nextConversationGoal": "Celestia wants to check gently that Noelle actually got proper rest after her latest observatory shift and remind her not to fall asleep on the damp courtyard steps."
+  },
+  "bToA": {
+    "id": "e10000000000060402",
+    "descriptor": "Tired Tower Prefect",
+    "memory": "Noelle sees right past Celestia's immaculate Starlight Tower uniform to the drawn bowstring underneath—recognizing another student who never lets her mind switch off after midnight. Whenever Celestia catches her nodding off outside the Grand Athenaeum, her clipped reprimands always leave Noelle with a dry nudge toward bed rather than real trouble.",
+    "nextConversationGoal": "Noelle wants to thank Celestia softly for steering her out of the courtyard chill last week and murmur a quiet observation that Celestia's own shoulders look overdue for one full night's sleep."
+  }
+}

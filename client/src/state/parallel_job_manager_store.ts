@@ -41,9 +41,7 @@ function syncConcurrencyWithSettings(settings: ReturnType<typeof useSettingsStor
     globalParallelJobManager.setConcurrencyForGroup(groupName, minLimit);
   }
 
-  const imageConcurrency = settings.generateImagesInParallelWithText
-    ? Math.max(1, settings.imageGenerationConcurrency || 1)
-    : 1;
+  const imageConcurrency = Math.max(1, settings.imageGenerationConcurrency || 1);
   globalParallelJobManager.setConcurrencyForGroup(IMAGE_GENERATION_PARALLELISM_GROUP, imageConcurrency);
 }
 

@@ -1,0 +1,17 @@
+{
+  "charASlug": "vivienne_clairmont",
+  "charBSlug": "evelyn_marlowe",
+  "familiarity": 58,
+  "aToB": {
+    "id": "e10000000000080e01",
+    "descriptor": "Formidable Mentor",
+    "memory": "As Potions Class's undisputed senior standout, Vivienne takes immense pride in meeting Prof. Marlowe's razor-edged standards at the copper alembic—and secretly studies Evelyn's effortless blend of salon glamour and intellectual authority. Lately she has noticed Evelyn's amber gaze sharpening whenever Leo Vance or the Waystone threshold comes up, convincing Vivienne there is an extraordinary planar mystery behind the transfer.",
+    "nextConversationGoal": "Vivienne wants to linger briefly after Potions Class with a near-flawless reagent purification sample to earn Prof. Marlowe's rare nod, while dropping one poised question about how non-magical transfers affect planar alchemy."
+  },
+  "bToA": {
+    "id": "e100000000000e0802",
+    "descriptor": "Prized Prodigy",
+    "memory": "Evelyn regards Vivienne as the most dangerously capable student in her cohort—methodical under heat, unbothered by volatile mixtures, and sharp enough to read between chalkboard lines. While Evelyn enjoys rewarding Vivienne's mastery with advanced alchemy readings, she stays carefully alert whenever Vivienne's polite curiosity drifts too close to Leo Vance's anomalous Earth file.",
+    "nextConversationGoal": "Evelyn wants to commend Vivienne crisply on her latest distillation curve in the Potions & Alchemy Lab and test her analytical nerve with an advanced containment problem—without handing her any clues about Waystone anomalies."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "charASlug": "julian_ashford",
+  "charBSlug": "finnian_reed",
+  "familiarity": 48,
+  "aToB": {
+    "id": "e100000000000b0c01",
+    "descriptor": "Nosy Columnist",
+    "memory": "Julian tolerates Finn's rapid-fire corridor interviews with practiced Grand Dining Hall grace because fair press buoys Mooncrest pride, yet stays razor-alert so the irrepressible editor never prints a hint of Julian's private obsession with toppling Celestia Sinclair's #1 spot. Twice Julian has threatened to lock Finn's inkwell after his paper dramatized routine tie-breakers into house feuds.",
+    "nextConversationGoal": "Julian wants to steer Finn smoothly away from printing dramatic speculation about Dueling Class rankings in Mooncrest Hall, trading one courteous official quote on upcoming exhibition bouts in exchange for leaving private practice drills off the page."
+  },
+  "bToA": {
+    "id": "e100000000000c0b02",
+    "descriptor": "Golden-Boy Story",
+    "memory": "Finn loves cornering Mooncrest's sunlit star duelist after Dueling Class for effortless front-page quotes—yet sharing a dorm hallway has taught Finn to read the tiny tightening in Julian's jaw whenever someone mentions Celestia Sinclair or Prof. Alistair Thorne's blunt critiques. Finn knows there is a far fiercer, sleepless story under Julian's flawless Ashford smile.",
+    "nextConversationGoal": "Finn wants to catch Julian between the Grand Dining Hall and Dueling Courtyard with notebook in hand, asking cheerfully how he plans to adjust for Celestia's bracket—and watching closely for the slightest flicker behind that composed grin."
+  }
+}

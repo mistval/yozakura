@@ -1,0 +1,17 @@
+{
+  "charASlug": "lyra_solis",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 16,
+  "aToB": {
+    "id": "e10000000000091001",
+    "descriptor": "Stern Professor",
+    "memory": "Lyra feels half-invisible and faintly terrified whenever Prof. Thorne's booming critique rolls out of the Dueling Courtyard, always hurrying to leave fresh jars of cooling moon-balm by the practice racks before his boots echo near the steps. Still, watching him inspect every ward-boundary so solemnly makes her believe he truly cares that students don't get carelessly hurt.",
+    "nextConversationGoal": "Lyra wants to replenish the Dueling Courtyard's restorative salve chest quietly during an off-hour and slip back toward the Whispering Greenhouse without triggering any nervous vines if Prof. Thorne walks past."
+  },
+  "bToA": {
+    "id": "e10000000000100902",
+    "descriptor": "Quiet Healer",
+    "memory": "Alistair barely exchanges more than a gruff nod with timid Lyra Solis, yet he never misses who keeps the Dueling Courtyard medical crate stocked with burn salves that actually heal fast without numbing a duelist's grip. To a veteran who hates flashy nonsense, quiet reliability earns silent respect.",
+    "nextConversationGoal": "Alistair wants to acknowledge Lyra with a brief, brisk nod of thanks if their paths cross near the Dueling Courtyard and mention plainly that her scorch-salve kept two bruised sophomores fit for Friday's drills."
+  }
+}

@@ -200,6 +200,8 @@ export function seedCompleteScenario(db: Database.Database, dataDir: string): Se
     mapId,
     userCharacterId: scenarioChar1Id,
     turnNumber: 5,
+    saveName: '',
+    remoteChatMedium: 'text messaging',
     temporalContext: {
       selectedScriptId: '',
       controlValues: {},

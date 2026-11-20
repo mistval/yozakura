@@ -1,0 +1,118 @@
+{
+  "id": "0e4eab3c35e29b4b2b",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "name": "Kingdoms",
+  "description": "Two neighboring but politically divided realms: the Kingdom of Caldris, a wealthy river-coast power of guilds and scholars, and the Kingdom of Thornvale, a rugged highland realm of knightly houses and old rites.",
+  "locations": [
+    {
+      "id": "69f4478a7baef524d4",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "name": "Sunport Docks",
+      "description": "Located in the Kingdom of Caldris. A busy harbor district of lateen ships, salt-stained warehouses, and foreign merchants trading under painted banners.",
+      "adjacency": ["44bd062aab353e43bc", "f591c53db753035513"],
+      "isEphemeral": false
+    },
+    {
+      "id": "44bd062aab353e43bc",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "name": "Gilded Forum",
+      "description": "Located in the Kingdom of Caldris. A grand civic square ringed by counting houses, marble loggias, and fountain statues of long-dead merchant princes.",
+      "adjacency": ["69f4478a7baef524d4", "c9543aeb8847b016c7", "58e491c717fdf005c4", "f591c53db753035513"],
+      "isEphemeral": false
+    },
+    {
+      "id": "c9543aeb8847b016c7",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "name": "Artificers Row",
+      "description": "Located in the Kingdom of Caldris. A narrow lane of alchemical glassworks, clockmaker stalls, and rune-etched mechanical curiosities humming after dusk.",
+      "adjacency": ["44bd062aab353e43bc", "4c8dcf901de1d32a5e"],
+      "isEphemeral": false
+    },
+    {
+      "id": "58e491c717fdf005c4",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "name": "Marble Basilica",
+      "description": "Located in the Kingdom of Caldris. A domed temple where choir hymns blend with careful celestial rites performed by scholar-priests.",
+      "adjacency": ["44bd062aab353e43bc", "4c8dcf901de1d32a5e"],
+      "isEphemeral": false
+    },
+    {
+      "id": "f591c53db753035513",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "name": "Canal Ward",
+      "description": "Located in the Kingdom of Caldris. Stone bridges cross narrow canals lined with silk dyers, mask shops, and lantern-lit balconies over dark water.",
+      "adjacency": ["69f4478a7baef524d4", "44bd062aab353e43bc"],
+      "isEphemeral": false
+    },
+    {
+      "id": "4c8dcf901de1d32a5e",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "name": "Skyglass Observatory",
+      "description": "Located in the Kingdom of Caldris. A hilltop observatory crowned with rotating brass instruments and a polished crystal lens for charting omens in the stars.",
+      "adjacency": ["c9543aeb8847b016c7", "58e491c717fdf005c4"],
+      "isEphemeral": false
+    },
+    {
+      "id": "e74bb612ede010d14d",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "name": "Wolfgate Keep",
+      "description": "Located in the Kingdom of Thornvale. A granite fortress with wind-battered pennants, where oathbound retainers and stewards govern the highland marches.",
+      "adjacency": ["f7d62ec255e773a8bc", "d718d5823080cbd807"],
+      "isEphemeral": false
+    },
+    {
+      "id": "f7d62ec255e773a8bc",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "name": "Emberfield Village",
+      "description": "Located in the Kingdom of Thornvale. A close-knit settlement of timber halls, smokehouses, and communal fire circles where ballads preserve family honor.",
+      "adjacency": ["e74bb612ede010d14d", "3127f054967bfd118e", "86e17f1c4945f750d7"],
+      "isEphemeral": false
+    },
+    {
+      "id": "3127f054967bfd118e",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "name": "Ironwood Hunt",
+      "description": "Located in the Kingdom of Thornvale. A deep old-growth forest of black pines and pale runestones, patrolled by wardens tracking beasts and spirits alike.",
+      "adjacency": ["f7d62ec255e773a8bc", "a4525ebbbe487ec1be"],
+      "isEphemeral": false
+    },
+    {
+      "id": "86e17f1c4945f750d7",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "name": "Runecloister",
+      "description": "Located in the Kingdom of Thornvale. A secluded monastic hall where knight-scribes illuminate war chronicles and bind protective sigils into steel and leather.",
+      "adjacency": ["f7d62ec255e773a8bc", "d718d5823080cbd807"],
+      "isEphemeral": false
+    },
+    {
+      "id": "d718d5823080cbd807",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "name": "Stormwatch Cliffs",
+      "description": "Located in the Kingdom of Thornvale. A jagged coastal overlook where beacon braziers and wyvern-watch towers stand against relentless ocean winds.",
+      "adjacency": ["e74bb612ede010d14d", "86e17f1c4945f750d7", "a4525ebbbe487ec1be"],
+      "isEphemeral": false
+    },
+    {
+      "id": "a4525ebbbe487ec1be",
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z",
+      "name": "Moonmere Shrine",
+      "description": "Located in the Kingdom of Thornvale. A quiet lakeside shrine with silver reeds and mirrored water said to reveal truthful visions on clear nights.",
+      "adjacency": ["3127f054967bfd118e", "d718d5823080cbd807"],
+      "isEphemeral": false
+    }
+  ],
+  "zones": []
+}

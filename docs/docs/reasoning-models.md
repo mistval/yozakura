@@ -14,6 +14,8 @@ You can use reasoning models in Yozakura if you want. They might do better at ce
 
 Below we will walk through two examples of using a reasoning model. The details might be different for other models and host software. Last, we'll go over a few tips and tricks.
 
+Some links in this article will open the relevant area of the Yozakura electron app if you have it installed and have run it at least once.
+
 ## Local: Gemma 4 26B A4B on KoboldCpp
 
 **Make sure you have the latest version of KoboldCpp**. Some of the features used below are very new at the time of this writing. I am using v1.117.1.

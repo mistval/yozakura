@@ -3,7 +3,7 @@ import { useStateRef } from '../hooks/useStateRef.js';
 import { useDraft } from '../hooks/useDraft.js';
 import { useLocation, useNavigate } from 'react-router';
 import YozakuraLogo from '../theme/yozakura_logo.js';
-import { useSettingsStore, type ChatPaneWidth, type Settings } from '../state/settings_store.js';
+import { useSettingsStore, type Settings } from '../state/settings_store.js';
 import { useModalPanelClasses } from '../hooks/use_mobile_layout.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import Modal from './ui/Modal.js';
@@ -33,6 +33,11 @@ const FTUE_MODEL_TOOLTIP_HTML =
 const MOBILE_DEFAULT_COMPLETIONS_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MOBILE_DEFAULT_MODEL = 'deepseek/deepseek-v4.1-flash-1017';
 
+const FTUE_SECTION_CLASS = 'space-y-3 rounded-lg border border-[#31234a]! bg-[#0f0a1c]/90 p-4';
+const FTUE_INPUT_CLASS =
+  'w-full rounded-sm border border-[#463464]! bg-[#07050d]! px-3 py-2 placeholder:text-[#866ca2] focus:border-[#9668bd]! focus:outline-none';
+const FTUE_BUTTON_CLASS = 'border-[#4a3769]! bg-[#161028]! hover:bg-[#22193b]!';
+
 export default function MainMenuFtueModal() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,8 +46,8 @@ export default function MainMenuFtueModal() {
   const setSettings = useSettingsStore((s) => s.setSettings);
   const { outerClassName, panelClassName } = useModalPanelClasses({
     maxWidthClassName: 'max-w-3xl',
-    surfaceClassName: 'bg-inset',
-    desktopPanelClassName: 'rounded-xl border border-border-default shadow-xl p-5 sm:p-7 space-y-6',
+    surfaceClassName: 'bg-[#090612]!',
+    desktopPanelClassName: 'rounded-xl border border-[#3a2a54]! shadow-xl p-5 sm:p-7 space-y-6',
   });
 
   const imageSelection = useImageScriptSelection();
@@ -80,22 +85,18 @@ export default function MainMenuFtueModal() {
     }
 
     const isMobile = window.innerWidth < 768;
-    const defaultLayout: ChatPaneWidth = isMobile ? 'mobile' : 'medium';
 
-    if (!isMobile) {
-      setSettings({ chatPaneWidth: defaultLayout });
-      return;
+    if (isMobile) {
+      setSettings((previous: Settings) => ({
+        chatPaneWidth: 'mobile',
+        llmConfigs: updateLLMConfigsWithBaseDefaultsConnection(
+          previous.llmConfigs,
+          MOBILE_DEFAULT_COMPLETIONS_URL,
+          findBaseDefaultsLLMConfig(previous.llmConfigs)?.llmAuthToken ?? '',
+          MOBILE_DEFAULT_MODEL
+        ),
+      }));
     }
-
-    setSettings((previous: Settings) => ({
-      chatPaneWidth: defaultLayout,
-      llmConfigs: updateLLMConfigsWithBaseDefaultsConnection(
-        previous.llmConfigs,
-        MOBILE_DEFAULT_COMPLETIONS_URL,
-        findBaseDefaultsLLMConfig(previous.llmConfigs)?.llmAuthToken ?? '',
-        MOBILE_DEFAULT_MODEL
-      ),
-    }));
   }, [open, setSettings]);
 
   const markFtueSeen = () => {
@@ -154,7 +155,7 @@ export default function MainMenuFtueModal() {
             </p>
           </header>
 
-          <section className="space-y-3 rounded-lg border border-border-default p-4">
+          <section className={FTUE_SECTION_CLASS}>
             <h3 className="text-lg font-semibold">Completions API Setup</h3>
 
             <div className="space-y-1">
@@ -174,7 +175,7 @@ export default function MainMenuFtueModal() {
                 onChange={(event) => setLlmUrlDraft(event.target.value)}
                 onBlur={saveConnectionDetails}
                 placeholder="http://localhost:5001/v1/chat/completions"
-                className="w-full rounded-sm border px-3 py-2"
+                className={FTUE_INPUT_CLASS}
               />
             </div>
 
@@ -196,7 +197,7 @@ export default function MainMenuFtueModal() {
                 onChange={(event) => setLlmAuthTokenDraft(event.target.value)}
                 onBlur={saveConnectionDetails}
                 placeholder="Bearer token"
-                className="w-full rounded-sm border px-3 py-2"
+                className={FTUE_INPUT_CLASS}
               />
             </div>
 
@@ -212,8 +213,8 @@ export default function MainMenuFtueModal() {
                 value={llmModelDraft}
                 onChange={(event) => setLlmModelDraft(event.target.value)}
                 onBlur={saveConnectionDetails}
-                placeholder="deepseek/deepseek-chat"
-                className="w-full rounded-sm border px-3 py-2"
+                placeholder="deepseek/deepseek-v4.1-flash-1017"
+                className={FTUE_INPUT_CLASS}
               />
             </div>
 
@@ -223,7 +224,7 @@ export default function MainMenuFtueModal() {
                 type="button"
                 onClick={() => void handleTestConnection()}
                 disabled={llmConnectionTestLoading}
-                className="px-3 py-1 border rounded-sm"
+                className={`px-3 py-1 border rounded-sm ${FTUE_BUTTON_CLASS}`}
               >
                 {llmConnectionTestLoading ? 'Testing...' : 'Test Connection'}
               </button>
@@ -231,42 +232,49 @@ export default function MainMenuFtueModal() {
             {llmConnectionTestError && <div className="error-card">{llmConnectionTestError}</div>}
           </section>
 
-          <section className="space-y-3 rounded-lg border border-border-default p-4">
+          <section className={FTUE_SECTION_CLASS}>
             <h3 className="text-lg font-semibold">Image Generation Setup (optional)</h3>
             <p className="text-sm text-secondary">
               Configure an image generation API if you wish to use image generation features.
             </p>
 
-            <CustomScriptSettings
-              descriptor={IMAGE_SCRIPT_DESCRIPTOR}
-              selection={imageSelection}
-              visibleControlIds={ftueImageControlIds}
-            />
+            <div className="[&_input:not([type='checkbox'])]:border-[#463464]! [&_input:not([type='checkbox'])]:bg-[#07050d]! [&_input:not([type='checkbox'])]:placeholder:text-[#866ca2] [&_select]:border-[#463464]! [&_select]:bg-[#07050d]!">
+              <CustomScriptSettings
+                descriptor={IMAGE_SCRIPT_DESCRIPTOR}
+                selection={imageSelection}
+                visibleControlIds={ftueImageControlIds}
+              />
+            </div>
           </section>
 
-          <section className="space-y-3 rounded-lg border border-border-default p-4">
+          <section className={FTUE_SECTION_CLASS}>
             <h3 className="text-lg font-semibold">
               Want to try Yozakura right away? Start a scenario with demo characters.
             </h3>
-            <button type="button" onClick={() => void startDemoSimulation()} disabled={demoStartLoading}>
+            <button
+              type="button"
+              onClick={() => void startDemoSimulation()}
+              disabled={demoStartLoading}
+              className={FTUE_BUTTON_CLASS}
+            >
               {demoStartLoading ? 'Starting...' : 'Start'}
             </button>
             {demoStartError && <div className="error-card">{demoStartError}</div>}
           </section>
 
-          <section className="space-y-3 rounded-lg border border-border-default p-4">
+          <section className={FTUE_SECTION_CLASS}>
             <h3 className="text-lg font-semibold">Or add your own characters.</h3>
             <p>
               If you have Yozakura or SillyTavern style character card images, you can upload them here, or
               create new characters from scratch.
             </p>
-            <button type="button" onClick={goToCharacterManager}>
+            <button type="button" onClick={goToCharacterManager} className={FTUE_BUTTON_CLASS}>
               Go to Character Manager
             </button>
           </section>
 
-          <footer className="flex justify-end border-t border-border-default pt-4">
-            <button type="button" onClick={closeModal}>
+          <footer className="flex justify-end border-t border-[#31234a]! pt-4">
+            <button type="button" onClick={closeModal} className={FTUE_BUTTON_CLASS}>
               Close
             </button>
           </footer>

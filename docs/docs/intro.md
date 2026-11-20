@@ -18,13 +18,21 @@ keywords:
 
 Yozakura is an AI-powered social simulation in which characters (including the user) move around a map, interact with each other via the user's LLM of choice, and form memories and intentions towards each other, creating a dynamically evolving narrative with up to dozens or even hundreds of characters.
 
-This article gives a brief peek at the main features of Yozakura via screenshots. There's also a [YouTube](https://www.youtube.com/watch?v=DqU5ZbXK8JY) video showing some of the same features in action (turn on subtitles) (it's a little outdated and doesn't show some newer features, but covers the core ideas).
+This article gives a brief peek at the main features of Yozakura via screenshots. There's also a [YouTube video](https://www.youtube.com/watch?v=ukt4ZJnV1Ks) showing most of the main features in action (turn on subtitles). The code is fully [open source](https://github.com/mistval/yozakura) on GitHub. There is no paid tier, no advertising, nothing but pure self-hosted open-source goodness.
 
 ## Chat
 
 During the user turn, choose one or more characters to chat with.
 
 ![group chat image](/img/in_chat_image.png)
+
+## Mobile Support
+
+Full mobile-friendly layout and [installation paths](mobile-devices.md).
+
+import MyImage from '/img/mobile.png';
+
+<img src={MyImage} alt="Description" style={{ maxWidth: '400px', display: 'block' }} />
 
 ## Memories
 
@@ -51,6 +59,10 @@ You can also of course create new characters from scratch.
 ![character create dialogue](/img/char_create.png)
 
 The [wardrobe](wardrobes.md) system can automatically enable different combinations of image model tags each day and in different map zones.
+
+The bulk importer enables you to import a whole library of SillyTavern cards in one go.
+
+![bulk importer](/img/bulk_import.png)
 
 ## Create Your Own Worlds
 

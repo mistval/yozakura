@@ -1,9 +1,9 @@
 ---
-title: API Setup
+title: Model Setup
 sidebar_position: 4
 description: Connect Yozakura to a local or cloud LLM and image model. Setup guides for KoboldCpp, OpenRouter, and any OpenAI-compatible completions API.
 keywords:
-  - yozakura api setup
+  - yozakura model setup
   - local llm
   - koboldcpp
   - openrouter
@@ -15,6 +15,8 @@ keywords:
 Yozakura requires you to bring your own AI LLM model/subscription (and optionally an image generation model).
 
 You can run these models on your own machine if it's powerful enough, or use a cloud provider. Both approaches will be covered in this document, with suggested software and providers.
+
+Some links in this article will open the relevant area of the Yozakura electron app if you have it installed and have run it at least once.
 
 ## Local LLM
 
@@ -53,13 +55,13 @@ Setup:
 1. Create an account at [openrouter.ai](https://openrouter.ai).
 2. Buy some credits on the [Credits page](https://openrouter.ai/credits).
 3. Create an API key on the [Keys page](https://openrouter.ai/keys).
-4. In Yozakura's initial setup popup, under `Completions API Setup` (if you already closed the popup, the same fields are under Base Defaults in [LLM Settings](yozakura://?settings=true&settingspath=llm)):
+4. In Yozakura's initial setup popup, under `Completions API Setup` (if you already closed the popup, the same fields are under Base Defaults in [LLM Settings](yozakura://?settings=true&settingspath=llm&llmoptionsid=base)):
    - **Completions API URL**: `https://openrouter.ai/api/v1/chat/completions`
    - **Bearer/Auth Token**: your OpenRouter API key
    - **Model**: a model ID from the [models page](https://openrouter.ai/models), see below
 5. Click `Test Connection` to confirm you can connect.
 
-For the model, `deepseek/deepseek-chat` is a decent choice, but it's a good idea to try several models and find one you like. Yozakura makes a lot of LLM calls with all the NPC chatting and memory processing, so keep that in mind as you budget. In my experience each default twelve-message NPC chat with `deepseek/deepseek-chat` costs about a penny. Using the latest models from Anthropic, OpenAI, or Google could cost much more (and may be overkill).
+For the model, `deepseek/deepseek-v4.1-flash-1017` is a good choice, but it's a good idea to try several models and find one you like. Yozakura makes a lot of LLM calls with all the NPC chatting and memory processing, so keep that in mind as you budget. Closed frontier models are not recommended unless you really don't care about the cost, or if you're willing to [dial down some features in Yozakura](budget-optimization.md).
 
 You can also choose to use different models for different tasks. That is covered [here](how-to-different-models-per-prompt.md).
 

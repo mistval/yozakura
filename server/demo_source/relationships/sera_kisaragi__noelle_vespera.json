@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "noelle_vespera",
+  "familiarity": 24,
+  "aToB": {
+    "id": "e10000000000020601",
+    "descriptor": "Sleepy Classmate",
+    "memory": "Sera shares Herbology Class with Noelle and has lost count of how many times she's quietly passed over clean notes or nudged Noelle awake before a potting demonstration. She finds Noelle's soft, deadpan foresight oddly comforting, even if half of it sounds like she's peering through fog.",
+    "nextConversationGoal": "Sera wants to bring Noelle a warm cup of tea from Familiar's Perch Cafe before Herbology Class and ask—half-teasingly, half-curiously—whether the Skyglass Observatory charts said anything weird about new arrivals this week."
+  },
+  "bToA": {
+    "id": "e10000000000060202",
+    "descriptor": "Kind Classmate",
+    "memory": "Noelle appreciates Sera for slipping her neat Herbology notes without lecturing her about sleeping at odd hours. Whenever Sera sits nearby, Noelle sometimes notices faint, neatly snipped edges around Sera's astral thread—like two years of echoes quietly sealed away from somewhere far off.",
+    "nextConversationGoal": "Noelle wants to thank Sera sleepily for looking out for her in class and mention in her calm, unhurried murmur that a strange new thread from Leo Vance seems to cross right back over Sera's old one."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "mina_bellweather",
+  "familiarity": 48,
+  "aToB": {
+    "id": "e10000000000030501",
+    "descriptor": "Chaotic Neighbor",
+    "memory": "Sharing Starlight Tower and Potions Class with Mina means Dorian regularly endures faint ozone smells and buzzing rune-coils from down the hall, in exchange for an amusingly earnest friend who treats spirit-binding resonance like just another fascinating electrical circuit. He keeps a few spare batteries around strictly so she won't raid his espresso pot's heating rune.",
+    "nextConversationGoal": "Dorian wants to check in on Mina before Potions Class, ask dryly whether her latest brass gadget stayed below blast-shield threshold, and remind her to ask politely before trying to borrow anything off Leo's desk."
+  },
+  "bToA": {
+    "id": "e10000000000050302",
+    "descriptor": "Steady Tinker-Buddy",
+    "memory": "Mina adores having Dorian down the hall in Starlight Tower because he never panics when sparks turn purple, brews top-tier morning espresso that saves her after thirty-six-hour workshop binges, and listens seriously when she theories about spirit-resonance tolerances. Plus, he's literally sharing a room with the new Earth transfer!",
+    "nextConversationGoal": "Mina wants to track Dorian down in Starlight Tower Commons for a cup of his strong espresso and immediately beg him for intel on what kind of Earth gadgets Leo unpacked into their room."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "lyra_solis",
+  "familiarity": 30,
+  "aToB": {
+    "id": "e10000000000020901",
+    "descriptor": "Greenhouse Friend",
+    "memory": "Sera shares Herbology Class with Lyra and frequently ducks into the Whispering Greenhouse when Starlight Tower feels noisy or memories of home ache too sharply. She loves Lyra's quiet warmth and pocket salves, and makes a conscious point never to startle Lyra near any dormant snap-vines.",
+    "nextConversationGoal": "Sera wants to stop by the Whispering Greenhouse to catch up gently with Lyra, thank her for always keeping healing tea on hand, and ask if she can bring Leo by sometime so he has a kind, low-pressure friend outside Starlight Tower."
+  },
+  "bToA": {
+    "id": "e10000000000090202",
+    "descriptor": "Warm Friend",
+    "memory": "Lyra feels completely at ease with Sera in Herbology Class—Sera never mocks her when a snap-vine lashes out, always moves calmly around delicate silverleaf sprouts, and brings an easy laugh to the Whispering Greenhouse. Lyra occasionally senses a quiet homesickness under Sera's bright grin and slips extra chamomile-mint tea into her satchel.",
+    "nextConversationGoal": "Lyra wants to hand Sera a fresh jar of soothing salve and herbal tea for orientation week, ask warmly how her new Earth transfer buddy is settling in, and offer to patch up any first-week Dueling Class scrapes."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "charASlug": "kaede_jin",
+  "charBSlug": "vivienne_clairmont",
+  "familiarity": 30,
+  "aToB": {
+    "id": "e10000000000070801",
+    "descriptor": "Silver-Tongued Hallmate",
+    "memory": "Sharing Mooncrest Hall with Vivienne feels like sharing a roof with velvet silk when Kaede prefers rolled training sleeves. Though Kaede distrusts parlor diplomacy and rumor-trading on instinct, she caught Vivienne silently watching an evening wind-blade drill from the Dueling Courtyard edge once—not hunting gossip, just studying balance and timing with genuine, unexpected appreciation.",
+    "nextConversationGoal": "Kaede wants to speak plainly with Vivienne if they cross paths and ask bluntly what had a potions prodigy studying dueling footwork from the colonnade."
+  },
+  "bToA": {
+    "id": "e10000000000080702",
+    "descriptor": "Refreshing Blunt Ace",
+    "memory": "Vivienne genuinely delights in fellow Mooncrest resident Kaede precisely because Kaede has zero capacity for polished dissembling. Her wind-blade choreography possesses effortless grace, and knowing Kaede despises courtly manipulation makes her honesty strangely comforting—even if Kaede squints suspiciously whenever Vivienne offers free Darjeeling tea.",
+    "nextConversationGoal": "Vivienne wants to compliment Kaede warmly on her razor-clean dueling form and engage Mooncrest's straightforward sword-ace in candid conversation without too much velvet wrapping."
+  }
+}

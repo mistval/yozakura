@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "finnian_reed",
+  "familiarity": 22,
+  "aToB": {
+    "id": "e10000000000030c01",
+    "descriptor": "Campus Rumormonger",
+    "memory": "Sharing Potions Class with Finn means Dorian has gotten used to dodging an enchanted brass camera whenever a beaker bubbles unexpectedly. Because Finn constantly chases lurid 'Starlight Tower necromancer' rumors, Dorian enjoys feeding him wildly polite, deadpan nonsense just to watch Finn try fact-checking it later.",
+    "nextConversationGoal": "Dorian wants to ward off Finn's inevitable interrogation about Leo Vance with dry, straight-faced misdirection before Potions Class and find out what wild theories the campus paper is already printing."
+  },
+  "bToA": {
+    "id": "e100000000000c0302",
+    "descriptor": "Deadpan Roommate-Source",
+    "memory": "Finn has learned the hard way that Dorian's calm expression looks identical whether he's giving genuine spirit-audit advice or inventing an outrageous joke about haunted broom closets. Still, as Leo Vance's literal Starlight Tower roommate, Dorian is suddenly the single hottest quote on Yozakura's campus.",
+    "nextConversationGoal": "Finnian wants to catch Dorian between Potions Class and the dorms with coffee-shop bribery, promise not to exaggerate his quote too badly, and pry out at least one real detail about what Leo Vance is like behind closed doors."
+  }
+}

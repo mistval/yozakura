@@ -12,11 +12,16 @@ import {
 import { useScenarioStore } from '../state/scenario_store.js';
 import ChatSettings from './chat/chat_settings.js';
 import CharacterChatSettings from './chat/character_chat_settings.js';
+import CharacterAvatar from './CharacterAvatar.js';
+import { useModalQueryParam } from '../hooks/useModalQueryParam.js';
+import { useTemporaryFlag } from '../hooks/use_temporary_flag.js';
+import { useQueryParam } from '../util/queryParams.js';
 import { useScenarioCharacterStore, useUserCharacter } from '../state/scenario_character_store.js';
 import ButtonOptions from './ui/ButtonOptions.js';
 import { chatSceneImageTemplatesGroup } from '../engine/prompt_templates/chat/group.js';
 import {
   abortCurrentChatGeneration,
+  ChatJobTags,
   useChatJobs,
   useUserCanInputChat,
   useImageGenerationJobs,
@@ -51,7 +56,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
     closeDrawer: closeCharacterTray,
   } = useMobileDrawer('chatparticipants');
   const selectedSceneImageTemplateChainId = useSettingsStore((s) => s.selectedSceneImageTemplateChainId);
-  const generateImagesInParallelWithText = useSettingsStore((s) => s.generateImagesInParallelWithText);
+  const editImagePromptsBeforeDispatch = useSettingsStore((s) => s.editImagePromptsBeforeDispatch);
   const setSettings = useSettingsStore((s) => s.setSettings);
   const sceneImageChains = chatSceneImageTemplatesGroup.useChains();
   const transcript = useTurnMachineStore((state) => state.transcript);
@@ -61,9 +66,9 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   const userCharacter = useUserCharacter();
   const scenario = useScenarioStore((state) => state.activeScenario);
 
+  const { openModal: openChatSettings } = useModalQueryParam('chatsettings');
+  const [, setCharacterChatSettingsId] = useQueryParam('characterchatsettings');
   const [inputIsNonEmpty, setInputIsNonEmpty] = useState(false);
-  const [showChatSettings, setShowChatSettings] = useState(false);
-  const [settingsCharacterId, setSettingsCharacterId] = useState<string | undefined>(undefined);
   const [editingMessageId, setEditingMessageId] = useState<string | undefined>(undefined);
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
   const [activeActionMessageId, setActiveActionMessageId] = useState<string | undefined>(undefined);
@@ -84,9 +89,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   const submitChatSkipTurn = useScenarioLoopStateStore((state) => state.submitChatSkipTurn);
   const submitChatSpeakAs = useScenarioLoopStateStore((state) => state.submitChatSpeakAs);
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
-  const submitChatDeleteMessage = useScenarioLoopStateStore((state) => state.submitChatDeleteMessage);
   const submitChatRedoMessage = useScenarioLoopStateStore((state) => state.submitChatRedoMessage);
-  const submitChatEditMessage = useScenarioLoopStateStore((state) => state.submitChatEditMessage);
   const userRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.userRequestedPhaseTransition
   );
@@ -100,11 +103,19 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   const imageGenerationJobs = useImageGenerationJobs();
   const isFinalizingChat = useIsChatFinalizing();
   const userCanInputChat = useUserCanInputChat();
-  const isAtMaxImageCapacity =
-    useSettingsStore((s) => s.imageGenerationConcurrency) <= imageGenerationJobs.length;
+  const { active: imageRequestedRecently, trigger: triggerImageRequestFeedback } = useTemporaryFlag(800);
+  const isGeneratingImagePrompt = imageGenerationJobs.some((job) =>
+    job.tags?.includes(ChatJobTags.generatingImagePrompt)
+  );
   const canFinishChat = chatJobs.length === 0;
   const canGenerateImages =
-    !isFinalizingChat && !isAtMaxImageCapacity && (generateImagesInParallelWithText || userCanInputChat);
+    !isFinalizingChat &&
+    !(editImagePromptsBeforeDispatch && (isGeneratingImagePrompt || Boolean(pendingImagePromptEdit)));
+
+  const handleRequestSceneImage = (afterMessageId: string | undefined) => {
+    triggerImageRequestFeedback();
+    void ChatCoordinator.requestSceneImage(afterMessageId);
+  };
 
   const isGenerating = chatJobs.length > 0;
   const hasRunningJobs = chatJobs.some((job) => job.state === 'running');
@@ -265,7 +276,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
     setActiveActionMessageId(undefined);
     setEditingMessageId(undefined);
     setEditingMessageDraft('');
-    submitChatDeleteMessage(id);
+    ChatCoordinator.deleteMessageById(id);
   };
 
   const redoMessage = (id: string) => {
@@ -284,7 +295,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
     const id = editingMessageId;
     setEditingMessageId(undefined);
     setEditingMessageDraft('');
-    submitChatEditMessage(id, trimmed);
+    ChatCoordinator.editMessageById(id, trimmed);
   };
 
   const requestEndChat = () => {
@@ -402,8 +413,8 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   };
 
   const getRunButtonTitle = () => {
-    const userIsInitiator = participants[0]?.id === userCharacter.id;
-    if (userIsInitiator && userCanInputChat && !transcript.hasCharacterMessages()) {
+    const userIsMainParticipant = participants[0]?.id === userCharacter.id;
+    if (userIsMainParticipant && userCanInputChat && !transcript.hasCharacterMessages()) {
       return undefined;
     }
 
@@ -457,14 +468,14 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
           key={participant.id}
           className="border rounded-sm p-2 bg-surface-subtle cursor-pointer"
           onClick={() => {
-            setSettingsCharacterId(participant.id);
+            setCharacterChatSettingsId(participant.id);
           }}
         >
           <img
             src={participant.imagePath}
             alt={`${participant.firstName} ${participant.lastName}`}
             className={
-              isTwoParticipantChat
+              isTwoParticipantChat || isMobileLayout
                 ? 'w-full h-auto border rounded-sm'
                 : 'w-full h-36 object-cover object-top border rounded-sm'
             }
@@ -499,7 +510,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
       {!isFinalizingChat && (
         <button
           type="button"
-          onClick={() => setShowChatSettings(true)}
+          onClick={openChatSettings}
           className={isMobileLayout ? 'flex-1 text-xs px-2! py-1.5!' : 'text-sm'}
         >
           Chat Settings
@@ -662,33 +673,36 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                   }}
                   className={`relative group flow-root text-left rounded-sm ${isMobileLayout ? 'px-0.5' : 'px-1'} py-0.5`}
                 >
-                  {editingMessageId === entryId && isCharacterMessage ? (
-                    <div className="space-y-2">
-                      <div>
-                        <strong>{entry.getSpeakerName()}:</strong>
-                      </div>
-                      <textarea
-                        value={editingMessageDraft}
-                        onChange={(event) => setEditingMessageDraft(event.target.value)}
-                        rows={3}
-                        className="w-full border rounded-sm p-2 bg-inset text-sm"
-                        disabled={!userCanInputChat}
-                      />
-                      <div className="flex justify-end gap-2 text-xs">
-                        <button
-                          type="button"
-                          onClick={() => setEditingMessageId(undefined)}
-                          disabled={!userCanInputChat}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={saveEditingMessageEdit}
-                          disabled={!userCanInputChat || !editingMessageDraft.trim()}
-                        >
-                          Save
-                        </button>
+                  {editingMessageId === entryId && !isFinalizingChat ? (
+                    <div className="flex items-start gap-2.5">
+                      {senderId && (
+                        <CharacterAvatar
+                          imagePath={senderCharacter?.imagePath}
+                          name={entry.getSpeakerName()}
+                          className="h-10 w-10 border-border-strong bg-surface-subtle"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div>
+                          <strong>{entry.getSpeakerName()}:</strong>
+                        </div>
+                        <textarea
+                          value={editingMessageDraft}
+                          onChange={(event) => setEditingMessageDraft(event.target.value)}
+                          className="w-full min-h-20 border rounded-sm p-2 bg-inset text-base leading-relaxed field-sizing-content"
+                        />
+                        <div className="flex justify-end gap-2 text-xs">
+                          <button type="button" onClick={() => setEditingMessageId(undefined)}>
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={saveEditingMessageEdit}
+                            disabled={!editingMessageDraft.trim()}
+                          >
+                            Save
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -716,7 +730,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                                     suppressAvatarClickRef.current = false;
                                     return;
                                   }
-                                  setSettingsCharacterId(senderId);
+                                  setCharacterChatSettingsId(senderId);
                                 }}
                                 title={
                                   canLongPressAvatarToSpeak
@@ -734,7 +748,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                     />
                   )}
 
-                  {userCanInputChat && !editingMessageId && (
+                  {!editingMessageId && !isFinalizingChat && (
                     <div
                       className={`absolute bottom-1 right-1 transition-opacity flex items-center ${actionBarContainerClassName} rounded-sm border border-border-default bg-emphasized/95 shadow-sm leading-none ${
                         isActionBarActive
@@ -757,7 +771,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                           type="button"
                           onClick={() => {
                             setActiveActionMessageId(undefined);
-                            void ChatCoordinator.requestSceneImage(entryId);
+                            handleRequestSceneImage(entryId);
                           }}
                           disabled={!canGenerateImages}
                           title="Generate image"
@@ -772,6 +786,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                         <button
                           type="button"
                           onClick={() => redoMessage(entryId)}
+                          disabled={!userCanInputChat}
                           title="Retry message"
                           aria-label="Retry message"
                           className={actionBarButtonClassName}
@@ -784,6 +799,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                         <button
                           type="button"
                           onClick={() => {
+                            lastUserScrollInteractionAtRef.current = -Infinity;
                             setActiveActionMessageId(undefined);
                             setEditingMessageId(entryId);
                             setEditingMessageDraft(entry.getContent());
@@ -880,9 +896,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
             button={
               <button
                 type="button"
-                onClick={() =>
-                  void ChatCoordinator.requestSceneImage(transcript.getMostRecentChatMessage()?.id)
-                }
+                onClick={() => handleRequestSceneImage(transcript.getMostRecentChatMessage()?.id)}
                 disabled={!canGenerateImages}
                 title={
                   activeSceneImageChain
@@ -890,9 +904,16 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                     : 'Generate image'
                 }
                 aria-label="Generate image"
-                className="px-2!"
+                className={`px-2! min-w-9 flex items-center justify-center gap-1 ${
+                  imageRequestedRecently ? 'border-success-border! bg-success-bg! text-success-text!' : ''
+                }`.trim()}
               >
-                🖼️
+                {imageRequestedRecently ? '✓' : '🖼️'}
+                {imageGenerationJobs.length > 0 && (
+                  <span className="text-xs font-semibold tabular-nums text-current!">
+                    {imageGenerationJobs.length}
+                  </span>
+                )}
               </button>
             }
           >
@@ -943,13 +964,9 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
         onConfirm={confirmImagePrompt}
       />
 
-      <ChatSettings open={showChatSettings} onClose={() => setShowChatSettings(false)} />
+      <ChatSettings />
 
-      <CharacterChatSettings
-        open={Boolean(settingsCharacterId)}
-        onClose={() => setSettingsCharacterId(undefined)}
-        settingsCharacterId={settingsCharacterId}
-      />
+      <CharacterChatSettings />
     </div>
   );
 }

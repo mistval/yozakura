@@ -1,0 +1,47 @@
+{
+  "group": {
+    "id": "a20000000000000005",
+    "createdAt": "2026-11-01T12:00:00.000Z",
+    "updatedAt": "2026-11-01T12:00:00.000Z",
+    "scenarioId": "a10000000000000001",
+    "name": "Dueling Class",
+    "privateZones": []
+  },
+  "schedule": {
+    "id": "a30000000000000005",
+    "createdAt": "2026-11-01T12:00:00.000Z",
+    "updatedAt": "2026-11-01T12:00:00.000Z",
+    "scenarioId": "a10000000000000001",
+    "groupId": "a20000000000000005",
+    "lengthInTurns": 56,
+    "segments": [
+      {
+        "id": "a4000000000000000b",
+        "startTurn": 11,
+        "endTurn": 12,
+        "zoneId": "5d4f493e1031ae0105",
+        "movementPolicy": "teleport",
+        "obedienceRate": 0.85,
+        "reason": "Dueling class is in session"
+      },
+      {
+        "id": "a4000000000000000c",
+        "startTurn": 19,
+        "endTurn": 20,
+        "zoneId": "5d4f493e1031ae0105",
+        "movementPolicy": "teleport",
+        "obedienceRate": 0.85,
+        "reason": "Dueling class is in session"
+      },
+      {
+        "id": "a4000000000000000d",
+        "startTurn": 27,
+        "endTurn": 28,
+        "zoneId": "5d4f493e1031ae0105",
+        "movementPolicy": "teleport",
+        "obedienceRate": 0.85,
+        "reason": "Dueling class is in session"
+      }
+    ]
+  }
+}

@@ -1,9 +1,13 @@
 export const settingsTooltips = {
+  'scenario.saveName':
+    'Optional display name shown in the main menu Load list in place of the User and Map fields. Leave blank to show User and Map.',
   'scenario.activeMap': 'Change the map. Moves characters to random locations on the new map.',
   'scenario.activeMapName':
     'Change the map name, just for this scenario. Your global map will remain unchanged.',
   'scenario.activeMapDescription':
     'Change the map description, just for this scenario. Your global map will remain unchanged. You can use this to influence narrative directionality too, for example by adding "it\'s Winter now and everyone is trying to find food."',
+  'scenario.remoteChatMedium':
+    'Describes how characters communicate when chatting across different locations (for example, "text messaging", "telepathy", or "carrier pigeons"). Available to prompt templates as <code>it.scenario.remoteChatMedium</code>.',
   'appearance.theme':
     'Select a theme. <strong>System</strong> chooses either Sakura or Yozakura based on your system light/dark setting.',
   'appearance.conversationLogWidth': 'Controls the width of the conversation log dialog on desktop.',
@@ -25,7 +29,7 @@ export const settingsTooltips = {
   'image.autoTemplateWeights':
     'Relative weights (<strong>0</strong> to <strong>100</strong>) controlling how often each image prompt template is chosen when auto image triggers. Weights are proportional rather than percentages—if all templates are set to the same value, they have an equal chance of triggering.',
   'image.autoNpcOnly':
-    'When enabled, auto image runs only for NPC-only chats. If the user is a chat participant, auto image will not trigger and images can only be generated via the Image button.',
+    'When enabled, auto image runs only when the user is not a participant in the chat, and the chat is not paused.',
   'image.width': 'Target width (in pixels) for generated chat images.',
   'image.height': 'Target height (in pixels) for generated chat images.',
   'image.cardWidth': 'Target width (in pixels) for character card image generation.',

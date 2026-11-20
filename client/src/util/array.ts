@@ -43,7 +43,7 @@ export function weightedSampleWithoutReplacement<TValue>(items: WeightedElement<
   return picks;
 }
 
-export function trimNewestByCreatedAt<T extends { createdAt: string }>(items: T[], max = 10): T[] {
+export function trimNewestByCreatedAt<T extends { createdAt: string }>(items: T[], max: number): T[] {
   return [...items]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, max);

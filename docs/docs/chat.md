@@ -14,9 +14,9 @@ keywords:
 
 ## Images on Demand
 
-After setting up an image model, use the Image button to generate an image.
+After setting up an image model, use the image icon button to generate an image.
 
-![in chat image](/img/in_chat_image.png)
+![in chat image](/img/chat_features_image.png)
 
 If you want to edit image prompts, you can enable the `Edit image prompts before dispatch` setting, though the system tends to be pretty good at generating relevant images on its own, and wardrobes are often a better way to influence image generation (more on that below).
 
@@ -38,7 +38,7 @@ For full details on autoselect groups, wardrobe tags, and map zone triggers, see
 
 ## Group chat
 
-Click more characters from the "Characters here" section at the bottom to add them to the chat. Click them again to remove them. You can also add characters from other locations by finding them in the character overview and clicking their "chat with" button. Characters can be removed from the chat by clicking them again, or using the Remove from Chat button in the character settings.
+Click more characters from the "Characters here" section on the right to add them to the chat. Click them again to remove them. You can also add characters from other locations by finding them in the character overview and clicking their "chat with" button. Characters can be removed from the chat by clicking them again, or using the Remove from Chat button in the character settings.
 
 Characters who only join a chat partway through can't see earlier messages, and those who leave partway through can't see later messages for purposes of memory generation.
 
@@ -56,7 +56,7 @@ The speaker selection mode for group chats can be changed from the default "Roun
 
 Change the location name and/or description in the chat settings to create a temporary location. All participants of the chat will now see themselves as being in that location.
 
-You can also move characters to non-temporary locations via the Character Overview any time (including during a chat).
+You can also move characters to non-temporary locations via each character's chat settings (click their card to the left of the chat window).
 
 ![temporary location settings](/img/temporary_location.png)
 
@@ -68,7 +68,9 @@ Edit, delete, or retry messages by hovering over them and using the button bar t
 
 ## Remote Chat
 
-Characters in different locations can still chat via remote chat. By default this happens at a lower rate than in-person chats. The default prompts contextualize remote chat as "text messaging", but you can [edit the prompts](template-system.md) to make it telepathy or pigeons or whatever.
+Characters in different locations can still chat via remote chat. By default this happens at a lower rate than in-person chats. The default setting is to contextualize this as "text messaging", but you can change this to another means of communication in [scenario settings](yozakura://?settings=true&settingspath=scenario).
+
+![remote chat conversation](/img/remote_chat.png)
 
 ## Conversation Log
 
@@ -82,7 +84,7 @@ View a history of all conversations via the conversation log, and see the memori
 
 Use the pause button to pause automatic next speaker selection. This allows you to take granular control of the chat, even if you aren't taking part in it. Choose who speaks next, edit/delete messages, generate images, set character instructions, add/remove characters, and more. There's also a setting you can enable to always pause at NPC chat start if you prefer to start every NPC chat in hands-on mode.
 
-![npc chat image](/img/npc_chat.png)
+![npc chat image](/img/pause.png)
 
 ## Set Instructions
 

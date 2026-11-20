@@ -1,0 +1,17 @@
+{
+  "charASlug": "celestia_sinclair",
+  "charBSlug": "mina_bellweather",
+  "familiarity": 64,
+  "aToB": {
+    "id": "e10000000000040501",
+    "descriptor": "Exhausting Dormmate",
+    "memory": "Living two doors down from Mina in Starlight Tower has aged Celestia three years in a single semester. She has confiscated unlicensed brass resonators, extinguished a self-heating kettle before it scorched the commons curtains, and issued fines for 2 a.m. ozone leaks—yet beneath the exasperated prefect lectures, she reluctantly respects that Mina's chaotic inventions actually work and secretly appreciates that Mina never treats her with stiff, fearful deference.",
+    "nextConversationGoal": "Celestia wants to intercept Mina in Starlight Tower Commons before lights-out, inspect whatever suspiciously humming brass box she carried back from the Aetherium Workshop, and extract a firm promise of quiet past midnight."
+  },
+  "bToA": {
+    "id": "e10000000000050402",
+    "descriptor": "Strict Tower Prefect",
+    "memory": "Mina views Celestia as Starlight Tower's walking curfew ledger—all crisp sapphire stares, confiscated copper coils, and sharp remarks about safety margins. Still, Mina vividly remembers the winter night a misfired cooling rune numbed her fingers to the wrist and Celestia hauled hot water upstairs and stayed up lecturing her until feeling returned, proving the icy prefect genuinely cares beneath all that starch.",
+    "nextConversationGoal": "Mina wants to sweet-talk Celestia into handing back her confiscated copper stabilizer—or at least distract her with Starlight Tower paperwork long enough to slip a fresh mana-capacitor pack upstairs."
+  }
+}

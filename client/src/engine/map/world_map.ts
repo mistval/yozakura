@@ -74,7 +74,7 @@ export function validateWorldMap(worldMap: Pick<WorldMap, 'name' | 'description'
       errors.push(`Location ${index + 1} is missing a name.`);
     }
 
-    if (!String(location.description || '').trim()) {
+    if (!String(location.description || '').trim() && location.name.trim()) {
       errors.push(`Location "${location.name}" is missing a description.`);
     }
   }

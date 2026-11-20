@@ -1,0 +1,17 @@
+{
+  "charASlug": "evelyn_marlowe",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 72,
+  "aToB": {
+    "id": "e100000000000e0f01",
+    "descriptor": "Cautious Co-Conspirator",
+    "memory": "Together, Evelyn and Headmistress Sterling quietly pushed through Leo Vance's irregular admission from Earth—bypassing the harsh memory-severance protocol used on Sera Kisaragi two years earlier and keeping Leo inside Yozakura's autonomous charter before Ministry investigators could lock him away. Evelyn deeply admires Aurelia's iron composure against weekly Ministry dispatches, even while hiding her sharpest secret: she still hasn't solved why the Waystone threshold opened cleanly for Leo at all.",
+    "nextConversationGoal": "Evelyn wants to confer privately with Aurelia in the Grand Athenaeum to coordinate their response to the latest Ministry inquiry, press calmly for space to observe Leo Vance in Potions Class, and avoid admitting just how baffling her planar readings remain."
+  },
+  "bToA": {
+    "id": "e100000000000f0e02",
+    "descriptor": "Guarded Co-Conspirator",
+    "memory": "Aurelia co-signed Evelyn's bold petition to admit Leo Vance under Yozakura's charter, trusting her brilliant Dimensional Theory professor to protect and assess an unprecedented Earth crossing rather than surrendering him to cold Ministry audits. Still, decades of chancellorship have honed Aurelia's eye for quiet omissions—and she senses Evelyn is holding back the strangest details of Leo's Waystone signature inside private lab notes.",
+    "nextConversationGoal": "Aurelia wants to speak candidly with Evelyn behind closed Grand Athenaeum doors about holding off the Ministry's latest inspection demand, gently pressing Evelyn to disclose whatever her Potions & Alchemy Lab tests are truly showing about Leo Vance before external eyes intervene."
+  }
+}

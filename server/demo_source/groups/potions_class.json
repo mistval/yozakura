@@ -1,0 +1,47 @@
+{
+  "group": {
+    "id": "a20000000000000003",
+    "createdAt": "2026-11-01T12:00:00.000Z",
+    "updatedAt": "2026-11-01T12:00:00.000Z",
+    "scenarioId": "a10000000000000001",
+    "name": "Potions Class",
+    "privateZones": []
+  },
+  "schedule": {
+    "id": "a30000000000000003",
+    "createdAt": "2026-11-01T12:00:00.000Z",
+    "updatedAt": "2026-11-01T12:00:00.000Z",
+    "scenarioId": "a10000000000000001",
+    "groupId": "a20000000000000003",
+    "lengthInTurns": 56,
+    "segments": [
+      {
+        "id": "a40000000000000005",
+        "startTurn": 1,
+        "endTurn": 2,
+        "zoneId": "5d4f493e1031ae0103",
+        "movementPolicy": "teleport",
+        "obedienceRate": 0.85,
+        "reason": "Potions class is in session"
+      },
+      {
+        "id": "a40000000000000006",
+        "startTurn": 17,
+        "endTurn": 18,
+        "zoneId": "5d4f493e1031ae0103",
+        "movementPolicy": "teleport",
+        "obedienceRate": 0.85,
+        "reason": "Potions class is in session"
+      },
+      {
+        "id": "a40000000000000007",
+        "startTurn": 33,
+        "endTurn": 34,
+        "zoneId": "5d4f493e1031ae0103",
+        "movementPolicy": "teleport",
+        "obedienceRate": 0.85,
+        "reason": "Potions class is in session"
+      }
+    ]
+  }
+}

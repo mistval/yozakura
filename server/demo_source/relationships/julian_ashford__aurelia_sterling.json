@@ -1,0 +1,17 @@
+{
+  "charASlug": "julian_ashford",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 35,
+  "aToB": {
+    "id": "e100000000000b0f01",
+    "descriptor": "Watchful Chancellor",
+    "memory": "Whenever Mooncrest Hall needs a poised student spokesman at seasonal gatherings, Julian steps up smoothly—yet beneath Headmistress Sterling's serene slate-blue gaze he always feels quietly measured beyond his family crest. He deeply respects her calm dignity and wants her to see genuine stewardship behind his ambition rather than hollow rivalry.",
+    "nextConversationGoal": "Julian wants to greet Headmistress Sterling respectfully in the Grand Dining Hall or Waystone Quad, offer Mooncrest's cooperation in welcoming first-years smoothly, and ask thoughtfully whether she expects visiting inspectors during the upcoming dueling showcase."
+  },
+  "bToA": {
+    "id": "e100000000000f0b02",
+    "descriptor": "Striving Scion",
+    "memory": "Aurelia appreciates Julian's consistent courtesy toward underclassmen in the Grand Dining Hall and quietly recognizes how exhausting it is to carry an ancient surname while trying to prove you deserve it on merit. She hopes he learns to value genuine camaraderie over turning every duel against Starlight Tower into a referendum on his worth.",
+    "nextConversationGoal": "Aurelia wants to commend Julian warmly for his steady poise around younger Mooncrest residents and gently remind him that true leadership outlasts a single tournament bracket."
+  }
+}

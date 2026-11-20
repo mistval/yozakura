@@ -1,0 +1,17 @@
+{
+  "charASlug": "kaede_jin",
+  "charBSlug": "soren_lindqvist",
+  "familiarity": 38,
+  "aToB": {
+    "id": "e10000000000070d01",
+    "descriptor": "Dependable Hallmate & Smith",
+    "memory": "Sharing Mooncrest Hall, Herbology Class, and Dueling Class with Soren has taught Kaede to trust quiet reliability over loud boasts. Whenever she runs full-speed wind slashes in the Dueling Courtyard, Soren reinforces the perimeter barrier stones without complaint—and once balanced a scarred scabbard clasp for her in three quiet minutes when she thought it was ruined.",
+    "nextConversationGoal": "Kaede wants to thank Soren squarely for strengthening the Dueling Courtyard's north containment plates and ask briefly whether her wind-bursts have been stressing the southern wards."
+  },
+  "bToA": {
+    "id": "e100000000000d0702",
+    "descriptor": "Honest, Disciplined Hallmate",
+    "memory": "Soren respects Kaede across Mooncrest Hall, Herbology Class, and the Dueling Courtyard because she works hard without pretension, respects sparring limits, and treats steel with real care. They can check a chipped granite ward ring together in three straightforward sentences, and he occasionally leaves an anonymous honey-almond tart near her door after brutal practice days.",
+    "nextConversationGoal": "Soren wants to let Kaede know the Dueling Courtyard's boundary anchors are freshly seated for full-force sparring and check concisely if she noticed any vibration along the east edge."
+  }
+}

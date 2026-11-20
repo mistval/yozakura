@@ -1,0 +1,17 @@
+{
+  "charASlug": "celestia_sinclair",
+  "charBSlug": "evelyn_marlowe",
+  "familiarity": 24,
+  "aToB": {
+    "id": "e10000000000040e01",
+    "descriptor": "Enigmatic Theory Professor",
+    "memory": "Although Celestia doesn't take Potions Class this term, she knows Prof. Evelyn Marlowe through Starlight Tower administrative briefings and formal academy assemblies. Celestia respects Marlowe's sharp intellect while quietly sharing a trace of her uncle Alistair's caution whenever Marlowe waves aside traditional threshold safeguards—especially around her sudden decision to place an anomalous Earth transfer in Starlight Tower.",
+    "nextConversationGoal": "Celestia wants to speak respectfully yet directly with Prof. Marlowe regarding Starlight Tower's practical safety protocols for Leo Vance's anomalous resonance."
+  },
+  "bToA": {
+    "id": "e100000000000e0402",
+    "descriptor": "Rigid Thorne Prefect",
+    "memory": "Evelyn finds Celestia impressive, principled, and occasionally far too tightly wound in the exact mold of Alistair Thorne. She backed placing Leo Vance in Starlight Tower partly knowing Celestia keeps impeccable order—while remaining mildly amused at how visibly the young prefect braces herself against anything that smells like unscripted planar improvising.",
+    "nextConversationGoal": "Evelyn wants to reassure Celestia smoothly that her newest Starlight Tower resident poses no danger to her immaculate curfew ledger—and gently remind the prefect not to mistake rigid tradition for the whole truth."
+  }
+}

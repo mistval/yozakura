@@ -1,0 +1,17 @@
+{
+  "charASlug": "mina_bellweather",
+  "charBSlug": "noelle_vespera",
+  "familiarity": 34,
+  "aToB": {
+    "id": "e10000000000050601",
+    "descriptor": "Dreamy Sky-Oracle",
+    "memory": "Mina loves testing wild harmonic theories around Noelle because Noelle never panics when brass instruments whistle—instead she tilts her head sleepily and murmurs things like 'coil three will melt on Thursday,' which turns out frighteningly accurate. After noticing Noelle freezes up at Skyglass Observatory past midnight, Mina rigged her a pocket-sized self-warming astrolabe mug as a surprise.",
+    "nextConversationGoal": "Mina wants to track down Noelle to ask half-jokingly whether tonight's star alignments look friendly for firing up a tricky twin-coil amplifier—and check if that warming mug still holds heat."
+  },
+  "bToA": {
+    "id": "e10000000000060502",
+    "descriptor": "Spark-Happy Tinkerer",
+    "memory": "Even from across Waystone Quad, Noelle can usually tell when Mina has pulled a thirty-six-hour Aetherium Workshop marathon by the smudge of soot on her cheek and the faint crackle of unshielded batteries. She finds Mina's double-speed chatter slightly dizzying when half-asleep, yet deeply cherishes the thoughtful little brass tea-warmer Mina customized for Skyglass Observatory.",
+    "nextConversationGoal": "Noelle wants to gently warn Mina not to skip sleep for a third straight night—and softly mention a subtle quirk in the evening probabilities around the Aetherium Workshop's west bench."
+  }
+}

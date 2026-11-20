@@ -1,0 +1,17 @@
+{
+  "charASlug": "vivienne_clairmont",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 34,
+  "aToB": {
+    "id": "e10000000000080f01",
+    "descriptor": "Guarded Chancellor",
+    "memory": "Vivienne always brings her cleanest manners to any encounter with Headmistress Sterling in the Grand Athenaeum, keenly aware that the Chancellor's quiet favor carries immense weight with old apothecary guilds. Yet even Vivienne's practiced social radar struggles to read past Aurelia's tranquil poise, leaving her half-awed and half-determined to learn what Ministry pressures the Headmistress is deflecting.",
+    "nextConversationGoal": "Vivienne wants to greet Headmistress Sterling respectfully near the Grand Athenaeum with a courteous update on Mooncrest senior apothecary prep, hoping to earn a favorable remark while subtly reading Aurelia's mood on recent campus arrivals."
+  },
+  "bToA": {
+    "id": "e100000000000f0802",
+    "descriptor": "Ambitious Scion",
+    "memory": "Aurelia recognizes the genuine brilliance beneath Vivienne Clairmont's high-society gloss and respects how cleanly the senior bridges Mooncrest tradition with serious laboratory craft. Still, having weathered decades of Ministry politics, Aurelia sees through Vivienne's careful charm and gently nudges her toward generosity rather than keeping every kindness on a ledger.",
+    "nextConversationGoal": "Aurelia wants to thank Vivienne warmly for helping organize Mooncrest's autumn herbarium stores and quietly suggest she lend a welcoming hand to newer students finding their footing at Yozakura."
+  }
+}

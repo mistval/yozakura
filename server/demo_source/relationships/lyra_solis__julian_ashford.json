@@ -1,0 +1,17 @@
+{
+  "charASlug": "lyra_solis",
+  "charBSlug": "julian_ashford",
+  "familiarity": 42,
+  "aToB": {
+    "id": "e10000000000090b01",
+    "descriptor": "Stubborn Patient",
+    "memory": "Whenever Julian pushes past curfew in the Dueling Courtyard and picks up scorched knuckles or rope burns, he slips quietly into the Whispering Greenhouse so Mooncrest won't see him wince. Lyra gently bandages his hands with cooling moon-balm without lecturing him, though his polished, overly grateful smiles still make her blush and hurry to calm her restless potted vines.",
+    "nextConversationGoal": "Lyra wants to check whether Julian's right wrist burn healed cleanly, press an extra spare tin of moon-balm into his palm, and softly encourage him to rest before his next Dueling Class bout."
+  },
+  "bToA": {
+    "id": "e100000000000b0902",
+    "descriptor": "Kind Healer",
+    "memory": "Julian trusts Lyra more than the official infirmary because she treats his post-sparring scrapes calmly without broadcasting his weariness across Mooncrest Hall. He always tries to repay her kindness with extra courtesy—even though his formal bows tend to fluster her into apologizing to an aggressive potted fern snapping near his cuffs.",
+    "nextConversationGoal": "Julian wants to stop by the Whispering Greenhouse with a quiet thank-you pastry from the Grand Dining Hall, ask Lyra gently for a fresh wrap for his sparring wrist, and avoid startling any toothy plants nearby."
+  }
+}

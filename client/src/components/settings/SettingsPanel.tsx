@@ -19,6 +19,7 @@ type SettingsCategory = {
   slug: string;
   title: string;
   description: string;
+  collapsed?: boolean;
 };
 
 type SettingsSection =
@@ -40,7 +41,7 @@ export default function SettingsPanel() {
   const isBaseRoute = settingsPath === '';
 
   const activeSection: SettingsSection | undefined = useMemo(() => {
-    if (settingsPath.startsWith('scenario') && includeScenarioSettings) return 'scenario';
+    if (settingsPath.startsWith('scenario')) return 'scenario';
     if (settingsPath.startsWith('appearance')) return 'appearance';
     if (settingsPath.startsWith('image-generation')) return 'image-generation';
     if (settingsPath.startsWith('behavior')) return 'behavior';
@@ -66,6 +67,12 @@ export default function SettingsPanel() {
 
   const categories = useMemo<SettingsCategory[]>(() => {
     const next: SettingsCategory[] = [
+      {
+        slug: 'scenario',
+        title: 'Scenario Settings',
+        description: 'Scenario-specific options.',
+        collapsed: !includeScenarioSettings,
+      },
       {
         slug: 'behavior',
         title: 'Behavior Settings',
@@ -98,14 +105,6 @@ export default function SettingsPanel() {
       },
     ];
 
-    if (includeScenarioSettings) {
-      next.unshift({
-        slug: 'scenario',
-        title: 'Scenario Settings',
-        description: 'Scenario-specific options.',
-      });
-    }
-
     return next;
   }, [includeScenarioSettings]);
 
@@ -120,6 +119,7 @@ export default function SettingsPanel() {
             key={category.slug}
             type="button"
             className="card-button"
+            hidden={category.collapsed ?? false}
             onClick={() => setSettingsSection(category.slug)}
           >
             <p className="text-base font-semibold">{category.title}</p>

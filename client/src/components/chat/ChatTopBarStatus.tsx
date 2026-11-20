@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   autoUpdate,
   flip,
@@ -11,16 +11,15 @@ import {
   useInteractions,
   useRole,
 } from '@floating-ui/react';
-import { useChatJobs, useIsChatFinalizing } from '../../state/chat_state.js';
+import { ChatJobTags, useChatJobs, useIsChatFinalizing } from '../../state/chat_state.js';
 
 export default function ChatTopBarStatus() {
   const [showWorkingPopover, setShowWorkingPopover] = useState(false);
 
-  const chatJobs = useChatJobs();
+  const chatJobs = useChatJobs().filter((job) => !job.tags?.includes(ChatJobTags.minor));
   const isFinalizingChat = useIsChatFinalizing();
-  const runningChatJobs = chatJobs.filter((j) => j.state === 'running');
-  const singleRunningJob = runningChatJobs.length === 1 ? runningChatJobs[0] : undefined;
-  const hasMultipleRunningJobs = runningChatJobs.length > 1;
+  const singleJob = chatJobs.length === 1 ? chatJobs[0] : undefined;
+  const topBarStatusText = singleJob ? singleJob.name : '';
 
   const { refs, floatingStyles, context } = useFloating({
     open: showWorkingPopover,
@@ -35,15 +34,7 @@ export default function ChatTopBarStatus() {
   const role = useRole(context, { role: 'dialog' });
   const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role]);
 
-  const topBarStatusText = useMemo(() => {
-    if (singleRunningJob) {
-      return singleRunningJob.name;
-    }
-
-    return '';
-  }, [singleRunningJob]);
-
-  if (hasMultipleRunningJobs) {
+  if (chatJobs.length > 1) {
     return (
       <>
         <button

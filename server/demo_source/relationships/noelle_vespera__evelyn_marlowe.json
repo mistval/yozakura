@@ -1,0 +1,17 @@
+{
+  "charASlug": "noelle_vespera",
+  "charBSlug": "evelyn_marlowe",
+  "familiarity": 16,
+  "aToB": {
+    "id": "e10000000000060e01",
+    "descriptor": "Intriguing Theory Professor",
+    "memory": "Although Noelle isn't in Prof. Marlowe's Potions Class this term, she occasionally crosses paths with the glamorous Dimensional Theory scholar near the Grand Athenaeum archives. Noelle once murmured half-asleep that a star-drift reading felt bent around Waystone Quad, earning a remarkably sharp, attentive look from Marlowe that stayed with her.",
+    "nextConversationGoal": "Noelle wants to offer Prof. Marlowe a polite greeting if they meet near the archives and quietly get to know her Dimensional Theory perspective on Skyglass Observatory drift."
+  },
+  "bToA": {
+    "id": "e100000000000e0602",
+    "descriptor": "Drowsy Astral Observer",
+    "memory": "Evelyn barely teaches Noelle directly, yet she keeps an attentive eye on Mooncrest's resident astral diviner from afar. A girl who spends every clear night under Skyglass Observatory tracking probability ripples might notice faint anomalies around the Arrival Portal arch before most faculty ever check an instrument.",
+    "nextConversationGoal": "Evelyn wants to strike up a charming, seemingly casual chat with Noelle to get to know her astral methodology better—and subtly gauge whether Skyglass Observatory logged any ripples around Leo's arrival."
+  }
+}

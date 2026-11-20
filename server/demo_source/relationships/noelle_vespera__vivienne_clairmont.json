@@ -1,0 +1,17 @@
+{
+  "charASlug": "noelle_vespera",
+  "charBSlug": "vivienne_clairmont",
+  "familiarity": 30,
+  "aToB": {
+    "id": "e10000000000060801",
+    "descriptor": "Velvet Mooncrest Senior",
+    "memory": "Noelle always feels gently underdressed beside Mooncrest senior Vivienne's immaculate tailoring, yet she knows a quieter side of Vivienne than the cafe crowd sees. Twice now Vivienne has climbed quietly to Skyglass Observatory alone for unrecorded star-chart readings—dropping her sparkling parlor smile just enough to seem genuinely intrigued by what probabilities can't be engineered.",
+    "nextConversationGoal": "Noelle wants to ask softly whether the late-month constellation note she drew for Vivienne proved helpful, keeping her voice discreet around Mooncrest Hall's parlor crowd."
+  },
+  "bToA": {
+    "id": "e10000000000080602",
+    "descriptor": "Perceptive Astral Oracle",
+    "memory": "Vivienne appreciates that fellow Mooncrest resident Noelle guards private conversations like sealed ink and never trades star-chart confessions into gossip. While Vivienne prides herself on empirical alchemy, Noelle's deadpan accuracy about shifting moods and tiny upcoming accidents makes Vivienne treat the sleepy diviner with genuine, quiet respect.",
+    "nextConversationGoal": "Vivienne wants to pour Noelle a soothing cup of warm Darjeeling in Mooncrest Hall—partly to make sure the girl rests, and partly to hear softly what the stars whisper about Yozakura's new Earth arrival."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "celestia_sinclair",
+  "familiarity": 44,
+  "aToB": {
+    "id": "e10000000000030401",
+    "descriptor": "Tower Prefect",
+    "memory": "Dorian has lived under Celestia's strict prefect oversight in Starlight Tower—and shared Dueling Class with her—long enough to know that beneath the icy midnight-blue coat she's chronically overworked and running on fumes. He keeps his spirit-binding work strictly neat and by-the-book so he never adds to her stack of headaches, occasionally leaving an extra espresso on the commons mantel without making a fuss.",
+    "nextConversationGoal": "Dorian wants to give Celestia a calm, deadpan assurance that Leo's side of the dorm room is set up cleanly—and casually slide an untouched espresso pastry her way without giving her a chance to turn it into a prefect lecture."
+  },
+  "bToA": {
+    "id": "e10000000000040302",
+    "descriptor": "Dependable Resident",
+    "memory": "Despite Dorian's forbidding gothic appearance, Celestia considers him one of the least troublesome residents in Starlight Tower—his room passes every inspection, his Dueling Class form is methodical and controlled, and he never plays sycophantic games around her family name. Even so, she worries a quiet necromancy major might startle a brand-new non-magical roommate.",
+    "nextConversationGoal": "Celestia wants to verify briefly with Dorian that Starlight Tower's newest transfer has settled into their suite smoothly, remind him crisply to explain basic ward rules to Leo, and try not to look too grateful for his steady, low-drama support."
+  }
+}

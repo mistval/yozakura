@@ -11,7 +11,15 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Core Systems',
-      items: ['chat', 'wardrobes', 'memory-system', 'schedules', 'temporal-context', 'template-system'],
+      items: [
+        'chat',
+        'wardrobes',
+        'memory-system',
+        'schedules',
+        'temporal-context',
+        'template-system',
+        'import-export',
+      ],
     },
     {
       type: 'category',
@@ -22,6 +30,8 @@ const sidebars: SidebarsConfig = {
         'suggested-models',
         'reasoning-models',
         'how-to-different-models-per-prompt',
+        'budget-optimization',
+        'parallelism',
       ],
     },
     {

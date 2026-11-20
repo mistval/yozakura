@@ -24,7 +24,7 @@ export function createChatSceneImageChainSpec(
 ): PromptTemplateChainSpec<z.infer<typeof focusedConversationExecutionContextSchema>, string> {
   return {
     templateChainId: chainId,
-    defaultTitle: 'Speaker',
+    defaultTitle: 'Chat Image: Speaker',
     defaultDescription:
       'Generates a scene image prompt focused on the speaking character in the current setting.',
     contextSchema: focusedConversationExecutionContextSchema,
@@ -82,7 +82,7 @@ export function createChatSceneImageSpeakerCloseUpChainSpec(
 ): PromptTemplateChainSpec<z.infer<typeof focusedConversationExecutionContextSchema>, string> {
   return {
     templateChainId: chainId,
-    defaultTitle: 'Speaker Close-Up',
+    defaultTitle: 'Chat Image: Speaker Close-Up',
     defaultDescription: 'Generates a close-up portrait image prompt of the speaking character.',
     contextSchema: focusedConversationExecutionContextSchema,
     templates: [
@@ -139,7 +139,7 @@ export function createChatSceneImageSceneryChainSpec(
 ): PromptTemplateChainSpec<z.infer<typeof focusedConversationExecutionContextSchema>, string> {
   return {
     templateChainId: chainId,
-    defaultTitle: 'Scenery',
+    defaultTitle: 'Chat Image: Scenery',
     defaultDescription: 'Generates an environmental scenery image prompt with no characters.',
     contextSchema: focusedConversationExecutionContextSchema,
     templates: [

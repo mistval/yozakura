@@ -1,0 +1,17 @@
+{
+  "charASlug": "celestia_sinclair",
+  "charBSlug": "soren_lindqvist",
+  "familiarity": 40,
+  "aToB": {
+    "id": "e10000000000040d01",
+    "descriptor": "Steadfast Campus Wardsmith",
+    "memory": "Celestia considers Soren one of the rare students at Yozakura who delivers results without theatrics or excuses. Whether he is reinforcing Dueling Courtyard barrier anchors in class or quietly showing up with ward-chalk after Mina blows another Starlight Tower circuit, Soren repairs damage cleanly—and Celestia occasionally wonders who leaves anonymous parchment-wrapped pastries near her prefect landing after late rounds.",
+    "nextConversationGoal": "Celestia wants to confirm with Soren that Starlight Tower's stairwell containment wards and the Dueling Courtyard's southern shield plates are holding cleanly after this week's heavy load."
+  },
+  "bToA": {
+    "id": "e100000000000d0402",
+    "descriptor": "Overworked Tower Prefect",
+    "memory": "Soren respects Celestia's unbending sense of duty in both Dueling Class and Starlight Tower, appreciating that she reports hairline fractures in corridor wardstones early instead of letting them fail. Knowing she barely sleeps while trying to satisfy Professor Thorne's standards and corral Mina at the same time, he occasionally leaves warm rye toast or cardamom knots by her door without signing his name.",
+    "nextConversationGoal": "Soren wants to give Celestia a concise, reassuring update on Starlight Tower's reinforced ward seals and quietly suggest she let someone else handle routine rounds for one evening."
+  }
+}

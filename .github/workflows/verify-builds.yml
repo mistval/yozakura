@@ -1,0 +1,109 @@
+name: Verify Builds
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_docker:
+        description: 'Build Docker image'
+        type: boolean
+        required: true
+        default: true
+      build_electron:
+        description: 'Build Electron distributables'
+        type: boolean
+        required: true
+        default: true
+      electron_os:
+        description: 'Electron target OS'
+        type: choice
+        required: true
+        default: 'all'
+        options:
+          - 'all'
+          - 'windows-latest'
+          - 'macos-latest'
+          - 'ubuntu-latest'
+      upload_electron_artifacts:
+        description: 'Upload Electron build artifacts'
+        type: boolean
+        required: true
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  docker:
+    name: Docker build
+    if: ${{ inputs.build_docker }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: false
+
+  electron:
+    name: Electron build (${{ matrix.os }})
+    if: ${{ inputs.build_electron }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJson(inputs.electron_os == 'all' && '["windows-latest", "macos-latest", "ubuntu-latest"]' || format('["{0}"]', inputs.electron_os)) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+            server/package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install client dependencies
+        run: npm ci --prefix client
+
+      - name: Install server dependencies
+        run: npm ci --prefix server
+
+      - name: Build frontend
+        run: npm run build:web
+
+      - name: Build backend
+        run: npm run build:server
+
+      - name: Rebuild native modules against Electron
+        shell: bash
+        run: ./server/node_modules/.bin/electron-rebuild -m ./server -w better-sqlite3 -f
+
+      - name: Build Electron distributables
+        run: npm run electron:make
+
+      - name: Upload build artifacts to workflow
+        if: ${{ inputs.upload_electron_artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-${{ matrix.os }}
+          path: electron_out/make/**
+          if-no-files-found: error
+          retention-days: 3

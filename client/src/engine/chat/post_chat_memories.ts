@@ -55,9 +55,11 @@ function stageCharacterFields(characterId: string, fields: Partial<Character>) {
 
 function stageConversationSummary(characterId: string, summary: ConversationSummary) {
   const character = getResolvedCharacter(characterId);
+  const { rollingConversationSummaryLimit } = useSettingsStore.getState();
   stageCharacterFields(characterId, {
     rollingConversationSummaries: trimNewestByCreatedAt(
-      character.rollingConversationSummaries.concat(summary)
+      character.rollingConversationSummaries.concat(summary),
+      rollingConversationSummaryLimit
     ),
   });
 }
@@ -70,8 +72,12 @@ function stageRelationshipFields(fromId: string, toId: string, fields: Partial<C
 
 async function stagePairwiseConversationSummary(fromId: string, toId: string, summary: ConversationSummary) {
   const relationship = await getResolvedRelationship(fromId, toId);
+  const { rollingConversationSummaryLimit } = useSettingsStore.getState();
   await stageRelationshipFields(fromId, toId, {
-    rollingPairwiseSummaries: trimNewestByCreatedAt(relationship.rollingPairwiseSummaries.concat(summary)),
+    rollingPairwiseSummaries: trimNewestByCreatedAt(
+      relationship.rollingPairwiseSummaries.concat(summary),
+      rollingConversationSummaryLimit
+    ),
   });
 }
 
@@ -81,9 +87,11 @@ async function stagePairwiseLearnedInformation(
   information: OffscreenLearnedInformation
 ) {
   const relationship = await getResolvedRelationship(fromId, toId);
+  const { offscreenLearnedInformationLimit } = useSettingsStore.getState();
   await stageRelationshipFields(fromId, toId, {
     rollingOffscreenLearnedInformation: trimNewestByCreatedAt(
-      relationship.rollingOffscreenLearnedInformation.concat(information)
+      relationship.rollingOffscreenLearnedInformation.concat(information),
+      offscreenLearnedInformationLimit
     ),
   });
 }
@@ -183,9 +191,19 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
     }
   > = [];
 
+  const oldGlobalMemory = getResolvedCharacter(fromCharacterPerspective.id).globalMemories;
+
+  // Global memory only depends on the character's conversation summaries, so run it
+  // in parallel with the pairwise updates.
+  const globalMemoryPromise = buildFocusedChatTemplateContext(fromCharacterPerspective.id).then((context) =>
+    rollingGlobalMemoryRewriteChain.renderAndExecute(context, {
+      jobConfig: createMemoryJobConfig(`Updating global memory for ${fromCharacterPerspective.firstName}`),
+    })
+  );
+
   // For each character we decided to update fromCharacterPerspective's memories towards,
   // generate updates in parallel
-  const pairwiseUpdateResults = await Promise.all(
+  const pairwiseUpdatesPromise = Promise.all(
     memoryUpdateTargets.map(async (otherCharacter) => {
       const initialPairwiseRelationship = await getResolvedRelationship(
         fromCharacterPerspective.id,
@@ -378,16 +396,13 @@ export async function generateCharacterEndOfChatUpdates(fromCharacterPerspective
     })
   );
 
+  const [pairwiseUpdateResults, newGlobalMemory] = await Promise.all([
+    pairwiseUpdatesPromise,
+    globalMemoryPromise,
+  ]);
+
   pairwiseUpdates.push(
     ...pairwiseUpdateResults.filter((result): result is NonNullable<typeof result> => result !== undefined)
-  );
-
-  const oldGlobalMemory = getResolvedCharacter(fromCharacterPerspective.id).globalMemories;
-  const newGlobalMemory = await rollingGlobalMemoryRewriteChain.renderAndExecute(
-    await buildFocusedChatTemplateContext(fromCharacterPerspective.id),
-    {
-      jobConfig: createMemoryJobConfig(`Updating global memory for ${fromCharacterPerspective.firstName}`),
-    }
   );
 
   stageCharacterFields(fromCharacterPerspective.id, {

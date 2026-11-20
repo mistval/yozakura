@@ -1,0 +1,17 @@
+{
+  "charASlug": "celestia_sinclair",
+  "charBSlug": "julian_ashford",
+  "familiarity": 55,
+  "aToB": {
+    "id": "e10000000000040b01",
+    "descriptor": "Polished Dueling Rival",
+    "memory": "Celestia and Julian have traded top-bracket spots and razor-edged pleasantries across three semesters of Dueling Class. While his effortless House Ashford poise irritates her when spectators cheer his showmanship, she recognizes that Julian drills ruthlessly behind closed doors and forces her to stay sharp—even if she secretly wishes he would drop the golden-boy smile and fight purely on steel.",
+    "nextConversationGoal": "Celestia wants to pin Julian down for a formal ranked sparring evaluation in the Dueling Courtyard—without Grand Dining Hall spectators—to settle whose counter-footwork holds cleaner under Alistair's eyes."
+  },
+  "bToA": {
+    "id": "e100000000000b0402",
+    "descriptor": "Uncompromising Dueling Rival",
+    "memory": "Celestia's iron hold on first place in Dueling Class is the single thorn under Julian's polished House Ashford composure. He genuinely admires that she earned her standing without coasting on her uncle Alistair's name—knowing all too well how heavy a prestigious surname weighs—yet every clinical critique she delivers after a bout leaves him drilling footwork until midnight.",
+    "nextConversationGoal": "Julian wants to meet Celestia with effortless courtesy while subtly issuing a sharp challenge for top bracket placement—determined to show both her and Professor Thorne that his timing has closed the gap."
+  }
+}

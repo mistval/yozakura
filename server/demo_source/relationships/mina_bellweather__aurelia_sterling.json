@@ -1,0 +1,17 @@
+{
+  "charASlug": "mina_bellweather",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 32,
+  "aToB": {
+    "id": "e10000000000050f01",
+    "descriptor": "Watchful Gracious Headmistress",
+    "memory": "Mina has stood respectfully before Headmistress Aurelia Sterling in the Grand Athenaeum enough times to recognize the calming cedar tea she keeps steeping. Rather than issuing harsh expulsions after minor workshop sparks, Aurelia serenely assigns Mina to restore antique campus clockwork or reinforce observatory brass gears—quiet discipline that keeps Mina genuinely eager not to disappoint her.",
+    "nextConversationGoal": "Mina wants to behave impeccably if she crosses paths with Headmistress Sterling today, present a tidy repair update on the library clockwork, and hope no smoke reports trailed from Starlight Tower."
+  },
+  "bToA": {
+    "id": "e100000000000f0502",
+    "descriptor": "Spirited Young Artificer",
+    "memory": "Aurelia views Mina with warm, patient amusement—seeing far more spark than malice in Starlight Tower's restless tinkerer. Pairing Mina's unruly curiosity with steady peers like Celestia and Soren has kept the Aetherium Workshop productive rather than explosive, and Aurelia quietly treasures Mina's rare gift for asking questions traditionalists never think to ask.",
+    "nextConversationGoal": "Aurelia wants to inquire pleasantly about Mina's progress on her approved workshop mechanisms and gently remind her that rest produces sharper insights than thirty-six hours of caffeine."
+  }
+}

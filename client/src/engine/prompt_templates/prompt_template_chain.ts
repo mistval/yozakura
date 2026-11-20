@@ -3,6 +3,8 @@ import type { OpenAIChatCompletionRequestMessage, ParallelPromptJobConfig } from
 import { PromptTemplate } from './prompt_template';
 import { PromptOutputParser } from './prompt_output_parser';
 import { chatCompletion } from '../llm.js';
+import { globalParallelJobManager } from '../parallelization/job_manager.js';
+import { ChatJobTags } from '../parallelization/yozakura_job_manager_types.js';
 import { etaRenderSync } from '../../util/eta';
 import { promptChainDocumentationTemplate } from './prompt_chain_documentation_template';
 import { assertNonNullish } from '../../errors/application_error';
@@ -131,30 +133,36 @@ export class PromptTemplateChain<TContextType extends PromptExecutionContext, TO
     context: TContextType,
     options?: PromptTemplateChainRenderOptions
   ): Promise<OpenAIChatCompletionRequestMessage[]> {
-    const results: OpenAIChatCompletionRequestMessage[] = [];
-    const completionRequestId = options?.completionRequestId ?? createCompletionRequestId();
+    return globalParallelJobManager.enqueue({
+      name: `Rendering ${this.templateChainTitle}`,
+      tags: [ChatJobTags.minor],
+      job: async () => {
+        const results: OpenAIChatCompletionRequestMessage[] = [];
+        const completionRequestId = options?.completionRequestId ?? createCompletionRequestId();
 
-    useTemplateRenderLogStore.getState().postTemplateRender({
-      completionRequestId,
-      promptChain: {
-        id: this.templateChainId,
-        name: this.templateChainTitle,
+        useTemplateRenderLogStore.getState().postTemplateRender({
+          completionRequestId,
+          promptChain: {
+            id: this.templateChainId,
+            name: this.templateChainTitle,
+          },
+        });
+
+        for (const entry of this.templates) {
+          const content = await entry.template.render(context, {
+            completionRequestId,
+          });
+          if (content.trim()) {
+            results.push({
+              role: entry.template.role,
+              content,
+            });
+          }
+        }
+
+        return results;
       },
     });
-
-    for (const entry of this.templates) {
-      const content = await entry.template.render(context, {
-        completionRequestId,
-      });
-      if (content.trim()) {
-        results.push({
-          role: entry.template.role,
-          content,
-        });
-      }
-    }
-
-    return results;
   }
 
   public async parse(
@@ -163,18 +171,25 @@ export class PromptTemplateChain<TContextType extends PromptExecutionContext, TO
     options?: PromptTemplateChainParseOptions
   ): Promise<TOutputType> {
     assertNonNullish(this.parser);
-    const parsedResult = await this.parser.parse(input, context);
+    const parser = this.parser;
+    return globalParallelJobManager.enqueue({
+      name: `Parsing ${this.templateChainTitle}`,
+      tags: [ChatJobTags.minor],
+      job: async () => {
+        const parsedResult = await parser.parse(input, context);
 
-    if (options?.completionRequestId) {
-      useTemplateRenderLogStore.getState().postTemplateRender({
-        completionRequestId: options.completionRequestId,
-        parser: {
-          parsedResponse: parsedResult,
-        },
-      });
-    }
+        if (options?.completionRequestId) {
+          useTemplateRenderLogStore.getState().postTemplateRender({
+            completionRequestId: options.completionRequestId,
+            parser: {
+              parsedResponse: parsedResult,
+            },
+          });
+        }
 
-    return parsedResult;
+        return parsedResult;
+      },
+    });
   }
 
   public async renderAndExecute(

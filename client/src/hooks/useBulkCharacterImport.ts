@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { detectCharacterCardMetadata } from '../engine/character_card_metadata.js';
 import {
   buildImportedCardCharacter,
+  CHARACTER_GEN_JOB_TAG,
   getImportedCardName,
   type CardImportMode,
 } from '../engine/character_gen.js';
@@ -50,7 +51,7 @@ export function useBulkCharacterImport() {
 
   const cancel = useCallback(() => {
     cancelledRef.current = true;
-    globalParallelJobManager.cancelAllJobs();
+    globalParallelJobManager.cancelJobsByTag(CHARACTER_GEN_JOB_TAG);
     setPhase((prev) => (prev === 'running' ? 'cancelling' : prev));
     setItems((prev) =>
       prev.map((item) => (item.status === 'pending' ? { ...item, status: 'cancelled' } : item))

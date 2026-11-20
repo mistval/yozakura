@@ -1,0 +1,17 @@
+{
+  "charASlug": "mina_bellweather",
+  "charBSlug": "lyra_solis",
+  "familiarity": 36,
+  "aToB": {
+    "id": "e10000000000050901",
+    "descriptor": "Sweet Burn-Healer",
+    "memory": "Mina owes Lyra at least half a dozen soothing rescue wraps whenever soldering irons slip or miniature steam valves pop before cooling. Lyra never yells the way Celestia does; she just sighs softly, smears cool moon-balm across Mina's scorched thumb, and apologizes profusely whenever a startled snap-vine tries to confiscate Mina's brass wrench.",
+    "nextConversationGoal": "Mina wants to drop off a cute clockwork brass watering timer she built for Lyra's Whispering Greenhouse benches—and maybe restock her workshop first-aid tin of soothing burn salve."
+  },
+  "bToA": {
+    "id": "e10000000000090502",
+    "descriptor": "Lively Soot-Stained Friend",
+    "memory": "Lyra always keeps an extra jar of cooling aloe-moss gel beside the Whispering Greenhouse door because Mina tends to sprint in beaming sheepishly with one singed sleeve and a wild new blueprint. Mina's booming double-speed enthusiasm still makes Lyra's pocket seeds rustle on arrival, yet Lyra adores how earnestly Mina protects delicate ferns from stray static sparks.",
+    "nextConversationGoal": "Lyra wants to check gently whether the soldering burn on Mina's left wrist healed cleanly and shyly ask how her new brass greenhouse timer works without setting off sparks near dry moss."
+  }
+}

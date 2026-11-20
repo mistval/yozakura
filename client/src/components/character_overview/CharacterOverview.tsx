@@ -123,7 +123,7 @@ function CharacterOverviewInner() {
       <RoutedModalFrame
         queryParam="characteroverview"
         onClose={closeCharacterOverview}
-        maxWidthClassName="max-w-6xl"
+        maxWidthClassName="max-w-7xl"
         contentRef={contentRef}
         headerActions={
           <>

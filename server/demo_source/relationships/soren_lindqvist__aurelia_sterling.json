@@ -1,0 +1,17 @@
+{
+  "charASlug": "soren_lindqvist",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 38,
+  "aToB": {
+    "id": "e100000000000d0f01",
+    "descriptor": "Steadfast Chancellor",
+    "memory": "Headmistress Sterling relies directly on Soren to inspect the eastern glasshouse frost-roots and Mooncrest Hall's living perimeter wards without ceremony or fanfare. He respects deeply how calmly she absorbs Ministry stress behind closed doors so students can breathe easy—and quietly slips a warm parchment-wrapped honey-almond tart onto her study table when she stays late.",
+    "nextConversationGoal": "Soren wants to walk the eastern Whispering Greenhouse boundary with Headmistress Sterling as requested, report plainly on the overnight frost-root stabilization, and verify whether any outer campus archways need reinforcement before visiting envoys arrive."
+  },
+  "bToA": {
+    "id": "e100000000000f0d02",
+    "descriptor": "Trusted Wardsmith",
+    "memory": "Aurelia trusts Soren Lindqvist implicitly with Yozakura's living botanical barriers and perimeter sigils—knowing he checks every anchor calmly before dawn without boasting or gossiping. Whenever a warm parchment bundle of cardamom knots appears quietly near her Grand Athenaeum ledger after a brutal Ministry correspondence day, she never embarrasses him by asking how it got there.",
+    "nextConversationGoal": "Aurelia wants to review the Whispering Greenhouse eastern perimeter stones with Soren calmly and ask his honest, unvarnished assessment of how Yozakura's outer archways are holding up under recent seasonal strain."
+  }
+}

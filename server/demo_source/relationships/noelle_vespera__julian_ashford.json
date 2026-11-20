@@ -1,0 +1,17 @@
+{
+  "charASlug": "noelle_vespera",
+  "charBSlug": "julian_ashford",
+  "familiarity": 12,
+  "aToB": {
+    "id": "e10000000000060b01",
+    "descriptor": "Distant Sunlit Hallmate",
+    "memory": "Although they both live in Mooncrest Hall, Noelle barely overlaps with Julian beyond passing his crisp silhouette in the Grand Dining Hall or hearing cheers drift across Waystone Quad. Once he politely retrieved a dropped star-chart tube for her with an easy golden-boy smile, leaving her vaguely bewildered at anyone possessing that much volume before nine in the morning.",
+    "nextConversationGoal": "Noelle wants to greet Julian politely if their paths cross and perhaps get to know what actually drives Mooncrest's golden boy underneath all that polished morning energy."
+  },
+  "bToA": {
+    "id": "e100000000000b0602",
+    "descriptor": "Sleepy Astral Hallmate",
+    "memory": "Julian barely knows Mooncrest hallmate Noelle beyond spotting her drifting through doorways wrapped in plum constellation embroidery looking permanently half-asleep. She once murmured softly as he passed that his left bootlace was coming undone before he even noticed it himself, leaving him amused and curious to get to know the cryptic stargazer a bit better.",
+    "nextConversationGoal": "Julian wants to offer Noelle a warm, unhurried greeting if he spots her on campus and gently break the ice to get to know Mooncrest's quietest resident better."
+  }
+}

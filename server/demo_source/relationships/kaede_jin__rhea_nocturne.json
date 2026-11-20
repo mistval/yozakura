@@ -1,0 +1,17 @@
+{
+  "charASlug": "kaede_jin",
+  "charBSlug": "rhea_nocturne",
+  "familiarity": 28,
+  "aToB": {
+    "id": "e10000000000070a01",
+    "descriptor": "Cheeky Snack Smuggler",
+    "memory": "Living in Mooncrest Hall means Kaede frequently crosses paths with senior Rhea slipping silently through dusk shadows with crinkling contraband bags. Though Kaede is normally too straightforward for shady deals, Rhea once tossed her an ice-cold citrus drink from Earth right after two brutal hours of wind-blade drills—and Kaede reluctantly admits nothing tastes better after sparring.",
+    "nextConversationGoal": "Kaede wants to catch Rhea near the Student Union Lounge, ask straightforwardly how she walks past creaking Mooncrest floorboards without making a sound, and maybe swap a coin for another cold Earth drink."
+  },
+  "bToA": {
+    "id": "e100000000000a0702",
+    "descriptor": "Swift Wind-Blade Ace",
+    "memory": "Rhea appreciates clean movement, and Kaede's wind-step footwork in the Dueling Courtyard comes surprisingly close to shadow-stepping in sheer speed—just far louder about pride and honor. Plus, Kaede never lectures Rhea over Mooncrest smuggling routes or pokes into her black satchel as long as the citrus electrolyte cans keep flowing.",
+    "nextConversationGoal": "Rhea wants to slide Kaede a chilled Earth sports drink or salty snack packet after training and tease Mooncrest's blunt sword-star lightly about overworking her wrists."
+  }
+}

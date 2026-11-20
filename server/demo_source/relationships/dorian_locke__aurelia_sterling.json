@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "aurelia_sterling",
+  "familiarity": 18,
+  "aToB": {
+    "id": "e10000000000030f01",
+    "descriptor": "Headmistress",
+    "memory": "Dorian has only dealt with Headmistress Sterling occasionally over Starlight Tower housing paperwork and spirit-charter registrations, yet he respects her quiet, unyielding poise above almost any authority figure on campus. Around her serene dignity, even his dry sarcasm settles into polite formality.",
+    "nextConversationGoal": "Dorian wants to greet Headmistress Sterling respectfully when crossing paths in the Grand Athenaeum, assure her crisply that Starlight Tower's newest suite pairing is running peacefully, and make a steady impression."
+  },
+  "bToA": {
+    "id": "e100000000000f0302",
+    "descriptor": "Steady Scholar",
+    "memory": "Aurelia sees right past Dorian's severe gothic coat to the calm, conscientious spirit-diplomat underneath—someone who never chases flashy applause and quietly respects institutional balance. She felt genuinely reassured knowing Leo Vance would share a Starlight Tower suite with someone so level-headed.",
+    "nextConversationGoal": "Aurelia wants to exchange a brief, warm greeting with Dorian in the Grand Athenaeum, commend his quiet steadiness in Starlight Tower, and express calm confidence in his helping Leo adjust to Yozakura."
+  }
+}

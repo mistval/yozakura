@@ -23,6 +23,7 @@ import ScenarioView from './pages/ScenarioView';
 import MapList from './pages/MapList';
 import MapEditor from './pages/MapEditor';
 import { hydrateSettings } from './state/settings_store.js';
+import { installSessionFetchInterceptor } from './backend_bridge/session_guard.js';
 import 'react-calendar/dist/Calendar.css';
 import './styles.css';
 
@@ -94,6 +95,7 @@ function registerServiceWorker() {
 }
 
 async function bootstrap() {
+  installSessionFetchInterceptor();
   registerServiceWorker();
   await hydrateSettings();
 

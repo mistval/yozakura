@@ -7,6 +7,7 @@ import { migration as migration0004RagHelperState } from './migrations/0004_rag_
 import { migration as migration0005WardrobeTags } from './migrations/0005_wardrobe_tags.js';
 import { migration as migration0006TemplateGroupData } from './migrations/0006_template_group_data.js';
 import { migration as migration0007NormalizeEntityIds } from './migrations/0007_normalize_entity_ids.js';
+import { migration as migration0008RemoteChatMedium } from './migrations/0008_remote_chat_medium.js';
 import type { Migration, MigrationContext } from './types.js';
 
 /**
@@ -25,6 +26,7 @@ const migrations: Migration[] = [
   migration0005WardrobeTags,
   migration0006TemplateGroupData,
   migration0007NormalizeEntityIds,
+  migration0008RemoteChatMedium,
 ];
 
 function getUserVersion(db: Database.Database): number {

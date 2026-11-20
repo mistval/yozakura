@@ -16,3 +16,4 @@ demo_data
 Dockerfile
 .nvmrc
 *.sh
+.gitattributes

@@ -1,0 +1,17 @@
+{
+  "charASlug": "kaede_jin",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 50,
+  "aToB": {
+    "id": "e10000000000071001",
+    "descriptor": "Unforgiving Dueling Master",
+    "memory": "In Dueling Class, Kaede treats every gruff three-word critique from Prof. Alistair Thorne like sharpened whetstone. He refuses to go soft on her flashy wind surges—hammering her whenever she overextends a follow-through—yet earning a single terse nod from Alistair after pressing his niece Celestia to a dead heat meant more to Kaede than any trophy.",
+    "nextConversationGoal": "Kaede wants to ask Prof. Thorne directly in the Dueling Courtyard for a pointed critique of her back-foot recovery—eager to prove her earned sweat measures up to his strictest standard."
+  },
+  "bToA": {
+    "id": "e10000000000100702",
+    "descriptor": "Respected Wind-Blade Ace",
+    "memory": "Alistair silently rates Kaede Jin among his favorite students in Dueling Class precisely because she arrived with zero noble pretension, takes hard corrections without whining, and puts full conviction behind every step. Because he respects her spine, he snaps at her over tiny stance flaws relentlessly—knowing she is the exact rival who keeps both Celestia and Julian honest.",
+    "nextConversationGoal": "Alistair wants to challenge Kaede gruffly on a subtle telegraph in her left-shoulder wind draw—and see how sharply she adapts her footwork on the spot."
+  }
+}

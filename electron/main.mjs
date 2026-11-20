@@ -86,14 +86,36 @@ function resolveRuntimePaths() {
   };
 }
 
+const PREFERRED_SERVER_PORT = 4396;
+
+async function startEmbeddedServerOnPort(paths, port) {
+  const runtime = startServer({ ...paths, port });
+  try {
+    await waitForServerListening(runtime.server);
+    return runtime;
+  } catch (error) {
+    await runtime.close();
+    throw error;
+  }
+}
+
 async function ensureEmbeddedServer() {
   if (serverRuntime) {
     return serverRuntime;
   }
 
-  const { dataDir, frontendDistDir } = resolveRuntimePaths();
-  const runtime = startServer({ dataDir, frontendDistDir, port: 0 });
-  await waitForServerListening(runtime.server);
+  const paths = resolveRuntimePaths();
+  let runtime;
+  try {
+    runtime = await startEmbeddedServerOnPort(paths, PREFERRED_SERVER_PORT);
+  } catch (error) {
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'EADDRINUSE') {
+      console.warn(`Port ${PREFERRED_SERVER_PORT} is already in use; falling back to an ephemeral port.`);
+      runtime = await startEmbeddedServerOnPort(paths, 0);
+    } else {
+      throw error;
+    }
+  }
 
   const address = runtime.server.address();
   if (!address || typeof address !== 'object') {
@@ -141,6 +163,8 @@ async function createMainWindow() {
   mainWindow = window;
 }
 
+const SERVER_SHUTDOWN_TIMEOUT_MS = 3000;
+
 async function shutdownEmbeddedServer() {
   if (!serverRuntime) {
     return;
@@ -149,10 +173,22 @@ async function shutdownEmbeddedServer() {
   const runtime = serverRuntime;
   serverRuntime = null;
 
+  let timeoutId;
   try {
-    await runtime.close();
+    await Promise.race([
+      runtime.close(),
+      new Promise((resolve) => {
+        timeoutId = setTimeout(() => {
+          console.warn('Embedded server shutdown timed out; forcing app exit.');
+          runtime.server.closeAllConnections();
+          resolve();
+        }, SERVER_SHUTDOWN_TIMEOUT_MS);
+      }),
+    ]);
   } catch (error) {
     console.error('Failed to stop embedded server cleanly:', error);
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

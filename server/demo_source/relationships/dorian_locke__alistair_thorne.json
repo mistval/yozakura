@@ -1,0 +1,17 @@
+{
+  "charASlug": "dorian_locke",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 22,
+  "aToB": {
+    "id": "e10000000000031001",
+    "descriptor": "Dueling Professor",
+    "memory": "Dorian takes Dueling Class under Prof. Thorne and understands exactly why Alistair snaps at flashy house heirs—though Dorian's defensive spirit-ward style occasionally earns a gruff lecture about planting his own boots instead of letting barrier sigils take the hit. Still, Dorian respects a professor who rewards plain grit over lineage.",
+    "nextConversationGoal": "Dorian wants to keep his Dueling Class posture crisp enough to spare himself one of Prof. Thorne's three-word scolds, ask a brief practical question about counter-ward footing, and quietly gauge Alistair's mood regarding his new roommate."
+  },
+  "bToA": {
+    "id": "e10000000000100302",
+    "descriptor": "Unflashy Duelist",
+    "memory": "While Alistair grumbles that Dorian relies too heavily on cold spirit barriers instead of direct steel-and-footwork in Dueling Class, he secretly respects that Dorian never whines, never coasts on family pride, and shows up steady every morning. He also trusts Celestia's word that Dorian keeps Starlight Tower orderly.",
+    "nextConversationGoal": "Alistair wants to drill Dorian sharply on active footwork in Dueling Class—cutting straight past his deadpan calm—and ask bluntly whether his new Earth roommate has enough sense to keep his feet planted in the courtyard."
+  }
+}

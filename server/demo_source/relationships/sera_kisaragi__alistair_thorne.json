@@ -1,0 +1,17 @@
+{
+  "charASlug": "sera_kisaragi",
+  "charBSlug": "alistair_thorne",
+  "familiarity": 24,
+  "aToB": {
+    "id": "e10000000000021001",
+    "descriptor": "Dueling Professor",
+    "memory": "Sera has endured enough of Prof. Thorne's blistering Dueling Class critiques to know he demands honest footing over theatrical flourishes—and secretly appreciates his refusal to baby anyone, even his niece Celestia. She keeps her fire-and-illusion timings sharp in his courtyard so she never gives him an excuse for three-word scolds.",
+    "nextConversationGoal": "Sera wants to present herself crisply to Prof. Thorne before Dueling Class starts and subtly put in a good word for Leo's composure so Alistair gives the Earth newcomer a fair shake on the granite."
+  },
+  "bToA": {
+    "id": "e10000000000100202",
+    "descriptor": "Gritty Second-Year",
+    "memory": "Alistair respects Sera in Dueling Class because she doesn't hide behind pretty house titles or soft excuses—when she misses a parry, she sets her boots firmer and hits back faster with crisp flame-and-illusion feints. Knowing she's guiding Starlight Tower's new Earth transfer makes him curious how quickly she'll whip the boy into shape.",
+    "nextConversationGoal": "Alistair wants to grill Sera bluntly after Dueling Class drills about whether Leo Vance has half a clue how to keep his balance, and tell her flatly not to go soft on the transfer during early practice."
+  }
+}

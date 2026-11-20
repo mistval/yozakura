@@ -1,0 +1,17 @@
+{
+  "charASlug": "vivienne_clairmont",
+  "charBSlug": "rhea_nocturne",
+  "familiarity": 42,
+  "aToB": {
+    "id": "e10000000000080a01",
+    "descriptor": "Discreet Supplier",
+    "memory": "As fellow Mooncrest seniors and Potions Class regulars, Vivienne and Rhea maintain an unspoken understanding: Vivienne never asks how Earth tea tins, ballpoint pens, or dark chocolate end up behind Mooncrest's baseboards, and Rhea never shortchanges a Clairmont commission. Vivienne privately respects Rhea's sharp instincts and refuses to judge her midnight arbitrage.",
+    "nextConversationGoal": "Vivienne wants to catch Rhea quietly after Potions Class to place a discreet request for imported Earth Assam tea leaves and check whether Rhea spotted any interesting planar curiosities in her latest batch."
+  },
+  "bToA": {
+    "id": "e100000000000a0802",
+    "descriptor": "Polished Client",
+    "memory": "Rhea genuinely likes Vivienne more than she lets on—unlike most highborn heirs, Vivienne pays promptly, respects shadow-pocket discretion, and shares crisp lab notes without lecturing about academy contraband rules. Still, Rhea enjoys watching Mooncrest's immaculate socialite politely pretend her contraband Earl Grey is strictly for aromatics research.",
+    "nextConversationGoal": "Rhea wants to slip Vivienne a foil-wrapped tin of specialty Earth tea under cover of returning borrowed Potions Class notes and collect a quick hint on whether faculty patrols are watching the east archway."
+  }
+}

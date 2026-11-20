@@ -1,0 +1,17 @@
+{
+  "charASlug": "julian_ashford",
+  "charBSlug": "evelyn_marlowe",
+  "familiarity": 25,
+  "aToB": {
+    "id": "e100000000000b0e01",
+    "descriptor": "Enigmatic Professor",
+    "memory": "Because Julian focuses on Dueling Class rather than Potions Class, he mostly encounters Prof. Marlowe at formal academy functions or when requesting approved stamina draughts—where his effortless Ashford charm glides right off her razor-sharp smile. He finds her brilliant and slightly intimidating, especially since rumors link her directly to Leo Vance's sudden Earth transfer.",
+    "nextConversationGoal": "Julian wants to greet Prof. Marlowe with crisp courtesy near Waystone Quad or the Grand Dining Hall, thank her for signing off on tournament medical draughts, and subtly observe what she makes of the new Earth transfer."
+  },
+  "bToA": {
+    "id": "e100000000000e0b02",
+    "descriptor": "Polished Duelist",
+    "memory": "Evelyn regards Julian Ashford as a legitimately talented duelist burdened by far too much ancestral pride behind his golden Grand Dining Hall poise. Though his sparring rivalries fall outside her Dimensional Theory purview, she finds his dogged persistence far more respectable than the effortless complacency his reputation implies.",
+    "nextConversationGoal": "Evelyn wants to acknowledge Julian's polite greeting briskly in passing and wryly ask whether his Dueling Class drills leave him any curiosity for how anomalous resonance works outside standard sparring shields."
+  }
+}

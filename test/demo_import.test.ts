@@ -30,7 +30,7 @@ describe('Integration: Demo Entities from Export', () => {
     expect(stageResult.success).toBe(true);
     if (!stageResult.success) throw new Error(stageResult.error);
 
-    expect(stageResult.manifest.dbUserVersion).toBe(8);
+    expect(stageResult.manifest.dbUserVersion).toBe(9);
 
     // Staging database should contain the demo entities
     const mapCount = server.db.prepare('SELECT count(*) as c FROM import_staging.map').get() as {
@@ -41,12 +41,27 @@ describe('Integration: Demo Entities from Export', () => {
     const charCount = server.db.prepare('SELECT count(*) as c FROM import_staging.character').get() as {
       c: number;
     };
-    expect(charCount.c).toBe(20);
+    expect(charCount.c).toBe(16);
 
     const scenCount = server.db.prepare('SELECT count(*) as c FROM import_staging.scenario').get() as {
       c: number;
     };
     expect(scenCount.c).toBe(1);
+
+    const groupCount = server.db
+      .prepare('SELECT count(*) as c FROM import_staging.scenario_character_group')
+      .get() as { c: number };
+    expect(groupCount.c).toBe(5);
+
+    const scheduleCount = server.db
+      .prepare('SELECT count(*) as c FROM import_staging.scenario_character_group_schedule')
+      .get() as { c: number };
+    expect(scheduleCount.c).toBe(5);
+
+    const relCount = server.db
+      .prepare('SELECT count(*) as c FROM import_staging.character_relationship')
+      .get() as { c: number };
+    expect(relCount.c).toBe(240);
 
     const [stagedSummaries, stagedMaps, stagedChars] = await Promise.all([
       importStagingDatabase.loadScenarioSummaries(),
@@ -59,6 +74,53 @@ describe('Integration: Demo Entities from Export', () => {
       selectedGlobalCharacterIds: stagedChars.map((c) => c.id),
     });
     expect(validationRes).toEqual({ valid: true });
+
+    const yozakuraMap = stagedMaps.find((m) => m.id === '5d4f493e1031ae6f32');
+    expect(yozakuraMap).toBeDefined();
+    const expectedZoneTriggers: Record<string, string> = {
+      '5d4f493e1031ae0101': 'dorm',
+      '5d4f493e1031ae0102': 'dorm',
+      '5d4f493e1031ae0103': 'lab',
+      '5d4f493e1031ae0104': 'greenhouse',
+      '5d4f493e1031ae0105': 'dueling',
+      '5d4f493e1031ae0106': 'lab',
+    };
+    expect(yozakuraMap?.zones).toHaveLength(6);
+    for (const zone of yozakuraMap?.zones ?? []) {
+      const expectedTag = expectedZoneTriggers[zone.id];
+      expect(expectedTag).toBeDefined();
+      expect(zone.wardrobeTriggers).toEqual([
+        { command: 'disable', tag: 'everyday' },
+        { command: 'enable_one', tag: expectedTag },
+      ]);
+    }
+
+    for (const char of stagedChars) {
+      expect(char.wardrobes.length).toBeGreaterThanOrEqual(6);
+      expect(char.wardrobes[0]?.enabled).toBe(true);
+      expect(char.wardrobes.slice(1).every((w) => !w.enabled)).toBe(true);
+
+      const everydayWardrobes = char.wardrobes.filter((w) => w.tags.includes('everyday'));
+      expect(everydayWardrobes.length).toBeGreaterThanOrEqual(2);
+
+      const everydayAutoselect = everydayWardrobes.filter((w) => w.tags.includes('daily_autoselect:default'));
+      expect(everydayAutoselect.length).toBeGreaterThanOrEqual(1);
+
+      for (const wardrobe of char.wardrobes) {
+        const hasDaily = wardrobe.tags.some((t) => t.startsWith('daily_autoselect:'));
+        if (hasDaily) {
+          expect(wardrobe.tags).toContain('everyday');
+        }
+      }
+
+      for (const requiredTag of ['dueling', 'lab', 'greenhouse', 'dorm']) {
+        const matching = char.wardrobes.filter((w) => w.tags.includes(requiredTag));
+        expect(matching.length).toBeGreaterThanOrEqual(1);
+        for (const w of matching) {
+          expect(w.tags.some((t) => t.startsWith('daily_autoselect:'))).toBe(false);
+        }
+      }
+    }
 
     await cancelImport();
   });
@@ -109,21 +171,41 @@ describe('Integration: Demo Entities from Export', () => {
     expect(scenRow).toBeDefined();
 
     const scenData = JSON.parse(scenRow!.data);
-    expect(scenData.mapId).toBe('77857aab9e47d2d6d5'); // Paradise Island
+    expect(scenData.mapId).toBe('5d4f493e1031ae6f32'); // Yozakura University
     expect(scenData.userCharacterId).toMatch(/^[0-9a-f]{18}$/);
 
-    // 20 Scenario characters should exist for newScenarioId
+    // 16 Scenario characters should exist for newScenarioId
     const scenChars = server.db
       .prepare('SELECT id, data FROM main.scenario_character WHERE scenario_id = ?')
       .all(newScenarioId) as Array<{ id: string; data: string }>;
-    expect(scenChars).toHaveLength(20);
+    expect(scenChars).toHaveLength(16);
 
-    // Verify protagonist is Kai Nakamura
+    // Verify protagonist is Leo Vance
     const userChar = scenChars.find((c) => c.id === scenData.userCharacterId);
     expect(userChar).toBeDefined();
     const userCharData = JSON.parse(userChar!.data);
-    expect(userCharData.firstName).toBe('Kai');
-    expect(userCharData.lastName).toBe('Nakamura');
+    expect(userCharData.firstName).toBe('Leo');
+    expect(userCharData.lastName).toBe('Vance');
+
+    // Groups, schedules, and 240 relationships should be imported for newScenarioId
+    const groups = server.db
+      .prepare('SELECT id FROM main.scenario_character_group WHERE scenario_id = ?')
+      .all(newScenarioId);
+    expect(groups).toHaveLength(5);
+
+    const schedules = server.db
+      .prepare('SELECT id FROM main.scenario_character_group_schedule WHERE scenario_id = ?')
+      .all(newScenarioId);
+    expect(schedules).toHaveLength(5);
+
+    const rels = server.db
+      .prepare(
+        `SELECT cr.id FROM main.character_relationship cr
+         JOIN main.scenario_character sc ON cr.from_id = sc.id
+         WHERE sc.scenario_id = ?`
+      )
+      .all(newScenarioId);
+    expect(rels).toHaveLength(240);
 
     // Turn state key_value row must exist for scenario_<newScenarioId>_turn
     const turnRow = server.db
@@ -135,7 +217,7 @@ describe('Integration: Demo Entities from Export', () => {
     const scenCardDir = path.join(server.dataDir, 'scenario', newScenarioId, 'character_cards');
     expect(fs.existsSync(scenCardDir)).toBe(true);
     const cardFiles = fs.readdirSync(scenCardDir);
-    expect(cardFiles.length).toBe(20);
+    expect(cardFiles.length).toBe(16);
 
     // Global characters should NOT have been imported
     const globalCount = server.db.prepare('SELECT count(*) as c FROM main.character').get() as { c: number };
@@ -152,7 +234,7 @@ describe('Integration: Demo Entities from Export', () => {
       id: string;
       data: string;
     }>;
-    expect(globalChars).toHaveLength(20);
+    expect(globalChars).toHaveLength(16);
 
     // Global character cards should exist on disk
     const globalCardDir = path.join(server.dataDir, 'character_cards');
@@ -166,6 +248,6 @@ describe('Integration: Demo Entities from Export', () => {
     // Re-running skips existing characters without duplicating
     await importDemoGlobalCharacters();
     const secondCount = server.db.prepare('SELECT count(*) as c FROM main.character').get() as { c: number };
-    expect(secondCount.c).toBe(20);
+    expect(secondCount.c).toBe(16);
   });
 });

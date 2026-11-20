@@ -9,28 +9,30 @@ import { useScenarioStore } from '../../state/scenario_store.js';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
 import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
 import CharacterLocationSelect from '../CharacterLocationSelect.js';
+import CharacterAvatar from '../CharacterAvatar.js';
+import { useQueryParam } from '../../util/queryParams.js';
 
-interface CharacterChatSettingsProps {
-  open: boolean;
-  onClose: () => void;
-  settingsCharacterId: string | undefined;
-}
-
-export default function CharacterChatSettings({
-  open,
-  onClose,
-  settingsCharacterId,
-}: CharacterChatSettingsProps) {
+export default function CharacterChatSettings() {
+  const [settingsCharacterId, setSettingsCharacterId] = useQueryParam('characterchatsettings');
   const scenario = useScenarioStore((state) => state.activeScenario);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const saveScenarioCharacterFields = useScenarioCharacterStore((state) => state.saveScenarioCharacterFields);
+  const chatState = useTurnMachineStore((state) => state.chatState);
+  const participantIds = useTurnMachineStore((state) => state.participantIds);
   const participants = useActiveChatParticipants();
   const chatInstructionsByCharacterId = useTurnMachineStore((state) => state.chatInstructionsByCharacterId);
   const { showCharacterOverview } = useCharacterOverview();
   const isCharacterSyncing = useIsEntityInDeferredSync(settingsCharacterId);
   const activeMap = useScenarioStore((state) => state.activeScenarioMap);
 
-  if (!settingsCharacterId || !scenario) {
+  const onClose = () => setSettingsCharacterId(undefined);
+
+  if (
+    !settingsCharacterId ||
+    chatState !== 'active' ||
+    !scenario ||
+    !participantIds.includes(settingsCharacterId)
+  ) {
     return undefined;
   }
 
@@ -47,7 +49,18 @@ export default function CharacterChatSettings({
   };
 
   return (
-    <RoutedModalFrame open={open} onClose={onClose} maxWidthClassName="max-w-2xl">
+    <RoutedModalFrame
+      queryParam="characterchatsettings"
+      onClose={onClose}
+      maxWidthClassName="max-w-2xl"
+      headerActions={
+        <CharacterAvatar
+          imagePath={character.imagePath}
+          name={`${character.firstName} ${character.lastName}`}
+          className="h-10 w-10 border-border-strong bg-surface-subtle"
+        />
+      }
+    >
       <div className="flex justify-between items-center gap-2">
         <h3 className="text-lg font-semibold">
           {character.firstName} {character.lastName}
