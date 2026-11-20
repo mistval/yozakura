@@ -68,5 +68,4 @@ You can find both image parallelism controls in [Image Generation Settings](yoza
 ### Image Generation Concurrency
 
 - Controls how many image generation jobs can run at the same time (minimum `1`, default `1`).
-- **Good to know:** Raising this number only runs multiple images in parallel if **Generate Images In Parallel With Text** is also enabled. When that checkbox is off, image jobs still run `1` at a time.
 - **When to raise it:** If you use a cloud image provider and frequently trigger multiple images (for example across busy chats or high auto-image rates), raising **Image generation concurrency** (e.g., to `3`–`4`) lets them finish together instead of waiting in line. Keep it at `1` for a single local Stable Diffusion / ComfyUI / KoboldCpp instance.

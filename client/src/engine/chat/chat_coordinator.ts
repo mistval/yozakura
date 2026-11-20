@@ -225,17 +225,27 @@ export class ChatCoordinator {
     return this.buildSceneImageFullPrompt(imageCharacterId, { upToMessageId: afterMessageId });
   }
 
+  private static runImagePipelineJob(run: () => Promise<void>) {
+    return globalParallelJobManager.enqueue({
+      name: 'Image generation pipeline',
+      tags: [ChatJobTags.minor, ChatJobTags.chatJob, ChatJobTags.generatingImagePipeline],
+      job: run,
+    });
+  }
+
   public static async requestSceneImage(afterMessageId: string | undefined) {
     try {
-      const prompt = await this.buildSceneImagePromptForRequest(afterMessageId);
-      if (useSettingsStore.getState().editImagePromptsBeforeDispatch) {
-        useScenarioLoopStateStore.getState().setPendingImagePromptEdit({
-          prompt,
-          afterMessageId,
-        });
-      } else {
-        await this.generateImageFromPrompt(prompt, { afterMessageId });
-      }
+      await this.runImagePipelineJob(async () => {
+        const prompt = await this.buildSceneImagePromptForRequest(afterMessageId);
+        if (useSettingsStore.getState().editImagePromptsBeforeDispatch) {
+          useScenarioLoopStateStore.getState().setPendingImagePromptEdit({
+            prompt,
+            afterMessageId,
+          });
+        } else {
+          await this.generateImageFromPrompt(prompt, { afterMessageId });
+        }
+      });
     } catch (err) {
       if (err instanceof SignalException) {
         return;
@@ -250,7 +260,7 @@ export class ChatCoordinator {
   public static async confirmSceneImagePrompt(prompt: string, afterMessageId: string | undefined) {
     useScenarioLoopStateStore.getState().setPendingImagePromptEdit(undefined);
     try {
-      await this.generateImageFromPrompt(prompt, { afterMessageId });
+      await this.runImagePipelineJob(() => this.generateImageFromPrompt(prompt, { afterMessageId }));
     } catch (err) {
       if (err instanceof SignalException) {
         return;
@@ -267,15 +277,11 @@ export class ChatCoordinator {
     options: { forceSkipAutoImage?: boolean } = {}
   ) {
     if (!options.forceSkipAutoImage) {
-      if (useSettingsStore.getState().generateImagesInParallelWithText) {
-        void this.maybeGenerateAutoImageForMessage(message).catch((err) => {
-          if (!(err instanceof SignalException)) {
-            console.error('Auto image generation error', err);
-          }
-        });
-      } else {
-        await this.maybeGenerateAutoImageForMessage(message);
-      }
+      void this.maybeGenerateAutoImageForMessage(message).catch((err) => {
+        if (!(err instanceof SignalException)) {
+          console.error('Auto image generation error', err);
+        }
+      });
     }
   }
 
@@ -401,6 +407,10 @@ export class ChatCoordinator {
   }
 
   public static async speakAsNpc(npcId: string) {
+    if (!useSettingsStore.getState().generateImagesInParallelWithText) {
+      await globalParallelJobManager.waitAllForTag(ChatJobTags.generatingImagePipeline);
+    }
+
     const speaker = useScenarioCharacterStore.getState().getRequiredCharacterById(npcId);
     const wasPaused = this.isChatPaused();
     const completionRequestId = newId();
@@ -690,11 +700,13 @@ export class ChatCoordinator {
         selectedChain = weightedRandomChoice(candidates);
       }
 
-      const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId, {
-        chain: selectedChain,
-        upToMessageId: chatMessage.id,
+      await this.runImagePipelineJob(async () => {
+        const fullPrompt = await this.buildSceneImageFullPrompt(chatMessage.senderId, {
+          chain: selectedChain,
+          upToMessageId: chatMessage.id,
+        });
+        await this.generateImageFromPrompt(fullPrompt, { afterMessageId: chatMessage.id });
       });
-      await this.generateImageFromPrompt(fullPrompt, { afterMessageId: chatMessage.id });
     } catch (err) {
       rethrowSignalException(err);
 

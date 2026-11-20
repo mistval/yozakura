@@ -14,12 +14,14 @@ import ChatSettings from './chat/chat_settings.js';
 import CharacterChatSettings from './chat/character_chat_settings.js';
 import CharacterAvatar from './CharacterAvatar.js';
 import { useModalQueryParam } from '../hooks/useModalQueryParam.js';
+import { useTemporaryFlag } from '../hooks/use_temporary_flag.js';
 import { useQueryParam } from '../util/queryParams.js';
 import { useScenarioCharacterStore, useUserCharacter } from '../state/scenario_character_store.js';
 import ButtonOptions from './ui/ButtonOptions.js';
 import { chatSceneImageTemplatesGroup } from '../engine/prompt_templates/chat/group.js';
 import {
   abortCurrentChatGeneration,
+  ChatJobTags,
   useChatJobs,
   useUserCanInputChat,
   useImageGenerationJobs,
@@ -54,7 +56,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
     closeDrawer: closeCharacterTray,
   } = useMobileDrawer('chatparticipants');
   const selectedSceneImageTemplateChainId = useSettingsStore((s) => s.selectedSceneImageTemplateChainId);
-  const generateImagesInParallelWithText = useSettingsStore((s) => s.generateImagesInParallelWithText);
+  const editImagePromptsBeforeDispatch = useSettingsStore((s) => s.editImagePromptsBeforeDispatch);
   const setSettings = useSettingsStore((s) => s.setSettings);
   const sceneImageChains = chatSceneImageTemplatesGroup.useChains();
   const transcript = useTurnMachineStore((state) => state.transcript);
@@ -101,11 +103,19 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   const imageGenerationJobs = useImageGenerationJobs();
   const isFinalizingChat = useIsChatFinalizing();
   const userCanInputChat = useUserCanInputChat();
-  const isAtMaxImageCapacity =
-    useSettingsStore((s) => s.imageGenerationConcurrency) <= imageGenerationJobs.length;
+  const { active: imageRequestedRecently, trigger: triggerImageRequestFeedback } = useTemporaryFlag(800);
+  const isGeneratingImagePrompt = imageGenerationJobs.some((job) =>
+    job.tags?.includes(ChatJobTags.generatingImagePrompt)
+  );
   const canFinishChat = chatJobs.length === 0;
   const canGenerateImages =
-    !isFinalizingChat && !isAtMaxImageCapacity && (generateImagesInParallelWithText || userCanInputChat);
+    !isFinalizingChat &&
+    !(editImagePromptsBeforeDispatch && (isGeneratingImagePrompt || Boolean(pendingImagePromptEdit)));
+
+  const handleRequestSceneImage = (afterMessageId: string | undefined) => {
+    triggerImageRequestFeedback();
+    void ChatCoordinator.requestSceneImage(afterMessageId);
+  };
 
   const isGenerating = chatJobs.length > 0;
   const hasRunningJobs = chatJobs.some((job) => job.state === 'running');
@@ -761,7 +771,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                           type="button"
                           onClick={() => {
                             setActiveActionMessageId(undefined);
-                            void ChatCoordinator.requestSceneImage(entryId);
+                            handleRequestSceneImage(entryId);
                           }}
                           disabled={!canGenerateImages}
                           title="Generate image"
@@ -886,9 +896,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
             button={
               <button
                 type="button"
-                onClick={() =>
-                  void ChatCoordinator.requestSceneImage(transcript.getMostRecentChatMessage()?.id)
-                }
+                onClick={() => handleRequestSceneImage(transcript.getMostRecentChatMessage()?.id)}
                 disabled={!canGenerateImages}
                 title={
                   activeSceneImageChain
@@ -896,9 +904,16 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                     : 'Generate image'
                 }
                 aria-label="Generate image"
-                className="px-2!"
+                className={`px-2! min-w-9 flex items-center justify-center gap-1 ${
+                  imageRequestedRecently ? 'border-success-border! bg-success-bg! text-success-text!' : ''
+                }`.trim()}
               >
-                🖼️
+                {imageRequestedRecently ? '✓' : '🖼️'}
+                {imageGenerationJobs.length > 0 && (
+                  <span className="text-xs font-semibold tabular-nums text-current!">
+                    {imageGenerationJobs.length}
+                  </span>
+                )}
               </button>
             }
           >

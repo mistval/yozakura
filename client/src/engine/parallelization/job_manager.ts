@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { newId } from '../../util/id';
-import { raceWithAbort } from '../../util/promise';
+import { raceWithAbort, wait } from '../../util/promise';
 import {
   ParallelJobCancellationError,
   UNCONSTRAINED_PARALLELISM_GROUP,
@@ -76,6 +76,7 @@ export class ParallelJobManager {
   ): Promise<PromiseSettledResult<unknown>[]> {
     const results: PromiseSettledResult<unknown>[] = [];
     while (true) {
+      await wait(0);
       const matchingJobs = Array.from(this.currentJobs.values())
         .filter((j) => j.tags?.includes(tag))
         .filter((j) => !j.tags?.some((t) => exclusiveTags.includes(t)));
