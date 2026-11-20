@@ -6,7 +6,8 @@ type NumericSettingRowProps = {
   value: number;
   onChange: (nextValue: number) => void;
   onBlur?: () => void;
-  tooltipHtml?: string;
+  tooltip?: string | undefined;
+  tooltipDangerousHtml?: string | undefined;
   min?: number | undefined;
   max?: number | undefined;
   step?: number | undefined;
@@ -25,7 +26,8 @@ export default function NumericSettingRow({
   label,
   value,
   onChange,
-  tooltipHtml,
+  tooltip,
+  tooltipDangerousHtml,
   min,
   max,
   step,
@@ -37,8 +39,9 @@ export default function NumericSettingRow({
   const labelProps = {
     text: label,
     htmlFor: id,
-    ...(tooltipHtml ? { tooltipHtml } : {}),
-    ...(labelClassName ? { className: labelClassName } : {}),
+    tooltip,
+    tooltipDangerousHtml,
+    className: labelClassName,
   };
 
   return (

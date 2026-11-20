@@ -100,7 +100,7 @@ export default function CharacterChatSettings() {
           <SettingFieldLabel
             text="Chat Instructions"
             htmlFor="character-chat-instructions"
-            tooltipHtml={`Anything you enter here will be included in the system prompt for just ${character.firstName} during this chat. Use it to steer this character specifically. Applies only to this chat.`}
+            tooltip={`Anything you enter here will be included in the system prompt for just ${character.firstName} during this chat. Use it to steer this character specifically. Applies only to this chat.`}
           />
           <textarea
             id="character-chat-instructions"

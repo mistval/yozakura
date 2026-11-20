@@ -10,7 +10,8 @@ type TextFileListFieldProps = {
   value: string;
   onChange: (fileId: string) => void;
   label: string;
-  tooltipHtml: string | undefined;
+  tooltip?: string | undefined;
+  tooltipDangerousHtml?: string | undefined;
   htmlFor: string;
 };
 
@@ -19,7 +20,8 @@ export default function TextFileListField({
   value,
   onChange,
   label,
-  tooltipHtml,
+  tooltip,
+  tooltipDangerousHtml,
   htmlFor,
 }: TextFileListFieldProps) {
   const { files, error, busy, create, save, remove } = useUserTextFileList(groupKey);
@@ -58,7 +60,12 @@ export default function TextFileListField({
 
   return (
     <div className="space-y-2">
-      <SettingFieldLabel text={label} htmlFor={htmlFor} tooltipHtml={tooltipHtml} />
+      <SettingFieldLabel
+        text={label}
+        htmlFor={htmlFor}
+        tooltip={tooltip}
+        tooltipDangerousHtml={tooltipDangerousHtml}
+      />
       <select
         id={htmlFor}
         value={isCreating ? NEW_OPTION : value}

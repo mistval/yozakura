@@ -3,7 +3,7 @@ import type { PromptTemplateChain } from '../../../engine/prompt_templates/promp
 import RevertableTextSettingsGroup from '../ui/RevertableTextSettingsGroup.js';
 import TextSettingEditor from '../ui/TextSettingEditor.js';
 import SettingFieldLabel from '../ui/SettingFieldLabel.js';
-import { settingsTooltips } from '../settings_tooltips.js';
+import { settingsDangerousHtmlTooltips } from '../settings_tooltips.js';
 import type { PromptExecutionContext } from '../../../engine/prompt_templates/prompt_template_context_fields.js';
 import AIAssistantInstructionsButton from '../../ui/AIAssistantInstructionsButton.js';
 
@@ -191,7 +191,7 @@ export default function PromptTemplateChainEditor({
                   draftId={getTemplateBodyKey(template.templateId)}
                   label="Template Body"
                   htmlFor={`template-body-${chain.templateChainId}-${template.templateId}`}
-                  tooltipHtml={settingsTooltips['promptTemplates.templateBody']}
+                  tooltipDangerousHtml={settingsDangerousHtmlTooltips['promptTemplates.templateBody']}
                   value={getDraftValue(getTemplateBodyKey(template.templateId))}
                   onChange={(nextValue) => setDraftValue(getTemplateBodyKey(template.templateId), nextValue)}
                   enablePasteWarning

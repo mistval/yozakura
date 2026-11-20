@@ -165,7 +165,7 @@ export default function MainMenuFtueModal() {
                 </label>
                 <InfoTooltip
                   label="About Completions API URL"
-                  html={FTUE_API_URL_TOOLTIP_HTML}
+                  dangerouslySetHtml={FTUE_API_URL_TOOLTIP_HTML}
                   align="center"
                 />
               </div>
@@ -186,7 +186,7 @@ export default function MainMenuFtueModal() {
                 </label>
                 <InfoTooltip
                   label="About Bearer/Auth Token"
-                  html={FTUE_AUTH_TOKEN_TOOLTIP_HTML}
+                  value={FTUE_AUTH_TOKEN_TOOLTIP_HTML}
                   align="center"
                 />
               </div>
@@ -206,7 +206,11 @@ export default function MainMenuFtueModal() {
                 <label className="block text-sm font-medium" htmlFor="ftue-llm-model">
                   Model (Optional)
                 </label>
-                <InfoTooltip label="About Model" html={FTUE_MODEL_TOOLTIP_HTML} align="center" />
+                <InfoTooltip
+                  label="About Model"
+                  dangerouslySetHtml={FTUE_MODEL_TOOLTIP_HTML}
+                  align="center"
+                />
               </div>
               <input
                 id="ftue-llm-model"

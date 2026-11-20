@@ -12,7 +12,8 @@ export type ProportionalWeightSlidersProps = {
   label: string;
   items: ReadonlyArray<ProportionalWeightItem>;
   weights: Record<string, number>;
-  tooltipHtml?: string | undefined;
+  tooltip?: string | undefined;
+  tooltipDangerousHtml?: string | undefined;
   defaultWeight?: number | undefined;
   min?: number | undefined;
   max?: number | undefined;
@@ -25,7 +26,8 @@ export default function ProportionalWeightSliders({
   label,
   items,
   weights,
-  tooltipHtml,
+  tooltip,
+  tooltipDangerousHtml,
   defaultWeight = 50,
   min = 0,
   max = 100,
@@ -52,7 +54,8 @@ export default function ProportionalWeightSliders({
       <SettingFieldLabel
         text={label}
         htmlFor={items[0] ? `${idPrefix}-${items[0].id}` : undefined}
-        tooltipHtml={tooltipHtml}
+        tooltip={tooltip}
+        tooltipDangerousHtml={tooltipDangerousHtml}
       />
       <div className="space-y-2">
         {items.map((item) => {

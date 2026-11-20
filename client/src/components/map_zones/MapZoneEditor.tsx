@@ -52,7 +52,7 @@ function ZoneWardrobeTriggersInput({
         </label>
         <InfoTooltip
           label="Wardrobe Triggers"
-          html='Comma-separated wardrobe triggers applied when a character in this zone begins a chat (e.g. <code>disable:*,enable:work_uniform,enable_one:work_tie</code>). Use <code>disable:*</code> to disable all wardrobes. Tokens without a command prefix default to <code>enable</code> (e.g. <code>work_uniform</code> becomes <code>enable:work_uniform</code>). For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
+          dangerouslySetHtml='Comma-separated wardrobe triggers applied when a character in this zone begins a chat (e.g. <code>disable:*,enable:work_uniform,enable_one:work_tie</code>). Use <code>disable:*</code> to disable all wardrobes. Tokens without a command prefix default to <code>enable</code> (e.g. <code>work_uniform</code> becomes <code>enable:work_uniform</code>). For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
         />
       </div>
       <input
@@ -281,7 +281,7 @@ export default function MapZoneEditor({
                   <div className="text-sm font-medium">Private to groups</div>
                   <InfoTooltip
                     label="About batch size"
-                    html="If any groups are selected here, only members of these groups will be allowed to enter this zone (even if other groups have schedules that want them to be here)."
+                    value="If any groups are selected here, only members of these groups will be allowed to enter this zone (even if other groups have schedules that want them to be here)."
                   />
                 </div>
                 {groups.length === 0 ? (

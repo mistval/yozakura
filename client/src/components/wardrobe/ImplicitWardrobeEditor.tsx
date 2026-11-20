@@ -213,7 +213,7 @@ export default function ImplicitWardrobeEditor({
                       <span>Autoselect group</span>
                       <InfoTooltip
                         label="Autoselect group"
-                        html='If non-empty, this wardrobe will be included in the named group. At the start of each scenario day, one wardrobe from each group is randomly selected and enabled; all others in the group are disabled. Leave empty to opt out of daily autoselection. This feature allows characters to spontaneously change appearance multidimensionally between days. For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
+                        dangerouslySetHtml='If non-empty, this wardrobe will be included in the named group. At the start of each scenario day, one wardrobe from each group is randomly selected and enabled; all others in the group are disabled. Leave empty to opt out of daily autoselection. This feature allows characters to spontaneously change appearance multidimensionally between days. For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
                       />
                     </label>
                     <input
@@ -231,7 +231,7 @@ export default function ImplicitWardrobeEditor({
                       <span>Tags</span>
                       <InfoTooltip
                         label="Wardrobe tags"
-                        html='Comma-separated tags for this wardrobe (e.g. casual_clothes, work_uniform). These can be targeted by Map Zone Wardrobe Triggers to automatically enable or disable outfits when entering zones. For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
+                        dangerouslySetHtml='Comma-separated tags for this wardrobe (e.g. casual_clothes, work_uniform). These can be targeted by Map Zone Wardrobe Triggers to automatically enable or disable outfits when entering zones. For details, see the <a href="https://mistval.github.io/yozakura/docs/wardrobes">Wardrobes documentation</a>.'
                       />
                     </label>
                     <WardrobeTagsInput
@@ -252,7 +252,7 @@ export default function ImplicitWardrobeEditor({
                     <span>Auto revert</span>
                     <InfoTooltip
                       label="Auto revert"
-                      html='If auto revert is enabled, changes to the enabled state of this wardrobe during a chat will be reverted after the chat ends. This is useful for temporary states like "surprised expression" that should be turned off again after the conversation.'
+                      value='If auto revert is enabled, changes to the enabled state of this wardrobe during a chat will be reverted after the chat ends. This is useful for temporary states like "surprised expression" that should be turned off again after the conversation.'
                     />
                   </label>
                 </div>

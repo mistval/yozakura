@@ -15,12 +15,14 @@ import {
 } from '@floating-ui/react';
 import type { Placement } from '@floating-ui/react';
 
+type InfoTooltipContentProps =
+  { value: string; dangerouslySetHtml?: never } | { dangerouslySetHtml: string; value?: never };
+
 type InfoTooltipProps = {
   label: string;
-  html: string;
   side?: 'top' | 'right' | 'bottom' | 'left';
   align?: 'start' | 'center' | 'end';
-};
+} & InfoTooltipContentProps;
 
 function sanitizeHtmlTooltip(html: string): string {
   if (typeof document === 'undefined') {
@@ -38,7 +40,13 @@ function sanitizeHtmlTooltip(html: string): string {
   return template.innerHTML;
 }
 
-export default function InfoTooltip({ label, html, side = 'top', align = 'start' }: InfoTooltipProps) {
+export default function InfoTooltip({
+  label,
+  value,
+  dangerouslySetHtml,
+  side = 'top',
+  align = 'start',
+}: InfoTooltipProps) {
   const [open, setOpen] = useState(false);
   const tooltipId = useId();
   const placement: Placement = align === 'center' ? side : `${side}-${align}`;
@@ -66,7 +74,10 @@ export default function InfoTooltip({ label, html, side = 'top', align = 'start'
 
   const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, click, dismiss, role]);
 
-  const sanitizedHtml = useMemo(() => sanitizeHtmlTooltip(html), [html]);
+  const sanitizedHtml = useMemo(
+    () => (dangerouslySetHtml !== undefined ? sanitizeHtmlTooltip(dangerouslySetHtml) : undefined),
+    [dangerouslySetHtml]
+  );
 
   return (
     <>
@@ -90,8 +101,10 @@ export default function InfoTooltip({ label, html, side = 'top', align = 'start'
             style={{ ...floatingStyles, zIndex: Number.MAX_SAFE_INTEGER }}
             className="z-80 max-w-sm rounded-md border border-border-default bg-inset px-3 py-2 text-xs text-secondary-strong shadow-lg [&_a]:font-medium [&_a]:underline [&_ul]:ml-4 [&_ul]:list-disc [&_ol]:ml-4 [&_ol]:list-decimal [&_code]:rounded-sm [&_code]:bg-surface-hover-soft [&_code]:px-1 [&_code]:py-0.5"
             {...getFloatingProps()}
-            dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-          />
+            dangerouslySetInnerHTML={sanitizedHtml !== undefined ? { __html: sanitizedHtml } : undefined}
+          >
+            {sanitizedHtml === undefined ? value : undefined}
+          </div>
         </FloatingPortal>
       )}
     </>

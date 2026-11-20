@@ -38,7 +38,7 @@ export default function DescriptionSection() {
           <h3 className="text-base font-medium">Internal Description</h3>
           <InfoTooltip
             label="Internal Description"
-            html="This is the internal persona used by the system to understand how to role play as this character. Include relevant behavioral traits, backstory, etc."
+            value="This is the internal persona used by the system to understand how to role play as this character. Include relevant behavioral traits, backstory, etc."
           />
         </div>
         <textarea
@@ -133,7 +133,7 @@ export default function DescriptionSection() {
               </ButtonOptions>
               <InfoTooltip
                 label="Extract"
-                html='Extract attempts to populate all fields from arbitrary text in the Internal Description. Try dumping a whole wiki article, chapter of a novel, etc into "Internal Description" and clicking Extract.'
+                value='Extract attempts to populate all fields from arbitrary text in the Internal Description. Try dumping a whole wiki article, chapter of a novel, etc into "Internal Description" and clicking Extract.'
               />
             </>
           )}
@@ -147,7 +147,7 @@ export default function DescriptionSection() {
           </h3>
           <InfoTooltip
             label="External Description"
-            html="Public description known or visible to other characters. Prioritize information about appearance, social status, and other externally observable details here. This is the description used by the system when describing the character to other characters. If omitted, other characters won't know anything about this character except what they learn through chat interactions."
+            value="Public description known or visible to other characters. Prioritize information about appearance, social status, and other externally observable details here. This is the description used by the system when describing the character to other characters. If omitted, other characters won't know anything about this character except what they learn through chat interactions."
           />
         </div>
         <textarea

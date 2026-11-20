@@ -6,28 +6,10 @@ export const settingsTooltips = {
     'Change the map name, just for this scenario. Your global map will remain unchanged.',
   'scenario.activeMapDescription':
     'Change the map description, just for this scenario. Your global map will remain unchanged. You can use this to influence narrative directionality too, for example by adding "it\'s Winter now and everyone is trying to find food."',
-  'scenario.remoteChatMedium':
-    'Describes how characters communicate when chatting across different locations (for example, "text messaging", "telepathy", or "carrier pigeons"). Available to prompt templates as <code>it.scenario.remoteChatMedium</code>.',
-  'appearance.theme':
-    'Select a theme. <strong>System</strong> chooses either Sakura or Yozakura based on your system light/dark setting.',
   'appearance.conversationLogWidth': 'Controls the width of the conversation log dialog on desktop.',
   'image.promptPrefix': 'This text is prepended to all image generation prompts.',
-  'image.apiUrl':
-    'Image API endpoint URL. For AUTOMATIC1111, typically you should use the <code>/sdapi/v1/txt2img</code> endpoint. For OpenRouter (or similar), use the <code>/v1/chat/completions</code> endpoint.',
-  'image.authToken':
-    'Optional bearer token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Required for most cloud  providers.',
-  'image.metaOptions':
-    'Extra JSON fields merged into every image generation request. For OpenRouter, this is where you set <code>model</code>, <code>size</code>, <code>n</code>, etc. For AUTOMATIC1111, this controls diffusion parameters such as <code>steps</code>, <code>sampler_name</code>, <code>cfg_scale</code>.',
-  'image.model':
-    'The image model to request (for example <code>x-ai/grok-imagine-image-quality</code>). This is saved as the <code>model</code> field of the meta options below.',
-  'image.negativePrompt':
-    'This text is appended as a <strong>negative prompt</strong> to discourage unwanted visual artifacts.',
   'image.editPromptBeforeDispatch':
     'When enabled, generated image prompts open in an editor before the request is sent to the image API. When disabled, prompts are dispatched immediately without an opportunity to edit. This setting does not apply to auto image, which is always fully automatic.',
-  'image.autoRate':
-    'Chance that each new chat message automatically generates an image. <strong>0</strong> disables auto image and <strong>100</strong> triggers on every message.',
-  'image.autoTemplateWeights':
-    'Relative weights (<strong>0</strong> to <strong>100</strong>) controlling how often each image prompt template is chosen when auto image triggers. Weights are proportional rather than percentages—if all templates are set to the same value, they have an equal chance of triggering.',
   'image.autoNpcOnly':
     'When enabled, auto image runs only when the user is not a participant in the chat, and the chat is not paused.',
   'image.width': 'Target width (in pixels) for generated chat images.',
@@ -44,11 +26,7 @@ export const settingsTooltips = {
     'Multiplier applied to familiarity gains towards the user. Setting a multiplier above one effectively makes NPCs approach the user more often.',
   'npc.familiarityWeightMultiplier':
     'Controls how strongly familiarity affects weighted choices that use familiarity weighting (for example, which character an NPC prefers to interact with and gossip target weighting). Increasing this makes NPCs more "cliquey" and likely to interact with characters they have already interacted with frequently.',
-  'npc.userGossipChanceMultiplier':
-    "Multiplier applied only to the user's gossip target selection weight when the user is a gossip target candidate. <strong>0</strong> disables user selection as a gossip target. <strong>1</strong> is neutral. Higher than 1 makes the user more likely to be selected as the gossip target than their baseline chance (which is controlled by familiarity). Increase this if you like being the center of attention.",
   'npc.groupLimit': 'The total number of messages generated during an NPC-only group chat.',
-  'npc.chatEndMode':
-    '<strong>Fixed length</strong> ends NPC-only chats at a fixed message count. <strong>Intelligent</strong> uses an LLM judge to decide when a conversation has reached a natural stopping point.',
   'npc.intelligentMinLength':
     'The minimum length of a one-on-one NPC-only conversation, in messages. The judge will not run, and the chat will not end, until at least this many messages have been sent.',
   'npc.intelligentMaxLength':
@@ -61,8 +39,6 @@ export const settingsTooltips = {
     'The suggested good length for one-on-one NPC-only chats, in messages. Passed to the judge as guidance: it becomes more willing to end the conversation once this length is exceeded. This is a suggestion, not a hard limit.',
   'npc.intelligentGroupTargetLength':
     'The suggested good length for NPC-only group chats (three or more participants), in messages. Passed to the judge as guidance: it becomes more willing to end the conversation once this length is exceeded. This is a suggestion, not a hard limit.',
-  'npc.intelligentJudgementInterval':
-    'How often the judge runs once the minimum length is reached, in messages. <strong>1</strong> runs the judge after every message, <strong>2</strong> every other message, and so on. Higher values reduce the number of judge calls but may miss the optimal stopping point',
   'npc.intelligentJudgeHistoryLength':
     'How many of the most recent messages the judge can see when deciding whether to end the conversation.',
   'npc.offscreenMentionLimit':
@@ -73,12 +49,6 @@ export const settingsTooltips = {
     'How many pieces of recent offscreen learned information are retained per character-pair. Older information is discarded and will no longer be injected into memory rewrite prompts, thus information no longer in that window is more likely to be discarded from character memory.',
   'chat.paneWidth':
     'Controls the scenario layout mode and chat panel width on desktop, or switches to the mobile drawer layout.',
-  speakerSelectionMode:
-    '<strong>Round Robin</strong> rotates speakers in a consistent order. <strong>Intelligent</strong> uses LLM-based moderation to choose who speaks next.',
-  'behavior.pauseAtNpcChatStart':
-    'When enabled, every NPC-initiated chat begins paused with control handed to you, so you can control it fully (cancel the conversation, choose who speaks, edit, delete, or redo messages, etc). Press <strong>Start Chat</strong> / <strong>Resume</strong> in the chat to continue automatically.',
-  'npc.freedomOfMovement':
-    "When enabled, movement and conversation do not consume the user's turn. Your turn ends only when you press <strong>Wait</strong>.",
   'npc.onlyChatDelay':
     'Optional delay, in seconds, after each NPC message in NPC-only chats (chats where the user is not a participant). Use this to slow the pace of messages as they appear on screen.',
   'npc.gossipRate':
@@ -103,6 +73,39 @@ export const settingsTooltips = {
     'Optional bearer token override. Leave blank to inherit token from earlier matching groups.',
   'llm.tokenStreaming':
     'When enabled, responses stream token-by-token. Select Inherit to use the setting from earlier matching groups. Requires your OpenAI-compatible API provider to support streaming (SSE).',
+} as const;
+
+export const settingsDangerousHtmlTooltips = {
+  'scenario.remoteChatMedium':
+    'Describes how characters communicate when chatting across different locations (for example, "text messaging", "telepathy", or "carrier pigeons"). Available to prompt templates as <code>it.scenario.remoteChatMedium</code>.',
+  'appearance.theme':
+    'Select a theme. <strong>System</strong> chooses either Sakura or Yozakura based on your system light/dark setting.',
+  'image.apiUrl':
+    'Image API endpoint URL. For AUTOMATIC1111, typically you should use the <code>/sdapi/v1/txt2img</code> endpoint. For OpenRouter (or similar), use the <code>/v1/chat/completions</code> endpoint.',
+  'image.authToken':
+    'Optional bearer token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Required for most cloud  providers.',
+  'image.metaOptions':
+    'Extra JSON fields merged into every image generation request. For OpenRouter, this is where you set <code>model</code>, <code>size</code>, <code>n</code>, etc. For AUTOMATIC1111, this controls diffusion parameters such as <code>steps</code>, <code>sampler_name</code>, <code>cfg_scale</code>.',
+  'image.model':
+    'The image model to request (for example <code>x-ai/grok-imagine-image-quality</code>). This is saved as the <code>model</code> field of the meta options below.',
+  'image.negativePrompt':
+    'This text is appended as a <strong>negative prompt</strong> to discourage unwanted visual artifacts.',
+  'image.autoRate':
+    'Chance that each new chat message automatically generates an image. <strong>0</strong> disables auto image and <strong>100</strong> triggers on every message.',
+  'image.autoTemplateWeights':
+    'Relative weights (<strong>0</strong> to <strong>100</strong>) controlling how often each image prompt template is chosen when auto image triggers. Weights are proportional rather than percentages—if all templates are set to the same value, they have an equal chance of triggering.',
+  'npc.userGossipChanceMultiplier':
+    "Multiplier applied only to the user's gossip target selection weight when the user is a gossip target candidate. <strong>0</strong> disables user selection as a gossip target. <strong>1</strong> is neutral. Higher than 1 makes the user more likely to be selected as the gossip target than their baseline chance (which is controlled by familiarity). Increase this if you like being the center of attention.",
+  'npc.chatEndMode':
+    '<strong>Fixed length</strong> ends NPC-only chats at a fixed message count. <strong>Intelligent</strong> uses an LLM judge to decide when a conversation has reached a natural stopping point.',
+  'npc.intelligentJudgementInterval':
+    'How often the judge runs once the minimum length is reached, in messages. <strong>1</strong> runs the judge after every message, <strong>2</strong> every other message, and so on. Higher values reduce the number of judge calls but may miss the optimal stopping point',
+  speakerSelectionMode:
+    '<strong>Round Robin</strong> rotates speakers in a consistent order. <strong>Intelligent</strong> uses LLM-based moderation to choose who speaks next.',
+  'behavior.pauseAtNpcChatStart':
+    'When enabled, every NPC-initiated chat begins paused with control handed to you, so you can control it fully (cancel the conversation, choose who speaks, edit, delete, or redo messages, etc). Press <strong>Start Chat</strong> / <strong>Resume</strong> in the chat to continue automatically.',
+  'npc.freedomOfMovement':
+    "When enabled, movement and conversation do not consume the user's turn. Your turn ends only when you press <strong>Wait</strong>.",
   'llm.responsePreParser':
     'Optional JavaScript function source that pre-processes raw model responses for this option group. Leave blank to inherit from earlier matching groups. It must evaluate to a function like <code>(response) => string</code>. This parser runs before any parsers configured for prompt templates.',
   'llm.model':
@@ -116,3 +119,4 @@ export const settingsTooltips = {
 } as const;
 
 export type SettingsTooltipKey = keyof typeof settingsTooltips;
+export type SettingsDangerousHtmlTooltipKey = keyof typeof settingsDangerousHtmlTooltips;

@@ -151,7 +151,7 @@ export default function CharacterOverviewSingleData({
                 <span>Next conversation with</span>
                 <InfoTooltip
                   label="Next conversation with"
-                  html="If this is set, this character will speak with the specified other character at the next opportunity, and it will be a rich interaction."
+                  value="If this is set, this character will speak with the specified other character at the next opportunity, and it will be a rich interaction."
                 />
               </div>
               <select

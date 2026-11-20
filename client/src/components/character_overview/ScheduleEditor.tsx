@@ -168,7 +168,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
             </label>
             <InfoTooltip
               label="About length in turns"
-              html="The schedule will repeat from the beginning after this many turns. Check the vertical <b>now</b> indicator line on the calendar bar to see where on the schedule we currently are. By default, there are eight turns per day, so set this to 8 if you want a single-day schedule, or 56 (8 x 7) if you want a week-long schedule. The number of turns per day may be different if you have changed the <b>Temporal Context</b> in Scenario Settings."
+              dangerouslySetHtml="The schedule will repeat from the beginning after this many turns. Check the vertical <b>now</b> indicator line on the calendar bar to see where on the schedule we currently are. By default, there are eight turns per day, so set this to 8 if you want a single-day schedule, or 56 (8 x 7) if you want a week-long schedule. The number of turns per day may be different if you have changed the <b>Temporal Context</b> in Scenario Settings."
             />
           </div>
           <input
@@ -314,7 +314,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
                 </label>
                 <InfoTooltip
                   label="About movement policy"
-                  html="The character is required to be in this zone when this schedule segment is active. If a character has multiple active schedule segments, they are allowed to be in any one the zones they are assigned to, and will move toward the nearest."
+                  value="The character is required to be in this zone when this schedule segment is active. If a character has multiple active schedule segments, they are allowed to be in any one the zones they are assigned to, and will move toward the nearest."
                 />
               </div>
               <select
@@ -338,7 +338,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
                 </label>
                 <InfoTooltip
                   label="About movement policy"
-                  html="<strong>Teleport</strong> means the character will instantly warp to the zone when their schedule requires them to be there, and then they still get a turn. <strong>Jump</strong> similarly means the character will instantly warp, but it consumes their turn. <strong>Rush</strong> means the character will move towards the zone one hop at a time, never stopping to initiate chats (although other characters can still initiate chats with them). <strong>Casual</strong> means the character will move towards the zone one hop at a time, while occasionally stopping to initiate chats, at the rate specified in Behavior Settings."
+                  dangerouslySetHtml="<strong>Teleport</strong> means the character will instantly warp to the zone when their schedule requires them to be there, and then they still get a turn. <strong>Jump</strong> similarly means the character will instantly warp, but it consumes their turn. <strong>Rush</strong> means the character will move towards the zone one hop at a time, never stopping to initiate chats (although other characters can still initiate chats with them). <strong>Casual</strong> means the character will move towards the zone one hop at a time, while occasionally stopping to initiate chats, at the rate specified in Behavior Settings."
                 />
               </div>
               <select
@@ -412,7 +412,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
               </label>
               <InfoTooltip
                 label="About obedience rate"
-                html="How often characters actually follow this schedule segment. At 100% they always obey. Lower it to add spontaneity: on a turn where the roll fails, the segment is ignored as if it weren't scheduled, so the character is free to wander or stay put — like deciding not to go to bed because they couldn't sleep."
+                value="How often characters actually follow this schedule segment. At 100% they always obey. Lower it to add spontaneity: on a turn where the roll fails, the segment is ignored as if it weren't scheduled, so the character is free to wander or stay put — like deciding not to go to bed because they couldn't sleep."
               />
             </div>
             <RangeNumberInput
@@ -435,7 +435,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
               </label>
               <InfoTooltip
                 label="About movement policy"
-                html="The reason why the character should be here at the specified time. Should complete the thought: <strong>They are here because ... </strong>. For example: <strong>they work here</strong>. This information will be injected into their system prompt (unless you have edited the Chat System Prompt to do otherwise)."
+                dangerouslySetHtml="The reason why the character should be here at the specified time. Should complete the thought: <strong>They are here because ... </strong>. For example: <strong>they work here</strong>. This information will be injected into their system prompt (unless you have edited the Chat System Prompt to do otherwise)."
               />
             </div>
             <textarea

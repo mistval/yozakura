@@ -3,7 +3,7 @@ import CheckboxSettingRow from './ui/CheckboxSettingRow.js';
 import RangeNumberInput from './ui/RangeNumberInput.js';
 import ProportionalWeightSliders from './ui/ProportionalWeightSliders.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
-import { settingsTooltips } from './settings_tooltips.js';
+import { settingsDangerousHtmlTooltips, settingsTooltips } from './settings_tooltips.js';
 import CustomScriptSettings from './settingsScripts/CustomScriptSettings.js';
 import { IMAGE_SCRIPT_DESCRIPTOR, useImageScriptSelection } from './settingsScripts/imageScriptSection.js';
 import { chatSceneImageTemplatesGroup } from '../../engine/prompt_templates/chat/group.js';
@@ -39,7 +39,7 @@ export default function ImageGenerationSettingsSection() {
         <SettingFieldLabel
           text="Global image prompt prefix"
           htmlFor="image-prompt-prefix"
-          tooltipHtml={settingsTooltips['image.promptPrefix']}
+          tooltip={settingsTooltips['image.promptPrefix']}
         />
         <textarea
           id="image-prompt-prefix"
@@ -52,7 +52,7 @@ export default function ImageGenerationSettingsSection() {
         <CheckboxSettingRow
           id="image-edit-prompt-before-dispatch"
           label="Edit image prompts before dispatch"
-          tooltipHtml={settingsTooltips['image.editPromptBeforeDispatch']}
+          tooltip={settingsTooltips['image.editPromptBeforeDispatch']}
           checked={editImagePromptsBeforeDispatch}
           onChange={(nextChecked) => setSettings({ editImagePromptsBeforeDispatch: nextChecked })}
         />
@@ -61,7 +61,7 @@ export default function ImageGenerationSettingsSection() {
           <CheckboxSettingRow
             id="image-parallel-with-text"
             label="Generate Images In Parallel With Text"
-            tooltipHtml={settingsTooltips['image.generateImagesInParallelWithText']}
+            tooltip={settingsTooltips['image.generateImagesInParallelWithText']}
             checked={generateImagesInParallelWithText}
             onChange={(nextChecked) => setSettings({ generateImagesInParallelWithText: nextChecked })}
           />
@@ -70,7 +70,7 @@ export default function ImageGenerationSettingsSection() {
             <SettingFieldLabel
               text="Image generation concurrency"
               htmlFor="image-concurrency"
-              tooltipHtml={settingsTooltips['image.concurrency']}
+              tooltip={settingsTooltips['image.concurrency']}
             />
             <input
               id="image-concurrency"
@@ -92,7 +92,7 @@ export default function ImageGenerationSettingsSection() {
           <SettingFieldLabel
             text={`Auto image rate (${toPercent(autoImageRate)}%)`}
             htmlFor="image-auto-rate"
-            tooltipHtml={settingsTooltips['image.autoRate']}
+            tooltipDangerousHtml={settingsDangerousHtmlTooltips['image.autoRate']}
           />
           <RangeNumberInput
             id="image-auto-rate"
@@ -113,7 +113,7 @@ export default function ImageGenerationSettingsSection() {
           <ProportionalWeightSliders
             idPrefix="image-auto-template-weight"
             label="Auto image template weights"
-            tooltipHtml={settingsTooltips['image.autoTemplateWeights']}
+            tooltipDangerousHtml={settingsDangerousHtmlTooltips['image.autoTemplateWeights']}
             items={sceneImageChains.map((chain) => ({
               id: chain.templateChainId,
               label: chain.settingsBridge.get().title,
@@ -126,7 +126,7 @@ export default function ImageGenerationSettingsSection() {
         <CheckboxSettingRow
           id="image-auto-npc-only"
           label="Auto image NPC only"
-          tooltipHtml={settingsTooltips['image.autoNpcOnly']}
+          tooltip={settingsTooltips['image.autoNpcOnly']}
           checked={autoImageNpcOnly}
           onChange={(nextChecked) => setSettings({ autoImageNpcOnly: nextChecked })}
         />

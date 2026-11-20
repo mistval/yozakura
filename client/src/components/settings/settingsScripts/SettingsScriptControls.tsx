@@ -34,24 +34,24 @@ function toIsoDate(date: Date): string {
 
 type FieldChromeProps = {
   label: string;
-  tooltipHtml: string | undefined;
+  tooltipDangerousHtml: string | undefined;
   htmlFor: string;
   children: React.ReactNode;
 };
 
-function StackedField({ label, tooltipHtml, htmlFor, children }: FieldChromeProps) {
+function StackedField({ label, tooltipDangerousHtml, htmlFor, children }: FieldChromeProps) {
   return (
     <div className="space-y-1">
-      <SettingFieldLabel text={label} htmlFor={htmlFor} tooltipHtml={tooltipHtml} />
+      <SettingFieldLabel text={label} htmlFor={htmlFor} tooltipDangerousHtml={tooltipDangerousHtml} />
       {children}
     </div>
   );
 }
 
-function InlineField({ label, tooltipHtml, htmlFor, children }: FieldChromeProps) {
+function InlineField({ label, tooltipDangerousHtml, htmlFor, children }: FieldChromeProps) {
   return (
     <div className="text-xs text-muted flex items-center justify-between gap-3">
-      <SettingFieldLabel text={label} htmlFor={htmlFor} tooltipHtml={tooltipHtml} />
+      <SettingFieldLabel text={label} htmlFor={htmlFor} tooltipDangerousHtml={tooltipDangerousHtml} />
       {children}
     </div>
   );
@@ -81,7 +81,11 @@ function ControlField({
   switch (control.type) {
     case 'string':
       return (
-        <StackedField label={control.label ?? control.id} tooltipHtml={control.tooltipHtml} htmlFor={htmlFor}>
+        <StackedField
+          label={control.label ?? control.id}
+          tooltipDangerousHtml={control.tooltipHtml}
+          htmlFor={htmlFor}
+        >
           <input
             id={htmlFor}
             value={value}
@@ -94,7 +98,11 @@ function ControlField({
 
     case 'password':
       return (
-        <StackedField label={control.label ?? control.id} tooltipHtml={control.tooltipHtml} htmlFor={htmlFor}>
+        <StackedField
+          label={control.label ?? control.id}
+          tooltipDangerousHtml={control.tooltipHtml}
+          htmlFor={htmlFor}
+        >
           <div className="flex gap-2">
             <input
               id={htmlFor}
@@ -118,7 +126,11 @@ function ControlField({
     case 'json': {
       const jsonError = value.trim() && safeParseJson(value) === undefined ? 'Must be valid JSON.' : '';
       return (
-        <StackedField label={control.label ?? control.id} tooltipHtml={control.tooltipHtml} htmlFor={htmlFor}>
+        <StackedField
+          label={control.label ?? control.id}
+          tooltipDangerousHtml={control.tooltipHtml}
+          htmlFor={htmlFor}
+        >
           <textarea
             id={htmlFor}
             rows={8}
@@ -135,7 +147,11 @@ function ControlField({
 
     case 'number':
       return (
-        <InlineField label={control.label ?? control.id} tooltipHtml={control.tooltipHtml} htmlFor={htmlFor}>
+        <InlineField
+          label={control.label ?? control.id}
+          tooltipDangerousHtml={control.tooltipHtml}
+          htmlFor={htmlFor}
+        >
           <input
             id={htmlFor}
             type="number"
@@ -154,7 +170,11 @@ function ControlField({
       // Keep a previously-saved value selectable even before its options load (e.g. ComfyUI before Connect).
       const hasValue = value === '' || control.options.some((option) => option.value === value);
       return (
-        <InlineField label={control.label ?? control.id} tooltipHtml={control.tooltipHtml} htmlFor={htmlFor}>
+        <InlineField
+          label={control.label ?? control.id}
+          tooltipDangerousHtml={control.tooltipHtml}
+          htmlFor={htmlFor}
+        >
           <select
             id={htmlFor}
             value={value}
@@ -176,7 +196,11 @@ function ControlField({
       const parsedDate = value ? new Date(`${value}T00:00:00`) : undefined;
       const selectedDate = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : undefined;
       return (
-        <StackedField label={control.label ?? control.id} tooltipHtml={control.tooltipHtml} htmlFor={htmlFor}>
+        <StackedField
+          label={control.label ?? control.id}
+          tooltipDangerousHtml={control.tooltipHtml}
+          htmlFor={htmlFor}
+        >
           <Calendar
             value={selectedDate ?? null}
             onChange={(next) => {
@@ -195,7 +219,7 @@ function ControlField({
         <TextFileListField
           groupKey={makeTextFileGroupKey(sectionId, scriptId, control.id)}
           label={control.label ?? control.id}
-          tooltipHtml={control.tooltipHtml}
+          tooltipDangerousHtml={control.tooltipHtml}
           htmlFor={htmlFor}
           value={value}
           onChange={onChange}

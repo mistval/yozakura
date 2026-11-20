@@ -5,7 +5,8 @@ type CheckboxSettingRowProps = {
   label: string;
   checked: boolean;
   onChange: (nextChecked: boolean) => void;
-  tooltipHtml?: string;
+  tooltip?: string | undefined;
+  tooltipDangerousHtml?: string | undefined;
 };
 
 export default function CheckboxSettingRow({
@@ -13,11 +14,17 @@ export default function CheckboxSettingRow({
   label,
   checked,
   onChange,
-  tooltipHtml,
+  tooltip,
+  tooltipDangerousHtml,
 }: CheckboxSettingRowProps) {
   return (
     <label className="flex items-center gap-3 text-sm">
-      <SettingFieldLabel text={label} htmlFor={id} tooltipHtml={tooltipHtml} />
+      <SettingFieldLabel
+        text={label}
+        htmlFor={id}
+        tooltip={tooltip}
+        tooltipDangerousHtml={tooltipDangerousHtml}
+      />
       <input
         id={id}
         type="checkbox"

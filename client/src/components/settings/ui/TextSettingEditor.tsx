@@ -6,7 +6,8 @@ type TextSettingEditorProps = {
   draftId?: string;
   label: string;
   htmlFor: string;
-  tooltipHtml?: string | undefined;
+  tooltip?: string | undefined;
+  tooltipDangerousHtml?: string | undefined;
   value: string;
   onChange: (nextValue: string) => void;
   textareaRows?: number;
@@ -20,7 +21,8 @@ export default function TextSettingEditor({
   draftId,
   label,
   htmlFor,
-  tooltipHtml,
+  tooltip,
+  tooltipDangerousHtml,
   value,
   onChange,
   textareaRows = 12,
@@ -33,7 +35,12 @@ export default function TextSettingEditor({
 
   return (
     <div className="space-y-1">
-      <SettingFieldLabel text={label} htmlFor={htmlFor} tooltipHtml={tooltipHtml} />
+      <SettingFieldLabel
+        text={label}
+        htmlFor={htmlFor}
+        tooltip={tooltip}
+        tooltipDangerousHtml={tooltipDangerousHtml}
+      />
       <textarea
         spellCheck={spellCheck}
         id={htmlFor}

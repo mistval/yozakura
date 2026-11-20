@@ -6,7 +6,7 @@ import {
   type Settings,
 } from '../../state/settings_store.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
-import { settingsTooltips } from './settings_tooltips.js';
+import { settingsDangerousHtmlTooltips, settingsTooltips } from './settings_tooltips.js';
 
 const THEME_OPTIONS: ReadonlyArray<{ value: Settings['theme']; label: string }> = [
   { value: 'system', label: 'System' },
@@ -36,7 +36,8 @@ const CONVERSATION_LOG_WIDTH_OPTIONS: ReadonlyArray<{ value: ConversationLogWidt
 type AppearanceSelectFieldProps<T extends string> = {
   id: string;
   label: string;
-  tooltipHtml: string;
+  tooltip?: string | undefined;
+  tooltipDangerousHtml?: string | undefined;
   value: T;
   options: ReadonlyArray<{ value: T; label: string }>;
   onChange: (nextValue: T) => void;
@@ -45,14 +46,20 @@ type AppearanceSelectFieldProps<T extends string> = {
 function AppearanceSelectField<T extends string>({
   id,
   label,
-  tooltipHtml,
+  tooltip,
+  tooltipDangerousHtml,
   value,
   options,
   onChange,
 }: AppearanceSelectFieldProps<T>) {
   return (
     <div className="bordered-section">
-      <SettingFieldLabel text={label} htmlFor={id} tooltipHtml={tooltipHtml} />
+      <SettingFieldLabel
+        text={label}
+        htmlFor={id}
+        tooltip={tooltip}
+        tooltipDangerousHtml={tooltipDangerousHtml}
+      />
       <select
         id={id}
         value={value}
@@ -92,7 +99,7 @@ export default function AppearanceSettingsSection() {
       <AppearanceSelectField
         id="appearance-theme"
         label="Theme"
-        tooltipHtml={settingsTooltips['appearance.theme']}
+        tooltipDangerousHtml={settingsDangerousHtmlTooltips['appearance.theme']}
         value={theme || 'system'}
         options={THEME_OPTIONS}
         onChange={(nextTheme) => setSettings({ theme: nextTheme })}
@@ -101,7 +108,7 @@ export default function AppearanceSettingsSection() {
       <AppearanceSelectField
         id="appearance-layout"
         label="Layout"
-        tooltipHtml={settingsTooltips['chat.paneWidth']}
+        tooltip={settingsTooltips['chat.paneWidth']}
         value={chatPaneWidth}
         options={LAYOUT_OPTIONS}
         onChange={(nextLayout) => setSettings({ chatPaneWidth: nextLayout })}
@@ -110,7 +117,7 @@ export default function AppearanceSettingsSection() {
       <AppearanceSelectField
         id="appearance-conversation-log-width"
         label="Conversation Log Width"
-        tooltipHtml={settingsTooltips['appearance.conversationLogWidth']}
+        tooltip={settingsTooltips['appearance.conversationLogWidth']}
         value={conversationLogWidth}
         options={CONVERSATION_LOG_WIDTH_OPTIONS}
         onChange={(nextWidth) => setSettings({ conversationLogWidth: nextWidth })}

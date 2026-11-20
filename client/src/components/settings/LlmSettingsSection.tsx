@@ -5,7 +5,7 @@ import { LLM_DEFAULTS } from '../../engine/settings/llm_defaults.js';
 import { useSettingsStore, type LLMOptionsGroup } from '../../state/settings_store.js';
 import { useModalScroll } from '../ui/Modal.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
-import { settingsTooltips } from './settings_tooltips.js';
+import { settingsDangerousHtmlTooltips, settingsTooltips } from './settings_tooltips.js';
 import { getErrorMessage } from '../../errors/error_util.js';
 import { useLlmConnectionTest } from '../../hooks/useLlmConnectionTest.js';
 import { useTextareaPasteWarningGate } from './pasteWarning/useTextareaPasteWarningGate.js';
@@ -164,7 +164,7 @@ function ConfigEditor({
         <SettingFieldLabel
           text="Name"
           htmlFor={`llm-config-name-${config.id}`}
-          tooltipHtml={settingsTooltips['llm.name']}
+          tooltip={settingsTooltips['llm.name']}
         />
         <input
           id={`llm-config-name-${config.id}`}
@@ -181,7 +181,7 @@ function ConfigEditor({
         <SettingFieldLabel
           text="Completions API URL"
           htmlFor={`llm-config-url-${config.id}`}
-          tooltipHtml={settingsTooltips['llm.url']}
+          tooltip={settingsTooltips['llm.url']}
         />
         <input
           id={`llm-config-url-${config.id}`}
@@ -198,7 +198,7 @@ function ConfigEditor({
         <SettingFieldLabel
           text="Bearer Token (optional)"
           htmlFor={`llm-config-auth-${config.id}`}
-          tooltipHtml={settingsTooltips['llm.authToken']}
+          tooltip={settingsTooltips['llm.authToken']}
         />
         <div className="flex gap-2">
           <input
@@ -231,7 +231,7 @@ function ConfigEditor({
         <SettingFieldLabel
           text="Model (optional)"
           htmlFor={`llm-config-model-${config.id}`}
-          tooltipHtml={settingsTooltips['llm.model']}
+          tooltipDangerousHtml={settingsDangerousHtmlTooltips['llm.model']}
         />
         <input
           id={`llm-config-model-${config.id}`}
@@ -258,7 +258,7 @@ function ConfigEditor({
           <SettingFieldLabel
             text="LLM Meta Options (JSON)"
             htmlFor={`llm-config-meta-${config.id}`}
-            tooltipHtml={settingsTooltips['llm.metaOptions']}
+            tooltipDangerousHtml={settingsDangerousHtmlTooltips['llm.metaOptions']}
           />
           <textarea
             id={`llm-config-meta-${config.id}`}
@@ -277,7 +277,7 @@ function ConfigEditor({
           <SettingFieldLabel
             text="Rule (optional)"
             htmlFor={`llm-config-rule-${config.id}`}
-            tooltipHtml={settingsTooltips['llm.rule']}
+            tooltipDangerousHtml={settingsDangerousHtmlTooltips['llm.rule']}
           />
           <input
             id={`llm-config-rule-${config.id}`}
@@ -303,7 +303,7 @@ function ConfigEditor({
             <SettingFieldLabel
               text="Token streaming"
               htmlFor={`llm-token-streaming-${config.id}`}
-              tooltipHtml={settingsTooltips['llm.tokenStreaming']}
+              tooltip={settingsTooltips['llm.tokenStreaming']}
             />
             <select
               id={`llm-token-streaming-${config.id}`}
@@ -328,7 +328,7 @@ function ConfigEditor({
               <SettingFieldLabel
                 text="Concurrency Group Name (optional)"
                 htmlFor={`llm-config-concurrency-group-${config.id}`}
-                tooltipHtml={settingsTooltips['llm.concurrencyGroupName']}
+                tooltip={settingsTooltips['llm.concurrencyGroupName']}
               />
               <input
                 id={`llm-config-concurrency-group-${config.id}`}
@@ -345,7 +345,7 @@ function ConfigEditor({
               <SettingFieldLabel
                 text="Concurrency Group Limit (optional)"
                 htmlFor={`llm-config-concurrency-limit-${config.id}`}
-                tooltipHtml={settingsTooltips['llm.concurrencyGroupLimit']}
+                tooltip={settingsTooltips['llm.concurrencyGroupLimit']}
               />
               <input
                 id={`llm-config-concurrency-limit-${config.id}`}
@@ -365,7 +365,7 @@ function ConfigEditor({
             <SettingFieldLabel
               text="Response Pre-parser (optional)"
               htmlFor={`llm-config-response-pre-parser-${config.id}`}
-              tooltipHtml={settingsTooltips['llm.responsePreParser']}
+              tooltipDangerousHtml={settingsDangerousHtmlTooltips['llm.responsePreParser']}
             />
             <textarea
               id={`llm-config-response-pre-parser-${config.id}`}

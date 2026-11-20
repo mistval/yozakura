@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStateRef } from '../../hooks/useStateRef.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
-import { settingsTooltips } from './settings_tooltips.js';
+import { settingsDangerousHtmlTooltips, settingsTooltips } from './settings_tooltips.js';
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { DEFAULT_REMOTE_CHAT_MEDIUM } from '../../engine/types.js';
 import { getErrorMessage } from '../../errors/error_util.js';
@@ -15,7 +15,8 @@ import {
 function ResettableTextField({
   id,
   label,
-  tooltipHtml,
+  tooltip,
+  tooltipDangerousHtml,
   value,
   placeholder,
   disabled,
@@ -27,7 +28,8 @@ function ResettableTextField({
 }: {
   id: string;
   label: string;
-  tooltipHtml: string;
+  tooltip?: string | undefined;
+  tooltipDangerousHtml?: string | undefined;
   value: string;
   placeholder: string;
   disabled: boolean;
@@ -43,7 +45,8 @@ function ResettableTextField({
         <SettingFieldLabel
           text={label}
           htmlFor={id}
-          tooltipHtml={tooltipHtml}
+          tooltip={tooltip}
+          tooltipDangerousHtml={tooltipDangerousHtml}
           className="text-sm font-medium text-primary"
         />
         {canReset && (
@@ -171,7 +174,7 @@ export default function ScenarioSettingsSection() {
       <ResettableTextField
         id="scenario-save-name"
         label="Save Name"
-        tooltipHtml={settingsTooltips['scenario.saveName']}
+        tooltip={settingsTooltips['scenario.saveName']}
         value={saveNameValue}
         placeholder="Leave blank to show User and Map"
         disabled={!scenarioLoaded}
@@ -185,7 +188,7 @@ export default function ScenarioSettingsSection() {
           <SettingFieldLabel
             text="Map"
             htmlFor="scenario-active-map"
-            tooltipHtml={settingsTooltips['scenario.activeMap']}
+            tooltip={settingsTooltips['scenario.activeMap']}
             className="text-sm font-medium text-primary"
           />
           <select
@@ -218,7 +221,7 @@ export default function ScenarioSettingsSection() {
         <ResettableTextField
           id="scenario-map-name"
           label="Map Name"
-          tooltipHtml={settingsTooltips['scenario.activeMapName']}
+          tooltip={settingsTooltips['scenario.activeMapName']}
           value={nameValue}
           placeholder={baseMap?.name ?? ''}
           disabled={!scenarioLoaded}
@@ -230,7 +233,7 @@ export default function ScenarioSettingsSection() {
         <ResettableTextField
           id="scenario-map-description"
           label="Map Description"
-          tooltipHtml={settingsTooltips['scenario.activeMapDescription']}
+          tooltip={settingsTooltips['scenario.activeMapDescription']}
           value={descriptionValue}
           placeholder={baseMap?.description ?? ''}
           disabled={!scenarioLoaded}
@@ -244,7 +247,7 @@ export default function ScenarioSettingsSection() {
       <ResettableTextField
         id="scenario-remote-chat-medium"
         label="Remote Chat Medium"
-        tooltipHtml={settingsTooltips['scenario.remoteChatMedium']}
+        tooltipDangerousHtml={settingsDangerousHtmlTooltips['scenario.remoteChatMedium']}
         value={remoteChatMediumValue}
         placeholder={DEFAULT_REMOTE_CHAT_MEDIUM}
         disabled={!scenarioLoaded}
@@ -259,7 +262,7 @@ export default function ScenarioSettingsSection() {
           <SettingFieldLabel
             text="Temporal Context"
             htmlFor="scenario-temporal-context"
-            tooltipHtml="Controls the date, time of day, weather, and other environmental context shown in the header and injected into character prompts."
+            tooltip="Controls the date, time of day, weather, and other environmental context shown in the header and injected into character prompts."
             className="text-sm font-medium text-primary"
           />
           <CustomScriptSettings descriptor={TEMPORAL_SCRIPT_DESCRIPTOR} selection={temporalSelection} />

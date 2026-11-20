@@ -2,7 +2,8 @@ import InfoTooltip from '../../ui/InfoTooltip.js';
 
 type SettingFieldLabelProps = {
   text: string;
-  tooltipHtml?: string | undefined;
+  tooltip?: string | undefined;
+  tooltipDangerousHtml?: string | undefined;
   tooltipLabel?: string | undefined;
   htmlFor?: string | undefined;
   className?: string | undefined;
@@ -11,7 +12,8 @@ type SettingFieldLabelProps = {
 
 export default function SettingFieldLabel({
   text,
-  tooltipHtml,
+  tooltip,
+  tooltipDangerousHtml,
   tooltipLabel,
   htmlFor,
   className,
@@ -30,7 +32,11 @@ export default function SettingFieldLabel({
   return (
     <div className={['flex items-center gap-1', wrapperClassName ?? ''].join(' ').trim()}>
       {label}
-      {tooltipHtml && <InfoTooltip label={tooltipLabel ?? `About ${text}`} html={tooltipHtml} />}
+      {tooltipDangerousHtml ? (
+        <InfoTooltip label={tooltipLabel ?? `About ${text}`} dangerouslySetHtml={tooltipDangerousHtml} />
+      ) : (
+        tooltip && <InfoTooltip label={tooltipLabel ?? `About ${text}`} value={tooltip} />
+      )}
     </div>
   );
 }

@@ -12,7 +12,7 @@ export default function IdentitySection() {
           <h3 className="text-base font-medium mb-1">First Name</h3>
           <InfoTooltip
             label="First Name"
-            html={
+            value={
               'This is the character\'s first name. Avoid names that are common words that come up in discussion. If you have a character named "and" or "the", the system will think everyone is constantly talking about them. The same applies to Last Name.'
             }
           />

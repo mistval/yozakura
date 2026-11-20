@@ -1,6 +1,6 @@
 import RoutedModalFrame from '../ui/RoutedModalFrame.js';
 import SettingFieldLabel from '../settings/ui/SettingFieldLabel.js';
-import { settingsTooltips } from '../settings/settings_tooltips.js';
+import { settingsDangerousHtmlTooltips } from '../settings/settings_tooltips.js';
 import { useSettingsStore } from '../../state/settings_store.js';
 import type { SpeakerSelectionMode } from '../../state/settings_store.js';
 import { useTurnMachineStore, useChatInitiatorLocation } from '../../state/turn_machine_store.js';
@@ -37,7 +37,7 @@ export default function ChatSettings() {
         <SettingFieldLabel
           text="Next Speaker Selection Mode"
           htmlFor="chat-next-speaker-selection-mode"
-          tooltipHtml={settingsTooltips['speakerSelectionMode']}
+          tooltipDangerousHtml={settingsDangerousHtmlTooltips['speakerSelectionMode']}
         />
         <select
           id="chat-next-speaker-selection-mode"
@@ -54,7 +54,7 @@ export default function ChatSettings() {
         <SettingFieldLabel
           text="Chat instructions"
           htmlFor="chat-instructions"
-          tooltipHtml="Anything you enter here will be included in the system prompt for all characters in this chat. Use it to steer the whole conversation (e.g. tone, topic, or scenario constraints). Applies only to this chat."
+          tooltip="Anything you enter here will be included in the system prompt for all characters in this chat. Use it to steer the whole conversation (e.g. tone, topic, or scenario constraints). Applies only to this chat."
         />
         <textarea
           id="chat-instructions"
@@ -70,7 +70,7 @@ export default function ChatSettings() {
         <SettingFieldLabel
           text="Location Name"
           htmlFor="chat-location-name"
-          tooltipHtml="Override the location name used in prompts for this chat. If characters are in different locations, changing this (or description) will cause them all to consider themselves to be in the updated location."
+          tooltip="Override the location name used in prompts for this chat. If characters are in different locations, changing this (or description) will cause them all to consider themselves to be in the updated location."
         />
         <input
           id="chat-location-name"
@@ -90,7 +90,7 @@ export default function ChatSettings() {
         <SettingFieldLabel
           text="Location Description"
           htmlFor="chat-location-description"
-          tooltipHtml="Override the location description used in prompts for this chat."
+          tooltip="Override the location description used in prompts for this chat."
         />
         <textarea
           id="chat-location-description"
@@ -120,7 +120,7 @@ export default function ChatSettings() {
         </button>
         <InfoTooltip
           label="End chat immediately"
-          html="End the chat immediately without generating memory updates or saving the conversation log."
+          value="End the chat immediately without generating memory updates or saving the conversation log."
         />
       </label>
     </RoutedModalFrame>

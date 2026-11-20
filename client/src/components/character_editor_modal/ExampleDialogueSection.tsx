@@ -15,7 +15,7 @@ export default function ExampleDialogueSection() {
         </h3>
         <InfoTooltip
           label="Example Dialogue"
-          html="This is an example of how the character might speak or interact in various situations. It helps to illustrate the character's personality and communication style."
+          value="This is an example of how the character might speak or interact in various situations. It helps to illustrate the character's personality and communication style."
         />
       </div>
       <textarea

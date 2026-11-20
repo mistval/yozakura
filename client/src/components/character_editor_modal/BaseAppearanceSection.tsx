@@ -15,7 +15,7 @@ export default function BaseAppearanceSection() {
         </h3>
         <InfoTooltip
           label="Base Appearance"
-          html="A description of the character's base physical appearance for consumption by image generation models. Only include details that never change between scenes (like eye color, height, etc). You can include LoRAs here. You can skip this if you do not plan to use image generation."
+          value="A description of the character's base physical appearance for consumption by image generation models. Only include details that never change between scenes (like eye color, height, etc). You can include LoRAs here. You can skip this if you do not plan to use image generation."
         />
       </div>
       <textarea

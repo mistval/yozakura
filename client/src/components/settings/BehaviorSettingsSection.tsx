@@ -9,13 +9,19 @@ import CheckboxSettingRow from './ui/CheckboxSettingRow.js';
 import NumericSettingRow from './ui/NumericSettingRow.js';
 import RangeNumberInput from './ui/RangeNumberInput.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
-import { settingsTooltips, type SettingsTooltipKey } from './settings_tooltips.js';
+import {
+  settingsDangerousHtmlTooltips,
+  settingsTooltips,
+  type SettingsDangerousHtmlTooltipKey,
+  type SettingsTooltipKey,
+} from './settings_tooltips.js';
 import { clampUnitRate, enforceMin, enforceMinInt, toPercent } from '../../util/numeric.js';
 
 type NumericSettingRowConfig = {
   id: string;
   label: string;
-  tooltipKey: SettingsTooltipKey;
+  tooltipKey?: SettingsTooltipKey;
+  dangerousHtmlTooltipKey?: SettingsDangerousHtmlTooltipKey;
   min?: number;
   max?: number;
   step?: number;
@@ -154,7 +160,7 @@ export default function BehaviorSettingsSection() {
     {
       id: 'npc-user-gossip-chance-multiplier',
       label: 'User gossip chance multiplier',
-      tooltipKey: 'npc.userGossipChanceMultiplier',
+      dangerousHtmlTooltipKey: 'npc.userGossipChanceMultiplier',
       min: 0,
       step: 0.1,
       value: userGossipChanceMultiplier,
@@ -379,7 +385,7 @@ export default function BehaviorSettingsSection() {
     {
       id: 'intelligent-chat-end-judgement-interval',
       label: 'Judgement interval',
-      tooltipKey: 'npc.intelligentJudgementInterval',
+      dangerousHtmlTooltipKey: 'npc.intelligentJudgementInterval',
       min: 1,
       step: 1,
       value: intelligentChatEndJudgementInterval,
@@ -410,7 +416,12 @@ export default function BehaviorSettingsSection() {
         key={setting.id}
         id={setting.id}
         label={setting.label}
-        tooltipHtml={settingsTooltips[setting.tooltipKey]}
+        tooltip={setting.tooltipKey ? settingsTooltips[setting.tooltipKey] : undefined}
+        tooltipDangerousHtml={
+          setting.dangerousHtmlTooltipKey
+            ? settingsDangerousHtmlTooltips[setting.dangerousHtmlTooltipKey]
+            : undefined
+        }
         min={setting.min}
         max={setting.max}
         step={setting.step}
@@ -440,7 +451,7 @@ export default function BehaviorSettingsSection() {
           <SettingFieldLabel
             text="Speaker selection mode"
             htmlFor="speaker-selection-mode"
-            tooltipHtml={settingsTooltips['speakerSelectionMode']}
+            tooltipDangerousHtml={settingsDangerousHtmlTooltips['speakerSelectionMode']}
           />
           <select
             id="speaker-selection-mode"
@@ -459,7 +470,7 @@ export default function BehaviorSettingsSection() {
         <CheckboxSettingRow
           id="scenario-pause-at-npc-chat-start"
           label="Pause at NPC chat start"
-          tooltipHtml={settingsTooltips['behavior.pauseAtNpcChatStart']}
+          tooltipDangerousHtml={settingsDangerousHtmlTooltips['behavior.pauseAtNpcChatStart']}
           checked={pauseAtNpcChatStart}
           onChange={(nextChecked) => setSettings({ pauseAtNpcChatStart: nextChecked })}
         />
@@ -467,7 +478,7 @@ export default function BehaviorSettingsSection() {
         <CheckboxSettingRow
           id="scenario-freedom-of-movement"
           label="Freedom of movement"
-          tooltipHtml={settingsTooltips['npc.freedomOfMovement']}
+          tooltipDangerousHtml={settingsDangerousHtmlTooltips['npc.freedomOfMovement']}
           checked={freedomOfMovement}
           onChange={(nextChecked) => setSettings({ freedomOfMovement: nextChecked })}
         />
@@ -477,7 +488,7 @@ export default function BehaviorSettingsSection() {
             <SettingFieldLabel
               text={`${setting.label} (${toPercent(setting.value)}%)`}
               htmlFor={setting.id}
-              tooltipHtml={settingsTooltips[setting.tooltipKey]}
+              tooltip={settingsTooltips[setting.tooltipKey]}
             />
             <RangeNumberInput
               id={setting.id}
@@ -500,7 +511,7 @@ export default function BehaviorSettingsSection() {
             <SettingFieldLabel
               text="NPC chat end mode"
               htmlFor="npc-chat-end-mode"
-              tooltipHtml={settingsTooltips['npc.chatEndMode']}
+              tooltipDangerousHtml={settingsDangerousHtmlTooltips['npc.chatEndMode']}
             />
             <select
               id="npc-chat-end-mode"

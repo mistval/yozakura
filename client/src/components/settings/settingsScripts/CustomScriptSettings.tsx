@@ -179,7 +179,7 @@ export default function CustomScriptSettings({
         {selectLabel && (
           <SettingFieldLabel
             text={selectLabel}
-            tooltipHtml={selectTooltipHtml}
+            tooltipDangerousHtml={selectTooltipHtml}
             htmlFor={`${sectionId}-script-provider`}
           />
         )}
