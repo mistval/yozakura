@@ -19,7 +19,7 @@ RUN npm ci --prefix server --ignore-scripts
 COPY server/index.ts server/tsconfig.json ./server/
 COPY server/src ./server/src
 COPY server/scripts ./server/scripts
-COPY server/demo_data ./server/demo_data
+COPY server/demo_source ./server/demo_source
 RUN npm run pack:demo --prefix server
 
 COPY --from=web-builder /app/client/dist ./client/dist
