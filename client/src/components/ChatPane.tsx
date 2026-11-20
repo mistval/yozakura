@@ -87,9 +87,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   const submitChatSkipTurn = useScenarioLoopStateStore((state) => state.submitChatSkipTurn);
   const submitChatSpeakAs = useScenarioLoopStateStore((state) => state.submitChatSpeakAs);
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
-  const submitChatDeleteMessage = useScenarioLoopStateStore((state) => state.submitChatDeleteMessage);
   const submitChatRedoMessage = useScenarioLoopStateStore((state) => state.submitChatRedoMessage);
-  const submitChatEditMessage = useScenarioLoopStateStore((state) => state.submitChatEditMessage);
   const userRequestedPhaseTransition = useScenarioLoopStateStore(
     (state) => state.userRequestedPhaseTransition
   );
@@ -268,7 +266,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
     setActiveActionMessageId(undefined);
     setEditingMessageId(undefined);
     setEditingMessageDraft('');
-    submitChatDeleteMessage(id);
+    ChatCoordinator.deleteMessageById(id);
   };
 
   const redoMessage = (id: string) => {
@@ -287,7 +285,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
     const id = editingMessageId;
     setEditingMessageId(undefined);
     setEditingMessageDraft('');
-    submitChatEditMessage(id, trimmed);
+    ChatCoordinator.editMessageById(id, trimmed);
   };
 
   const requestEndChat = () => {
@@ -405,8 +403,8 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   };
 
   const getRunButtonTitle = () => {
-    const userIsInitiator = participants[0]?.id === userCharacter.id;
-    if (userIsInitiator && userCanInputChat && !transcript.hasCharacterMessages()) {
+    const userIsMainParticipant = participants[0]?.id === userCharacter.id;
+    if (userIsMainParticipant && userCanInputChat && !transcript.hasCharacterMessages()) {
       return undefined;
     }
 
@@ -665,7 +663,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                   }}
                   className={`relative group flow-root text-left rounded-sm ${isMobileLayout ? 'px-0.5' : 'px-1'} py-0.5`}
                 >
-                  {editingMessageId === entryId && isCharacterMessage ? (
+                  {editingMessageId === entryId && !isFinalizingChat ? (
                     <div className="flex items-start gap-2.5">
                       {senderId && (
                         <CharacterAvatar
@@ -682,20 +680,15 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                           value={editingMessageDraft}
                           onChange={(event) => setEditingMessageDraft(event.target.value)}
                           className="w-full min-h-20 border rounded-sm p-2 bg-inset text-base leading-relaxed field-sizing-content"
-                          disabled={!userCanInputChat}
                         />
                         <div className="flex justify-end gap-2 text-xs">
-                          <button
-                            type="button"
-                            onClick={() => setEditingMessageId(undefined)}
-                            disabled={!userCanInputChat}
-                          >
+                          <button type="button" onClick={() => setEditingMessageId(undefined)}>
                             Cancel
                           </button>
                           <button
                             type="button"
                             onClick={saveEditingMessageEdit}
-                            disabled={!userCanInputChat || !editingMessageDraft.trim()}
+                            disabled={!editingMessageDraft.trim()}
                           >
                             Save
                           </button>
@@ -745,7 +738,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                     />
                   )}
 
-                  {userCanInputChat && !editingMessageId && (
+                  {!editingMessageId && !isFinalizingChat && (
                     <div
                       className={`absolute bottom-1 right-1 transition-opacity flex items-center ${actionBarContainerClassName} rounded-sm border border-border-default bg-emphasized/95 shadow-sm leading-none ${
                         isActionBarActive
@@ -783,6 +776,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                         <button
                           type="button"
                           onClick={() => redoMessage(entryId)}
+                          disabled={!userCanInputChat}
                           title="Retry message"
                           aria-label="Retry message"
                           className={actionBarButtonClassName}

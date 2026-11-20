@@ -180,6 +180,8 @@ export class ChatCoordinator {
     const { deletedMessage, updatedTranscript } = this.transcript().deleteMessageById(messageId);
     this.setTranscript(updatedTranscript);
 
+    persistTurn();
+
     return deletedMessage;
   }
 
@@ -192,9 +194,10 @@ export class ChatCoordinator {
     };
   }
 
-  public static async editMessageById(id: string, newContent: string) {
+  public static editMessageById(id: string, newContent: string) {
     const { updatedTranscript } = this.transcript().editMessageById(id, newContent);
     this.setTranscript(updatedTranscript);
+    persistTurn();
   }
 
   public static addCharacterMessage(
