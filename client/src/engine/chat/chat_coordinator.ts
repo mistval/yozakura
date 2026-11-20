@@ -87,7 +87,7 @@ export class ChatCoordinator {
     const chatState = this.turnMachineStore();
     const settings = useSettingsStore.getState();
 
-    if (this.hasUserChatMessages() || this.isChatPaused()) {
+    if ((this.turnMachineStore().userIsParticipant() && this.hasUserChatMessages()) || this.isChatPaused()) {
       return false;
     }
 
@@ -487,15 +487,13 @@ export class ChatCoordinator {
     const participants = getActiveChatParticipants();
     const excludedSpeakerId = opts?.notSpeakerId;
     const nonExcludedParticipants = participants.filter((p) => p.id !== excludedSpeakerId);
+    const primarySpeaker = this.primarySpeaker();
 
     try {
-      // If it's the first message, return the initiator (unless they are specifically excluded)
+      // If it's the first message, return the primary speaker (unless they are specifically excluded)
       if (!this.transcript().hasCharacterMessages()) {
-        if (excludedSpeakerId !== this.initiatorId()) {
-          const initiator = this.initiator();
-          if (initiator) {
-            return initiator;
-          }
+        if (excludedSpeakerId !== primarySpeaker.id) {
+          return primarySpeaker;
         } else {
           const firstAvailable = nonExcludedParticipants[0];
           assertNonNullish(firstAvailable, 'No available participant for first message speaker selection');
@@ -578,7 +576,7 @@ export class ChatCoordinator {
         hint: 'Control will be handed to first participant',
       });
 
-      return participants[0]!;
+      return this.primarySpeaker();
     }
   }
 
@@ -734,11 +732,9 @@ export class ChatCoordinator {
     return this.getCharacterById(this.userCharacterId());
   }
 
-  private static initiatorId() {
-    return this.turnMachineStore().initiatorId;
-  }
-
-  private static initiator() {
-    return getActiveChatParticipants().find((p) => p.id === this.initiatorId());
+  private static primarySpeaker() {
+    const speaker = getActiveChatParticipants()[0];
+    assertNonNullish(speaker, 'No primary speaker');
+    return speaker;
   }
 }
