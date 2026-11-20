@@ -45,7 +45,7 @@ Installation:
 
 **Using Docker compose**: Save this [docker-compose.yml](https://github.com/mistval/yozakura/blob/main/docker-compose.yml) file somewhere and run `docker compose up -d` in that directory.
 
-**Or without compose**: Run `docker run --network host -v ./yozakura_data:/app/data -d ghcr.io/mistval/yozakura:latest`.
+**Or without compose**: Run `docker run --network host -v ./yozakura_data:/app/yozakura_data -d ghcr.io/mistval/yozakura:latest`.
 
 In both cases, your data will be saved to a `yozakura_data` folder in the current working directory.
 

@@ -8,4 +8,4 @@ services:
     init: true
     network_mode: host
     volumes:
-      - ./yozakura_data:/app/data
+      - ./yozakura_data:/app/yozakura_data
