@@ -12,9 +12,12 @@ import {
   useRole,
 } from '@floating-ui/react';
 import { ChatJobTags, useChatJobs, useIsChatFinalizing } from '../../state/chat_state.js';
+import { useModalQueryParam } from '../../hooks/useModalQueryParam.js';
+import { ACTIVE_JOBS_MODAL_QUERY_PARAM } from '../ActiveJobsModal.js';
 
 export default function ChatTopBarStatus() {
   const [showWorkingPopover, setShowWorkingPopover] = useState(false);
+  const { openModal: openActiveJobsModal } = useModalQueryParam(ACTIVE_JOBS_MODAL_QUERY_PARAM);
 
   const chatJobs = useChatJobs().filter((job) => !job.tags?.includes(ChatJobTags.minor));
   const isFinalizingChat = useIsChatFinalizing();
@@ -76,6 +79,18 @@ export default function ChatTopBarStatus() {
                     </span>
                   </div>
                 ))}
+              </div>
+              <div className="pt-1.5 border-t border-border-default">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWorkingPopover(false);
+                    openActiveJobsModal();
+                  }}
+                  className="w-full text-xs"
+                >
+                  Manage Jobs
+                </button>
               </div>
             </div>
           </FloatingPortal>

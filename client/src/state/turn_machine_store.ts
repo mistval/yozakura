@@ -74,6 +74,7 @@ type BaseTurnMachineStoreState = {
   pendingTurnCharacterIds: string[];
   chatsSoFar: Record<string, { withIds: string[] }[]>;
   wardrobeAutoselectRan: boolean;
+  inChatTurnForCharacterId: string | undefined;
 
   chatState: ChatState;
   participantIds: string[];
@@ -108,6 +109,7 @@ type BaseTurnMachineStoreState = {
   removeChatParticipant: (participantId: string) => void;
   setChatInstructions: (instructions: string) => void;
   setCharacterChatInstructions: (characterId: string, instructions: string) => void;
+  markInChatTurnFor: (id: string | undefined) => void;
   getChatCharacterLocation: (
     charId: string,
     getCharacterById?: (id: string) => Character,
@@ -143,6 +145,7 @@ const inactiveChatTurnMachineState: InactiveChatFields = {
   initiatorId: undefined,
   chatInstructions: '',
   chatInstructionsByCharacterId: {},
+  inChatTurnForCharacterId: undefined,
 };
 
 function getRequiredCharacterById(characterId: string): Character {
@@ -576,6 +579,10 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     const location = activeScenarioMap.locations.find((l) => l.id === character.locationId);
 
     return location;
+  },
+
+  markInChatTurnFor(charId: string | undefined) {
+    set({ inChatTurnForCharacterId: charId });
   },
 }));
 

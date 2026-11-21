@@ -146,6 +146,7 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
 
     while (true) {
       try {
+        useTurnMachineStore.getState().markInChatTurnFor(nextSpeaker.id);
         const speakerInput = makeInputInterface(nextSpeaker.id);
         const { input } = await speakerInput.getNextChatInput();
 
@@ -198,6 +199,8 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
   } catch (err) {
     await closeChatSession(true);
     throw err;
+  } finally {
+    useTurnMachineStore.getState().markInChatTurnFor(undefined);
   }
 }
 

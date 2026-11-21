@@ -16,6 +16,7 @@ import ConversationLog from './components/conversation_log/ConversationLog.js';
 import InteractiveRetryPopoverHost from './components/InteractiveRetryPopoverHost';
 import SettingsPanel from './components/settings/SettingsPanel.js';
 import MapModal from './components/MapModal.js';
+import ActiveJobsModal from './components/ActiveJobsModal.js';
 import MainMenu from './pages/MainMenu';
 import CharacterList from './pages/CharacterList';
 import ScenarioSetup from './pages/ScenarioSetup';
@@ -48,6 +49,7 @@ function AppRoutes() {
       <GlobalCharacterEditorModal />
       <ConversationLog />
       <CharacterOverview />
+      <ActiveJobsModal />
       <InteractiveRetryPopoverHost />
     </>
   );

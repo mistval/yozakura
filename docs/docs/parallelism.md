@@ -35,10 +35,10 @@ If you started out with a local server (like KoboldCpp) and later switched your 
    - **Concurrency Group Limit (optional):** How many requests in that pool can run simultaneously. Change this to whatever number of requests you want to run in parallel at most.
 4. Click **Save**.
 
-### When to Increase Prompt Parallelism
+### When to Change Prompt Parallelism
 
 - **Using a cloud provider:** Raise **Concurrency Group Limit** (for example `4`–`8`, or higher if your provider allows it). Because background NPC chats and memory updates involve many separate character prompts, running several at once makes the simulation feel much snappier.
-- **Using a local LLM:** Usually keep it at `1`. Most local setups only process one request efficiently at a time, and sending many at once either queues up or stalls your GPU. (Only raise it if you've intentionally configured your local server for parallel slots.)
+- **Using a local LLM:** For most local software (including KoboldCpp), it might help a little bit to increase concurrency, because the software will queue your requests and avoid going idle or offloading the model. However, some software might attempt to execute generations in parallel and in local setups, this can often cause slowdowns or even crashes.
 - **Hitting rate limits (HTTP 429):** If your cloud provider starts returning rate-limit errors, lower **Concurrency Group Limit** down (e.g., to `2` or `3`). Or, if the error only happens occasionally, you can leave it alone since Yozakura will automatically retry until it succeeds (this will be shown in the bottom right of the app with a cancel button to cancel the retries.
 
 ### Using Separate Concurrency Pools for Mixed Setups
@@ -68,4 +68,4 @@ You can find both image parallelism controls in [Image Generation Settings](yoza
 ### Image Generation Concurrency
 
 - Controls how many image generation jobs can run at the same time (minimum `1`, default `1`).
-- **When to raise it:** If you use a cloud image provider and frequently trigger multiple images (for example across busy chats or high auto-image rates), raising **Image generation concurrency** (e.g., to `3`–`4`) lets them finish together instead of waiting in line. Keep it at `1` for a single local Stable Diffusion / ComfyUI / KoboldCpp instance.
+- **When to raise it:** If you use a cloud image provider and frequently trigger multiple image generations (for example across busy chats or high auto-image rates), raising **Image generation concurrency** (e.g., to `3`–`4`) lets them finish together instead of waiting in line. As is the case with text models, it also might help a little bit to increase this even for local models, _unless_ your image generation software attempts to render multiple images in parallel, which may cause slowdowns or even crashes.

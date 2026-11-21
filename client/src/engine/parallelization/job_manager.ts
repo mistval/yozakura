@@ -66,6 +66,15 @@ export class ParallelJobManager {
     return this.cancelJobs(jobsToCancel, error);
   }
 
+  public cancelJobById(id: string, error?: Error) {
+    const job = this.currentJobs.get(id);
+    if (!job) {
+      return;
+    }
+
+    return this.cancelJobs([job], error);
+  }
+
   public cancelAllJobs(error?: Error) {
     return this.cancelJobs(this.getJobs(), error);
   }

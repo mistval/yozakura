@@ -60,11 +60,13 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   const setSettings = useSettingsStore((s) => s.setSettings);
   const sceneImageChains = chatSceneImageTemplatesGroup.useChains();
   const transcript = useTurnMachineStore((state) => state.transcript);
+  const inChatTurnFor = useTurnMachineStore((state) => state.inChatTurnForCharacterId);
   const chatMode = useActiveChatMedium();
   const participants = useActiveChatParticipants();
   const charactersById = useScenarioCharacterStore((s) => s.scenarioCharactersById);
   const userCharacter = useUserCharacter();
   const scenario = useScenarioStore((state) => state.activeScenario);
+  assertNonNullish(scenario, 'No scenario');
 
   const { openModal: openChatSettings } = useModalQueryParam('chatsettings');
   const [, setCharacterChatSettingsId] = useQueryParam('characterchatsettings');
@@ -107,7 +109,7 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   const isGeneratingImagePrompt = imageGenerationJobs.some((job) =>
     job.tags?.includes(ChatJobTags.generatingImagePrompt)
   );
-  const canFinishChat = chatJobs.length === 0;
+  const canFinishChat = chatJobs.length === 0 && inChatTurnFor === scenario.userCharacterId;
   const canGenerateImages =
     !isFinalizingChat &&
     !(editImagePromptsBeforeDispatch && (isGeneratingImagePrompt || Boolean(pendingImagePromptEdit)));
@@ -226,9 +228,9 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
     observer.observe(outer);
 
     return () => observer.disconnect();
-  }, [Boolean(transcript && primaryNpc && scenario)]);
+  }, [Boolean(transcript && primaryNpc)]);
 
-  if (!transcript || !primaryNpc || !scenario) {
+  if (!transcript || !primaryNpc) {
     return undefined;
   }
 
