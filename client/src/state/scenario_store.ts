@@ -108,7 +108,9 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
       activeScenarioMap: applyMapOverrides(selectedMap, nextScenario),
     });
 
-    get().updateActiveScenario(() => nextScenario);
+    if (selectedMap.id !== loadedScenario.mapId) {
+      get().updateActiveScenario(() => nextScenario);
+    }
   },
 
   updateActiveScenario: (updater) => {

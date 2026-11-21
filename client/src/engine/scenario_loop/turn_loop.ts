@@ -65,16 +65,15 @@ export async function runTurnLoop(
 }
 
 async function runTurnLoopTick(opts?: { prioritizeUser?: boolean | undefined }) {
-  const { turnMachineState, currentCharacterId, startNewTurn } = useTurnMachineStore.getState();
-
-  await recomputeTemporalContextAndAutoselectWardrobes();
-
-  if (turnMachineState === undefined) {
-    startNewTurn({
+  if (useTurnMachineStore.getState().turnMachineState === undefined) {
+    useTurnMachineStore.getState().startNewTurn({
       userMovesFirst: opts?.prioritizeUser,
     });
   }
 
+  await recomputeTemporalContextAndAutoselectWardrobes();
+
+  const { turnMachineState, currentCharacterId } = useTurnMachineStore.getState();
   const characterId = currentCharacterId();
   assertNonNullish(characterId, 'No current character to process');
   const character = useScenarioCharacterStore.getState().getCharacterById(characterId);
@@ -288,8 +287,14 @@ async function recomputeTemporalContextAndAutoselectWardrobes() {
   const lastDayIndex = loopState.lastTemporalDayIndex;
   loopState.setLastTemporalDayIndex(temporalContext.dayIndex);
 
+  const turnMachineStore = useTurnMachineStore.getState();
+  if (turnMachineStore.wardrobeAutoselectRan) {
+    return;
+  }
+
   // If day index has not changed, don't trigger auto select
   if (temporalContext.dayIndex === lastDayIndex) {
+    turnMachineStore.setWardrobeAutoselectRan(true);
     return;
   }
 
@@ -307,16 +312,24 @@ async function recomputeTemporalContextAndAutoselectWardrobes() {
       });
 
       if (computedLastDayContext?.dayIndex === temporalContext.dayIndex) {
+        turnMachineStore.setWardrobeAutoselectRan(true);
         return;
       }
     }
   }
 
+  let updatedAnyWardrobe = false;
   for (const c of useScenarioCharacterStore.getState().scenarioCharacters) {
     const updatedWardrobes = applyDailyWardrobeAutoselect(c.wardrobes);
     if (updatedWardrobes) {
+      updatedAnyWardrobe = true;
       useScenarioCharacterStore.getState().saveScenarioCharacterFields(c.id, { wardrobes: updatedWardrobes });
     }
+  }
+
+  turnMachineStore.setWardrobeAutoselectRan(true);
+  if (updatedAnyWardrobe) {
+    persistTurn();
   }
 }
 

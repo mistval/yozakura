@@ -16,7 +16,7 @@ If you want to contribute, tinker, or you just prefer the `git clone` installati
 
 ## Requirements
 
-- [Node.js v26](https://nodejs.org/) (see [.nvmrc](.nvmrc) for the exact recommended version)
+- [Node.js v26](https://nodejs.org/)
 - [Git](https://git-scm.com/)
 
 ## Quick Start

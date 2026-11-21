@@ -57,6 +57,7 @@ export const serializedTurnSchema = z.object({
   turnMachineState: z.enum(['deciding', 'chatting']),
   pendingTurnCharacterIds: z.array(z.string()),
   chatsSoFar: z.record(z.string(), z.array(z.object({ withIds: z.array(z.string()) }))),
+  wardrobeAutoselectRan: z.boolean(),
   activeChat: persistedActiveChatSchema.optional(),
 });
 
@@ -66,6 +67,7 @@ type BaseTurnMachineStoreState = {
   turnMachineState: TurnMachineState | undefined;
   pendingTurnCharacterIds: string[];
   chatsSoFar: Record<string, { withIds: string[] }[]>;
+  wardrobeAutoselectRan: boolean;
 
   chatState: ChatState;
   participantIds: string[];
@@ -84,6 +86,7 @@ type BaseTurnMachineStoreState = {
   currentCharacterIsUser: () => boolean;
   finishCurrentCharacter: () => boolean;
   setTurnMachineState: (turnMachineState: TurnMachineState) => void;
+  setWardrobeAutoselectRan: (ran: boolean) => void;
   recordChat: (initiatorId: string, withIds: string[]) => void;
   hasChatted: (characterAId: string, characterBId: string) => boolean;
   beginChat: (args: StartChatSessionArgs) => void;
@@ -120,7 +123,7 @@ type ActiveChatTurnMachineStoreState = OmitFunctions<BaseTurnMachineStoreState> 
 
 type InactiveChatFields = Omit<
   OmitFunctions<BaseTurnMachineStoreState>,
-  'turnMachineState' | 'pendingTurnCharacterIds' | 'chatsSoFar'
+  'turnMachineState' | 'pendingTurnCharacterIds' | 'chatsSoFar' | 'wardrobeAutoselectRan'
 >;
 
 const inactiveChatTurnMachineState: InactiveChatFields = {
@@ -294,6 +297,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
   turnMachineState: undefined,
   pendingTurnCharacterIds: [],
   chatsSoFar: {},
+  wardrobeAutoselectRan: false,
 
   startNewTurn(opts: { userMovesFirst?: boolean | undefined } = {}) {
     const allCharacterIds = useScenarioCharacterStore.getState().scenarioCharacters.map((c) => c.id);
@@ -310,6 +314,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       turnMachineState: 'deciding',
       pendingTurnCharacterIds: ordered,
       chatsSoFar: {},
+      wardrobeAutoselectRan: false,
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
@@ -347,6 +352,10 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
 
   setTurnMachineState(machineState) {
     set({ turnMachineState: machineState } satisfies Partial<BaseTurnMachineStoreState>);
+  },
+
+  setWardrobeAutoselectRan(ran) {
+    set({ wardrobeAutoselectRan: ran } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
   recordChat(initiatorId, withIds) {
@@ -409,6 +418,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       turnMachineState: undefined,
       pendingTurnCharacterIds: [],
       chatsSoFar: {},
+      wardrobeAutoselectRan: false,
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
@@ -422,6 +432,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       turnMachineState: state.turnMachineState,
       pendingTurnCharacterIds: state.pendingTurnCharacterIds,
       chatsSoFar: state.chatsSoFar,
+      wardrobeAutoselectRan: state.wardrobeAutoselectRan,
       activeChat: state.turnMachineState === 'chatting' ? buildPersistedActiveChat(state) : undefined,
     };
   },
@@ -432,6 +443,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       turnMachineState: snapshot.turnMachineState,
       pendingTurnCharacterIds: snapshot.pendingTurnCharacterIds,
       chatsSoFar: snapshot.chatsSoFar,
+      wardrobeAutoselectRan: snapshot.wardrobeAutoselectRan,
     } satisfies Partial<BaseTurnMachineStoreState>;
 
     if (!snapshot.activeChat) {
