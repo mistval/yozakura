@@ -15,7 +15,7 @@ import {
   useTurnMachineStore,
   useCurrentTurnCharacterId,
 } from '../state/turn_machine_store';
-import { useScenarioStore } from '../state/scenario_store.js';
+import { useActiveScenarioMap, useScenarioStore } from '../state/scenario_store.js';
 import { useMapStore } from '../state/map_store.js';
 import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
@@ -52,7 +52,7 @@ export default function ScenarioView() {
   const scenarioCharacters = useScenarioCharacterStore((s) => s.scenarioCharacters);
   const globalCharactersAreLoaded = useGlobalCharactersStore((s) => s.globalCharactersAreLoaded);
   const globalCharacters = useGlobalCharactersStore((s) => s.globalCharacters);
-  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const activeMap = useActiveScenarioMap();
   const noMapsExist = useMapStore((s) => s.mapsAreLoaded && s.maps.length === 0);
   const loadScenarioState = useScenarioStore((state) => state.refreshScenario);
   const getCharacterRelationships = useScenarioCharacterRelationshipStore(
@@ -108,10 +108,10 @@ export default function ScenarioView() {
   }, [scenarioId, loadScenarioState]);
 
   useEffect(() => {
-    if (scenario) {
+    if (scenario && activeMap) {
       void startScenarioLoop();
     }
-  }, [scenario?.id]);
+  }, [scenario?.id, Boolean(activeMap)]);
 
   useEffect(() => {
     if (!scenario) {

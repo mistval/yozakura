@@ -9,7 +9,7 @@ import {
   getActiveChatParticipants,
   useTurnMachineStore,
 } from '../../state/turn_machine_store.js';
-import { useScenarioStore } from '../../state/scenario_store.js';
+import { getActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import type {
   CharacterEditorExecutionContext,
   ContextCharacter,
@@ -135,7 +135,8 @@ function buildScenarioTemplateContext(resolvers?: ContextResolvers): ScenarioExe
   );
   assertNonNullish(userCharacter, 'User character not found in scenario characters');
 
-  if (!scenarioStore.activeScenario || !scenarioStore.activeScenarioMap) {
+  const activeMap = getActiveScenarioMap();
+  if (!scenarioStore.activeScenario || !activeMap) {
     throw new Error('Failed to build scenario context. Scenario or active map not found');
   }
 
@@ -147,7 +148,7 @@ function buildScenarioTemplateContext(resolvers?: ContextResolvers): ScenarioExe
     userCharacter: toContextCharacter(userCharacter),
     scenario: scenarioStore.activeScenario,
     temporalContext: useTemporalContextStore.getState().plainText,
-    worldMap: scenarioStore.activeScenarioMap,
+    worldMap: activeMap,
     getRelationship: (characterAId: string, characterBId: string) =>
       resolveContextRelationship(characterAId, characterBId, resolvers),
   };

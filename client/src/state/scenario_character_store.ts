@@ -5,10 +5,12 @@ import { type WorldMap, type Character, type Scenario } from '../engine/types.js
 import { assertNonNullish } from '../errors/application_error.js';
 import { concatUniqueByIds, getRequiredRandomChoice } from '../util/array.js';
 import {
+  getActiveScenarioBaseMap,
   getRequiredActiveScenario,
   getRequiredActiveScenarioMap,
   useScenarioStore,
 } from './scenario_store.js';
+import { useMapStore } from './map_store.js';
 import { addOrReplaceVersionQueryParam, newId } from '../util/id.js';
 import { ephemeralStateSlice, IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
 import { applyDailyWardrobeAutoselect } from '../engine/wardrobes.js';
@@ -368,19 +370,25 @@ export function whenScenarioCharactersLoaded(): Promise<void> {
   });
 }
 
-function updateCharacterLocationsForMapChange(map: WorldMap) {
-  const scenarioCharacterStore = useScenarioCharacterStore.getState();
-  const locationIds = map.locations.map((location) => location.id);
+function ensureCharacterLocationsValid() {
+  const { scenarioCharactersAreLoaded, scenarioCharacters, saveScenarioCharacters } =
+    useScenarioCharacterStore.getState();
+  const activeBaseMap = getActiveScenarioBaseMap();
+  if (!scenarioCharactersAreLoaded || !activeBaseMap) {
+    return;
+  }
+
+  const locationIds = activeBaseMap.locations.map((location) => location.id);
   const locationIdsSet = new Set(locationIds);
 
-  const movedCharacters = scenarioCharacterStore.scenarioCharacters
+  const movedCharacters = scenarioCharacters
     .filter((c) => !locationIdsSet.has(c.locationId))
     .map((c) => ({
       ...c,
       locationId: getRequiredRandomChoice(locationIds),
     }));
 
-  scenarioCharacterStore.saveScenarioCharacters(movedCharacters);
+  saveScenarioCharacters(movedCharacters);
 }
 
 useScenarioStore.subscribe(async (newScenario, prevScenario) => {
@@ -396,19 +404,16 @@ useScenarioStore.subscribe(async (newScenario, prevScenario) => {
     await useScenarioCharacterStore.getState().loadScenarioCharacters();
   }
 
-  if (newScenario.activeScenarioMap && newScenario.activeScenarioMap !== prevScenario.activeScenarioMap) {
-    updateCharacterLocationsForMapChange(newScenario.activeScenarioMap);
-  }
+  ensureCharacterLocationsValid();
 });
 
+useMapStore.subscribe(ensureCharacterLocationsValid);
+
 async function initialize() {
-  const initialScenarioState = useScenarioStore.getState();
-  if (initialScenarioState.activeScenario) {
+  if (useScenarioStore.getState().activeScenario) {
     await useScenarioCharacterStore.getState().loadScenarioCharacters();
   }
-  if (initialScenarioState.activeScenarioMap) {
-    updateCharacterLocationsForMapChange(initialScenarioState.activeScenarioMap);
-  }
+  ensureCharacterLocationsValid();
 }
 
 await initialize();

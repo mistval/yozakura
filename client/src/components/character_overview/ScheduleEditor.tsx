@@ -7,7 +7,7 @@ import {
   type ScheduleSegment,
 } from '../../engine/types.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
-import { useScenarioStore } from '../../state/scenario_store.js';
+import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import { useMapModal } from '../MapModalContext.js';
 import InfoTooltip from './../ui/InfoTooltip';
 import { newId } from '../../util/id.js';
@@ -55,7 +55,7 @@ function assignLanes(segments: ScheduleSegment[]): {
 
 export default function ScheduleEditor({ groupId }: { groupId: string }) {
   const storedSchedule = useCharacterGroupStore((state) => state.schedulesByGroupId[groupId]);
-  const map = useScenarioStore((s) => s.activeScenarioMap);
+  const map = useActiveScenarioMap();
   const scenario = useScenarioStore((state) => state.activeScenario);
 
   const { showMapZones } = useMapModal();

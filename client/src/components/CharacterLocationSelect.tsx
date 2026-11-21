@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useIsEntityInDeferredSync } from '../state/ephemeral_state_helper.js';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
-import { useScenarioStore } from '../state/scenario_store.js';
+import { useActiveScenarioMap } from '../state/scenario_store.js';
 import { getRequiredRandomChoice } from '../util/array.js';
 
 interface CharacterLocationSelectProps {
@@ -16,7 +16,7 @@ export default function CharacterLocationSelect({
   id,
   className = '',
 }: CharacterLocationSelectProps) {
-  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const activeMap = useActiveScenarioMap();
   const currentLocationId = useScenarioCharacterStore(
     (state) => state.scenarioCharactersById[characterId]?.locationId || ''
   );

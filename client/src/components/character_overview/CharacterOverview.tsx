@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useCharacterOverview } from './CharacterOverviewContext.js';
 import type { Character } from '../../engine/types.js';
-import { useScenarioStore } from '../../state/scenario_store.js';
+import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import {
   useCachedCharacterRelationships,
@@ -21,7 +21,7 @@ import { useConversationLog } from '../conversation_log/ConversationLogContext.j
 function CharacterOverviewInner() {
   const [scrollDown, setScrollDown] = useQueryParam('scrolldown');
   const scenario = useScenarioStore((state) => state.activeScenario);
-  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const activeMap = useActiveScenarioMap();
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const getCharacterRelationships = useScenarioCharacterRelationshipStore(
     (state) => state.getCharacterRelationships

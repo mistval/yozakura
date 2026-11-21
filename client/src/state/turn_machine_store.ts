@@ -18,7 +18,13 @@ import {
 import { ConversationTranscript, type TranscriptRagDeps } from '../engine/chat/transcript.js';
 import type { ContextResolvers } from '../engine/prompt_templates/prompt_template_context_fields.js';
 import type { OmitFunctions } from '../util/types.js';
-import { getRequiredActiveScenario, getRequiredUserCharacterId, useScenarioStore } from './scenario_store.js';
+import {
+  getActiveScenarioMap,
+  getRequiredActiveScenario,
+  getRequiredUserCharacterId,
+  useActiveScenarioMap,
+  useScenarioStore,
+} from './scenario_store.js';
 import { useScenarioCharacterStore } from './scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
 import { assert, assertNonNullish } from '../errors/application_error.js';
@@ -191,7 +197,7 @@ export function getActiveChatMedium(
   participants = useTurnMachineStore.getState().participantIds,
   getRequiredCharacterById = useScenarioCharacterStore.getState().getRequiredCharacterById,
   getCharacterLocation = useTurnMachineStore.getState().getChatCharacterLocation,
-  map = useScenarioStore.getState().activeScenarioMap,
+  map = getActiveScenarioMap(),
   ephemeralLocation = useTurnMachineStore.getState().ephemeralLocation
 ): ChatMedium {
   const allLocations = new Set(
@@ -205,7 +211,7 @@ export function useActiveChatMedium(): ChatMedium {
   const getCharacterLocation = useTurnMachineStore((s) => s.getChatCharacterLocation);
   const getRequiredCharacterById = useScenarioCharacterStore((s) => s.getRequiredCharacterById);
   const ephemeralLocation = useTurnMachineStore((s) => s.ephemeralLocation);
-  const map = useScenarioStore((s) => s.activeScenarioMap);
+  const map = useActiveScenarioMap();
   const participants = useActiveChatParticipants();
 
   return getActiveChatMedium(
@@ -222,7 +228,7 @@ export function useChatInitiatorLocation() {
   const getCharacterLocation = useTurnMachineStore((s) => s.getChatCharacterLocation);
   const getRequiredCharacterById = useScenarioCharacterStore((s) => s.getRequiredCharacterById);
   const ephemeralLocation = useTurnMachineStore((s) => s.ephemeralLocation);
-  const map = useScenarioStore((s) => s.activeScenarioMap);
+  const map = useActiveScenarioMap();
 
   if (!initiatorId || !map) {
     return undefined;
@@ -254,7 +260,7 @@ export async function getActiveChatGossipCharacter(fromCharacterId?: string, res
 }
 
 export function applyMapZoneWardrobeTriggersForParticipants(participants: Character[]) {
-  const activeMap = useScenarioStore.getState().activeScenarioMap;
+  const activeMap = getActiveScenarioMap();
   if (!activeMap || !activeMap.zones) {
     return;
   }
@@ -558,7 +564,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
   getChatCharacterLocation(
     charId: string,
     getRequiredCharacterById = useScenarioCharacterStore.getState().getRequiredCharacterById,
-    activeScenarioMap = useScenarioStore.getState().activeScenarioMap,
+    activeScenarioMap = getActiveScenarioMap(),
     ephemeralLocation = get().ephemeralLocation
   ) {
     if (ephemeralLocation) {

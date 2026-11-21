@@ -106,10 +106,9 @@ export function validateWorldMap(worldMap: Pick<WorldMap, 'name' | 'description'
   return errors;
 }
 
-export function getNewestUpdatedMap(maps: WorldMap[]) {
+/** Deterministically selects the fallback map with the lowest ID when the configured map is unavailable. */
+export function getDeterministicFallbackMap(maps: WorldMap[]): WorldMap | undefined {
   if (maps.length === 0) return undefined;
 
-  const sorted = [...maps].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-
-  return sorted[0] || undefined;
+  return maps.reduce((lowest, candidate) => (candidate.id < lowest.id ? candidate : lowest));
 }

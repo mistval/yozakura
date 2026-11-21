@@ -3,7 +3,11 @@ import { useTurnMachineStore } from '../../state/turn_machine_store';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
-import { getRequiredUserCharacterId, useScenarioStore } from '../../state/scenario_store';
+import {
+  getActiveScenarioMap,
+  getRequiredUserCharacterId,
+  useScenarioStore,
+} from '../../state/scenario_store';
 import { createPersistedObject, doAsDataWrite, mainDatabase } from '../../backend_bridge/database';
 import { useSettingsStore } from '../../state/settings_store';
 import { useTemporalContextStore } from '../../state/temporal_context_store';
@@ -254,7 +258,7 @@ function moveScenarioCharacter(characterId: string, toId: string) {
 function recordMovement(characterId: string, toId: string, movementPolicy: MovementPolicy | undefined) {
   const scenario = useScenarioStore.getState().activeScenario;
   const character = useScenarioCharacterStore.getState().scenarioCharactersById[characterId];
-  const map = useScenarioStore.getState().activeScenarioMap;
+  const map = getActiveScenarioMap();
   if (!scenario || !character || !map || character.locationId === toId) {
     return;
   }

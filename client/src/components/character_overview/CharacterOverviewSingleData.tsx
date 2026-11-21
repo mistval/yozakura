@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useCharacterOverview } from './CharacterOverviewContext.js';
 import type { Character, Scenario, WorldMap } from '../../engine/types.js';
-import { useScenarioStore } from '../../state/scenario_store.js';
+import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
@@ -29,7 +29,7 @@ export default function CharacterOverviewSingleData({
   onShowConversationDetail,
 }: CharacterOverviewSingleDataProps) {
   const scenario = useScenarioStore((state) => state.activeScenario);
-  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const activeMap = useActiveScenarioMap();
   const characters = useScenarioCharacterStore((state) => state.scenarioCharacters);
   const saveScenarioCharacterFields = useScenarioCharacterStore((state) => state.saveScenarioCharacterFields);
   const setUserCharacter = useScenarioStore((state) => state.setUserCharacter);

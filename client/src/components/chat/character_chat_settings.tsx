@@ -5,7 +5,7 @@ import type { Character } from '../../engine/types.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { useActiveChatParticipants, useTurnMachineStore } from '../../state/turn_machine_store.js';
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
-import { useScenarioStore } from '../../state/scenario_store.js';
+import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
 import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
 import CharacterLocationSelect from '../CharacterLocationSelect.js';
@@ -23,7 +23,7 @@ export default function CharacterChatSettings() {
   const chatInstructionsByCharacterId = useTurnMachineStore((state) => state.chatInstructionsByCharacterId);
   const { showCharacterOverview } = useCharacterOverview();
   const isCharacterSyncing = useIsEntityInDeferredSync(settingsCharacterId);
-  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const activeMap = useActiveScenarioMap();
 
   const onClose = () => setSettingsCharacterId(undefined);
 

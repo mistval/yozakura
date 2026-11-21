@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStateRef } from '../../hooks/useStateRef.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
 import { settingsDangerousHtmlTooltips, settingsTooltips } from './settings_tooltips.js';
-import { useScenarioStore } from '../../state/scenario_store.js';
+import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import { DEFAULT_REMOTE_CHAT_MEDIUM } from '../../engine/types.js';
 import { getErrorMessage } from '../../errors/error_util.js';
 import { useMapStore } from '../../state/map_store.js';
@@ -87,7 +87,7 @@ function ResettableTextField({
 
 export default function ScenarioSettingsSection() {
   const scenario = useScenarioStore((state) => state.activeScenario);
-  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const activeMap = useActiveScenarioMap();
   const setScenarioMap = useScenarioStore((state) => state.setScenarioMap);
   const mergeMapOverrides = useScenarioStore((state) => state.mergeMapOverrides);
   const setSaveName = useScenarioStore((state) => state.setSaveName);
