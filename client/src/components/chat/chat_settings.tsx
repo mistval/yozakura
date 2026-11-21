@@ -1,8 +1,5 @@
 import RoutedModalFrame from '../ui/RoutedModalFrame.js';
 import SettingFieldLabel from '../settings/ui/SettingFieldLabel.js';
-import { settingsDangerousHtmlTooltips } from '../settings/settings_tooltips.js';
-import { useSettingsStore } from '../../state/settings_store.js';
-import type { SpeakerSelectionMode } from '../../state/settings_store.js';
 import { useTurnMachineStore, useChatRootLocation } from '../../state/turn_machine_store.js';
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
@@ -13,17 +10,11 @@ import { useModalQueryParam } from '../../hooks/useModalQueryParam.js';
 
 export default function ChatSettings() {
   const { open, closeModal } = useModalQueryParam('chatsettings');
-  const speakerSelectionMode = useSettingsStore((s) => s.speakerSelectionMode);
-  const setSettings = useSettingsStore((s) => s.setSettings);
   const chatState = useTurnMachineStore((s) => s.chatState);
   const chatInstructions = useTurnMachineStore((s) => s.chatInstructions);
   const initiatorLocation = useChatRootLocation();
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
   const canEndChat = useUserCanInputChat();
-
-  const updateSpeakerSelectionMode = (nextMode: SpeakerSelectionMode) => {
-    setSettings({ speakerSelectionMode: nextMode });
-  };
 
   if (!open || chatState !== 'active' || !initiatorLocation) {
     return undefined;
@@ -32,23 +23,6 @@ export default function ChatSettings() {
   return (
     <RoutedModalFrame queryParam="chatsettings" onClose={closeModal} maxWidthClassName="max-w-2xl">
       <h3 className="text-lg font-semibold">Chat Settings</h3>
-
-      <div className="space-y-2">
-        <SettingFieldLabel
-          text="Next Speaker Selection Mode"
-          htmlFor="chat-next-speaker-selection-mode"
-          tooltipDangerousHtml={settingsDangerousHtmlTooltips['speakerSelectionMode']}
-        />
-        <select
-          id="chat-next-speaker-selection-mode"
-          value={speakerSelectionMode}
-          onChange={(event) => updateSpeakerSelectionMode(event.target.value as SpeakerSelectionMode)}
-          className="rounded-input bg-inset"
-        >
-          <option value="round_robin">Round Robin</option>
-          <option value="intelligent">Intelligent</option>
-        </select>
-      </div>
 
       <div className="space-y-2">
         <SettingFieldLabel
