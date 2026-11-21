@@ -2,6 +2,17 @@ import z from 'zod';
 import { LLM_DEFAULTS, LLM_DEFAULTS_CHAT } from './llm_defaults.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 
+export const llmMetaOptionsObjectSchema = z.record(z.string(), z.unknown());
+
+/** Parses JSON `llmMetaOptions` into a record, throwing on invalid syntax or non-object JSON. */
+export function parseLlmMetaOptions(source: string): Record<string, unknown> {
+  const trimmed = source.trim();
+  if (!trimmed) {
+    return {};
+  }
+  return llmMetaOptionsObjectSchema.parse(JSON.parse(trimmed));
+}
+
 export const BASE_DEFAULTS_LLM_CONFIG_ID = 'base';
 const BASE_DEFAULTS_CONFIG_NAME = 'Base Defaults';
 
@@ -111,7 +122,7 @@ export function updateLLMConfigsWithBaseDefaultsConnection(
     ...baseConfigEntry,
     llmMetaOptions: JSON.stringify(
       {
-        ...JSON.parse(baseConfigEntry.llmMetaOptions),
+        ...parseLlmMetaOptions(baseConfigEntry.llmMetaOptions),
         model: trimmedModel || undefined,
       },
       null,

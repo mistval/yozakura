@@ -12,6 +12,7 @@ import { getErrorMessage } from '../errors/error_util.js';
 import { useLlmConnectionTest } from '../hooks/useLlmConnectionTest.js';
 import {
   findBaseDefaultsLLMConfig,
+  parseLlmMetaOptions,
   updateLLMConfigsWithBaseDefaultsConnection,
 } from '../engine/settings/cascading_llm_configs.js';
 import { getBuiltinImageScript } from '../engine/settings/settings_scripts/image/image_scripts.js';
@@ -63,10 +64,9 @@ export default function MainMenuFtueModal() {
 
   const baseDefaultsConfig = useMemo(() => findBaseDefaultsLLMConfig(llmConfigs), [llmConfigs]);
   const llmModelSource = useMemo(() => {
-    const meta = baseDefaultsConfig
-      ? (JSON.parse(baseDefaultsConfig.llmMetaOptions) as Record<string, unknown>)
-      : {};
-    const model = meta.model;
+    const model = baseDefaultsConfig
+      ? parseLlmMetaOptions(baseDefaultsConfig.llmMetaOptions).model
+      : undefined;
     return typeof model === 'string' ? model : '';
   }, [baseDefaultsConfig?.llmMetaOptions]);
 

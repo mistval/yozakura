@@ -10,6 +10,7 @@ import { getErrorMessage } from '../../errors/error_util.js';
 import { useLlmConnectionTest } from '../../hooks/useLlmConnectionTest.js';
 import { useTextareaPasteWarningGate } from './pasteWarning/useTextareaPasteWarningGate.js';
 import { newId } from '../../util/id.js';
+import { parseLlmMetaOptions } from '../../engine/settings/cascading_llm_configs.js';
 import { readModelFromMetaOptions, writeModelToMetaOptions } from './meta_options_model.js';
 import DeleteButton from '../ui/DeleteButton.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
@@ -26,7 +27,7 @@ function maskToken(token: string) {
 }
 
 function formatMetaOptionsPreview(source: string | undefined) {
-  const parsed = JSON.parse(source || '{}') as Record<string, unknown>;
+  const parsed = parseLlmMetaOptions(source || '{}');
   const entries = Object.entries(parsed);
   if (entries.length === 0) {
     return '(none)';
@@ -554,7 +555,7 @@ export default function LlmSettingsSection() {
                     }}
                     onCancel={() => {
                       setEditingId(undefined);
-                      const parsedMetaOptions = JSON.parse(config.llmMetaOptions) as Record<string, unknown>;
+                      const parsedMetaOptions = parseLlmMetaOptions(config.llmMetaOptions);
                       const hasMetaOptions = Boolean(Object.keys(parsedMetaOptions).length);
                       if (
                         !config.rule &&

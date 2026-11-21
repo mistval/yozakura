@@ -9,6 +9,7 @@ import { getErrorMessage } from '../errors/error_util.js';
 import type { PromptExecutionContext } from './prompt_templates/prompt_template_context_fields';
 import { globalParallelJobManager } from './parallelization/job_manager.js';
 import { DEFAULT_LLM_PARALLELISM_GROUP } from './parallelization/yozakura_job_manager_types.js';
+import { parseLlmMetaOptions } from './settings/cascading_llm_configs.js';
 
 type ResponsePreParser = (response: string) => string;
 
@@ -110,7 +111,7 @@ export function resolveLlmPromptOptions(
 
     matchedCount += 1;
 
-    const parsedMetaOptions = JSON.parse(config.llmMetaOptions) as Record<string, unknown>;
+    const parsedMetaOptions = parseLlmMetaOptions(config.llmMetaOptions);
     metaOptions = {
       ...metaOptions,
       ...parsedMetaOptions,

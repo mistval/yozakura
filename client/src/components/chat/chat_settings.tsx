@@ -3,7 +3,7 @@ import SettingFieldLabel from '../settings/ui/SettingFieldLabel.js';
 import { settingsDangerousHtmlTooltips } from '../settings/settings_tooltips.js';
 import { useSettingsStore } from '../../state/settings_store.js';
 import type { SpeakerSelectionMode } from '../../state/settings_store.js';
-import { useTurnMachineStore, useChatInitiatorLocation } from '../../state/turn_machine_store.js';
+import { useTurnMachineStore, useChatRootLocation } from '../../state/turn_machine_store.js';
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
@@ -17,7 +17,7 @@ export default function ChatSettings() {
   const setSettings = useSettingsStore((s) => s.setSettings);
   const chatState = useTurnMachineStore((s) => s.chatState);
   const chatInstructions = useTurnMachineStore((s) => s.chatInstructions);
-  const initiatorLocation = useChatInitiatorLocation();
+  const initiatorLocation = useChatRootLocation();
   const submitChatRequestEnd = useScenarioLoopStateStore((state) => state.submitChatRequestEnd);
   const canEndChat = useUserCanInputChat();
 

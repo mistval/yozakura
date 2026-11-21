@@ -1,11 +1,9 @@
+import { llmMetaOptionsObjectSchema } from '../../engine/settings/cascading_llm_configs.js';
 import { safeParseJson } from '../../util/json.js';
 
 function asMetaOptionsObject(source: string): Record<string, unknown> {
-  const parsed = safeParseJson(source);
-  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-    return parsed as Record<string, unknown>;
-  }
-  return {};
+  const result = llmMetaOptionsObjectSchema.safeParse(safeParseJson(source));
+  return result.success ? result.data : {};
 }
 
 export function readModelFromMetaOptions(source: string): string {

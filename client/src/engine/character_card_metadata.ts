@@ -119,12 +119,7 @@ function tryDecodeBase64(value: string): string | undefined {
   }
 
   try {
-    const binary = atob(trimmed);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-    return decodeUtf8(bytes);
+    return decodeUtf8(Uint8Array.fromBase64(trimmed));
   } catch {
     return undefined;
   }
@@ -254,7 +249,9 @@ export function embedYozakuraCharacterInPng(
     character: exportedCharacterSchema.parse(character),
   };
 
-  const withMetadata = addMetadata(pngBytes, YOZAKURA_METADATA_KEY, JSON.stringify(embedData));
+  // PNG tEXt chunks use Latin-1 encoding; base64-encoded UTF-8 preserves non-Latin-1 characters.
+  const encodedMetadata = new TextEncoder().encode(JSON.stringify(embedData)).toBase64();
+  const withMetadata = addMetadata(pngBytes, YOZAKURA_METADATA_KEY, encodedMetadata);
   const outputBuffer = new ArrayBuffer(withMetadata.byteLength);
   const outputBytes = new Uint8Array(outputBuffer);
   outputBytes.set(withMetadata);

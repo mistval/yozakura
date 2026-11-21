@@ -223,18 +223,18 @@ export function useActiveChatMedium(): ChatMedium {
   );
 }
 
-export function useChatInitiatorLocation() {
-  const initiatorId = useTurnMachineStore((s) => s.initiatorId);
+export function useChatRootLocation() {
+  const firstParticipantId = useTurnMachineStore((s) => s.participantIds[0]);
   const getCharacterLocation = useTurnMachineStore((s) => s.getChatCharacterLocation);
   const getRequiredCharacterById = useScenarioCharacterStore((s) => s.getRequiredCharacterById);
   const ephemeralLocation = useTurnMachineStore((s) => s.ephemeralLocation);
   const map = useActiveScenarioMap();
 
-  if (!initiatorId || !map) {
+  if (!firstParticipantId || !map) {
     return undefined;
   }
 
-  return getCharacterLocation(initiatorId, getRequiredCharacterById, map, ephemeralLocation);
+  return getCharacterLocation(firstParticipantId, getRequiredCharacterById, map, ephemeralLocation);
 }
 
 export async function getActiveChatGossipCharacter(fromCharacterId?: string, resolvers?: ContextResolvers) {
@@ -545,10 +545,10 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
   },
 
   setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation | undefined) {
-    const userId = useScenarioStore.getState().activeScenario?.userCharacterId;
-    assertNonNullish(userId, 'no user for scenario');
+    const firstParticipantId = get().participantIds[0];
+    assertNonNullish(firstParticipantId, 'no participants in active chat');
 
-    const currentLocation = get().getChatCharacterLocation(userId);
+    const currentLocation = get().getChatCharacterLocation(firstParticipantId);
     assertNonNullish(currentLocation, 'unable to get character location');
 
     set({

@@ -366,7 +366,7 @@ export default function ScenarioView() {
         onMove={(locationId) => {
           submitUserMove(
             locationId,
-            moveSuggestion?.consumesTurnByLocationId[locationId] ?? !freedomOfMovement
+            !freedomOfMovement && (moveSuggestion?.consumesTurnByLocationId[locationId] ?? true)
           );
         }}
         onWait={() => {

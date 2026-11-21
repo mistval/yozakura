@@ -14,7 +14,7 @@ import { useScenarioStore } from '../state/scenario_store.js';
 import { createDefaultTemporalSectionState } from '../engine/settings/settings_scripts/temporal/temporal_scripts.js';
 
 function sortCharacters(characters: Character[]) {
-  return characters.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  return characters.toSorted((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 }
 
 function StartScenarioButton({ canStart, onClick }: { canStart: boolean; onClick: () => void }) {
