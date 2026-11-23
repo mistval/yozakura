@@ -10,7 +10,7 @@ keywords:
   - feedback
 ---
 
-Sometimes people assume due to the scale of Yozakura, generating memories and managing relationships between dozens of characters, that an especially strong model is required. Fortunately, that's not the case, since characters effectively only interact with a few other characters at a time (usually just one other character, depending on your group chat settings). Users have reported Yozakura working well with models as small as 4B.
+Sometimes people assume due to the scale of Yozakura, generating memories and managing relationships between dozens of characters, that an especially strong model is required. Fortunately, that's not the case, since characters effectively only interact with a few other characters at a time (usually just one other character, depending on your group chat settings). Additionally, Yozakura is designed for the lowest common denominator and does **not** require structured output, except when using the optional Object Editor feature. Users have reported Yozakura working well with models as small as 4B.
 
 Smaller models are more likely to suffer from hallucination, misattribution, forgetfulness, etc, but just allowing this to happen often provides a better experience than one might expect. Alteratively, since character memories are easy to edit, a user who is open to doing some work themselves can correct and improve character memories by hand (this also enables steering characters in the user's desired direction, which can be entertaining even when you have a strong model).
 
