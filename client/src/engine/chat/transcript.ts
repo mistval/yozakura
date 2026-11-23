@@ -60,7 +60,7 @@ function concatAfterMessageId(
   return before.concat(newMessage, after);
 }
 
-class ChatMessageWrapper {
+export class ChatMessageWrapper {
   constructor(
     public readonly message: ChatMessage,
     public readonly associatedCharacter: TranscriptParticipant | undefined
