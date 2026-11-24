@@ -27,7 +27,7 @@ type TemporalContextStoreState = {
   displayHtml: string;
   plainText: string;
   dayIndex: number | undefined;
-  lastComputedTurn: number;
+  lastComputedTurn: number | undefined;
   compute: (scenario: Scenario) => Promise<TemporalContext | undefined>;
   computeAndSet: (opts?: { forceRecompute?: boolean }) => Promise<TemporalContextStoreState>;
   reset: () => void;
@@ -37,7 +37,7 @@ const EMPTY: OmitFunctions<TemporalContextStoreState> = {
   displayHtml: '',
   plainText: '',
   dayIndex: undefined,
-  lastComputedTurn: -1,
+  lastComputedTurn: undefined,
 };
 
 export const useTemporalContextStore = create<TemporalContextStoreState>((set, get) => ({
@@ -74,10 +74,19 @@ export const useTemporalContextStore = create<TemporalContextStoreState>((set, g
       createSeededRandom,
     };
 
+    const effectiveScenario: Scenario = {
+      ...scenario,
+      turnNumber: scenario.turnNumber + scenario.turnOffset,
+    };
+
     return runWithInteractiveRetry({
       operationType: 'temporal_context.compute',
       run: async () => {
-        const result = await resolved.script.getTemporalContext(controlValues, { scenario }, helpers);
+        const result = await resolved.script.getTemporalContext(
+          controlValues,
+          { scenario: effectiveScenario },
+          helpers
+        );
         return result;
       },
     });
@@ -90,7 +99,7 @@ export const useTemporalContextStore = create<TemporalContextStoreState>((set, g
       return get();
     }
 
-    const turn = scenario.turnNumber;
+    const turn = scenario.turnNumber + scenario.turnOffset;
     if (turn === get().lastComputedTurn && !options.forceRecompute) {
       return get();
     }
@@ -99,6 +108,9 @@ export const useTemporalContextStore = create<TemporalContextStoreState>((set, g
     const newScenario = useScenarioStore.getState().activeScenario;
     if (!result || newScenario?.id !== scenario.id) {
       set(EMPTY);
+      return get();
+    }
+    if (newScenario.turnNumber + newScenario.turnOffset !== turn) {
       return get();
     }
 
@@ -112,3 +124,19 @@ export const useTemporalContextStore = create<TemporalContextStoreState>((set, g
     return get();
   },
 }));
+
+useScenarioStore.subscribe((newState, prevState) => {
+  const nextScenario = newState.activeScenario;
+  const prevScenario = prevState.activeScenario;
+
+  if (!nextScenario) {
+    if (prevScenario) {
+      useTemporalContextStore.getState().reset();
+    }
+    return;
+  }
+
+  if (nextScenario.id === prevScenario?.id && nextScenario.turnOffset !== prevScenario.turnOffset) {
+    void useTemporalContextStore.getState().computeAndSet();
+  }
+});

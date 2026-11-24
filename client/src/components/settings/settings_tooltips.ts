@@ -1,6 +1,8 @@
 export const settingsTooltips = {
   'scenario.saveName':
     'Optional display name shown in the main menu Load list in place of the User and Map fields. Leave blank to show User and Map.',
+  'scenario.turnOffset':
+    'Integer offset added to the current turn when calculating temporal context (date, time of day, weather) and evaluating character schedules. Use this to shift the calendar forwards or backwards.',
   'scenario.activeMap': 'Change the map. Moves characters to random locations on the new map.',
   'scenario.activeMapName':
     'Change the map name, just for this scenario. Your global map will remain unchanged.',

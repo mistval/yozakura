@@ -59,6 +59,7 @@ export default function ScenarioView() {
     (state) => state.getCharacterRelationships
   );
   const ephemeralLocation = useTurnMachineStore((s) => s.ephemeralLocation);
+  const characterGroups = useCharacterGroupStore((state) => state.groups);
   const schedulesByGroupId = useCharacterGroupStore((state) => state.schedulesByGroupId);
   const temporalDisplayHtml = useTemporalContextStore((state) => state.displayHtml);
   const { showCharacterOverview } = useCharacterOverview();
@@ -67,6 +68,7 @@ export default function ScenarioView() {
   const { openSettings } = useSettingsModal();
   const activeParticipants = useActiveChatParticipants();
   const freedomOfMovement = useSettingsStore((s) => s.freedomOfMovement);
+  const npcChatRate = useSettingsStore((s) => s.npcChatRate);
   const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
   const isMobileLayout = chatPaneWidth === 'mobile';
   const activeChatState = useTurnMachineStore((state) => state.chatState);
@@ -232,11 +234,19 @@ export default function ScenarioView() {
       .filter((l): l is WorldMapLocation => Boolean(l));
   }, [perspectiveLocationId, locationAdjacenyById, locationById]);
 
+  const effectiveScheduleTurn = scenario ? scenario.turnNumber + scenario.turnOffset : undefined;
   const moveSuggestion = useMemo<MoveSuggestion | undefined>(() => {
-    if (!canSubmitUserTurn || !user || !activeMap) {
+    if (!canSubmitUserTurn || !user || !activeMap || effectiveScheduleTurn === undefined) {
       return undefined;
     }
-    const raw = getUserMovementSuggestion(user);
+    const raw = getUserMovementSuggestion({
+      user,
+      turnNumber: effectiveScheduleTurn,
+      map: activeMap,
+      characterGroups,
+      groupSchedulesByGroupId: schedulesByGroupId,
+      npcChatRate,
+    });
     if (!raw) {
       return undefined;
     }
@@ -244,7 +254,16 @@ export default function ScenarioView() {
       .map((id) => locationById[id])
       .filter((entry): entry is WorldMapLocation => Boolean(entry));
     return { ...raw, suggestedLocations };
-  }, [canSubmitUserTurn, user, activeMap, scenario?.turnNumber, schedulesByGroupId, locationById]);
+  }, [
+    canSubmitUserTurn,
+    user,
+    activeMap,
+    effectiveScheduleTurn,
+    characterGroups,
+    schedulesByGroupId,
+    npcChatRate,
+    locationById,
+  ]);
 
   const addCharacterToActiveChat = (npcId: string) => {
     if (!hasActiveChatSession || !scenario) {

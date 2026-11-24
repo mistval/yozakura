@@ -8,8 +8,8 @@ const EXAMPLE_CUSTOM_TEMPORAL_SCRIPT = `({
     { id: 'startDate', type: 'calendar', label: 'Start date', width: 'full', default: 'SCENARIO_CREATE_DATE' },
   ],
   async getTemporalContext(controlValues, request, helpers) {
-    const TURNS_PER_DAY = 4;
-    const PERIODS = ['Morning', 'Afternoon', 'Evening', 'Night'];
+    const TURNS_PER_DAY = 8;
+    const PERIODS = ['Dawn', 'Morning', 'Midday', 'Afternoon', 'Evening', 'Dusk', 'Night', 'Midnight'];
     const dayIndex = Math.floor(request.scenario.turnNumber / TURNS_PER_DAY);
     const period = PERIODS[request.scenario.turnNumber % TURNS_PER_DAY];
 

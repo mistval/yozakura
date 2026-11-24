@@ -220,11 +220,17 @@ export const worldMapSchema = basePersistedObjectSchema.extend({
 export type WorldMap = z.infer<typeof worldMapSchema>;
 
 export const DEFAULT_REMOTE_CHAT_MEDIUM = 'text messaging';
+export const DEFAULT_TURN_OFFSET = 0;
+export const MAX_TURN_OFFSET = Math.floor(Number.MAX_SAFE_INTEGER / 2);
 
 export const scenarioSchema = basePersistedObjectSchema.extend({
   mapId: idSchema,
   userCharacterId: idSchema.or(z.literal('')),
   turnNumber: z.number(),
+  turnOffset: z.number().int().min(-MAX_TURN_OFFSET).max(MAX_TURN_OFFSET).meta({
+    description:
+      'Signed integer offset added to turnNumber when computing temporal context and evaluating character schedules.',
+  }),
   saveName: z.string().meta({
     description:
       'Optional display name shown in the main menu load list in place of the user character and map names. Empty string means none.',

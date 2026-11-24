@@ -67,7 +67,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
   const lengthInTurns = storedSchedule?.lengthInTurns ?? 56;
   const zones = map?.zones ?? [];
   const segments = storedSchedule?.segments ?? [];
-  const turnNumber = scenario?.turnNumber ?? 0;
+  const turnNumber = (scenario?.turnNumber ?? 0) + (scenario?.turnOffset ?? 0);
   const nowTurn = ((turnNumber % lengthInTurns) + lengthInTurns) % lengthInTurns;
 
   const { laneBySegmentId, laneCount } = useMemo(() => assignLanes(segments), [segments]);

@@ -4,6 +4,8 @@ import { createPersistedObject, doAsDataRead, doAsDataWrite, mainDatabase } from
 import * as Files from '../backend_bridge/files';
 import {
   DEFAULT_REMOTE_CHAT_MEDIUM,
+  DEFAULT_TURN_OFFSET,
+  MAX_TURN_OFFSET,
   type Scenario,
   type ScenarioSummary,
   type WorldMap,
@@ -13,6 +15,7 @@ import { useMapStore } from './map_store.js';
 import { importDemoScenario } from '../backend_bridge/demo_import.js';
 import { assertNonNullish } from '../errors/application_error.js';
 import { createDefaultTemporalSectionState } from '../engine/settings/settings_scripts/temporal/temporal_scripts.js';
+import { clamp } from '../util/numeric.js';
 
 type ScenarioStoreState = {
   activeScenario: Scenario | undefined;
@@ -28,6 +31,7 @@ type ScenarioStoreState = {
   setTemporalControlValue: (scriptId: string, controlId: string, value: string) => void;
   resetTemporalControlValues: (scriptId: string) => void;
   setSaveName: (saveName: string) => void;
+  setTurnOffset: (turnOffset: number) => void;
   setRemoteChatMedium: (remoteChatMedium: string) => void;
   deleteScenario: (scenarioId: string) => void;
   saveImmediateBlankInactiveScenario: (mapId: string) => Promise<Scenario>;
@@ -218,6 +222,19 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     }));
   },
 
+  setTurnOffset: (turnOffset) => {
+    const clampedOffset = clamp(Math.round(turnOffset), -MAX_TURN_OFFSET, MAX_TURN_OFFSET);
+    const scenario = getRequiredActiveScenario();
+    if (clampedOffset === scenario.turnOffset) {
+      return;
+    }
+
+    get().updateActiveScenario((prev) => ({
+      ...prev,
+      turnOffset: clampedOffset,
+    }));
+  },
+
   setRemoteChatMedium: (remoteChatMedium) => {
     get().updateActiveScenario((prev) => ({
       ...prev,
@@ -229,6 +246,7 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     const scenario = createPersistedObject({
       mapId,
       turnNumber: 0,
+      turnOffset: DEFAULT_TURN_OFFSET,
       userCharacterId: '',
       saveName: '',
       remoteChatMedium: DEFAULT_REMOTE_CHAT_MEDIUM,

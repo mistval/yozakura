@@ -290,7 +290,12 @@ function SelectedLocationDetails({
   const location = useMapStore((s) => s.mapsById[mapId]?.locations.find((l) => l.id === locationId));
   const canDelete = useMapStore((s) => (s.mapsById[mapId]?.locations.length ?? 0) > 1);
   const otherLocations = useMapStore(
-    useShallow((s) => s.mapsById[mapId]?.locations.filter((l) => l.id !== locationId) ?? [])
+    useShallow(
+      (s) =>
+        s.mapsById[mapId]?.locations
+          .filter((l) => l.id !== locationId)
+          .toSorted((a, b) => a.name.localeCompare(b.name)) ?? []
+    )
   );
 
   if (!location) {

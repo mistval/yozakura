@@ -90,6 +90,7 @@ export default function ScenarioSetup() {
       const scenario = createPersistedObject({
         mapId: selectedMap.id,
         turnNumber: 0,
+        turnOffset: 0,
         userCharacterId: '',
         saveName: '',
         remoteChatMedium: DEFAULT_REMOTE_CHAT_MEDIUM,
