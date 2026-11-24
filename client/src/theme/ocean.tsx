@@ -68,7 +68,7 @@ function findCrests(points: [number, number][], opts: CrestFinderOpts) {
     if (!isPeak) continue;
     const neighborY = (points[i - 4]![1] + points[i + 4]![1]) / 2;
     if (neighborY - y < opts.minProminence) continue;
-    if (crests.length && x - crests[crests.length - 1]!.x < opts.minSpacing) continue;
+    if (crests.length && x - crests.at(-1)!.x < opts.minSpacing) continue;
     if (next() > opts.density) continue;
     crests.push({ x, y });
   }
@@ -244,7 +244,7 @@ function buildCrestBodyPath(pts: [number, number][]) {
     const my = (py + y) / 2;
     d += `Q ${px} ${py} ${mx} ${my} `;
   }
-  const last = pts[pts.length - 1]!;
+  const last = pts.at(-1)!;
   d += `L ${last[0]} ${last[1]} L 1430 620 L -30 620 Z`;
   return d;
 }

@@ -157,8 +157,7 @@ Your instructions:
   ],
   parser: {
     defaultParserSource: `async (response, it) => {
-    try { return response.replace(new RegExp(\`^\\*?\\*?\${it.focusedCharacter.firstName}\\*?\\*?:\`), '').trim(); }
-    catch { return response; }
+    return response.replace(new RegExp(\`^\\*?\\*?\${RegExp.escape(it.focusedCharacter.firstName)}\\*?\\*?:\`), '').trim();
 }`,
     parserOutputSchema: z.string(),
   },

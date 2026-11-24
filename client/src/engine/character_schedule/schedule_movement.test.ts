@@ -37,7 +37,7 @@ const DIAMOND_LOCATIONS: WorldMapLocation[] = [
 ];
 
 function chooseLast<T>(items: T[]): T {
-  return items[items.length - 1]!;
+  return items.at(-1)!;
 }
 
 function makeZone(id: string, locationIds: string[], extra: Partial<MapZone> = {}): MapZone {

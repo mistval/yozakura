@@ -27,7 +27,7 @@ export function weightedRandomChoice<TValue>(weightMap: WeightedElement<TValue>[
     }
   }
 
-  return weightMap[weightMap.length - 1]!.value;
+  return weightMap.at(-1)!.value;
 }
 
 export function weightedSampleWithoutReplacement<TValue>(items: WeightedElement<TValue>[], count: number) {

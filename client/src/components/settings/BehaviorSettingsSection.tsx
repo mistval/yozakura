@@ -409,7 +409,7 @@ export default function BehaviorSettingsSection() {
   const chatEndRows = npcChatEndMode === 'fixed' ? fixedChatEndRows : intelligentChatEndRows;
 
   const renderNumericSettingRow = (setting: NumericSettingRowConfig) => {
-    const displayValue = drafts.hasOwnProperty(setting.id) ? Number(drafts[setting.id]) : setting.value;
+    const displayValue = Object.hasOwn(drafts, setting.id) ? Number(drafts[setting.id]) : setting.value;
 
     return (
       <NumericSettingRow
@@ -430,7 +430,7 @@ export default function BehaviorSettingsSection() {
           setDrafts((prev) => ({ ...prev, [setting.id]: nextValue }));
         }}
         onBlur={() => {
-          const raw = drafts.hasOwnProperty(setting.id) ? Number(drafts[setting.id]) : setting.value;
+          const raw = Object.hasOwn(drafts, setting.id) ? Number(drafts[setting.id]) : setting.value;
           setSettings(setting.apply(raw));
           setDrafts((prev) => {
             const copy = { ...prev, [setting.id]: raw };

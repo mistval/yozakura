@@ -43,7 +43,7 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
 
   const setSelectedIds = useCallback(
     (ids: string[]) => {
-      const uniqueIds = [...new Set(ids)].filter(Boolean).slice(0, 2);
+      const uniqueIds = new Set(ids).values().filter(Boolean).take(2).toArray();
       setParams({ selected_ids: uniqueIds });
     },
     [setParams]
@@ -58,7 +58,7 @@ export function CharacterOverviewProvider({ children }: { children: ReactNode })
         co_character: target === 'character' && incoming?.characterId ? incoming.characterId : undefined,
         co_add: target === 'add-characters' ? true : undefined,
         selected_ids: incoming?.selectedIds
-          ? [...new Set(incoming.selectedIds)].filter(Boolean).slice(0, 2)
+          ? new Set(incoming.selectedIds).values().filter(Boolean).take(2).toArray()
           : undefined,
         scrolldown: incoming?.scrolldown ? 'true' : undefined,
       };

@@ -6,12 +6,8 @@ import {
   type SerializedLorebookEntry,
 } from './lorebook_schema';
 
-function escapeRegularExpression(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 function matchesWholePhrase(text: string, phrase: string): boolean {
-  const escapedPhrase = escapeRegularExpression(phrase);
+  const escapedPhrase = RegExp.escape(phrase);
   const wordCharacter = '[\\p{L}\\p{N}_]';
   return new RegExp(`(?<!${wordCharacter})${escapedPhrase}(?!${wordCharacter})`, 'iu').test(text);
 }

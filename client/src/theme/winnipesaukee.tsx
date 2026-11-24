@@ -78,7 +78,7 @@ function mountainPath(peaks: Peak[], closeY = HORIZON_Y): string {
     const my = (y1 + y2) / 2;
     d += `Q ${x1} ${y1} ${mx} ${my} `;
   }
-  const last = peaks[peaks.length - 1]!;
+  const last = peaks.at(-1)!;
   d += `Q ${last[0]} ${last[1]} 1410 ${last[1] + 10} `;
   d += `L 1410 ${closeY} L -10 ${closeY} Z`;
   return d;

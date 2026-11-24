@@ -171,30 +171,17 @@ export async function toggleNodeSelection(
   }
   knownNodesById.set(node.id, node);
 
-  const nextSelected = new Set(selectedIds);
+  let nextSelected: Set<string>;
   if (shouldSelect) {
-    for (const id of allIds) {
-      nextSelected.add(id);
-    }
-    // Auto-select required prerequisites (and their prerequisites transitively)
-    const required = resolveRequiredNodeIds(allIds, knownNodesById);
-    for (const reqId of required) {
-      nextSelected.add(reqId);
-    }
-    // Auto-select ancestors
-    for (const ancestorId of getAncestorIds(node.id, childrenMap)) {
-      nextSelected.add(ancestorId);
-    }
+    // Auto-select descendants, required prerequisites, and ancestors
+    nextSelected = selectedIds
+      .union(new Set(allIds))
+      .union(resolveRequiredNodeIds(allIds, knownNodesById))
+      .union(new Set(getAncestorIds(node.id, childrenMap)));
   } else {
-    // Deselect node and all descendants
-    for (const id of allIds) {
-      nextSelected.delete(id);
-    }
-    // Auto-deselect any dependent nodes that require any of the deselected nodes
-    const dependents = resolveDependentNodeIds(allIds, knownNodesById, nextSelected);
-    for (const depId of dependents) {
-      nextSelected.delete(depId);
-    }
+    // Deselect node, descendants, and any dependent nodes that require them
+    nextSelected = selectedIds.difference(new Set(allIds));
+    nextSelected = nextSelected.difference(resolveDependentNodeIds(allIds, knownNodesById, nextSelected));
     // Deselect ancestors whose loaded children now evaluate to 'none'
     for (const ancestorId of getAncestorIds(node.id, childrenMap)) {
       const children = childrenMap[ancestorId];

@@ -525,7 +525,7 @@ export class ConversationTranscript {
   }
 
   public getMostRecentMessage() {
-    return this.messages[this.messages.length - 1];
+    return this.messages.at(-1);
   }
 
   public getMostRecentChatMessage() {

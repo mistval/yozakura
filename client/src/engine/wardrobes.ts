@@ -236,8 +236,8 @@ export function applyDailyWardrobeAutoselect(wardrobes: Character['wardrobes']):
     return undefined;
   }
 
-  const groups = _.groupBy(tagged, (item) => item.tagValue);
-  const selected = new Set(Object.values(groups).map((group) => _.sample(group)?.wardrobe));
+  const groups = Map.groupBy(tagged, (item) => item.tagValue);
+  const selected = new Set(groups.values().map((group) => _.sample(group)?.wardrobe));
   const participatingWardrobes = new Set(tagged.map((item) => item.wardrobe));
 
   let changed = false;
