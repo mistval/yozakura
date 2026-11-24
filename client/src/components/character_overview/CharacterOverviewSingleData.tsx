@@ -166,8 +166,7 @@ export default function CharacterOverviewSingleData({
               >
                 <option value="">Automatic</option>
                 {otherCharactersArr
-                  .concat()
-                  .sort(
+                  .toSorted(
                     (a, b) => a.firstName.localeCompare(b.firstName) || a.lastName.localeCompare(b.lastName)
                   )
                   .map((character) => (

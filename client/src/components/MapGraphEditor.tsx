@@ -150,7 +150,7 @@ function LocationEntriesBar({
       return locationIds;
     }
 
-    return [...locationIds].sort((a, b) => {
+    return locationIds.toSorted((a, b) => {
       const countA = charactersByLocationId?.[a]?.length ?? 0;
       const countB = charactersByLocationId?.[b]?.length ?? 0;
       return (countA > 0 ? 0 : 1) - (countB > 0 ? 0 : 1);

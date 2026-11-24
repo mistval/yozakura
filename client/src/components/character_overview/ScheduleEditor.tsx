@@ -35,7 +35,7 @@ function assignLanes(segments: ScheduleSegment[]): {
   laneBySegmentId: Record<string, number>;
   laneCount: number;
 } {
-  const ordered = [...segments].sort((a, b) => a.startTurn - b.startTurn || a.endTurn - b.endTurn);
+  const ordered = segments.toSorted((a, b) => a.startTurn - b.startTurn || a.endTurn - b.endTurn);
   const laneEndTurns: number[] = [];
   const laneBySegmentId: Record<string, number> = {};
 

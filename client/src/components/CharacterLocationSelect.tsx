@@ -28,7 +28,7 @@ export default function CharacterLocationSelect({
       return [];
     }
 
-    return [...activeMap.locations].sort((a, b) => a.name.localeCompare(b.name));
+    return activeMap.locations.toSorted((a, b) => a.name.localeCompare(b.name));
   }, [activeMap?.locations]);
 
   if (!activeMap || sortedLocations.length === 0) {

@@ -30,7 +30,7 @@ export default function CharacterGroupsTab() {
   };
 
   const orderedCharacters = useMemo(() => {
-    return [...characters].sort((a, b) => {
+    return characters.toSorted((a, b) => {
       const aIn = selectedGroup && a.groupIds.includes(selectedGroup.id) ? 0 : 1;
       const bIn = selectedGroup && b.groupIds.includes(selectedGroup.id) ? 0 : 1;
       return aIn - bIn || `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);

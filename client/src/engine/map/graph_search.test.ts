@@ -63,7 +63,7 @@ describe('findNearestReachable', () => {
       () => true
     );
     expect(targets).toEqual(['D']);
-    expect([...firstStepsToward('D')].sort()).toEqual(['B', 'C']);
+    expect(firstStepsToward('D').toSorted()).toEqual(['B', 'C']);
   });
 
   it('returns no targets when the path is blocked', () => {

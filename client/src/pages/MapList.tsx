@@ -11,7 +11,7 @@ export default function MapList() {
   const { openSettings } = useSettingsModal();
 
   const sortedMaps = useMemo(() => {
-    return [...maps].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    return maps.toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [maps]);
 
   return (

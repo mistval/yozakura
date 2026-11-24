@@ -98,8 +98,8 @@ function formatGlobalMemoriesForPrompt(
   focusedCharacter: ContextCharacter,
   allCharacters: ContextCharacter[]
 ): string {
-  const summariesText = Array.from(focusedCharacter.rollingConversationSummaries)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  const summariesText = focusedCharacter.rollingConversationSummaries
+    .toSorted((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map((entry) => {
       const participantNames = entry.participantIds.map(
         (id) => allCharacters.find((p) => p.id === id)?.firstName || 'Unknown Person'

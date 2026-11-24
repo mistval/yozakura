@@ -20,8 +20,8 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
       label: 'Scenarios',
       subtitle: `(${scenarios.length} ${countSuffix})`,
       getChildren: async () => {
-        return Array.from(scenarios)
-          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        return scenarios
+          .toSorted((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
           .map((summary) => {
             const scenId = summary.scenario.id;
             return {
@@ -116,8 +116,8 @@ export function buildImportExportTreeRoots(options: BuildTreeOptions): TreeNode[
       label: 'Global Characters',
       subtitle: `(${globalCharacters.length} ${countSuffix})`,
       getChildren: async () => {
-        return Array.from(globalCharacters)
-          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        return globalCharacters
+          .toSorted((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
           .map((char) => ({
             id: TreeEntityIds.character(char.id),
             label: `${char.firstName} ${char.lastName}`,

@@ -30,7 +30,7 @@ export default function CharacterOverviewAddCharactersModal() {
   }, [currentScenarioCharacterGlobalIds, addCharacterSelectedGlobalIds]);
 
   const sortedCharacters = useMemo(() => {
-    return globalCharacters.concat().sort((a, b) => {
+    return globalCharacters.toSorted((a, b) => {
       if (currentScenarioCharacterGlobalIdsSet.has(a.id) && !currentScenarioCharacterGlobalIdsSet.has(b.id)) {
         return 1;
       }
