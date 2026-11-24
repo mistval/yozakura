@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { buildAppIdentificationHeaders } from '../engine/settings/cascading_llm_configs.js';
 import { ApplicationError } from '../errors/application_error';
-import { omitNilValues } from '../util/types';
+import { omitNilValues, type PartialWithUndefined } from '../util/types';
 
 type LlmTokenCallback = (fullText: string) => void;
 
@@ -40,7 +40,7 @@ const openAIChatCompletionSchema = z.object({
 type RawLLMChatMessage = z.infer<typeof openAIChatCompletionSchema>['choices'][number]['message'];
 
 type ExtractedStreamChunk =
-  | { mode: 'delta'; message: Partial<NormalizedLLMChatMessage> }
+  | { mode: 'delta'; message: PartialWithUndefined<NormalizedLLMChatMessage> }
   | { mode: 'full'; message: NormalizedLLMChatMessage }
   | { mode: 'none' };
 
@@ -53,7 +53,9 @@ function normalizeChatMessage(raw: RawLLMChatMessage): NormalizedLLMChatMessage 
   };
 }
 
-function extractStreamMessageFields(value: unknown): Partial<NormalizedLLMChatMessage> | undefined {
+function extractStreamMessageFields(
+  value: unknown
+): PartialWithUndefined<NormalizedLLMChatMessage> | undefined {
   if (!value || typeof value !== 'object') {
     return undefined;
   }
@@ -68,8 +70,8 @@ function extractStreamMessageFields(value: unknown): Partial<NormalizedLLMChatMe
   }
 
   return {
-    ...(typeof content === 'string' ? { content } : {}),
-    ...(typeof reasoningContent === 'string' ? { reasoning_content: reasoningContent } : {}),
+    content: typeof content === 'string' ? content : undefined,
+    reasoning_content: typeof reasoningContent === 'string' ? reasoningContent : undefined,
   };
 }
 
@@ -101,9 +103,7 @@ function extractStreamChunkMessage(chunkPayload: unknown): ExtractedStreamChunk 
       mode: 'full',
       message: {
         content: fullMessage.content,
-        ...(fullMessage.reasoning_content !== undefined
-          ? { reasoning_content: fullMessage.reasoning_content }
-          : {}),
+        reasoning_content: fullMessage.reasoning_content,
       },
     };
   }

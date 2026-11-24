@@ -164,7 +164,7 @@ export function updateLLMConfigsWithBaseDefaultsConnection(
     ),
     llmUrl: trimmedUrl || undefined,
     llmAuthToken: trimmedToken || undefined,
-    ...(concurrencyGroupLimit !== undefined ? { concurrencyGroupLimit } : {}),
+    concurrencyGroupLimit,
   };
 
   const nextConfigs: LLMConfigById = {

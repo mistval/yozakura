@@ -17,7 +17,7 @@ import { applyDailyWardrobeAutoselect } from '../engine/wardrobes.js';
 import { useGlobalCharactersStore } from './global_character_store.js';
 
 type UpdatedScenarioCharacter = Character & {
-  imageFile?: File;
+  imageFile?: File | undefined;
 };
 
 type ScenarioCharacterStoreState = {
@@ -238,7 +238,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
 
     const newCharacter: UpdatedScenarioCharacter = {
       ...setter(get().scenarioCharactersById[character.id]),
-      ...(imageFile ? { imageFile } : {}),
+      imageFile,
     };
 
     void get().ephemeralStateHelper.stageUpdatedEntity(newCharacter, IMMEDIATE_SYNC);

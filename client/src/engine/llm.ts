@@ -30,20 +30,20 @@ type ConfigRuleContext = {
 
 export type ResolvedLlmPromptOptions = {
   metaOptions: Record<string, unknown>;
-  targetUrl?: string;
-  authToken?: string;
-  responsePreParserSource?: string;
+  targetUrl?: string | undefined;
+  authToken?: string | undefined;
+  responsePreParserSource?: string | undefined;
   tokenStreamingEnabled: boolean;
   appIdentificationHeadersEnabled: boolean;
-  concurrencyGroupName?: string;
-  concurrencyGroupLimit?: number;
+  concurrencyGroupName?: string | undefined;
+  concurrencyGroupLimit?: number | undefined;
 };
 
 type LlmTransportOptions = {
   targetUrl: string;
   authToken?: string | undefined;
   appIdentificationHeadersEnabled?: boolean | undefined;
-  onTokens?: (fullText: string) => void;
+  onTokens?: ((fullText: string) => void) | undefined;
 };
 
 function applyInheritToggleMode(
@@ -171,11 +171,11 @@ export function resolveLlmPromptOptions(
   return {
     metaOptions,
     ...transport,
-    ...(responsePreParserSource ? { responsePreParserSource } : {}),
+    responsePreParserSource,
     tokenStreamingEnabled: tokenStreamingEnabled ?? true,
     appIdentificationHeadersEnabled: appIdentificationHeadersEnabled ?? true,
-    ...(concurrencyGroupName ? { concurrencyGroupName } : {}),
-    ...(concurrencyGroupLimit !== undefined ? { concurrencyGroupLimit } : {}),
+    concurrencyGroupName,
+    concurrencyGroupLimit,
   };
 }
 
@@ -265,7 +265,7 @@ export async function chatCompletion(
             targetUrl,
             authToken: resolvedPromptOptions.authToken,
             appIdentificationHeadersEnabled: resolvedPromptOptions.appIdentificationHeadersEnabled,
-            ...(resolvedPromptOptions.tokenStreamingEnabled && onTokens ? { onTokens } : {}),
+            onTokens: resolvedPromptOptions.tokenStreamingEnabled ? onTokens : undefined,
           };
 
           const responseMessage = await Api.llmChat(payload, {

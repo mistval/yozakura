@@ -131,7 +131,7 @@ export const automatic1111Script: ImageGenerationSettingsScript = {
 
     const body = {
       ...metaOptions,
-      ...(model ? { model } : {}),
+      model: model || metaOptions.model,
       prompt,
       width: dimension(isCard ? controlValues.cardImageWidth : controlValues.chatImageWidth),
       height: dimension(isCard ? controlValues.cardImageHeight : controlValues.chatImageHeight),

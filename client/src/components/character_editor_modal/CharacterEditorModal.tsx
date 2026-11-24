@@ -13,7 +13,7 @@ import WardrobesSection from './WardrobesSection';
 import { useModalStackZIndex } from '../../hooks/useModalQueryParam.js';
 import { useModalPanelClasses } from '../../hooks/use_mobile_layout.js';
 
-function CharacterEditorModalContent({ zIndex }: { zIndex?: number }) {
+function CharacterEditorModalContent({ zIndex }: { zIndex?: number | undefined }) {
   const { open, closeEditor } = useCharacterEditorModal();
   const { outerClassName, panelClassName } = useModalPanelClasses({
     maxWidthClassName: 'max-w-4xl',
@@ -37,7 +37,7 @@ function CharacterEditorModalContent({ zIndex }: { zIndex?: number }) {
         </div>
       </Modal>
 
-      <CharacterCardImportModal {...(zIndex !== undefined && { zIndex: zIndex + 100 })} />
+      <CharacterCardImportModal zIndex={zIndex !== undefined ? zIndex + 100 : undefined} />
     </>
   );
 }
@@ -51,7 +51,7 @@ export default function CharacterEditorModal({ queryParam, ...props }: Character
 
   return (
     <CharacterEditorModalProvider {...props}>
-      <CharacterEditorModalContent {...(queryParam !== undefined && { zIndex })} />
+      <CharacterEditorModalContent zIndex={queryParam !== undefined ? zIndex : undefined} />
     </CharacterEditorModalProvider>
   );
 }

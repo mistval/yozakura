@@ -104,7 +104,7 @@ export type ImportCommitPayload = {
 export type CommitImportResult =
   | {
       success: true;
-      backupFilename?: string;
+      backupFilename?: string | undefined;
     }
   | {
       success: false;
@@ -134,7 +134,7 @@ export async function commitImport(payload: ImportCommitPayload): Promise<Commit
 
   return {
     success: true,
-    ...(parsed.backupFilename ? { backupFilename: parsed.backupFilename } : {}),
+    backupFilename: parsed.backupFilename || undefined,
   };
 }
 

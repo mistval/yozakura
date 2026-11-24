@@ -100,7 +100,7 @@ export default function ConversationLog() {
       showBack={showBackButton}
       contentRef={contentRef}
       maxWidthClassName={maxWidthClassName}
-      {...(showBackButton ? { onBack: backToConversationLog } : {})}
+      onBack={showBackButton ? backToConversationLog : undefined}
     >
       <>
         <ConversationSearchList
