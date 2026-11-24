@@ -58,7 +58,7 @@ function resolveChatUserInputAction(action: ChatUserInputAction): boolean {
   return true;
 }
 
-export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((set) => ({
+export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((set, get) => ({
   autoMode: false,
   runState: 'idle',
   runningForScenario: undefined,
@@ -67,24 +67,44 @@ export const useScenarioLoopStateStore = create<ScenarioLoopStateStoreState>((se
   lastTemporalDayIndex: undefined,
 
   setAutoMode(enabled: boolean) {
+    if (enabled === get().autoMode) {
+      return;
+    }
+
     set({
       autoMode: enabled,
     });
   },
 
   setRunState(runState: ScenarioLoopRunState) {
+    if (runState === get().runState) {
+      return;
+    }
+
     set({ runState });
   },
 
   setUserRequestedPhaseTransition(value: UserRequestedPhaseTransition) {
+    if (value === get().userRequestedPhaseTransition) {
+      return;
+    }
+
     set({ userRequestedPhaseTransition: value });
   },
 
   setPendingImagePromptEdit(value: PendingImagePromptEdit | undefined) {
+    if (value === get().pendingImagePromptEdit) {
+      return;
+    }
+
     set({ pendingImagePromptEdit: value });
   },
 
   setLastTemporalDayIndex(dayIndex: number | undefined) {
+    if (dayIndex === get().lastTemporalDayIndex) {
+      return;
+    }
+
     set({ lastTemporalDayIndex: dayIndex });
   },
 
