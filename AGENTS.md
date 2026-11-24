@@ -6,7 +6,7 @@
 - Never swallow errors indiscriminately. Prefer failing loudly.
 - Always prefer explicit database migrations over runtime backwards compatibility.
 - Prefer undefined over null.
-- Avoid excessively defensive programming.
+- Avoid excessively defensive programming. When something is wrong, we want to blow up as soon as possible, not silently fall back and pretend we're respecting the contract.
 - Use the latest browser, JS, and TS features.
 - Keep the backend as ignorant of data shapes as possible. It's just a storage layer. Migrations are an exception, they can be high-context when necessary.
 - Prefer manual dependency injection over vitest mocking.

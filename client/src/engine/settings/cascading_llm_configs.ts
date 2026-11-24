@@ -33,8 +33,10 @@ const DEFAULT_RESPONSE_PRE_PARSER_SOURCE = `(response) => {
   return extractedTaggedText.replaceAll('[TOOL_CALLS]', '');
 }`;
 
-export const tokenStreamingModeSchema = z.enum(['enabled', 'disabled']);
-export type TokenStreamingMode = z.infer<typeof tokenStreamingModeSchema>;
+export const llmInheritToggleModeSchema = z.enum(['enabled', 'disabled']);
+export type LlmInheritToggleMode = z.infer<typeof llmInheritToggleModeSchema>;
+export const tokenStreamingModeSchema = llmInheritToggleModeSchema;
+export type TokenStreamingMode = LlmInheritToggleMode;
 
 export const llmConfigSchema = z.object({
   id: z.string(),
@@ -45,6 +47,7 @@ export const llmConfigSchema = z.object({
   llmAuthToken: z.string().optional(),
   responsePreParserSource: z.string().optional(),
   tokenStreamingEnabled: tokenStreamingModeSchema.optional(),
+  appIdentificationHeadersEnabled: llmInheritToggleModeSchema.optional(),
   concurrencyGroupName: z.string().optional(),
   concurrencyGroupLimit: z.number().optional(),
 });
@@ -83,21 +86,52 @@ const KNOWN_CLOUD_LLM_HOSTNAMES = [
   'nano-gpt.com',
 ];
 
-export function isKnownCloudLlmProvider(url: string): boolean {
-  const trimmed = url.trim();
-  if (!trimmed) {
-    return false;
-  }
+export const APP_IDENTIFICATION_URL = 'https://github.com/mistval/yozakura';
+export const APP_IDENTIFICATION_NAME = 'Yozakura';
+export const PROXY_REFERER_HEADER = 'X-Proxy-Referer';
 
+const ATTRIBUTION_PROVIDER_DOMAINS = [
+  'openrouter.ai',
+  'requesty.ai',
+  'featherless.ai',
+  'ai-gateway.vercel.sh',
+];
+
+function matchesDomain(host: string, domain: string): boolean {
+  return host === domain || host.endsWith(`.${domain}`);
+}
+
+export function isKnownCloudLlmProvider(url: string): boolean {
   try {
-    const parsed = new URL(
-      trimmed.startsWith('http://') || trimmed.startsWith('https://') ? trimmed : `https://${trimmed}`
-    );
-    const host = parsed.hostname.toLowerCase();
-    return KNOWN_CLOUD_LLM_HOSTNAMES.some((known) => host === known || host.endsWith(`.${known}`));
+    const host = new URL(url).hostname.toLowerCase();
+    return KNOWN_CLOUD_LLM_HOSTNAMES.some((known) => matchesDomain(host, known));
   } catch {
     return false;
   }
+}
+
+/**
+ * Returns provider-recognized app identification headers for LLM gateways/routers
+ * that support attribution (OpenRouter, Requesty, Featherless AI, Vercel AI Gateway).
+ * Includes X-Proxy-Referer so the backend proxy can rewrite the forbidden browser Referer header.
+ */
+export function buildAppIdentificationHeaders(targetUrl: string): Record<string, string> {
+  const host = new URL(targetUrl).hostname.toLowerCase();
+  if (!ATTRIBUTION_PROVIDER_DOMAINS.some((domain) => matchesDomain(host, domain))) {
+    return {};
+  }
+
+  const headers: Record<string, string> = {
+    'HTTP-Referer': APP_IDENTIFICATION_URL,
+    [PROXY_REFERER_HEADER]: APP_IDENTIFICATION_URL,
+    'X-Title': APP_IDENTIFICATION_NAME,
+  };
+
+  if (matchesDomain(host, 'openrouter.ai')) {
+    headers['X-OpenRouter-Title'] = APP_IDENTIFICATION_NAME;
+  }
+
+  return headers;
 }
 
 export function updateLLMConfigsWithBaseDefaultsConnection(
@@ -150,6 +184,7 @@ export const DEFAULT_LLM_CONFIGS: LLMConfigById = {
     llmUrl: DEFAULT_COMPLETIONS_URL,
     responsePreParserSource: DEFAULT_RESPONSE_PRE_PARSER_SOURCE,
     tokenStreamingEnabled: 'enabled',
+    appIdentificationHeadersEnabled: 'enabled',
     concurrencyGroupName: 'default_llm',
     concurrencyGroupLimit: 1,
   },

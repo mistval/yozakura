@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { buildAppIdentificationHeaders } from '../engine/settings/cascading_llm_configs.js';
 import { ApplicationError } from '../errors/application_error';
 import { omitNilValues } from '../util/types';
 
@@ -11,8 +12,9 @@ function buildAuthHeader(authToken: string | undefined): string | undefined {
 }
 
 export type LlmChatOptions = {
-  targetUrl?: string | undefined;
+  targetUrl: string;
   authToken?: string | undefined;
+  appIdentificationHeadersEnabled?: boolean | undefined;
   onTokens?: LlmTokenCallback | undefined;
   signal?: AbortSignal | undefined;
 };
@@ -220,9 +222,12 @@ async function parseLlmStreamingResponse(
 
 export async function executeLlmChat(
   payload: Record<string, unknown>,
-  options: LlmChatOptions = {}
+  options: LlmChatOptions
 ): Promise<NormalizedLLMChatMessage | undefined> {
-  const { targetUrl, authToken, onTokens, signal } = options;
+  const { targetUrl, authToken, appIdentificationHeadersEnabled = true, onTokens, signal } = options;
+  if (!targetUrl.trim()) {
+    throw new Error('Target URL is required for LLM chat requests.');
+  }
   const streamingRequested = typeof onTokens === 'function';
 
   if (streamingRequested) {
@@ -234,10 +239,15 @@ export async function executeLlmChat(
     stream: streamingRequested,
   };
 
+  const appIdentificationHeaders = appIdentificationHeadersEnabled
+    ? buildAppIdentificationHeaders(targetUrl)
+    : {};
+
   const headers = omitNilValues({
     'Content-Type': 'application/json',
     'X-Target-URL': targetUrl,
     Authorization: buildAuthHeader(authToken),
+    ...appIdentificationHeaders,
   });
 
   const response = await fetch('/api/proxy/fetch', {

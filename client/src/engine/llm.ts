@@ -9,7 +9,7 @@ import { getErrorMessage } from '../errors/error_util.js';
 import type { PromptExecutionContext } from './prompt_templates/prompt_template_context_fields';
 import { globalParallelJobManager } from './parallelization/job_manager.js';
 import { DEFAULT_LLM_PARALLELISM_GROUP } from './parallelization/yozakura_job_manager_types.js';
-import { parseLlmMetaOptions } from './settings/cascading_llm_configs.js';
+import { parseLlmMetaOptions, type LlmInheritToggleMode } from './settings/cascading_llm_configs.js';
 
 type ResponsePreParser = (response: string) => string;
 
@@ -33,16 +33,31 @@ export type ResolvedLlmPromptOptions = {
   targetUrl?: string;
   authToken?: string;
   responsePreParserSource?: string;
-  tokenStreamingEnabled?: boolean;
+  tokenStreamingEnabled: boolean;
+  appIdentificationHeadersEnabled: boolean;
   concurrencyGroupName?: string;
   concurrencyGroupLimit?: number;
 };
 
 type LlmTransportOptions = {
-  targetUrl?: string | undefined;
+  targetUrl: string;
   authToken?: string | undefined;
+  appIdentificationHeadersEnabled?: boolean | undefined;
   onTokens?: (fullText: string) => void;
 };
+
+function applyInheritToggleMode(
+  current: boolean | undefined,
+  mode: LlmInheritToggleMode | undefined
+): boolean | undefined {
+  if (mode === 'enabled') {
+    return true;
+  }
+  if (mode === 'disabled') {
+    return false;
+  }
+  return current;
+}
 
 function stringifyForPromptLog(value: unknown): string {
   return JSON.stringify(value, null, 2);
@@ -87,6 +102,7 @@ export function resolveLlmPromptOptions(
   let transport: { targetUrl?: string; authToken?: string } = {};
   let responsePreParserSource: string | undefined;
   let tokenStreamingEnabled: boolean | undefined;
+  let appIdentificationHeadersEnabled: boolean | undefined;
   let concurrencyGroupName: string | undefined;
   let concurrencyGroupLimit: number | undefined;
 
@@ -133,11 +149,11 @@ export function resolveLlmPromptOptions(
       responsePreParserSource = trimmedResponsePreParserSource;
     }
 
-    if (config.tokenStreamingEnabled === 'enabled') {
-      tokenStreamingEnabled = true;
-    } else if (config.tokenStreamingEnabled === 'disabled') {
-      tokenStreamingEnabled = false;
-    }
+    tokenStreamingEnabled = applyInheritToggleMode(tokenStreamingEnabled, config.tokenStreamingEnabled);
+    appIdentificationHeadersEnabled = applyInheritToggleMode(
+      appIdentificationHeadersEnabled,
+      config.appIdentificationHeadersEnabled
+    );
 
     if (config.concurrencyGroupName) {
       concurrencyGroupName = config.concurrencyGroupName;
@@ -156,7 +172,8 @@ export function resolveLlmPromptOptions(
     metaOptions,
     ...transport,
     ...(responsePreParserSource ? { responsePreParserSource } : {}),
-    ...(tokenStreamingEnabled !== undefined ? { tokenStreamingEnabled } : {}),
+    tokenStreamingEnabled: tokenStreamingEnabled ?? true,
+    appIdentificationHeadersEnabled: appIdentificationHeadersEnabled ?? true,
     ...(concurrencyGroupName ? { concurrencyGroupName } : {}),
     ...(concurrencyGroupLimit !== undefined ? { concurrencyGroupLimit } : {}),
   };
@@ -231,6 +248,12 @@ export async function chatCompletion(
         run: async () => {
           // Resolve them again in case user edited config to fix an error
           resolvedPromptOptions = resolveLlmPromptOptions(promptTemplateGroup, promptContext);
+          const targetUrl = resolvedPromptOptions.targetUrl?.trim();
+          if (!targetUrl) {
+            throw new Error(
+              'No Completions API URL is configured for this prompt. Set a Completions API URL in Settings > LLM Settings.'
+            );
+          }
 
           const payload = {
             ...resolvedPromptOptions.metaOptions,
@@ -239,8 +262,9 @@ export async function chatCompletion(
           };
 
           const transportOptions: LlmTransportOptions = {
-            targetUrl: resolvedPromptOptions.targetUrl,
+            targetUrl,
             authToken: resolvedPromptOptions.authToken,
+            appIdentificationHeadersEnabled: resolvedPromptOptions.appIdentificationHeadersEnabled,
             ...(resolvedPromptOptions.tokenStreamingEnabled && onTokens ? { onTokens } : {}),
           };
 

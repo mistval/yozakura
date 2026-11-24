@@ -17,74 +17,90 @@ function setLlmConfigs(llmConfigs: LLMConfigById) {
   useSettingsStore.setState({ llmConfigs });
 }
 
-describe('resolveLlmPromptOptions tokenStreamingEnabled cascading', () => {
-  afterEach(() => {
-    useSettingsStore.setState({ llmConfigs: DEFAULT_SETTINGS.llmConfigs });
-  });
-
-  it('inherits enabled from base when matching child config is inherit', () => {
-    setLlmConfigs(DEFAULT_LLM_CONFIGS);
-    const resolved = resolveLlmPromptOptions('gen_npc_response', TEST_CONTEXT);
-    expect(resolved.tokenStreamingEnabled).toBe(true);
-  });
-
-  it('inherits disabled from base when matching child config is inherit', () => {
-    setLlmConfigs({
-      ...DEFAULT_LLM_CONFIGS,
-      [BASE_DEFAULTS_LLM_CONFIG_ID]: {
-        ...DEFAULT_LLM_CONFIGS[BASE_DEFAULTS_LLM_CONFIG_ID]!,
-        tokenStreamingEnabled: 'disabled',
-      },
+describe.each(['tokenStreamingEnabled', 'appIdentificationHeadersEnabled'] as const)(
+  'resolveLlmPromptOptions %s cascading',
+  (field) => {
+    afterEach(() => {
+      useSettingsStore.setState({ llmConfigs: DEFAULT_SETTINGS.llmConfigs });
     });
-    const resolved = resolveLlmPromptOptions('gen_npc_response', TEST_CONTEXT);
-    expect(resolved.tokenStreamingEnabled).toBe(false);
-  });
 
-  it('allows child config to override base from enabled to disabled', () => {
-    setLlmConfigs({
-      ...DEFAULT_LLM_CONFIGS,
-      'npc-respond': {
-        ...DEFAULT_LLM_CONFIGS['npc-respond']!,
-        tokenStreamingEnabled: 'disabled',
-      },
+    it('defaults to true when all matching groups are set to inherit (undefined)', () => {
+      setLlmConfigs({
+        base: {
+          id: 'base',
+          name: 'Base',
+          rule: 'true',
+          llmMetaOptions: '{}',
+        },
+        child: {
+          id: 'child',
+          name: 'Child',
+          rule: "context.promptTemplateGroup === 'gen_npc_response'",
+          llmMetaOptions: '{}',
+        },
+      });
+      const resolved = resolveLlmPromptOptions('gen_npc_response', TEST_CONTEXT);
+      expect(resolved[field]).toBe(true);
     });
-    const resolved = resolveLlmPromptOptions('gen_npc_response', TEST_CONTEXT);
-    expect(resolved.tokenStreamingEnabled).toBe(false);
-  });
 
-  it('allows child config to override base from disabled to enabled', () => {
-    setLlmConfigs({
-      ...DEFAULT_LLM_CONFIGS,
-      [BASE_DEFAULTS_LLM_CONFIG_ID]: {
-        ...DEFAULT_LLM_CONFIGS[BASE_DEFAULTS_LLM_CONFIG_ID]!,
-        tokenStreamingEnabled: 'disabled',
-      },
-      'npc-respond': {
-        ...DEFAULT_LLM_CONFIGS['npc-respond']!,
-        tokenStreamingEnabled: 'enabled',
-      },
+    it('inherits disabled from base when matching child config is inherit', () => {
+      setLlmConfigs({
+        ...DEFAULT_LLM_CONFIGS,
+        [BASE_DEFAULTS_LLM_CONFIG_ID]: {
+          ...DEFAULT_LLM_CONFIGS[BASE_DEFAULTS_LLM_CONFIG_ID]!,
+          [field]: 'disabled',
+        },
+      });
+      const resolved = resolveLlmPromptOptions('gen_npc_response', TEST_CONTEXT);
+      expect(resolved[field]).toBe(false);
     });
-    const resolved = resolveLlmPromptOptions('gen_npc_response', TEST_CONTEXT);
-    expect(resolved.tokenStreamingEnabled).toBe(true);
-  });
 
-  it('preserves prior value when subsequent matching config has undefined tokenStreamingEnabled', () => {
-    setLlmConfigs({
-      base: {
-        id: 'base',
-        name: 'Base',
-        rule: 'true',
-        llmMetaOptions: '{}',
-        tokenStreamingEnabled: 'enabled',
-      },
-      child: {
-        id: 'child',
-        name: 'Child',
-        rule: "context.promptTemplateGroup === 'gen_npc_response'",
-        llmMetaOptions: '{}',
-      },
+    it('allows child config to override base from inherit/enabled to disabled', () => {
+      setLlmConfigs({
+        ...DEFAULT_LLM_CONFIGS,
+        'npc-respond': {
+          ...DEFAULT_LLM_CONFIGS['npc-respond']!,
+          [field]: 'disabled',
+        },
+      });
+      const resolved = resolveLlmPromptOptions('gen_npc_response', TEST_CONTEXT);
+      expect(resolved[field]).toBe(false);
     });
-    const resolved = resolveLlmPromptOptions('gen_npc_response', TEST_CONTEXT);
-    expect(resolved.tokenStreamingEnabled).toBe(true);
-  });
-});
+
+    it('allows child config to override base from disabled to enabled', () => {
+      setLlmConfigs({
+        ...DEFAULT_LLM_CONFIGS,
+        [BASE_DEFAULTS_LLM_CONFIG_ID]: {
+          ...DEFAULT_LLM_CONFIGS[BASE_DEFAULTS_LLM_CONFIG_ID]!,
+          [field]: 'disabled',
+        },
+        'npc-respond': {
+          ...DEFAULT_LLM_CONFIGS['npc-respond']!,
+          [field]: 'enabled',
+        },
+      });
+      const resolved = resolveLlmPromptOptions('gen_npc_response', TEST_CONTEXT);
+      expect(resolved[field]).toBe(true);
+    });
+
+    it('preserves prior value when subsequent matching config has undefined', () => {
+      setLlmConfigs({
+        base: {
+          id: 'base',
+          name: 'Base',
+          rule: 'true',
+          llmMetaOptions: '{}',
+          [field]: 'enabled',
+        },
+        child: {
+          id: 'child',
+          name: 'Child',
+          rule: "context.promptTemplateGroup === 'gen_npc_response'",
+          llmMetaOptions: '{}',
+        },
+      });
+      const resolved = resolveLlmPromptOptions('gen_npc_response', TEST_CONTEXT);
+      expect(resolved[field]).toBe(true);
+    });
+  }
+);

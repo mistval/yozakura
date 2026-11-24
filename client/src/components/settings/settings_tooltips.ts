@@ -74,7 +74,9 @@ export const settingsTooltips = {
   'llm.authToken':
     'Optional bearer token override. Leave blank to inherit token from earlier matching groups.',
   'llm.tokenStreaming':
-    'When enabled, responses stream token-by-token. Select Inherit to use the setting from earlier matching groups. Requires your OpenAI-compatible API provider to support streaming (SSE).',
+    'When enabled (or when all matching groups are set to Inherit), responses stream token-by-token. Requires your OpenAI-compatible API provider to support streaming (SSE).',
+  'llm.appIdentificationHeaders':
+    'When enabled (or when all matching groups are set to Inherit), includes HTTP-Referer, Referer, and X-Title/X-OpenRouter-Title headers identifying Yozakura (https://github.com/mistval/yozakura) on requests to supported providers. Providers use these headers for app attribution, usage analytics, and public leaderboards.',
 } as const;
 
 export const settingsDangerousHtmlTooltips = {

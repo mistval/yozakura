@@ -52,6 +52,28 @@ function sanitizeDiffForStorage(value: unknown): unknown {
   return sanitized;
 }
 
+/**
+ * Builds a `DeepPartial<T>` patch that replaces `prev` with `next`, emitting `null`
+ * for keys present in `prev` that are missing or `undefined` in `next` so `applyPatch` deletes them.
+ */
+export function buildObjectReplacementPatch<T extends Record<string, unknown>>(
+  prev: T | undefined,
+  next: T
+): DeepPartial<T> {
+  const entries: Array<[string, unknown]> = [];
+  for (const key of Object.keys(prev ?? {})) {
+    if (!(key in next) || next[key] === undefined) {
+      entries.push([key, null]);
+    }
+  }
+  for (const [key, value] of Object.entries(next)) {
+    if (value !== undefined) {
+      entries.push([key, value]);
+    }
+  }
+  return Object.fromEntries(entries) as DeepPartial<T>;
+}
+
 export function applyPatch<T extends Record<string, unknown>>(current: T, patch: DeepPartial<T>): T {
   const merged = merge(current, patch as Partial<T>, MERGE_OPTIONS) as T;
   applyNullDeletions(merged, patch);

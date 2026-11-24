@@ -57,7 +57,7 @@ export const deleteFile = (path: string) =>
     },
   });
 
-export const llmChat = (payload: Record<string, unknown>, options: LlmChatOptions = {}) =>
+export const llmChat = (payload: Record<string, unknown>, options: LlmChatOptions) =>
   executeLlmChat(payload, options);
 
 export async function dbExec(sql: string) {
