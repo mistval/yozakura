@@ -176,6 +176,7 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
           err instanceof UserPauseSignalException ||
           err instanceof UserAbortCurrentGenerationSignalException
         ) {
+          useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
           nextSpeaker = await ChatCoordinator.selectNextSpeaker({
             forcedSpeakerId: getRequiredUserCharacterId(),
           });
