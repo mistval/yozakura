@@ -12,11 +12,9 @@ import { useMapModal } from './MapModalContext.js';
 import { useObjectEditor } from './object_editor/ObjectEditorContext.js';
 import MapGraphEditor from './MapGraphEditor.js';
 import MapZoneEditor from './map_zones/MapZoneEditor.js';
-import DeleteButton from './ui/DeleteButton.js';
 import { useMapStore } from '../state/map_store.js';
 import CharacterAvatar from './CharacterAvatar.js';
 import { useDraft } from '../hooks/useDraft.js';
-import { newId } from '../util/id.js';
 
 const MOVEMENT_VERB: Record<MovementPolicy, string> = {
   teleport: 'teleported',
@@ -149,11 +147,9 @@ function InlineEditableField({
 }
 
 function MapModalInner() {
-  const { closeMap, open, mapId: explicitMapId, showMap } = useMapModal();
+  const { closeMap, open, mapId: explicitMapId } = useMapModal();
   const { openMapObjectEditor } = useObjectEditor();
   const updateMap = useMapStore((s) => s.updateMap);
-  const saveMap = useMapStore((s) => s.saveMap);
-  const numMaps = useMapStore((s) => s.maps.length);
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
   const explicitMap = useMapStore((s) => (explicitMapId ? s.mapsById[explicitMapId] : undefined));
   const activeScenarioMap = useActiveScenarioMap();
@@ -357,7 +353,7 @@ function MapModalInner() {
       )}
 
       {view === 'characters' &&
-        (mapId && targetMap ? (
+        (mapId ? (
           <MapGraphEditor
             className="min-h-0 flex-1"
             mapId={mapId}
@@ -388,49 +384,10 @@ function MapModalInner() {
                   <button
                     type="button"
                     onClick={addLocation}
-                    className="w-full px-2.5! py-1! text-xs sm:text-sm whitespace-nowrap"
+                    className="button-emphasized w-full px-2.5! py-1! text-xs sm:text-sm font-medium whitespace-nowrap"
                   >
                     Add Location
                   </button>
-                  {isGlobalContext && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const now = new Date().toISOString();
-                        const duplicatedMap = {
-                          ...targetMap,
-                          id: newId(),
-                          name: `${mapName} (Copy)`,
-                          createdAt: now,
-                          updatedAt: now,
-                        };
-                        saveMap(duplicatedMap);
-                        showMap(duplicatedMap.id);
-                      }}
-                      className="w-full px-2.5! py-1! text-xs sm:text-sm whitespace-nowrap"
-                    >
-                      Copy Map
-                    </button>
-                  )}
-                  <DeleteButton
-                    label="Delete map"
-                    buttonText="Delete Map"
-                    disabled={numMaps <= 1}
-                    confirmTitle="Delete Map"
-                    confirmLabel="Delete Map"
-                    confirmMessage={
-                      isGlobalContext
-                        ? `Delete map "${mapName}"? This will permanently remove the map.`
-                        : `Delete map "${mapName}"? This will permanently remove the map, and this scenario will switch to another one.`
-                    }
-                    className="w-full px-2.5! py-1! text-xs sm:text-sm whitespace-nowrap bg-danger-solid! border-danger-border-accent!"
-                    onConfirm={() => {
-                      useMapStore.getState().deleteMap(mapId);
-                      if (isGlobalContext) {
-                        closeMap();
-                      }
-                    }}
-                  />
                 </div>
 
                 <div className="shrink-0 w-64 sm:w-72 flex flex-col gap-2 rounded-sm border border-border-default bg-inset p-2.5">
