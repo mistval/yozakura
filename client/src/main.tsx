@@ -5,6 +5,8 @@ import { ConversationLogProvider } from './components/conversation_log/Conversat
 import { CharacterOverviewProvider } from './components/character_overview/CharacterOverviewContext.js';
 import { SettingsModalProvider } from './components/settings/SettingsModalContext.js';
 import { MapModalProvider } from './components/MapModalContext.js';
+import { ObjectEditorProvider } from './components/object_editor/ObjectEditorContext.js';
+import { ObjectEditorModal } from './components/object_editor/ObjectEditorModal.js';
 import {
   GlobalCharacterEditorProvider,
   GlobalCharacterEditorModal,
@@ -49,6 +51,7 @@ function AppRoutes() {
       <GlobalCharacterEditorModal />
       <ConversationLog />
       <CharacterOverview />
+      <ObjectEditorModal />
       <ActiveJobsModal />
       <InteractiveRetryPopoverHost />
     </>
@@ -63,7 +66,9 @@ function App() {
           <GlobalCharacterEditorProvider>
             <ConversationLogProvider>
               <CharacterOverviewProvider>
-                <AppRoutes />
+                <ObjectEditorProvider>
+                  <AppRoutes />
+                </ObjectEditorProvider>
               </CharacterOverviewProvider>
             </ConversationLogProvider>
           </GlobalCharacterEditorProvider>

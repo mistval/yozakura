@@ -9,10 +9,15 @@ import {
   type WorldMap,
 } from '../types.js';
 import { idSchema, newId } from '../../util/id.js';
+import { createBlankCharacter } from '../character_gen.js';
 import { PromptTemplateChain } from '../prompt_templates/prompt_template_chain.js';
 import { objectEditorPromptChainSpec } from '../prompt_templates/object_editor/object_editor_prompt.js';
 import { chainSpecsToGroupDefaultData } from '../prompt_templates/template_types.js';
 import { SettingsBridge } from '../settings/settings_bridge.js';
+import {
+  createBidirectionalRelationshipSchema,
+  createCharacterDraftSessionBinding,
+} from './object_editor_delegates.js';
 import {
   ObjectEditor,
   type ObjectEditorDelegate,
@@ -583,5 +588,54 @@ describe('objectEditorPromptChainSpec', () => {
     await expect(
       chain.parse('First\n<json_patch>[]</json_patch>\nSecond\n<json_patch>[]</json_patch>', context)
     ).rejects.toThrow(/at most one <json_patch>/i);
+  });
+});
+
+describe('bidirectional relationships & draft character delegate', () => {
+  it('supports bidirectional relationship schema formatting/readOnly guards and draft character editing', async () => {
+    const schema = createBidirectionalRelationshipSchema('Alice', 'Bob');
+    const aToB = createRelationshipFixture();
+    const bToA = {
+      ...createRelationshipFixture(),
+      fromId: aToB.toId,
+      toId: aToB.fromId,
+      descriptor: 'rival',
+    };
+
+    const harness = createEditorHarness({ aToB, bToA }, schema, async () => ({
+      message: 'Updated both directions.',
+      patch: [
+        { op: 'replace', path: '/aToB/memory', value: 'Shared umbrella in the rain.' },
+        { op: 'replace', path: '/bToA/familiarity', value: 60 },
+      ],
+    }));
+
+    await harness.editor.initialize();
+    await harness.editor.runUserMessage('Update both directions.');
+
+    const names = harness.editor.getState().history[0]!.humanReadableChanges.map((c) => c.name);
+    expect(names).toHaveLength(2);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'Character Relationship -> Alice → Bob -> Memory',
+        'Character Relationship -> Bob → Alice -> Familiarity',
+      ])
+    );
+
+    let currentDraft = createBlankCharacter();
+    const draftBinding = createCharacterDraftSessionBinding({
+      getDraft: () => currentDraft,
+      setDraft: (next) => {
+        currentDraft = next;
+      },
+    });
+    const draftEditor = new ObjectEditor(draftBinding.delegate);
+    await draftBinding.acquireLock(new AbortController().signal);
+    await draftEditor.initialize();
+    await draftEditor.applyManualJsonEdit(
+      JSON.stringify({ ...currentDraft, firstName: 'Seraphina' }, null, 2)
+    );
+    await draftBinding.commitChanges(draftEditor.getState().currentObject!, draftEditor.getState().isDirty);
+    expect(currentDraft.firstName).toBe('Seraphina');
   });
 });

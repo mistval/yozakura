@@ -4,6 +4,7 @@ import type { ConversationStateUpdateNode, StoredConversation } from '../../engi
 import { useIsMobileLayout } from '../../hooks/use_mobile_layout.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import ChatView from '../chat/ChatView.js';
+import { transcriptToChatViewMessages } from '../chat/transcript_chat_messages.js';
 import { useViewRelationshipCapability } from '../chat/capabilities/use_view_relationship_capability.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
 
@@ -71,6 +72,11 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
     [selectedEntry]
   );
 
+  const chatMessages = useMemo(
+    () => (transcript ? transcriptToChatViewMessages(transcript, userId) : []),
+    [transcript, userId]
+  );
+
   const participants = selectedEntry?.serializedTranscript.participants ?? [];
   const participantById = useMemo(
     () => Object.fromEntries(participants.map((participant) => [participant.id, participant] as const)),
@@ -85,8 +91,8 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
 
   return (
     <ChatView
-      transcript={transcript}
-      perspectiveCharacterId={userId}
+      messages={chatMessages}
+      isEmpty={transcript.countAllMessages() === 0}
       participants={participants}
       resolveAvatarImagePath={(senderId) =>
         participantById[senderId]?.imagePath ?? charactersById[senderId]?.imagePath

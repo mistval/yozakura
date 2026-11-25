@@ -11,7 +11,9 @@ import {
   EphemeralStateHelper,
   IMMEDIATE_SYNC,
   ephemeralStateSlice,
+  getActiveDeferredSyncOwner,
   isEntityInDeferredSync,
+  useDeferredSyncStore,
   type IEphemeralStateDelegate,
 } from './ephemeral_state_helper';
 import { useScenarioStore } from './scenario_store';
@@ -63,6 +65,10 @@ function createHelper() {
 describe('EphemeralStateHelper', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useDeferredSyncStore.setState({
+      activeOwner: undefined,
+      syncingEntityIds: {},
+    });
   });
 
   it('applies and persists immediate updates', async () => {
@@ -266,5 +272,93 @@ describe('EphemeralStateHelper', () => {
     await helper.discardPendingChanges();
     expect(delegate.getEntitiesFromDatabase).not.toHaveBeenCalled();
     expect(isEntityInDeferredSync(entity.id)).toBe(false);
+  });
+
+  it('allows multi-store locking under one owner and clears activeOwner only when all stores release', async () => {
+    const { helper: helper1 } = createHelper();
+    const { helper: helper2 } = createHelper();
+    const entity1 = { id: 'owner-multi-1', value: 'v1' };
+    const entity2 = { id: 'owner-multi-2', value: 'v2' };
+
+    helper1.lockEntitiesForDeferredSync([entity1], 'owner_a');
+    helper2.lockEntitiesForDeferredSync([entity2], 'owner_a');
+
+    expect(getActiveDeferredSyncOwner()).toBe('owner_a');
+    expect(isEntityInDeferredSync(entity1.id)).toBe(true);
+    expect(isEntityInDeferredSync(entity2.id)).toBe(true);
+
+    await helper1.commitChanges();
+    expect(isEntityInDeferredSync(entity1.id)).toBe(false);
+    expect(isEntityInDeferredSync(entity2.id)).toBe(true);
+    expect(getActiveDeferredSyncOwner()).toBe('owner_a');
+
+    await helper2.commitChanges();
+    expect(isEntityInDeferredSync(entity2.id)).toBe(false);
+    expect(getActiveDeferredSyncOwner()).toBeUndefined();
+  });
+
+  it('rejects synchronous locking by a different owner while a lock is held', async () => {
+    const { helper: helper1 } = createHelper();
+    const { helper: helper2, delegate: delegate2 } = createHelper();
+    const entity1 = { id: 'conflict-1', value: 'v1' };
+    const entity2 = { id: 'conflict-2', value: 'v2' };
+
+    helper1.lockEntitiesForDeferredSync([entity1], 'owner_a');
+
+    expect(() => helper2.lockEntitiesForDeferredSync([entity2], 'owner_b')).toThrow(
+      'Cannot acquire deferred-sync lock for "owner_b": currently held by "owner_a".'
+    );
+    expect(getActiveDeferredSyncOwner()).toBe('owner_a');
+    expect(isEntityInDeferredSync(entity2.id)).toBe(false);
+
+    // Ensure entity2 was not added to helper2 pendingOperations
+    await helper2.stageUpdatedEntity(entity2, IMMEDIATE_SYNC);
+    expect(delegate2.setDatabaseState).toHaveBeenCalledWith([entity2]);
+  });
+
+  it('waits to acquire lock via waitToLockEntitiesForDeferredSync and supports abortSignal', async () => {
+    const { helper: helper1 } = createHelper();
+    const { helper: helper2, delegate: delegate2 } = createHelper();
+    const entity1 = { id: 'wait-1', value: 'v1' };
+    const entity2 = { id: 'wait-2', value: 'v2' };
+
+    helper1.lockEntitiesForDeferredSync([entity1], 'owner_a');
+
+    // Aborting while waiting rejects cleanly without mutating state
+    const abortController = new AbortController();
+    const abortedWait = helper2.waitToLockEntitiesForDeferredSync(
+      [entity2],
+      'owner_b',
+      abortController.signal
+    );
+    abortController.abort(new Error('User aborted'));
+    await expect(abortedWait).rejects.toThrow('User aborted');
+    expect(getActiveDeferredSyncOwner()).toBe('owner_a');
+    expect(isEntityInDeferredSync(entity2.id)).toBe(false);
+
+    // Ensure entity2 was not locked on helper2
+    await helper2.stageUpdatedEntity(entity2, IMMEDIATE_SYNC);
+    expect(delegate2.setDatabaseState).toHaveBeenCalledWith([entity2]);
+
+    // Waiting resolves and acquires lock once owner_a releases
+    let acquired = false;
+    const waitPromise = helper2.waitToLockEntitiesForDeferredSync([entity2], 'owner_b').then(() => {
+      acquired = true;
+    });
+
+    await Promise.resolve();
+    expect(acquired).toBe(false);
+    expect(getActiveDeferredSyncOwner()).toBe('owner_a');
+
+    await helper1.discardPendingChanges();
+    await waitPromise;
+
+    expect(acquired).toBe(true);
+    expect(getActiveDeferredSyncOwner()).toBe('owner_b');
+    expect(isEntityInDeferredSync(entity2.id)).toBe(true);
+
+    await helper2.commitChanges();
+    expect(getActiveDeferredSyncOwner()).toBeUndefined();
+    expect(isEntityInDeferredSync(entity2.id)).toBe(false);
   });
 });

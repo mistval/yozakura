@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useCharacterOverview } from './CharacterOverviewContext.js';
+import { useObjectEditor } from '../object_editor/ObjectEditorContext.js';
 import type { Character, Scenario, WorldMap } from '../../engine/types.js';
 import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
@@ -39,6 +40,7 @@ export default function CharacterOverviewSingleData({
   const requestDirectNpcChat = useScenarioLoopStateStore((state) => state.submitUserChatAction);
   const chatSessionIsActive = useTurnMachineStore((state) => state.chatState !== 'inactive');
   const { closeCharacterOverview, openCharacterOverviewEditor } = useCharacterOverview();
+  const { openScenarioCharacterObjectEditor } = useObjectEditor();
   const groups = useCharacterGroupStore((state) => state.groups);
   const [, setOverviewParams] = useQueryParams();
 
@@ -139,6 +141,13 @@ export default function CharacterOverviewSingleData({
           disabled={!selectedSingleCharacter || isCharacterSyncing}
         >
           Edit {selectedSingleCharacter.firstName}
+        </button>
+        <button
+          type="button"
+          disabled={!selectedSingleCharacter}
+          onClick={() => openScenarioCharacterObjectEditor(selectedSingleCharacter.id)}
+        >
+          🤖 AI Edit
         </button>
         <label className="flex flex-col items-center gap-2 text-sm">
           <span>Location</span>

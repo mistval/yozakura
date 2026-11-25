@@ -193,6 +193,11 @@ function createSqlStatements(schema: string) {
       SELECT *
       FROM ${table('character')}
     `,
+    SELECT_CHARACTER_BY_ID_SQL: `
+      SELECT *
+      FROM ${table('character')}
+      WHERE id = ?;
+    `,
     SELECT_ALL_SCENARIO_CHARACTERS_SQL: `
       SELECT *
       FROM ${table('scenario_character')}
@@ -618,6 +623,15 @@ export class DatabaseClient {
     return this.selectDataRows(this.sql.SELECT_ALL_CHARACTERS_SQL, [[]], characterSchema);
   }
 
+  public async loadGlobalCharactersByIds(ids: string[]): Promise<Character[]> {
+    if (ids.length === 0) return [];
+    return this.selectDataRows(
+      this.sql.SELECT_CHARACTER_BY_ID_SQL,
+      ids.map((id) => [id]),
+      characterSchema
+    );
+  }
+
   public async loadScenarioCharacters(scenarioId: string) {
     return this.selectDataRows(this.sql.SELECT_ALL_SCENARIO_CHARACTERS_SQL, [[scenarioId]], characterSchema);
   }
@@ -632,6 +646,15 @@ export class DatabaseClient {
 
   public async loadMaps() {
     return this.selectDataRows(this.sql.SELECT_ALL_MAPS_SQL, [[]], worldMapSchema);
+  }
+
+  public async loadMapsByIds(ids: string[]): Promise<WorldMap[]> {
+    if (ids.length === 0) return [];
+    return this.selectDataRows(
+      this.sql.SELECT_MAP_BY_ID_SQL,
+      ids.map((id) => [id]),
+      worldMapSchema
+    );
   }
 
   public async loadMap(id: string) {
@@ -649,12 +672,28 @@ export class DatabaseClient {
     return this.storeMaps([map]);
   }
 
+  public async deleteMaps(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    await this.dbRun(
+      this.sql.DELETE_MAP_BY_ID_SQL,
+      ids.map((id) => [id])
+    );
+  }
+
   public async deleteMap(id: string) {
-    await this.dbRun(this.sql.DELETE_MAP_BY_ID_SQL, [[id]]);
+    return this.deleteMaps([id]);
+  }
+
+  public async deleteGlobalCharacters(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    await this.dbRun(
+      this.sql.DELETE_CHARACTER_BY_ID_SQL,
+      ids.map((id) => [id])
+    );
   }
 
   public async deleteGlobalCharacter(id: string) {
-    await this.dbRun(this.sql.DELETE_CHARACTER_BY_ID_SQL, [[id]]);
+    return this.deleteGlobalCharacters([id]);
   }
 
   public async deleteScenarioCharacters(characterIds: string[]) {

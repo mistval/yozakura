@@ -6,7 +6,6 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
-import type { ChatMessageWrapper, ConversationTranscript } from '../../engine/chat/transcript.js';
 import type { TranscriptParticipant } from '../../engine/types.js';
 import CharacterAvatar from '../CharacterAvatar.js';
 import ResponsiveDrawerSidebar, {
@@ -47,9 +46,21 @@ export type ChatViewMessageActionHelpers = {
   buttonClassName: string;
 };
 
+export type ChatViewMessage = {
+  id: string;
+  speakerName: string;
+  content: string;
+  senderId?: string | undefined;
+  isCharacterMessage?: boolean | undefined;
+  isImageMessage?: boolean | undefined;
+  imageUrl?: string | undefined;
+  customContent?: ReactNode | undefined;
+  extraActions?: ((helpers: ChatViewMessageActionHelpers) => ReactNode) | undefined;
+};
+
 export type ChatViewProps = {
-  transcript: ConversationTranscript;
-  perspectiveCharacterId: string;
+  messages: readonly ChatViewMessage[];
+  isEmpty?: boolean | undefined;
   participants?: TranscriptParticipant[] | undefined;
   resolveAvatarImagePath?: ((senderId: string) => string | undefined) | undefined;
 
@@ -84,12 +95,12 @@ export type ChatViewProps = {
   onDeleteMessage?: ((messageId: string) => void) | undefined;
   onEditMessage?: ((messageId: string, newContent: string) => void) | undefined;
   onRetryMessage?: ((messageId: string) => void) | undefined;
-  canShowRetryMessage?: ((message: ChatMessageWrapper) => boolean) | undefined;
+  canShowRetryMessage?: ((message: ChatViewMessage) => boolean) | undefined;
   retryMessageDisabled?: boolean | undefined;
   onGenerateImageForMessage?: ((messageId: string) => void) | undefined;
   generateImageDisabled?: boolean | undefined;
   extraMessageActions?:
-    ((message: ChatMessageWrapper, helpers: ChatViewMessageActionHelpers) => ReactNode) | undefined;
+    ((message: ChatViewMessage, helpers: ChatViewMessageActionHelpers) => ReactNode) | undefined;
 
   onSendMessage?: ((message: string) => void) | undefined;
   inputPlaceholder?: string | undefined;
@@ -120,8 +131,8 @@ function isNearTranscriptBottom(container: HTMLDivElement) {
 }
 
 export default function ChatView({
-  transcript,
-  perspectiveCharacterId,
+  messages,
+  isEmpty,
   participants,
   resolveAvatarImagePath,
   headerPlacement = 'column',
@@ -491,11 +502,11 @@ export default function ChatView({
     messageRowClassName ??
     `relative group flow-root text-left rounded-sm ${isMobileLayout ? 'px-0.5' : 'px-1'} py-0.5`;
 
-  const messageRows = transcript.getVisibleMessages(perspectiveCharacterId).map((entry) => {
-    const entryId = entry.getId();
+  const messageRows = messages.map((entry) => {
+    const entryId = entry.id;
     const isActionBarActive = activeActionMessageId === entryId;
-    const isCharacterMessage = entry.isCharacterChatMessage();
-    const senderId = isCharacterMessage ? entry.asCharacterChatMessage().senderId : undefined;
+    const isCharacterMessage = Boolean(entry.isCharacterMessage);
+    const senderId = entry.senderId;
     const avatarImagePath = senderId
       ? resolveAvatarImagePath
         ? resolveAvatarImagePath(senderId)
@@ -509,13 +520,26 @@ export default function ChatView({
     const showDelete = Boolean(onDeleteMessage);
     const showGenerateImage = Boolean(onGenerateImageForMessage && isCharacterMessage);
     const showRetry = Boolean(onRetryMessage && canShowRetryMessage?.(entry));
-    const showEdit = Boolean(onEditMessage && !entry.isImageMessage());
-    const extraActions = hasAnyMessageActions
+    const showEdit = Boolean(onEditMessage && !entry.isImageMessage && entry.customContent === undefined);
+    const perMessageActions = hasAnyMessageActions
+      ? entry.extraActions?.({
+          dismissActionBar: () => setActiveActionMessageId(undefined),
+          buttonClassName: actionBarButtonClassName,
+        })
+      : undefined;
+    const callbackActions = hasAnyMessageActions
       ? extraMessageActions?.(entry, {
           dismissActionBar: () => setActiveActionMessageId(undefined),
           buttonClassName: actionBarButtonClassName,
         })
       : undefined;
+    const extraActions =
+      perMessageActions || callbackActions ? (
+        <>
+          {perMessageActions}
+          {callbackActions}
+        </>
+      ) : undefined;
     const rowHasActions =
       hasAnyMessageActions &&
       (showDelete || showGenerateImage || showRetry || showEdit || Boolean(extraActions));
@@ -545,13 +569,13 @@ export default function ChatView({
             {senderId && (
               <CharacterAvatar
                 imagePath={avatarImagePath}
-                name={entry.getSpeakerName()}
+                name={entry.speakerName}
                 className="h-10 w-10 border-border-strong bg-surface-subtle"
               />
             )}
             <div className="min-w-0 flex-1 space-y-2">
               <div>
-                <strong>{entry.getSpeakerName()}:</strong>
+                <strong>{entry.speakerName}:</strong>
               </div>
               <textarea
                 value={editingMessageDraft}
@@ -568,13 +592,15 @@ export default function ChatView({
               </div>
             </div>
           </div>
+        ) : entry.customContent !== undefined ? (
+          entry.customContent
         ) : (
           <TranscriptMessageContent
-            isImageMessage={entry.isImageMessage()}
+            isImageMessage={Boolean(entry.isImageMessage)}
             isCharacterMessage={isCharacterMessage && Boolean(senderId)}
-            imageUrl={entry.isImageMessage() ? entry.imageUrl() : undefined}
-            speakerName={entry.getSpeakerName()}
-            content={entry.getContent()}
+            imageUrl={entry.imageUrl}
+            speakerName={entry.speakerName}
+            content={entry.content}
             avatarImagePath={avatarImagePath}
             renderAvatarWrapper={
               senderId && interactiveAvatar
@@ -595,8 +621,8 @@ export default function ChatView({
                         }
                         onAvatarClick?.(senderId);
                       }}
-                      title={getAvatarTitle?.(senderId, entry.getSpeakerName())}
-                      aria-label={`${entry.getSpeakerName()} avatar`}
+                      title={getAvatarTitle?.(senderId, entry.speakerName)}
+                      aria-label={`${entry.speakerName} avatar`}
                       className="float-left mr-2.5 mb-0.5 p-0! border-0! rounded-full! bg-transparent! shrink-0 select-none touch-manipulation"
                     >
                       {avatar}
@@ -673,7 +699,7 @@ export default function ChatView({
                   lastUserScrollInteractionAtRef.current = -Infinity;
                   setActiveActionMessageId(undefined);
                   setEditingMessageId(entryId);
-                  setEditingMessageDraft(entry.getContent());
+                  setEditingMessageDraft(entry.content);
                 }}
                 title="Edit message"
                 aria-label="Edit message"
@@ -689,6 +715,8 @@ export default function ChatView({
       </div>
     );
   });
+
+  const showEmptyState = (isEmpty ?? messages.length === 0) && emptyState;
 
   const messageListElement = (
     <div
@@ -720,13 +748,13 @@ export default function ChatView({
     >
       {autoScroll ? (
         <div ref={transcriptContainerInnerRef} className="space-y-3">
-          {transcript.countAllMessages() === 0 && emptyState}
+          {showEmptyState}
           {messageRows}
           {afterMessages}
         </div>
       ) : (
         <>
-          {transcript.countAllMessages() === 0 && emptyState}
+          {showEmptyState}
           {messageRows}
           {afterMessages}
         </>
@@ -747,7 +775,13 @@ export default function ChatView({
           }
         }}
         onKeyDown={(event) => {
-          if (event.key === 'Enter' && !event.shiftKey && inputIsNonEmpty && canSendMessage) {
+          if (
+            event.key === 'Enter' &&
+            !event.shiftKey &&
+            inputIsNonEmpty &&
+            canSendMessage &&
+            !inputDisabled
+          ) {
             event.preventDefault();
             handleSend();
           }
@@ -771,7 +805,7 @@ export default function ChatView({
         <button
           type="button"
           onClick={handleSend}
-          disabled={!canSendMessage || !inputIsNonEmpty}
+          disabled={!canSendMessage || inputDisabled || !inputIsNonEmpty}
           aria-label="Send"
           title="Send"
           className={isMobileLayout ? 'px-2.5! flex items-center justify-center shrink-0' : 'shrink-0'}

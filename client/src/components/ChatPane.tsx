@@ -20,6 +20,7 @@ import {
 import ImagePromptModal from './ImagePromptModal.js';
 import ChatTopBarStatus from './chat/ChatTopBarStatus.js';
 import ChatView from './chat/ChatView.js';
+import { transcriptToChatViewMessages } from './chat/transcript_chat_messages.js';
 import SceneImageControls from './chat/SceneImageControls.js';
 import { useCharacterChatSettingsCapability } from './chat/capabilities/use_character_chat_settings_capability.js';
 import { useChatMessageActionsCapability } from './chat/capabilities/use_chat_message_actions_capability.js';
@@ -120,6 +121,11 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [transcript?.countAllMessages() === 0]);
+
+  const chatMessages = useMemo(
+    () => (transcript ? transcriptToChatViewMessages(transcript, userCharacter.id) : []),
+    [transcript, userCharacter.id]
+  );
 
   if (!transcript || !primaryNpc) {
     return undefined;
@@ -226,8 +232,8 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   return (
     <>
       <ChatView
-        transcript={transcript}
-        perspectiveCharacterId={userCharacter.id}
+        messages={chatMessages}
+        isEmpty={transcript.countAllMessages() === 0}
         participants={participantsCardOrder}
         resolveAvatarImagePath={(senderId) =>
           speakCapability.participantById[senderId]?.imagePath ?? charactersById[senderId]?.imagePath

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useQueryParam } from '../util/queryParams.js';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
+import { useObjectEditor } from '../components/object_editor/ObjectEditorContext.js';
 import DeleteButton from '../components/ui/DeleteButton.js';
 import Tabs from '../components/ui/Tabs.js';
 import type { WorldMap } from '../engine/types.js';
@@ -32,6 +33,7 @@ export default function MapEditor() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { openSettings } = useSettingsModal();
+  const { openMapObjectEditor } = useObjectEditor();
 
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
   const mapExists = useMapStore((s) => Boolean(id && s.mapsById[id]));
@@ -103,6 +105,9 @@ export default function MapEditor() {
               navigate('/maps');
             }}
           />
+          <button type="button" onClick={() => openMapObjectEditor(id)}>
+            🤖 AI Edit
+          </button>
           <button type="button" onClick={() => openSettings()} aria-label="Settings" title="Settings">
             ⚙
           </button>

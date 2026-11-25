@@ -15,6 +15,7 @@ import {
   useAreAnyEntitiesInDeferredSync,
   isEntityInDeferredSync,
 } from '../../state/ephemeral_state_helper.js';
+import { useObjectEditor } from '../object_editor/ObjectEditorContext.js';
 
 type RelationshipIds = Pick<CharacterRelationship, 'fromId' | 'toId'>;
 
@@ -58,6 +59,7 @@ export default function CharacterOverviewPairData({
   const saveRelationshipFields = useScenarioCharacterRelationshipStore(
     (state) => state.saveRelationshipFields
   );
+  const { openRelationshipObjectEditor } = useObjectEditor();
 
   const [idA, idB] = selectedCharacterIds;
   const charA = charactersById[idA];
@@ -222,9 +224,14 @@ export default function CharacterOverviewPairData({
 
   return (
     <div className="border-t pt-4 space-y-3">
-      <h3 className="text-lg font-semibold">
-        {charA.firstName} {charA.lastName} ↔ {charB.firstName} {charB.lastName}
-      </h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-lg font-semibold">
+          {charA.firstName} {charA.lastName} ↔ {charB.firstName} {charB.lastName}
+        </h3>
+        <button type="button" onClick={() => openRelationshipObjectEditor(charA.id, charB.id)}>
+          🤖 AI Edit
+        </button>
+      </div>
       {relationshipLoadError && <div className="text-sm text-danger-text">{relationshipLoadError}</div>}
 
       <div className="space-y-2">

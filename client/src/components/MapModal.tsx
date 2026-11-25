@@ -9,6 +9,7 @@ import { doAsDataRead, mainDatabase } from '../backend_bridge/database.js';
 import type { ScenarioEvent, MovementPolicy } from '../engine/types.js';
 import { useCharacterOverview } from './character_overview/CharacterOverviewContext.js';
 import { useMapModal } from './MapModalContext.js';
+import { useObjectEditor } from './object_editor/ObjectEditorContext.js';
 import MapGraphEditor from './MapGraphEditor.js';
 import MapZoneEditor from './map_zones/MapZoneEditor.js';
 import DeleteButton from './ui/DeleteButton.js';
@@ -28,6 +29,7 @@ function movementVerb(policy: MovementPolicy | undefined): string {
 
 function MapModalInner() {
   const { closeMap, open } = useMapModal();
+  const { openMapObjectEditor } = useObjectEditor();
   const updateMap = useMapStore((s) => s.updateMap);
   const numMaps = useMapStore((s) => s.maps.length);
   const activeMap = useActiveScenarioMap();
@@ -129,6 +131,17 @@ function MapModalInner() {
             onClick={() => setView('log')}
           >
             Movement
+          </button>
+          <button
+            type="button"
+            disabled={!mapId}
+            onClick={() => {
+              if (mapId) {
+                openMapObjectEditor(mapId);
+              }
+            }}
+          >
+            🤖 AI Edit
           </button>
         </>
       }

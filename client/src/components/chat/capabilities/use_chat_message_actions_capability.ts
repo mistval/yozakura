@@ -1,8 +1,7 @@
 import { useCallback } from 'react';
 import { ChatCoordinator } from '../../../engine/chat/chat_coordinator.js';
-import type { ChatMessageWrapper } from '../../../engine/chat/transcript.js';
 import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_store.js';
-import type { ChatViewProps } from '../ChatView.js';
+import type { ChatViewMessage, ChatViewProps } from '../ChatView.js';
 
 export function useChatMessageActionsCapability({
   userCharacterId,
@@ -35,8 +34,7 @@ export function useChatMessageActionsCapability({
   }, []);
 
   const canShowRetryMessage = useCallback(
-    (message: ChatMessageWrapper) =>
-      message.isCharacterChatMessage() && message.asCharacterChatMessage().senderId !== userCharacterId,
+    (message: ChatViewMessage) => Boolean(message.isCharacterMessage && message.senderId !== userCharacterId),
     [userCharacterId]
   );
 

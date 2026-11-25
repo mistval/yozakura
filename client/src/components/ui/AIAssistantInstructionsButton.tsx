@@ -41,6 +41,7 @@ export default function AIAssistantInstructionsButton({
         open={documentationOpen}
         onClose={() => setDocumentationOpen(false)}
         className="flex items-center justify-center p-4"
+        zIndex={Number.MAX_SAFE_INTEGER}
       >
         <div className="bg-emphasized rounded-sm p-4 w-full max-w-4xl space-y-3">
           <header className="space-y-2">

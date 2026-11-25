@@ -52,6 +52,7 @@ type CharacterEditorModalContextValue = {
   toggleExtractField: (field: ExtractCharacterCardField) => void;
   closeEditor: () => void;
   setCharacterField: <K extends keyof Character>(key: K, value: Character[K]) => void;
+  replaceCharacter: (nextCharacter: Character) => void;
   generateInternalDescription: () => Promise<void>;
   generateExternalDescription: () => Promise<void>;
   extractFromDescription: (options?: ExtractCharacterCardOptions) => Promise<void>;
@@ -569,6 +570,7 @@ export function CharacterEditorModalProvider({
     toggleExtractField,
     closeEditor,
     setCharacterField,
+    replaceCharacter: setCharacter,
     generateInternalDescription: generateInternalDescriptionField,
     generateExternalDescription: generateExternalDescriptionField,
     extractFromDescription,
