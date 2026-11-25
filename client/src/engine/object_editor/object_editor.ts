@@ -241,11 +241,8 @@ export class ObjectEditor<TObjectType> {
     assert(!this.state.pendingTurn, 'An AI turn is already in progress');
     assert(!this.state.invalidManualEdit, 'Resolve invalid manual JSON before sending a message');
 
-    const oldObjectState = await this.delegate.getObjectCurrentState();
-    const messages = await this.buildPromptMessages(message);
     const abortController = new AbortController();
     this.activeAbortController = abortController;
-
     this.store.setState({
       pendingTurn: {
         userMessage: message,
@@ -254,6 +251,10 @@ export class ObjectEditor<TObjectType> {
     });
 
     try {
+      const oldObjectState = await this.delegate.getObjectCurrentState();
+      const messages = await this.buildPromptMessages(message);
+      abortController.signal.throwIfAborted();
+
       const rawResult = await this.delegate.executePrompt(messages, {
         abortSignal: abortController.signal,
         onTokens: (fullText) => {
@@ -330,7 +331,9 @@ export class ObjectEditor<TObjectType> {
       if (this.activeAbortController === abortController) {
         this.activeAbortController = undefined;
       }
-      this.store.setState({ pendingTurn: undefined });
+      if (this.store.getState().pendingTurn !== undefined) {
+        this.store.setState({ pendingTurn: undefined });
+      }
     }
   }
 
@@ -491,6 +494,7 @@ export class ObjectEditor<TObjectType> {
     this.store.setState({
       history: this.history.concat(entry),
       currentObject: nextObject,
+      pendingTurn: undefined,
       invalidManualEdit,
       isDirty: !_.isEqual(nextObject, initialObject) || Boolean(invalidManualEdit),
     });
