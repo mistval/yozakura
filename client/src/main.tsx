@@ -24,7 +24,6 @@ import CharacterList from './pages/CharacterList';
 import ScenarioSetup from './pages/ScenarioSetup';
 import ScenarioView from './pages/ScenarioView';
 import MapList from './pages/MapList';
-import MapEditor from './pages/MapEditor';
 import { hydrateSettings } from './state/settings_store.js';
 import { installSessionFetchInterceptor } from './backend_bridge/session_guard.js';
 import 'react-calendar/dist/Calendar.css';
@@ -43,7 +42,6 @@ function AppRoutes() {
         <Route path="/scenario/new" element={<ScenarioSetup />} />
         <Route path="/scenario/:scenarioId/*" element={<ScenarioView />} />
         <Route path="/maps" element={<MapList />} />
-        <Route path="/maps/:id/*" element={<MapEditor />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <SettingsPanel />

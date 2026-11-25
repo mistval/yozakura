@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router';
 import { useMapStore } from '../state/map_store.js';
 import { useMemo } from 'react';
 import { useSettingsModal } from '../components/settings/SettingsModalContext.js';
+import { useMapModal } from '../components/MapModalContext.js';
 import { createEmptyWorldMap } from '../engine/map/map_factories.js';
 
 export default function MapList() {
@@ -9,6 +10,7 @@ export default function MapList() {
   const maps = useMapStore((s) => s.maps);
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
   const { openSettings } = useSettingsModal();
+  const { showMap } = useMapModal();
 
   const sortedMaps = useMemo(() => {
     return maps.toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
@@ -27,7 +29,7 @@ export default function MapList() {
             onClick={() => {
               const newMap = createEmptyWorldMap();
               useMapStore.getState().saveMap(newMap);
-              navigate(`/maps/${newMap.id}`);
+              showMap(newMap.id);
             }}
           >
             Create New Map
@@ -48,7 +50,7 @@ export default function MapList() {
             key={map.id}
             type="button"
             className="text-left border rounded-sm p-4 hover:bg-surface-hover"
-            onClick={() => navigate(`/maps/${map.id}`)}
+            onClick={() => showMap(map.id)}
           >
             <div className="font-semibold">{map.name}</div>
             <div className="text-sm text-secondary">{map.description}</div>

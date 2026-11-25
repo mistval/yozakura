@@ -4,7 +4,8 @@ import { useQueryParams } from '../util/queryParams.js';
 
 type MapModalContextType = {
   open: boolean;
-  showMap: () => void;
+  mapId: string | undefined;
+  showMap: (mapId?: string) => void;
   showMapZones: () => void;
   closeMap: () => void;
 };
@@ -15,13 +16,23 @@ export function MapModalProvider({ children }: { children: ReactNode }) {
   const [params, setParams] = useQueryParams();
 
   const open = params.has('map') && params.get('map') !== 'false';
-  const showMap = useCallback(() => setParams({ map: true, mapview: undefined }), [setParams]);
-  const showMapZones = useCallback(() => setParams({ map: true, mapview: 'zones' }), [setParams]);
-  const closeMap = useCallback(() => setParams({ map: undefined, mapview: undefined }), [setParams]);
+  const mapId = params.get('map_id') ?? undefined;
+  const showMap = useCallback(
+    (id?: string) => setParams({ map: true, map_id: id ?? undefined, mapview: undefined }),
+    [setParams]
+  );
+  const showMapZones = useCallback(
+    () => setParams({ map: true, map_id: undefined, mapview: 'zones' }),
+    [setParams]
+  );
+  const closeMap = useCallback(
+    () => setParams({ map: undefined, map_id: undefined, mapview: undefined }),
+    [setParams]
+  );
 
   const value = useMemo(
-    () => ({ open, showMap, showMapZones, closeMap }),
-    [open, showMap, showMapZones, closeMap]
+    () => ({ open, mapId, showMap, showMapZones, closeMap }),
+    [open, mapId, showMap, showMapZones, closeMap]
   );
 
   return <MapModalContext.Provider value={value}>{children}</MapModalContext.Provider>;
