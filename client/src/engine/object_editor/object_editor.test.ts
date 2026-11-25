@@ -9,6 +9,10 @@ import {
   type WorldMap,
 } from '../types.js';
 import { idSchema, newId } from '../../util/id.js';
+import { PromptTemplateChain } from '../prompt_templates/prompt_template_chain.js';
+import { objectEditorPromptChainSpec } from '../prompt_templates/object_editor/object_editor_prompt.js';
+import { chainSpecsToGroupDefaultData } from '../prompt_templates/template_types.js';
+import { SettingsBridge } from '../settings/settings_bridge.js';
 import {
   ObjectEditor,
   type ObjectEditorDelegate,
@@ -103,7 +107,12 @@ function createRelationshipFixture(): CharacterRelationship {
   };
 }
 
-function createEditorHarness<T>(initialObject: T, zodSchema: z.ZodType<T>, promptHandler?: PromptHandler) {
+function createEditorHarness<T>(
+  initialObject: T,
+  zodSchema: z.ZodType<T>,
+  promptHandler?: PromptHandler,
+  cancelPendingPrompt?: () => void
+) {
   let externalState = initialObject;
   const writtenStates: T[] = [];
   const promptCalls: OpenAIChatCompletionRequestMessage[][] = [];
@@ -122,6 +131,7 @@ function createEditorHarness<T>(initialObject: T, zodSchema: z.ZodType<T>, promp
       }
       return promptHandler(messages, options);
     },
+    cancelPendingPrompt,
   };
 
   return {
@@ -373,16 +383,14 @@ describe('ObjectEditor', () => {
   });
 
   describe('prompt history formatting, streaming, and cancellation', () => {
-    it('always includes <json_patch> tags in assistant history even for no-op replies and forwards streaming tokens + abort', async () => {
+    it('always includes <json_patch> tags in assistant history even for no-op replies and forwards streaming tokens', async () => {
       const map = createWorldMapFixture();
-      let seenAbortSignal: AbortSignal | undefined;
       let turn = 0;
 
       const { editor, writtenStates, promptCalls } = createEditorHarness(
         map,
         worldMapSchema,
         async (_messages, options) => {
-          seenAbortSignal = options.abortSignal;
           options.onTokens('Checking the map...');
           turn += 1;
           if (turn === 1) {
@@ -411,7 +419,6 @@ describe('ObjectEditor', () => {
       unsubscribe();
 
       expect(pendingValues).toEqual(['Checking the map...']);
-      expect(seenAbortSignal?.aborted).toBe(false);
       expect(editor.getState().pendingTurn).toBeUndefined();
       expect(writtenStates).toHaveLength(0);
       expect(editor.getState().history[0]!.canRevert).toBe(false);
@@ -423,23 +430,28 @@ describe('ObjectEditor', () => {
       });
     });
 
-    it('aborts in-flight prompt via cancelPendingTurn and cleans up pendingTurn', async () => {
+    it('cancels in-flight prompt via cancelPendingTurn and cleans up pendingTurn', async () => {
       const map = createWorldMapFixture();
-      let signalAborted = false;
+      let cancelledViaDelegate = false;
+      let rejectPendingPrompt: ((error: Error) => void) | undefined;
 
-      const { editor } = createEditorHarness(map, worldMapSchema, async (_messages, { abortSignal }) => {
-        return new Promise<ObjectEditorPromptOutput>((_resolve, reject) => {
-          abortSignal.addEventListener('abort', () => {
-            signalAborted = true;
-            reject(new Error('Aborted'));
-          });
-          queueMicrotask(() => editor.cancelPendingTurn());
-        });
-      });
+      const { editor } = createEditorHarness(
+        map,
+        worldMapSchema,
+        async () =>
+          new Promise<ObjectEditorPromptOutput>((_resolve, reject) => {
+            rejectPendingPrompt = reject;
+            queueMicrotask(() => editor.cancelPendingTurn());
+          }),
+        () => {
+          cancelledViaDelegate = true;
+          rejectPendingPrompt?.(new Error('Cancelled'));
+        }
+      );
 
       await editor.initialize();
-      await expect(editor.runUserMessage('Do something slow')).rejects.toThrow('Aborted');
-      expect(signalAborted).toBe(true);
+      await expect(editor.runUserMessage('Do something slow')).rejects.toThrow('Cancelled');
+      expect(cancelledViaDelegate).toBe(true);
       expect(editor.getState().pendingTurn).toBeUndefined();
     });
   });
@@ -518,5 +530,58 @@ describe('ObjectEditor', () => {
       expect(editor.getState().history).toEqual([]);
       expect(editor.getState().isDirty).toBe(false);
     });
+  });
+});
+
+describe('objectEditorPromptChainSpec', () => {
+  it('renders both leading and trailing system prompts and parses <json_patch> responses', async () => {
+    const chain = new PromptTemplateChain({
+      ...objectEditorPromptChainSpec,
+      groupSettingsBridge: SettingsBridge.createInMemory(
+        chainSpecsToGroupDefaultData([objectEditorPromptChainSpec])
+      ),
+    });
+
+    const context = {
+      settings: {},
+      globalWritableContext: {},
+      objectEditorTargetTitle: 'World Map',
+      objectEditorJsonSchema: JSON.stringify(z.toJSONSchema(worldMapSchema), null, 2),
+    };
+
+    const rendered = await chain.render(context);
+    expect(rendered).toHaveLength(2);
+    expect(rendered[0]?.role).toBe('system');
+    expect(rendered[0]?.content).toContain('"readOnly": true');
+    expect(rendered[0]?.content).toContain('<object_json_schema>');
+    expect(rendered[1]?.role).toBe('system');
+    expect(rendered[1]?.content).toContain('World Map');
+
+    const parsedPlain = await chain.parse(
+      'Renamed the map.\n\n<json_patch>\n[{"op":"replace","path":"/name","value":"Lothlorien"}]\n</json_patch>',
+      context
+    );
+    expect(parsedPlain).toEqual({
+      message: 'Renamed the map.',
+      patch: [{ op: 'replace', path: '/name', value: 'Lothlorien' }],
+    });
+
+    const parsedFenced = await chain.parse(
+      'No changes needed.\n\n<json_patch>\n```json\n[]\n```\n</json_patch>',
+      context
+    );
+    expect(parsedFenced).toEqual({
+      message: 'No changes needed.',
+      patch: [],
+    });
+
+    await expect(chain.parse('No patch block included here.', context)).resolves.toEqual({
+      message: 'No patch block included here.',
+      patch: [],
+    });
+
+    await expect(
+      chain.parse('First\n<json_patch>[]</json_patch>\nSecond\n<json_patch>[]</json_patch>', context)
+    ).rejects.toThrow(/at most one <json_patch>/i);
   });
 });

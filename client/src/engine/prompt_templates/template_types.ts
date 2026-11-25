@@ -5,6 +5,7 @@ export const RUNTIME_CHAT_TEMPLATES_GROUP_ID = 'runtime_chat_templates';
 export const CHAT_SCENE_IMAGE_TEMPLATES_GROUP_ID = 'chat_scene_image_templates';
 export const CHARACTER_GENERATION_TEMPLATES_GROUP_ID = 'character_generation_templates';
 export const MEMORIES_GROUP_ID = 'memories';
+export const OBJECT_EDITOR_TEMPLATES_GROUP_ID = 'object_editor_templates';
 
 export const promptTemplateRoleSchema = z.enum(['system', 'user', 'assistant']);
 export type PromptTemplateRole = z.infer<typeof promptTemplateRoleSchema>;

@@ -5,6 +5,7 @@ import { createStore, useStore } from 'zustand';
 import { assert, assertNonNullish } from '../../errors/application_error.js';
 import { getErrorMessage } from '../../errors/error_util.js';
 import { newId } from '../../util/id.js';
+import { ParallelJobCancellationError } from '../parallelization/job_manager_types.js';
 import type { OpenAIChatCompletionRequestMessage } from '../types.js';
 import {
   assertNoReadOnlyViolations,
@@ -66,7 +67,6 @@ export interface ObjectEditorState<TObjectType> {
 
 export interface ObjectEditorExecutePromptOptions {
   onTokens: (fullText: string) => void;
-  abortSignal: AbortSignal;
 }
 
 export interface ObjectEditorDelegate<TObjectType> {
@@ -76,6 +76,7 @@ export interface ObjectEditorDelegate<TObjectType> {
     messages: OpenAIChatCompletionRequestMessage[],
     options: ObjectEditorExecutePromptOptions
   ) => Promise<ObjectEditorPromptOutput>;
+  cancelPendingPrompt?: (() => void) | undefined;
   zodSchema: z.ZodType<TObjectType>;
 }
 
@@ -91,7 +92,7 @@ export class ObjectEditor<TObjectType> {
     isDirty: false,
   }));
 
-  private activeAbortController: AbortController | undefined = undefined;
+  private activeTurnCancellation: { cancelled: boolean } | undefined = undefined;
 
   constructor(private readonly delegate: ObjectEditorDelegate<TObjectType>) {}
 
@@ -120,7 +121,10 @@ export class ObjectEditor<TObjectType> {
   }
 
   public cancelPendingTurn(): void {
-    this.activeAbortController?.abort();
+    if (this.activeTurnCancellation) {
+      this.activeTurnCancellation.cancelled = true;
+      this.delegate.cancelPendingPrompt?.();
+    }
   }
 
   public resetConversation(): void {
@@ -241,8 +245,8 @@ export class ObjectEditor<TObjectType> {
     assert(!this.state.pendingTurn, 'An AI turn is already in progress');
     assert(!this.state.invalidManualEdit, 'Resolve invalid manual JSON before sending a message');
 
-    const abortController = new AbortController();
-    this.activeAbortController = abortController;
+    const turnCancellation = { cancelled: false };
+    this.activeTurnCancellation = turnCancellation;
     this.store.setState({
       pendingTurn: {
         userMessage: message,
@@ -252,11 +256,15 @@ export class ObjectEditor<TObjectType> {
 
     try {
       const oldObjectState = await this.delegate.getObjectCurrentState();
+      if (turnCancellation.cancelled) {
+        throw new ParallelJobCancellationError();
+      }
       const messages = await this.buildPromptMessages(message);
-      abortController.signal.throwIfAborted();
+      if (turnCancellation.cancelled) {
+        throw new ParallelJobCancellationError();
+      }
 
       const rawResult = await this.delegate.executePrompt(messages, {
-        abortSignal: abortController.signal,
         onTokens: (fullText) => {
           const currentPending = this.store.getState().pendingTurn;
           if (!currentPending) {
@@ -270,6 +278,9 @@ export class ObjectEditor<TObjectType> {
           });
         },
       });
+      if (turnCancellation.cancelled) {
+        throw new ParallelJobCancellationError();
+      }
 
       const result = objectEditorPromptOutputSchema.parse(rawResult);
       if (result.patch.length === 0) {
@@ -328,8 +339,8 @@ export class ObjectEditor<TObjectType> {
       };
       this.commitNewHistoryState(entry, applied.newObjectState, undefined);
     } finally {
-      if (this.activeAbortController === abortController) {
-        this.activeAbortController = undefined;
+      if (this.activeTurnCancellation === turnCancellation) {
+        this.activeTurnCancellation = undefined;
       }
       if (this.store.getState().pendingTurn !== undefined) {
         this.store.setState({ pendingTurn: undefined });

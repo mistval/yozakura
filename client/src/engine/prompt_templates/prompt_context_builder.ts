@@ -20,6 +20,7 @@ import type {
   GlobalExecutionContext,
   MemoryRagExecutionContext,
   ModerationNextSpeakerExecutionContext,
+  ObjectEditorExecutionContext,
   ScenarioExecutionContext,
   TargetedConversationExecutionContext,
 } from './prompt_template_context_fields.js';
@@ -312,5 +313,16 @@ export async function buildMemoryRagTemplateContext(
   return {
     ...(await buildTargetedChatTemplateContext(focusedCharacter.id, mentionedCharacter.id)),
     mentionedByCharacter: toContextCharacter(mentionedByCharacter),
+  };
+}
+
+export function buildObjectEditorContext(params: {
+  targetTitle: string;
+  jsonSchemaString: string;
+}): ObjectEditorExecutionContext {
+  return {
+    ...buildGlobalTemplateContext(),
+    objectEditorTargetTitle: params.targetTitle,
+    objectEditorJsonSchema: params.jsonSchemaString,
   };
 }
