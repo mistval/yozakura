@@ -1,157 +1,520 @@
 import { applyPatch } from 'fast-json-patch';
+import _ from 'lodash';
 import z from 'zod';
-import type { OpenAIChatCompletionRequestMessage } from '../types';
 import { createStore, useStore } from 'zustand';
-import { assert, assertNonNullish } from '../../errors/application_error';
-import { newId } from '../../util/id';
+import { assert, assertNonNullish } from '../../errors/application_error.js';
+import { getErrorMessage } from '../../errors/error_util.js';
+import { newId } from '../../util/id.js';
+import type { OpenAIChatCompletionRequestMessage } from '../types.js';
+import {
+  assertNoReadOnlyViolations,
+  autoPopulatePersistedSubObjectFields,
+  compareToJsonPatch,
+  computeHumanReadableChanges,
+  jsonPatchOperationSchema,
+  replaceNewIdPlaceholdersInPatch,
+  type JsonPatchOperation,
+  type ObjectEditorHumanReadableChange,
+} from './object_editor_util.js';
 
-// The prompt template's parser will be responsible for parsing the patch out and returning it
-const objectEditorPromptOutputSchema = z.object({
-  message: z.string(), // May be empty
-  patch: z.array(z.object({})), // Please type this correctly for me.
+export { jsonPatchOperationSchema, type JsonPatchOperation, type ObjectEditorHumanReadableChange };
+
+// The prompt template's parser is responsible for extracting the message and JSON Patch array.
+export const objectEditorPromptOutputSchema = z.object({
+  message: z.string(),
+  patch: z.array(jsonPatchOperationSchema),
 });
 
 export type ObjectEditorPromptOutput = z.infer<typeof objectEditorPromptOutputSchema>;
 
-export interface ObjectEditorHumanReadableChange {
-  name: string;
-  beforeValue: Record<string, unknown>;
-  afterValue: Record<string, unknown>;
-}
+export type ObjectEditorHistoryEntrySource = 'ai' | 'manual';
 
-// Something outside of here should convert an array of these into a new ChatMessage subtype so they can be displayed in the dumb chat pane
+// Consumers outside this module adapt these entries into Transcript / DumbChatPane items.
 export interface ObjectEditorHistoryEntry<TObjectType> {
+  id: string;
+  source: ObjectEditorHistoryEntrySource;
   objectBeforeState: TObjectType;
   objectAfterState: TObjectType;
-  canRevertIfLatest: boolean;
+  canRevert: boolean;
   userMessage: string;
   agentMessage: string;
-  objectPatch: any[]; // Please type for me
+  objectPatch: JsonPatchOperation[];
   humanReadableChanges: ObjectEditorHumanReadableChange[];
-  validationError: string;
+  invalidRawJson: string | undefined;
+  validationError: string | undefined;
 }
 
-export interface ObjectEditorDelegate<TObjectType, TPromptExecutionContext> {
+export interface ObjectEditorPendingTurn {
+  userMessage: string;
+  streamingMessage: string;
+}
+
+export interface ObjectEditorInvalidManualEdit {
+  rawJson: string;
+  error: string;
+}
+
+export interface ObjectEditorState<TObjectType> {
+  initialized: boolean;
+  initialObject: TObjectType | undefined;
+  currentObject: TObjectType | undefined;
+  history: ObjectEditorHistoryEntry<TObjectType>[];
+  pendingTurn: ObjectEditorPendingTurn | undefined;
+  invalidManualEdit: ObjectEditorInvalidManualEdit | undefined;
+  isDirty: boolean;
+}
+
+export interface ObjectEditorExecutePromptOptions {
+  onTokens: (fullText: string) => void;
+  abortSignal: AbortSignal;
+}
+
+export interface ObjectEditorDelegate<TObjectType> {
   getObjectCurrentState: () => Promise<TObjectType>;
-  writeObjectState: (object: TObjectType) => unknown;
-  createObjectEditorPromptContext: () => Promise<TPromptExecutionContext>;
-  executePrompt: (messages: OpenAIChatCompletionRequestMessage[]) => Promise<ObjectEditorPromptOutput>;
-  zodSchema: any; // please type this for me
+  writeObjectState: (object: TObjectType) => Promise<void> | void;
+  executePrompt: (
+    messages: OpenAIChatCompletionRequestMessage[],
+    options: ObjectEditorExecutePromptOptions
+  ) => Promise<ObjectEditorPromptOutput>;
+  zodSchema: z.ZodType<TObjectType>;
 }
 
-export class ObjectEditor<TObjectType, TPromptExecutionContext> {
-  // Doing a per-instance reactive store
-  private readonly store = createStore<{
-    history: ObjectEditorHistoryEntry<TObjectType>[];
-  }>(() => ({
+export class ObjectEditor<TObjectType> {
+  // Per-instance reactive store
+  public readonly store = createStore<ObjectEditorState<TObjectType>>(() => ({
+    initialized: false,
+    initialObject: undefined,
+    currentObject: undefined,
     history: [],
+    pendingTurn: undefined,
+    invalidManualEdit: undefined,
+    isDirty: false,
   }));
 
-  constructor(private readonly delegate: ObjectEditorDelegate<TObjectType, TPromptExecutionContext>) {}
+  private activeAbortController: AbortController | undefined = undefined;
 
-  async initialize() {
-    this.store.setState({
-      history: [],
-    });
+  constructor(private readonly delegate: ObjectEditorDelegate<TObjectType>) {}
+
+  public getState(): ObjectEditorState<TObjectType> {
+    return this.store.getState();
   }
 
-  public async notifyPossibleManualChange() {
-    const newObjectState = this.delegate.getObjectCurrentState();
-    const lastKnown = this.getLatestKnownObject();
-
-    if (!Object.is(newObjectState, lastKnown)) {
-      // Mark entire history as un-revertable
-      // Can we automatically generate a patch from this diff and add it into the history so it can be reverted?
-    }
-  }
-
-  // Does this actually work? WOndering if React rules require us to farm out the useStore call to the React component. That's fine if so.
-  public useState(selector: <TReturnType>(store: ReturnType<typeof this.store.getState>) => TReturnType) {
+  public useState<TReturnType>(
+    selector: (state: ObjectEditorState<TObjectType>) => TReturnType
+  ): TReturnType {
     return useStore(this.store, selector);
   }
 
-  public async runUserMessage(message: string) {
+  public async initialize(): Promise<void> {
+    this.cancelPendingTurn();
+    const initial = await this.delegate.getObjectCurrentState();
+    this.store.setState({
+      initialized: true,
+      initialObject: initial,
+      currentObject: initial,
+      history: [],
+      pendingTurn: undefined,
+      invalidManualEdit: undefined,
+      isDirty: false,
+    });
+  }
+
+  public cancelPendingTurn(): void {
+    this.activeAbortController?.abort();
+  }
+
+  public resetConversation(): void {
+    this.cancelPendingTurn();
+    this.store.setState({
+      history: [],
+      pendingTurn: undefined,
+      invalidManualEdit: undefined,
+    });
+  }
+
+  public async discardChanges(): Promise<void> {
+    this.cancelPendingTurn();
+    const initialObject = this.requireInitialObject();
+    await this.delegate.writeObjectState(initialObject);
+    this.store.setState({
+      currentObject: initialObject,
+      history: [],
+      pendingTurn: undefined,
+      invalidManualEdit: undefined,
+      isDirty: false,
+    });
+  }
+
+  public async notifyPossibleManualChange(): Promise<boolean> {
+    const newObjectState = await this.delegate.getObjectCurrentState();
+    const lastKnown = this.getLatestKnownObject();
+    const patch = compareToJsonPatch(lastKnown, newObjectState);
+    if (patch.length === 0) {
+      return false;
+    }
+
+    const humanReadableChanges = computeHumanReadableChanges(this.delegate.zodSchema, lastKnown, patch);
+    const entry: ObjectEditorHistoryEntry<TObjectType> = {
+      id: newId(),
+      source: 'manual',
+      objectBeforeState: lastKnown,
+      objectAfterState: newObjectState,
+      canRevert: true,
+      userMessage: '',
+      agentMessage: 'Manual changes applied by user.',
+      objectPatch: patch,
+      humanReadableChanges,
+      invalidRawJson: undefined,
+      validationError: undefined,
+    };
+
+    this.commitNewHistoryState(entry, newObjectState, undefined);
+    return true;
+  }
+
+  public async applyManualJsonEdit(rawJson: string): Promise<boolean> {
+    this.assertInitialized();
+    assert(!this.state.pendingTurn, 'Cannot apply manual edit while an AI turn is running');
+
+    const lastKnown = this.getLatestKnownObject();
+    if (this.state.invalidManualEdit) {
+      if (rawJson === this.state.invalidManualEdit.rawJson) {
+        return false;
+      }
+    } else if (rawJson === JSON.stringify(lastKnown, null, 2)) {
+      return false;
+    }
+
+    let parsedJson: unknown;
+    try {
+      parsedJson = JSON.parse(rawJson);
+    } catch (error) {
+      return this.recordInvalidManualEdit(rawJson, `Invalid JSON: ${getErrorMessage(error)}`, lastKnown);
+    }
+
+    const validation = this.delegate.zodSchema.safeParse(parsedJson);
+    if (!validation.success) {
+      return this.recordInvalidManualEdit(rawJson, validation.error.message, lastKnown);
+    }
+
+    const validatedNext = validation.data;
+    const patch = compareToJsonPatch(lastKnown, validatedNext);
+    if (patch.length === 0) {
+      if (this.state.invalidManualEdit) {
+        let firstInvalidIndex = this.history.length;
+        while (firstInvalidIndex > 0 && this.history[firstInvalidIndex - 1]?.invalidRawJson !== undefined) {
+          firstInvalidIndex -= 1;
+        }
+        assert(
+          firstInvalidIndex < this.history.length,
+          'Expected trailing invalid manual edit entry in history'
+        );
+        await this.revertFromIndex(firstInvalidIndex);
+        return true;
+      }
+      return false;
+    }
+
+    const humanReadableChanges = computeHumanReadableChanges(this.delegate.zodSchema, lastKnown, patch);
+    await this.delegate.writeObjectState(validatedNext);
+
+    const entry: ObjectEditorHistoryEntry<TObjectType> = {
+      id: newId(),
+      source: 'manual',
+      objectBeforeState: lastKnown,
+      objectAfterState: validatedNext,
+      canRevert: true,
+      userMessage: '',
+      agentMessage: 'Updated object manually via raw JSON.',
+      objectPatch: patch,
+      humanReadableChanges,
+      invalidRawJson: undefined,
+      validationError: undefined,
+    };
+
+    this.commitNewHistoryState(entry, validatedNext, undefined);
+    return true;
+  }
+
+  public async runUserMessage(message: string): Promise<void> {
+    this.assertInitialized();
+    assert(!this.state.pendingTurn, 'An AI turn is already in progress');
+    assert(!this.state.invalidManualEdit, 'Resolve invalid manual JSON before sending a message');
+
     const oldObjectState = await this.delegate.getObjectCurrentState();
     const messages = await this.buildPromptMessages(message);
-    const result = await this.delegate.executePrompt(messages);
-    const hasChanges = result.patch?.length > 0;
+    const abortController = new AbortController();
+    this.activeAbortController = abortController;
 
-    // We'll need to change this to safeParse and handle the invalid case
-    const newObjectState = hasChanges
-      ? this.delegate.zodSchema.parse(
-          this.generateNewIds(applyPatch(oldObjectState, result.patch as any).newDocument)
-        )
-      : oldObjectState;
-    await this.delegate.writeObjectState(newObjectState);
-
-    const newHistory = this.state.history.concat({
-      objectBeforeState: oldObjectState,
-      objectAfterState: newObjectState,
-      canRevertIfLatest: hasChanges,
-      userMessage: message,
-      agentMessage: result.message,
-      objectPatch: result.patch,
-      humanReadableChanges: this.computeHumanReadableChanges(oldObjectState, newObjectState, result.patch),
-      validationError: '',
+    this.store.setState({
+      pendingTurn: {
+        userMessage: message,
+        streamingMessage: '',
+      },
     });
 
-    this.store.setState({ history: newHistory });
+    try {
+      const rawResult = await this.delegate.executePrompt(messages, {
+        abortSignal: abortController.signal,
+        onTokens: (fullText) => {
+          const currentPending = this.store.getState().pendingTurn;
+          if (!currentPending) {
+            return;
+          }
+          this.store.setState({
+            pendingTurn: {
+              ...currentPending,
+              streamingMessage: fullText,
+            },
+          });
+        },
+      });
+
+      const result = objectEditorPromptOutputSchema.parse(rawResult);
+      if (result.patch.length === 0) {
+        const entry: ObjectEditorHistoryEntry<TObjectType> = {
+          id: newId(),
+          source: 'ai',
+          objectBeforeState: oldObjectState,
+          objectAfterState: oldObjectState,
+          canRevert: false,
+          userMessage: message,
+          agentMessage: result.message,
+          objectPatch: [],
+          humanReadableChanges: [],
+          invalidRawJson: undefined,
+          validationError: undefined,
+        };
+        this.commitNewHistoryState(entry, oldObjectState, undefined);
+        return;
+      }
+
+      const applied = this.validateAndApplyPatch(oldObjectState, result.patch);
+      if (!applied.ok) {
+        const entry: ObjectEditorHistoryEntry<TObjectType> = {
+          id: newId(),
+          source: 'ai',
+          objectBeforeState: oldObjectState,
+          objectAfterState: oldObjectState,
+          canRevert: false,
+          userMessage: message,
+          agentMessage: result.message,
+          objectPatch: result.patch,
+          humanReadableChanges: [],
+          invalidRawJson: undefined,
+          validationError: applied.error,
+        };
+        this.commitNewHistoryState(entry, oldObjectState, undefined);
+        return;
+      }
+
+      const hasNetChanges = applied.resolvedPatch.length > 0;
+      if (hasNetChanges) {
+        await this.delegate.writeObjectState(applied.newObjectState);
+      }
+      const entry: ObjectEditorHistoryEntry<TObjectType> = {
+        id: newId(),
+        source: 'ai',
+        objectBeforeState: oldObjectState,
+        objectAfterState: applied.newObjectState,
+        canRevert: hasNetChanges,
+        userMessage: message,
+        agentMessage: result.message,
+        objectPatch: applied.resolvedPatch,
+        humanReadableChanges: applied.humanReadableChanges,
+        invalidRawJson: undefined,
+        validationError: undefined,
+      };
+      this.commitNewHistoryState(entry, applied.newObjectState, undefined);
+    } finally {
+      if (this.activeAbortController === abortController) {
+        this.activeAbortController = undefined;
+      }
+      this.store.setState({ pendingTurn: undefined });
+    }
   }
 
   public async buildPromptMessages(newUserMessage: string): Promise<OpenAIChatCompletionRequestMessage[]> {
-    const currentObjectState = await this.delegate.getObjectCurrentState();
-    const messages = this.history
-      .flatMap((h) =>
-        [
-          {
-            role: 'user' as const,
-            content: h.userMessage,
-          } satisfies OpenAIChatCompletionRequestMessage,
-          {
-            role: 'assistant' as const,
-            content: `${h.agentMessage}\n\n<json_patch>\n${JSON.stringify(h.objectPatch)}\n</json_patch>`,
-          } satisfies OpenAIChatCompletionRequestMessage,
-          h.validationError
-            ? {
-                role: 'system' as const,
-                content: `The attempted patch resulted in an invalid result: <error>${h.validationError}</error>. No changes were made.`,
-              }
-            : [],
-        ].flat()
-      )
-      .concat({
+    const currentObjectState = this.state.initialized
+      ? this.getLatestKnownObject()
+      : await this.delegate.getObjectCurrentState();
+
+    const historyMessages: OpenAIChatCompletionRequestMessage[] = [];
+
+    for (const h of this.history) {
+      if (h.source === 'manual') {
+        if (!h.validationError && h.objectPatch.length > 0) {
+          historyMessages.push({
+            role: 'system',
+            content: `The user manually modified the object with the following JSON patch:\n\n<json_patch>\n${JSON.stringify(h.objectPatch)}\n</json_patch>`,
+          });
+        }
+        continue;
+      }
+
+      historyMessages.push({
         role: 'user',
-        content: `Here is the current state of the object:\n\n<object_current_state>\n${JSON.stringify(currentObjectState)}\n</object_current_state>\n\n${newUserMessage}`,
+        content: h.userMessage,
       });
 
-    return messages;
-  }
+      const assistantContent =
+        `${h.agentMessage}\n\n<json_patch>\n${JSON.stringify(h.objectPatch)}\n</json_patch>`.trim();
 
-  public async revertLatest() {
-    const latestIndex = this.history.findLastIndex((h) => h.canRevertIfLatest);
-    const toRevert = this.history[latestIndex];
-    assert(toRevert);
-    await this.delegate.writeObjectState(toRevert.objectBeforeState);
+      historyMessages.push({
+        role: 'assistant',
+        content: assistantContent,
+      });
 
-    this.store.setState({
-      history: this.history.slice(0, latestIndex),
+      if (h.validationError) {
+        historyMessages.push({
+          role: 'system',
+          content: `The attempted patch resulted in an invalid result: <error>${h.validationError}</error>. No changes were made.`,
+        });
+      }
+    }
+
+    historyMessages.push({
+      role: 'user',
+      content: `Here is the current state of the object:\n\n<object_current_state>\n${JSON.stringify(currentObjectState)}\n</object_current_state>\n\n${newUserMessage}`,
     });
 
-    return toRevert.userMessage;
+    return historyMessages;
   }
 
-  private computeHumanReadableChanges(
-    oldObject: TObjectType,
-    newObject: TObjectType,
-    patch: any[]
-  ): ObjectEditorHumanReadableChange[] {
-    // Iterate through each command in the patch
-    // Look up the metadata from the Zod schema registry
-    // Metadata tells us how to get the human readable "name" of the field changes
-    // This would turn into something like "Paradise Island (Map) -> Beach (Map Location) -> Description"
-    // If the before and after values are not symbol types, we just stringify them with idententation, no need to try to decompose them. But we'll tell the model to prefer emitting separate replace ops for each object field, rather than replacing objects wholesale. Also for new objects, we'll tell the model to prefer emitting an op to create an empty obj, then running separate add ops for each field. If the model doesn't respect this rule, that's fine but the user will just see JSON blobs.
+  public async revertFromIndex(index: number): Promise<string | undefined> {
+    this.assertInitialized();
+    assert(!this.state.pendingTurn, 'Cannot revert while an AI turn is in progress');
 
-    return [];
+    const toRevert = this.history[index];
+    assertNonNullish(toRevert, `No history entry at index ${index}`);
+    assert(toRevert.canRevert, `History entry at index ${index} cannot be reverted`);
+
+    const restored = toRevert.objectBeforeState;
+    if (!toRevert.invalidRawJson) {
+      await this.delegate.writeObjectState(restored);
+    }
+
+    const initialObject = this.requireInitialObject();
+    const nextHistory = this.history.slice(0, index);
+    const newTop = nextHistory.at(-1);
+    const nextInvalidManualEdit =
+      newTop?.invalidRawJson !== undefined && newTop.validationError !== undefined
+        ? { rawJson: newTop.invalidRawJson, error: newTop.validationError }
+        : undefined;
+
+    this.store.setState({
+      history: nextHistory,
+      currentObject: restored,
+      invalidManualEdit: nextInvalidManualEdit,
+      isDirty: !_.isEqual(restored, initialObject) || Boolean(nextInvalidManualEdit),
+    });
+
+    return toRevert.source === 'ai' ? toRevert.userMessage : undefined;
+  }
+
+  public async revertLatest(): Promise<string | undefined> {
+    const latestIndex = this.history.findLastIndex((h) => h.canRevert);
+    assert(latestIndex >= 0, 'No revertible history entry found');
+    return this.revertFromIndex(latestIndex);
+  }
+
+  private validateAndApplyPatch(
+    oldObjectState: TObjectType,
+    rawPatch: readonly JsonPatchOperation[]
+  ):
+    | {
+        ok: true;
+        resolvedPatch: JsonPatchOperation[];
+        newObjectState: TObjectType;
+        humanReadableChanges: ObjectEditorHumanReadableChange[];
+      }
+    | { ok: false; error: string } {
+    try {
+      const resolvedPatch = replaceNewIdPlaceholdersInPatch(rawPatch);
+      assertNoReadOnlyViolations(this.delegate.zodSchema, oldObjectState, resolvedPatch);
+
+      const patchedDocument = applyPatch(oldObjectState, resolvedPatch, true, false).newDocument;
+      const populatedDocument = autoPopulatePersistedSubObjectFields(
+        this.delegate.zodSchema,
+        patchedDocument,
+        new Date().toISOString()
+      );
+      const parsed = this.delegate.zodSchema.safeParse(populatedDocument);
+
+      if (!parsed.success) {
+        return { ok: false, error: parsed.error.message };
+      }
+
+      const finalPatch = compareToJsonPatch(oldObjectState, parsed.data);
+      const humanReadableChanges = computeHumanReadableChanges(
+        this.delegate.zodSchema,
+        oldObjectState,
+        finalPatch
+      );
+
+      return {
+        ok: true,
+        resolvedPatch: finalPatch,
+        newObjectState: parsed.data,
+        humanReadableChanges,
+      };
+    } catch (error) {
+      return { ok: false, error: getErrorMessage(error) };
+    }
+  }
+
+  private recordInvalidManualEdit(rawJson: string, error: string, lastKnown: TObjectType): boolean {
+    const entry: ObjectEditorHistoryEntry<TObjectType> = {
+      id: newId(),
+      source: 'manual',
+      objectBeforeState: lastKnown,
+      objectAfterState: lastKnown,
+      canRevert: true,
+      userMessage: '',
+      agentMessage: 'Manual JSON edit failed validation.',
+      objectPatch: [],
+      humanReadableChanges: [],
+      invalidRawJson: rawJson,
+      validationError: error,
+    };
+
+    this.commitNewHistoryState(entry, lastKnown, { rawJson, error });
+    return false;
+  }
+
+  private commitNewHistoryState(
+    entry: ObjectEditorHistoryEntry<TObjectType>,
+    nextObject: TObjectType,
+    invalidManualEdit: ObjectEditorInvalidManualEdit | undefined
+  ): void {
+    const initialObject = this.requireInitialObject();
+    this.store.setState({
+      history: this.history.concat(entry),
+      currentObject: nextObject,
+      invalidManualEdit,
+      isDirty: !_.isEqual(nextObject, initialObject) || Boolean(invalidManualEdit),
+    });
+  }
+
+  private assertInitialized(): void {
+    assert(this.state.initialized, 'ObjectEditor must be initialized before use');
+  }
+
+  private requireInitialObject(): TObjectType {
+    this.assertInitialized();
+    const initial = this.state.initialObject;
+    assertNonNullish(initial, 'ObjectEditor initialObject is not set');
+    return initial;
+  }
+
+  private getLatestKnownObject(): TObjectType {
+    const mostRecentEntry = this.history.at(-1);
+    if (mostRecentEntry) {
+      return mostRecentEntry.objectAfterState;
+    }
+    const current = this.state.currentObject;
+    assertNonNullish(current, 'ObjectEditor has no current object state');
+    return current;
   }
 
   private get state() {
@@ -161,29 +524,11 @@ export class ObjectEditor<TObjectType, TPromptExecutionContext> {
   private get history() {
     return this.state.history;
   }
+}
 
-  private getLatestKnownObject() {
-    const mostRecentMessage = this.history.at(-1);
-    assertNonNullish(mostRecentMessage, 'unexpected empty history');
-
-    return mostRecentMessage.objectAfterState;
-  }
-
-  private generateNewIds(object: TObjectType) {
-    // We'll tell model how to use the `newId()` function. Hopefully this makes it work better.
-    const newIdForNum = new Map<number, string>();
-    const generateReplacement = (numString: string) => {
-      const num = Number(numString);
-      if (Number.isNaN(num)) {
-        throw new Error(); // Should make a specific error class for this
-      }
-
-      const id = newIdForNum.getOrInsert(num, newId());
-      return id;
-    };
-
-    const stringObject = JSON.stringify(object);
-    const replaced = stringObject.replaceAll(/newId\([0-9]+\)/, (m, g1) => generateReplacement(g1));
-    return replaced;
-  }
+export function useObjectEditorState<TObjectType, TReturnType>(
+  editor: ObjectEditor<TObjectType>,
+  selector: (state: ObjectEditorState<TObjectType>) => TReturnType
+): TReturnType {
+  return useStore(editor.store, selector);
 }
