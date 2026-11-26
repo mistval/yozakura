@@ -1,6 +1,6 @@
 import { applyOperation, compare, unescapePathComponent, type Operation } from 'fast-json-patch';
+import _ from 'lodash';
 import z from 'zod';
-import { assert } from '../../errors/application_error.js';
 import { newId } from '../../util/id.js';
 
 const jsonPointerSchema = z
@@ -321,23 +321,244 @@ export function assertNoReadOnlyViolations(
   }
 }
 
-export function replaceNewIdPlaceholdersInPatch(patch: readonly JsonPatchOperation[]): JsonPatchOperation[] {
-  const newIdByPlaceholder = new Map<number, string>();
-  const getOrCreateId = (digits: string) => {
-    const num = Number(digits);
-    assert(Number.isInteger(num), `Invalid newId placeholder argument: "${digits}"`);
-    return newIdByPlaceholder.getOrInsertComputed(num, newId);
-  };
-
-  const serialized = JSON.stringify(patch);
-  const replaced = serialized.replaceAll(/newId\(([0-9]+)\)/g, (_match, digits: string) =>
-    getOrCreateId(digits)
-  );
-  if (replaced === serialized) {
-    return [...patch];
+function schemaHasReadOnlyDescendant(schema: z.ZodType): boolean {
+  const { schema: unwrapped, meta } = unwrapSchemaWithMeta(schema);
+  if (meta.readOnly) {
+    return true;
   }
 
-  return jsonPatchOperationSchema.array().parse(JSON.parse(replaced));
+  if (unwrapped instanceof z.ZodObject) {
+    return Object.values(unwrapped.shape).some(
+      (fieldSchema) => fieldSchema instanceof z.ZodType && schemaHasReadOnlyDescendant(fieldSchema)
+    );
+  }
+
+  if (unwrapped instanceof z.ZodArray) {
+    const elementSchema = asZodType(unwrapped.element);
+    return elementSchema ? schemaHasReadOnlyDescendant(elementSchema) : false;
+  }
+
+  if (unwrapped instanceof z.ZodRecord) {
+    const valueSchema = asZodType(unwrapped.valueType);
+    return valueSchema ? schemaHasReadOnlyDescendant(valueSchema) : false;
+  }
+
+  return false;
+}
+
+function getObjectWithIdElementInfo(schema: z.ZodType):
+  | {
+      elementSchema: z.ZodType;
+      unwrappedObject: z.ZodObject;
+    }
+  | undefined {
+  const { schema: unwrapped } = unwrapSchemaWithMeta(schema);
+  if (!(unwrapped instanceof z.ZodArray)) {
+    return undefined;
+  }
+  const elementSchema = asZodType(unwrapped.element);
+  if (!elementSchema) {
+    return undefined;
+  }
+  const unwrappedElement = unwrapSchemaWithMeta(elementSchema).schema;
+  if (
+    !(unwrappedElement instanceof z.ZodObject) ||
+    !Object.hasOwn(unwrappedElement.shape, 'id') ||
+    !isStringLikeSchema(unwrappedElement.shape.id)
+  ) {
+    return undefined;
+  }
+  return { elementSchema, unwrappedObject: unwrappedElement };
+}
+
+function indexPlainRecordsById(items: unknown): Map<string, Record<string, unknown>> {
+  const byId = new Map<string, Record<string, unknown>>();
+  if (!Array.isArray(items)) {
+    return byId;
+  }
+  for (const item of items) {
+    if (isPlainRecord(item) && typeof item.id === 'string' && item.id !== '') {
+      byId.set(item.id, item);
+    }
+  }
+  return byId;
+}
+
+/**
+ * Verifies across the entire resulting document that no `readOnly` field was changed relative to `beforeDoc`,
+ * catching container-level `replace`, `remove`+`add` ID laundering, and array index shifts.
+ */
+export function assertNoReadOnlyStateViolations(
+  rootSchema: z.ZodType,
+  beforeDoc: unknown,
+  afterDoc: unknown
+): void {
+  const check = (
+    schema: z.ZodType,
+    beforeVal: unknown,
+    afterVal: unknown,
+    segments: readonly string[]
+  ): void => {
+    const { schema: unwrapped, meta } = unwrapSchemaWithMeta(schema);
+    if (meta.readOnly) {
+      if (!_.isEqual(beforeVal, afterVal)) {
+        throw new Error(`Cannot modify read-only field "${buildPointerFromSegments(segments) || '/'}"`);
+      }
+      return;
+    }
+
+    if (unwrapped instanceof z.ZodObject) {
+      if (!isPlainRecord(beforeVal)) {
+        return;
+      }
+      if (!isPlainRecord(afterVal) && !schemaHasReadOnlyDescendant(unwrapped)) {
+        return;
+      }
+      const afterRecord = isPlainRecord(afterVal) ? afterVal : {};
+      for (const [key, fieldSchema] of Object.entries(unwrapped.shape)) {
+        if (!(fieldSchema instanceof z.ZodType)) {
+          continue;
+        }
+        const childBefore = Object.hasOwn(beforeVal, key) ? beforeVal[key] : undefined;
+        const childAfter = Object.hasOwn(afterRecord, key) ? afterRecord[key] : undefined;
+        check(fieldSchema, childBefore, childAfter, [...segments, key]);
+      }
+      return;
+    }
+
+    if (unwrapped instanceof z.ZodArray) {
+      if (!Array.isArray(beforeVal)) {
+        return;
+      }
+      const elementSchema = asZodType(unwrapped.element);
+      if (!elementSchema) {
+        return;
+      }
+      if (!Array.isArray(afterVal)) {
+        if (beforeVal.length > 0 && schemaHasReadOnlyDescendant(elementSchema)) {
+          throw new Error(`Cannot modify read-only fields in "${buildPointerFromSegments(segments) || '/'}"`);
+        }
+        return;
+      }
+
+      const idArrayInfo = getObjectWithIdElementInfo(unwrapped);
+      if (idArrayInfo) {
+        const beforeById = indexPlainRecordsById(beforeVal);
+        const matchedBeforeIds = new Set<string>();
+        afterVal.forEach((item, index) => {
+          if (
+            isPlainRecord(item) &&
+            typeof item.id === 'string' &&
+            beforeById.has(item.id) &&
+            !matchedBeforeIds.has(item.id)
+          ) {
+            matchedBeforeIds.add(item.id);
+            check(idArrayInfo.elementSchema, beforeById.get(item.id), item, [...segments, String(index)]);
+          }
+        });
+        return;
+      }
+
+      if (schemaHasReadOnlyDescendant(elementSchema)) {
+        const sharedCount = Math.min(beforeVal.length, afterVal.length);
+        for (let i = 0; i < sharedCount; i += 1) {
+          check(elementSchema, beforeVal[i], afterVal[i], [...segments, String(i)]);
+        }
+      }
+      return;
+    }
+
+    if (unwrapped instanceof z.ZodRecord) {
+      if (!isPlainRecord(beforeVal) || !isPlainRecord(afterVal)) {
+        return;
+      }
+      const valueSchema = asZodType(unwrapped.valueType);
+      if (!valueSchema) {
+        return;
+      }
+      for (const [key, afterEntry] of Object.entries(afterVal)) {
+        if (Object.hasOwn(beforeVal, key)) {
+          check(valueSchema, beforeVal[key], afterEntry, [...segments, key]);
+        }
+      }
+    }
+  };
+
+  check(rootSchema, beforeDoc, afterDoc, []);
+}
+
+export const NEW_ID_PLACEHOLDER_PATTERN = /^new_id_[a-z0-9_]+$/;
+
+export function replaceNewIdPlaceholdersInValue(
+  value: unknown,
+  newIdByPlaceholder: Map<string, string> = new Map()
+): { value: unknown; generatedIds: Set<string> } {
+  const replaceInner = (candidate: unknown): unknown => {
+    if (typeof candidate === 'string') {
+      if (NEW_ID_PLACEHOLDER_PATTERN.test(candidate)) {
+        return newIdByPlaceholder.getOrInsertComputed(candidate, newId);
+      }
+      return candidate;
+    }
+
+    if (Array.isArray(candidate)) {
+      let changed = false;
+      const nextArray = candidate.map((item) => {
+        const updatedItem = replaceInner(item);
+        if (updatedItem !== item) {
+          changed = true;
+        }
+        return updatedItem;
+      });
+      return changed ? nextArray : candidate;
+    }
+
+    if (isPlainRecord(candidate)) {
+      let changed = false;
+      const nextRecord: Record<string, unknown> = {};
+      for (const [key, entry] of Object.entries(candidate)) {
+        const updatedEntry = replaceInner(entry);
+        if (updatedEntry !== entry) {
+          changed = true;
+        }
+        nextRecord[key] = updatedEntry;
+      }
+      return changed ? nextRecord : candidate;
+    }
+
+    return candidate;
+  };
+
+  const nextValue = replaceInner(value);
+  return {
+    value: nextValue,
+    generatedIds: new Set(newIdByPlaceholder.values()),
+  };
+}
+
+export function replaceNewIdPlaceholdersInPatch(patch: readonly JsonPatchOperation[]): {
+  patch: JsonPatchOperation[];
+  generatedIds: Set<string>;
+} {
+  const newIdByPlaceholder = new Map<string, string>();
+  const nextPatch = patch.map((op) => {
+    if (!('value' in op)) {
+      return op;
+    }
+    const { value: updatedValue } = replaceNewIdPlaceholdersInValue(op.value, newIdByPlaceholder);
+    if (updatedValue === op.value) {
+      return op;
+    }
+    return {
+      ...op,
+      value: updatedValue,
+    };
+  });
+
+  return {
+    patch: nextPatch,
+    generatedIds: new Set(newIdByPlaceholder.values()),
+  };
 }
 
 function isStringLikeSchema(schema: z.ZodType | undefined): boolean {
@@ -346,6 +567,138 @@ function isStringLikeSchema(schema: z.ZodType | undefined): boolean {
   }
   const { schema: unwrapped } = unwrapSchemaWithMeta(schema);
   return unwrapped instanceof z.ZodString;
+}
+
+function assertObjectIdValue(
+  id: unknown,
+  expectedOldId: string | undefined,
+  pointer: string,
+  generatedIds: ReadonlySet<string>,
+  seenIds: Set<string>
+): void {
+  if (typeof id !== 'string' || id === '') {
+    throw new Error(
+      `Missing or empty "id" at "${pointer}". Newly created objects must use a unique "new_id_<name>" placeholder.`
+    );
+  }
+
+  if (id !== expectedOldId && !generatedIds.has(id)) {
+    throw new Error(
+      `Invalid "id" "${id}" at "${pointer}". Newly created objects must use a unique "new_id_<name>" placeholder instead of hardcoding an ID.`
+    );
+  }
+
+  if (seenIds.has(id)) {
+    throw new Error(
+      `Duplicate "id" "${id}" at "${pointer}". Every object "id" must be globally unique; use distinct "new_id_<name>" placeholders for new objects.`
+    );
+  }
+
+  seenIds.add(id);
+}
+
+/**
+ * Validates that every schema object with an `id` field keeps its container-matched existing ID
+ * or uses a unique ID generated from a `new_id_*` placeholder in this edit.
+ */
+export function assertValidObjectIds(
+  schema: z.ZodType,
+  oldDoc: unknown,
+  nextDoc: unknown,
+  generatedIds: ReadonlySet<string>
+): void {
+  const seenIds = new Set<string>();
+
+  const validateObjectFields = (
+    objectSchema: z.ZodObject,
+    oldObj: Record<string, unknown> | undefined,
+    nextObj: Record<string, unknown>,
+    segments: readonly string[],
+    skipIdCheck: boolean
+  ): void => {
+    const shape = objectSchema.shape;
+    if (!skipIdCheck && Object.hasOwn(shape, 'id') && isStringLikeSchema(shape.id)) {
+      const oldId = oldObj && typeof oldObj.id === 'string' && oldObj.id !== '' ? oldObj.id : undefined;
+      assertObjectIdValue(
+        nextObj.id,
+        oldId,
+        buildPointerFromSegments([...segments, 'id']),
+        generatedIds,
+        seenIds
+      );
+    }
+
+    for (const [key, fieldSchema] of Object.entries(shape)) {
+      if (key === 'id' || !(fieldSchema instanceof z.ZodType) || !Object.hasOwn(nextObj, key)) {
+        continue;
+      }
+      const childOld = oldObj && Object.hasOwn(oldObj, key) ? oldObj[key] : undefined;
+      validateNode(fieldSchema, childOld, nextObj[key], [...segments, key]);
+    }
+  };
+
+  const validateNode = (
+    nodeSchema: z.ZodType,
+    oldVal: unknown,
+    nextVal: unknown,
+    segments: readonly string[]
+  ): void => {
+    const { schema: unwrapped } = unwrapSchemaWithMeta(nodeSchema);
+
+    if (unwrapped instanceof z.ZodArray && Array.isArray(nextVal)) {
+      const idArrayInfo = getObjectWithIdElementInfo(unwrapped);
+      if (idArrayInfo) {
+        const oldById = indexPlainRecordsById(oldVal);
+        nextVal.forEach((nextItem, index) => {
+          const itemSegments = [...segments, String(index)];
+          if (!isPlainRecord(nextItem)) {
+            validateNode(idArrayInfo.elementSchema, undefined, nextItem, itemSegments);
+            return;
+          }
+          const matchedOld = typeof nextItem.id === 'string' ? oldById.get(nextItem.id) : undefined;
+          assertObjectIdValue(
+            nextItem.id,
+            matchedOld && typeof matchedOld.id === 'string' ? matchedOld.id : undefined,
+            buildPointerFromSegments([...itemSegments, 'id']),
+            generatedIds,
+            seenIds
+          );
+          validateObjectFields(idArrayInfo.unwrappedObject, matchedOld, nextItem, itemSegments, true);
+        });
+        return;
+      }
+
+      const elementSchema = asZodType(unwrapped.element);
+      if (!elementSchema) {
+        return;
+      }
+      const oldArr = Array.isArray(oldVal) ? oldVal : undefined;
+      nextVal.forEach((item, index) => {
+        validateNode(elementSchema, oldArr?.[index], item, [...segments, String(index)]);
+      });
+      return;
+    }
+
+    if (unwrapped instanceof z.ZodRecord && isPlainRecord(nextVal)) {
+      const valueSchema = asZodType(unwrapped.valueType);
+      if (!valueSchema) {
+        return;
+      }
+      const oldRecord = isPlainRecord(oldVal) ? oldVal : undefined;
+      for (const [key, nextEntry] of Object.entries(nextVal)) {
+        const oldEntry = oldRecord && Object.hasOwn(oldRecord, key) ? oldRecord[key] : undefined;
+        validateNode(valueSchema, oldEntry, nextEntry, [...segments, key]);
+      }
+      return;
+    }
+
+    if (unwrapped instanceof z.ZodObject && isPlainRecord(nextVal)) {
+      const oldObj = isPlainRecord(oldVal) ? oldVal : undefined;
+      validateObjectFields(unwrapped, oldObj, nextVal, segments, false);
+    }
+  };
+
+  validateNode(schema, oldDoc, nextDoc, []);
 }
 
 export function autoPopulatePersistedSubObjectFields(
@@ -392,15 +745,6 @@ export function autoPopulatePersistedSubObjectFields(
     const shape = unwrapped.shape;
     let changed = false;
     const nextObj: Record<string, unknown> = { ...value };
-
-    if (
-      Object.hasOwn(shape, 'id') &&
-      isStringLikeSchema(shape.id) &&
-      (nextObj.id === undefined || nextObj.id === '')
-    ) {
-      nextObj.id = newId();
-      changed = true;
-    }
 
     if (
       Object.hasOwn(shape, 'createdAt') &&

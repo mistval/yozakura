@@ -151,11 +151,11 @@ function createEditorHarness<T>(
 }
 
 describe('ObjectEditor', () => {
-  describe('patching, newId placeholders, auto-population, and human-readable changes', () => {
-    it('expands newId(N) placeholders consistently, auto-populates persisted fields, and formats semantic WorldMap changes', async () => {
+  describe('patching, new_id_* placeholders, auto-population, and human-readable changes', () => {
+    it('expands new_id_* placeholders consistently without altering prose, auto-populates timestamps, and formats semantic WorldMap changes', async () => {
       const initialMap = createWorldMapFixture();
       const firstLocId = initialMap.locations[0]!.id;
-      const newZoneLocIds = [firstLocId, 'newId(1)'];
+      const newZoneLocIds = [firstLocId, 'new_id_elrond_library'];
 
       const { editor, getExternalState, writtenStates } = createEditorHarness(
         initialMap,
@@ -167,11 +167,11 @@ describe('ObjectEditor', () => {
               op: 'add',
               path: '/locations/-',
               value: {
-                id: 'newId(1)',
+                id: 'new_id_elrond_library',
                 createdAt: '',
                 updatedAt: '',
                 name: 'Elrond Library',
-                description: 'Quiet hall of scrolls.',
+                description: 'Quiet hall of scrolls mentioning new_id_elrond_library in prose.',
                 adjacency: [firstLocId],
                 isEphemeral: false,
               },
@@ -179,7 +179,7 @@ describe('ObjectEditor', () => {
             {
               op: 'add',
               path: '/locations/0/adjacency/-',
-              value: 'newId(1)',
+              value: 'new_id_elrond_library',
             },
             {
               op: 'replace',
@@ -207,10 +207,13 @@ describe('ObjectEditor', () => {
       expect(updatedMap.locations).toHaveLength(2);
       const addedLocation = updatedMap.locations[1]!;
       expect(idSchema.safeParse(addedLocation.id).success).toBe(true);
+      expect(addedLocation.description).toBe(
+        'Quiet hall of scrolls mentioning new_id_elrond_library in prose.'
+      );
       expect(addedLocation.createdAt).not.toBe('');
       expect(addedLocation.updatedAt).not.toBe('');
 
-      // Both references to newId(1) resolved to the exact same newly created ID.
+      // Both references to new_id_elrond_library resolved to the exact same newly created ID.
       expect(updatedMap.locations[0]!.adjacency).toEqual([addedLocation.id]);
       expect(updatedMap.zones[0]!.locationIds).toEqual([firstLocId, addedLocation.id]);
 
@@ -218,7 +221,8 @@ describe('ObjectEditor', () => {
       expect(entry.source).toBe('ai');
       expect(entry.canRevert).toBe(true);
       expect(entry.validationError).toBeUndefined();
-      expect(JSON.stringify(entry.objectPatch)).not.toContain('newId(');
+      expect(JSON.stringify(entry.objectPatch)).not.toContain('"new_id_elrond_library"');
+      expect(JSON.stringify(entry.rawAgentPatch)).toContain('new_id_elrond_library');
 
       expect(entry.humanReadableChanges).toHaveLength(5);
       expect(entry.humanReadableChanges).toEqual(
@@ -262,7 +266,7 @@ describe('ObjectEditor', () => {
       );
     });
 
-    it('formats semantic labels for Character and CharacterRelationship edits and auto-populates new sub-objects without IDs', async () => {
+    it('formats semantic labels for Character and CharacterRelationship edits and resolves new_id_* + timestamps', async () => {
       const alice = createCharacterFixture();
       const charHarness = createEditorHarness(alice, characterSchema, async () => ({
         message: 'Disabled evening dress and added casual outfit.',
@@ -272,7 +276,7 @@ describe('ObjectEditor', () => {
             op: 'add',
             path: '/wardrobes/-',
             value: {
-              id: '',
+              id: 'new_id_casual_outfit',
               createdAt: '',
               updatedAt: '',
               text: 'blue jeans, sneakers',
@@ -536,7 +540,7 @@ describe('ObjectEditor', () => {
       expect(editor.getState().isDirty).toBe(false);
     });
 
-    it('auto-populates omitted or empty id, createdAt, and updatedAt on newly added sub-objects during applyManualJsonEdit', async () => {
+    it('expands new_id_* placeholders and auto-populates createdAt and updatedAt on newly added sub-objects during applyManualJsonEdit', async () => {
       const alice = createCharacterFixture();
       const { editor, writtenStates } = createEditorHarness(alice, characterSchema);
       await editor.initialize();
@@ -547,7 +551,7 @@ describe('ObjectEditor', () => {
           wardrobes: [
             ...alice.wardrobes,
             {
-              id: '',
+              id: 'new_id_jacket',
               createdAt: '',
               updatedAt: '',
               text: 'leather jacket, boots',
@@ -556,6 +560,7 @@ describe('ObjectEditor', () => {
               autoRevert: false,
             },
             {
+              id: 'new_id_swimsuit_2',
               text: 'swimsuit',
               enabled: false,
               tags: ['beach'],
@@ -573,11 +578,318 @@ describe('ObjectEditor', () => {
 
       const current = editor.getState().currentObject!;
       expect(current.wardrobes).toHaveLength(3);
+      expect(current.wardrobes[1]!.id).not.toBe(current.wardrobes[2]!.id);
       for (const added of [current.wardrobes[1]!, current.wardrobes[2]!]) {
         expect(idSchema.safeParse(added.id).success).toBe(true);
         expect(added.createdAt).not.toBe('');
         expect(added.updatedAt).not.toBe('');
       }
+    });
+
+    it('rejects omitted, empty, hardcoded, copied, or duplicate object IDs in both AI patches and manual JSON edits while allowing reference IDs', async () => {
+      const initialMap = createWorldMapFixture();
+      const existingLocId = initialMap.locations[0]!.id;
+      const externalLocId = newId();
+
+      let nextAiPatch: unknown[] = [];
+      const aiHarness = createEditorHarness(initialMap, worldMapSchema, async () => ({
+        message: 'Attempted location edit.',
+        patch: nextAiPatch as ObjectEditorPromptOutput['patch'],
+      }));
+      await aiHarness.editor.initialize();
+
+      const invalidAiCases: Array<{ label: string; patch: unknown[]; errorPattern: RegExp }> = [
+        {
+          label: 'omitted id',
+          patch: [
+            {
+              op: 'add',
+              path: '/locations/-',
+              value: {
+                createdAt: '',
+                updatedAt: '',
+                name: 'No Id',
+                description: 'Missing id field.',
+                adjacency: [],
+                isEphemeral: false,
+              },
+            },
+          ],
+          errorPattern: /Missing or empty "id"/,
+        },
+        {
+          label: 'empty id',
+          patch: [
+            {
+              op: 'add',
+              path: '/locations/-',
+              value: {
+                id: '',
+                createdAt: '',
+                updatedAt: '',
+                name: 'Empty Id',
+                description: 'Blank id field.',
+                adjacency: [],
+                isEphemeral: false,
+              },
+            },
+          ],
+          errorPattern: /Missing or empty "id"/,
+        },
+        {
+          label: 'hardcoded hex id',
+          patch: [
+            {
+              op: 'add',
+              path: '/locations/-',
+              value: {
+                id: newId(),
+                createdAt: '',
+                updatedAt: '',
+                name: 'Hardcoded Id',
+                description: 'Hardcoded 18-char hex.',
+                adjacency: [],
+                isEphemeral: false,
+              },
+            },
+          ],
+          errorPattern: /instead of hardcoding an ID/,
+        },
+        {
+          label: 'duplicate new_id_* across two new objects',
+          patch: [
+            {
+              op: 'add',
+              path: '/locations/-',
+              value: {
+                id: 'new_id_shared',
+                createdAt: '',
+                updatedAt: '',
+                name: 'Room A',
+                description: 'First room.',
+                adjacency: [],
+                isEphemeral: false,
+              },
+            },
+            {
+              op: 'add',
+              path: '/locations/-',
+              value: {
+                id: 'new_id_shared',
+                createdAt: '',
+                updatedAt: '',
+                name: 'Room B',
+                description: 'Second room.',
+                adjacency: [],
+                isEphemeral: false,
+              },
+            },
+          ],
+          errorPattern: /Duplicate "id"/,
+        },
+        {
+          label: 'copying an existing object id',
+          patch: [
+            {
+              op: 'add',
+              path: '/locations/-',
+              value: {
+                id: existingLocId,
+                createdAt: '',
+                updatedAt: '',
+                name: 'Duplicate Existing',
+                description: 'Reuses existing id.',
+                adjacency: [],
+                isEphemeral: false,
+              },
+            },
+          ],
+          errorPattern: /Duplicate "id"/,
+        },
+      ];
+
+      for (const testCase of invalidAiCases) {
+        nextAiPatch = testCase.patch;
+        await aiHarness.editor.runUserMessage(`Test ${testCase.label}`);
+        const latest = aiHarness.editor.getState().history.at(-1)!;
+        expect(latest.validationError, testCase.label).toMatch(testCase.errorPattern);
+      }
+      expect(aiHarness.writtenStates).toHaveLength(0);
+
+      // Reference fields (like adjacency) may contain external/existing IDs freely.
+      nextAiPatch = [
+        {
+          op: 'add',
+          path: '/locations/0/adjacency/-',
+          value: externalLocId,
+        },
+      ];
+      await aiHarness.editor.runUserMessage('Reference external location id');
+      expect(aiHarness.editor.getState().history.at(-1)!.validationError).toBeUndefined();
+      expect(aiHarness.editor.getState().currentObject!.locations[0]!.adjacency).toEqual([externalLocId]);
+
+      // Manual Raw JSON edits enforce the same ID rules.
+      const manualHarness = createEditorHarness(initialMap, worldMapSchema);
+      await manualHarness.editor.initialize();
+
+      const invalidManualDocs = [
+        {
+          ...initialMap,
+          locations: [
+            ...initialMap.locations,
+            {
+              createdAt: '',
+              updatedAt: '',
+              name: 'Omitted Id',
+              description: 'No id.',
+              adjacency: [],
+              isEphemeral: false,
+            },
+          ],
+        },
+        {
+          ...initialMap,
+          locations: [
+            ...initialMap.locations,
+            {
+              id: '',
+              createdAt: '',
+              updatedAt: '',
+              name: 'Empty Id',
+              description: 'Blank id.',
+              adjacency: [],
+              isEphemeral: false,
+            },
+          ],
+        },
+        {
+          ...initialMap,
+          locations: [
+            ...initialMap.locations,
+            {
+              id: newId(),
+              createdAt: '',
+              updatedAt: '',
+              name: 'Hardcoded Id',
+              description: 'Hardcoded hex.',
+              adjacency: [],
+              isEphemeral: false,
+            },
+          ],
+        },
+        {
+          ...initialMap,
+          locations: [
+            ...initialMap.locations,
+            {
+              id: existingLocId,
+              createdAt: '',
+              updatedAt: '',
+              name: 'Existing Id',
+              description: 'Copied existing id.',
+              adjacency: [],
+              isEphemeral: false,
+            },
+          ],
+        },
+        {
+          ...initialMap,
+          locations: [
+            ...initialMap.locations,
+            {
+              id: 'new_id_twin',
+              createdAt: '',
+              updatedAt: '',
+              name: 'Twin 1',
+              description: 'First.',
+              adjacency: [],
+              isEphemeral: false,
+            },
+            {
+              id: 'new_id_twin',
+              createdAt: '',
+              updatedAt: '',
+              name: 'Twin 2',
+              description: 'Second.',
+              adjacency: [],
+              isEphemeral: false,
+            },
+          ],
+        },
+      ];
+
+      for (const badDoc of invalidManualDocs) {
+        const applied = await manualHarness.editor.applyManualJsonEdit(JSON.stringify(badDoc, null, 2));
+        expect(applied).toBe(false);
+        expect(manualHarness.editor.getState().invalidManualEdit).toBeDefined();
+      }
+      expect(manualHarness.writtenStates).toHaveLength(0);
+    });
+
+    it('replays raw new_id_* placeholders in assistant history messages while sending real generated IDs in object_current_state', async () => {
+      const alice = createCharacterFixture();
+      let turn = 0;
+
+      const { editor, promptCalls } = createEditorHarness(alice, characterSchema, async () => {
+        turn += 1;
+        if (turn === 1) {
+          return {
+            message: 'Added wizard cloak.',
+            patch: [
+              {
+                op: 'add',
+                path: '/wardrobes/-',
+                value: {
+                  id: 'new_id_wizard_cloak',
+                  createdAt: '',
+                  updatedAt: '',
+                  text: 'silver wizard cloak',
+                  enabled: true,
+                  tags: ['magic'],
+                  autoRevert: false,
+                },
+              },
+            ],
+          };
+        }
+        return {
+          message: 'No further changes.',
+          patch: [],
+        };
+      });
+
+      await editor.initialize();
+      await editor.runUserMessage('Add a wizard cloak.');
+      await editor.runUserMessage('Now inspect it.');
+
+      const addedId = editor.getState().currentObject!.wardrobes[1]!.id;
+      expect(idSchema.safeParse(addedId).success).toBe(true);
+
+      const secondPrompt = promptCalls[1]!;
+      expect(secondPrompt).toHaveLength(3);
+      // Turn 1 assistant message replays raw placeholder patch, NOT the generated hex ID.
+      expect(secondPrompt[1]).toEqual({
+        role: 'assistant',
+        content: `Added wizard cloak.\n\n<json_patch>\n${JSON.stringify([
+          {
+            op: 'add',
+            path: '/wardrobes/-',
+            value: {
+              id: 'new_id_wizard_cloak',
+              createdAt: '',
+              updatedAt: '',
+              text: 'silver wizard cloak',
+              enabled: true,
+              tags: ['magic'],
+              autoRevert: false,
+            },
+          },
+        ])}\n</json_patch>`,
+      });
+      // Turn 2 user message carries <object_current_state> with the real resolved ID.
+      expect(secondPrompt[2]!.role).toBe('user');
+      expect(secondPrompt[2]!.content).toContain(`"id":"${addedId}"`);
+      expect(secondPrompt[2]!.content).not.toContain('new_id_wizard_cloak');
     });
 
     it('rejects modifications to readOnly fields during applyManualJsonEdit without calling writeObjectState', async () => {

@@ -15,10 +15,18 @@ export const TRANSCRIPT_SYSTEM = '__transcript_system__';
 
 export type ChatMedium = z.infer<typeof chatMediumSchema>;
 
+export const timestampSchema = z
+  .string()
+  .regex(
+    /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/,
+    'Expected a valid UTC/ISO timestamp (e.g. "2026-01-01T00:00:00.000Z" or "2026-01-01 00:00:00Z")'
+  )
+  .refine((value) => !Number.isNaN(Date.parse(value)), 'Expected a valid calendar timestamp');
+
 const basePersistedObjectSchema = z.object({
   id: idSchema.meta({ readOnly: true }),
-  createdAt: z.string().meta({ readOnly: true }),
-  updatedAt: z.string().meta({ readOnly: true }),
+  createdAt: timestampSchema.meta({ readOnly: true }),
+  updatedAt: timestampSchema.meta({ readOnly: true }),
 });
 
 export type RootPersistedObject = z.infer<typeof basePersistedObjectSchema>;
@@ -27,7 +35,6 @@ const conversationSummarySchema = basePersistedObjectSchema
   .extend({
     conversationId: idSchema.meta({ readOnly: true }),
     turnNumber: z.number(),
-    createdAt: z.string().meta({ readOnly: true }),
     summary: z.string().meta({
       description:
         'A summary of a conversation from the perspective of the focus character. Typically 1-3 paragraphs long.',
@@ -46,7 +53,6 @@ const offscreenLearnedInformationSchema = basePersistedObjectSchema
   .extend({
     sourceConversationId: idSchema.meta({ readOnly: true }),
     turnNumber: z.number(),
-    createdAt: z.string().meta({ readOnly: true }),
     information: z.string().meta({
       description:
         'Information focused character has learned about the target character from a secondhand source without the target character being present.',
@@ -233,7 +239,7 @@ export const worldMapSchema = basePersistedObjectSchema
   .extend({
     name: z.string(),
     description: z.string(),
-    locations: z.array(worldMapLocationSchema),
+    locations: z.array(worldMapLocationSchema).min(1),
     zones: z.array(mapZoneSchema),
   })
   .meta({ title: 'World Map' });
@@ -331,11 +337,11 @@ export const characterRelationshipSchema = basePersistedObjectSchema
   .extend({
     fromId: idSchema.meta({ readOnly: true }),
     toId: idSchema.meta({ readOnly: true }),
-    familiarity: z.number().meta({
+    familiarity: z.number().min(0).meta({
       description:
         'A numeric value representing how familiar the from character is with the to character. This increases with interactions. It influences how likely the two characters are to approach each other.',
     }),
-    lastProcessedTurn: z.number().int(),
+    lastProcessedTurn: z.number().int().meta({ readOnly: true }),
     descriptor: z.string().meta({
       description:
         'A short (usually 1-3 words) description of what the "to" character means to the "from" character, from the perspective of the "from" character.',

@@ -113,6 +113,65 @@ export function normalizeMapAdjacencies(map: WorldMap): WorldMap {
   };
 }
 
+/**
+ * Normalizes a `WorldMap` by fixing symmetric/valid adjacencies, forcing
+ * `isEphemeral: false` on persisted map locations, and pruning dangling or
+ * duplicate `locationIds` inside `zones`. Returns the original map reference
+ * unchanged when no normalization is needed.
+ */
+export function normalizeWorldMap(map: WorldMap): WorldMap {
+  const withNormalizedAdjacencies = normalizeMapAdjacencies(map);
+  const validLocationIds = new Set(getLocationIds(withNormalizedAdjacencies));
+
+  let locationsChanged = false;
+  const nextLocations = withNormalizedAdjacencies.locations.map((location) => {
+    if (!location.isEphemeral) {
+      return location;
+    }
+    locationsChanged = true;
+    return {
+      ...location,
+      isEphemeral: false,
+    };
+  });
+
+  let zonesChanged = false;
+  const nextZones = withNormalizedAdjacencies.zones.map((zone) => {
+    const seen = new Set<string>();
+    const nextLocationIds: string[] = [];
+    let zoneChanged = false;
+
+    for (const locationId of zone.locationIds) {
+      if (!validLocationIds.has(locationId) || seen.has(locationId)) {
+        zoneChanged = true;
+        continue;
+      }
+      seen.add(locationId);
+      nextLocationIds.push(locationId);
+    }
+
+    if (!zoneChanged) {
+      return zone;
+    }
+
+    zonesChanged = true;
+    return {
+      ...zone,
+      locationIds: nextLocationIds,
+    };
+  });
+
+  if (!locationsChanged && !zonesChanged) {
+    return withNormalizedAdjacencies;
+  }
+
+  return {
+    ...withNormalizedAdjacencies,
+    locations: locationsChanged ? nextLocations : withNormalizedAdjacencies.locations,
+    zones: zonesChanged ? nextZones : withNormalizedAdjacencies.zones,
+  };
+}
+
 export function validateWorldMap(worldMap: Pick<WorldMap, 'name' | 'description' | 'locations'>) {
   const errors: string[] = [];
 

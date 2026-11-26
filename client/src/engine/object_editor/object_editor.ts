@@ -8,12 +8,15 @@ import { newId } from '../../util/id.js';
 import { ParallelJobCancellationError } from '../parallelization/job_manager_types.js';
 import type { OpenAIChatCompletionRequestMessage } from '../types.js';
 import {
+  assertNoReadOnlyStateViolations,
   assertNoReadOnlyViolations,
+  assertValidObjectIds,
   autoPopulatePersistedSubObjectFields,
   compareToJsonPatch,
   computeHumanReadableChanges,
   jsonPatchOperationSchema,
   replaceNewIdPlaceholdersInPatch,
+  replaceNewIdPlaceholdersInValue,
   type JsonPatchOperation,
   type ObjectEditorHumanReadableChange,
 } from './object_editor_util.js';
@@ -40,6 +43,7 @@ export interface ObjectEditorHistoryEntry<TObjectType> {
   userMessage: string;
   agentMessage: string;
   objectPatch: JsonPatchOperation[];
+  rawAgentPatch: JsonPatchOperation[] | undefined;
   humanReadableChanges: ObjectEditorHumanReadableChange[];
   invalidRawJson: string | undefined;
   validationError: string | undefined;
@@ -167,6 +171,7 @@ export class ObjectEditor<TObjectType> {
       userMessage: '',
       agentMessage: 'Manual changes applied by user.',
       objectPatch: patch,
+      rawAgentPatch: undefined,
       humanReadableChanges,
       invalidRawJson: undefined,
       validationError: undefined,
@@ -196,39 +201,42 @@ export class ObjectEditor<TObjectType> {
       return this.recordInvalidManualEdit(rawJson, `Invalid JSON: ${getErrorMessage(error)}`, lastKnown);
     }
 
-    const populatedJson = autoPopulatePersistedSubObjectFields(
-      this.delegate.zodSchema,
-      parsedJson,
-      new Date().toISOString()
-    );
+    const { value: resolvedJson, generatedIds } = replaceNewIdPlaceholdersInValue(parsedJson);
+    const userPatch = compareToJsonPatch(lastKnown, resolvedJson);
+    if (userPatch.length === 0) {
+      if (this.state.invalidManualEdit) {
+        await this.clearTrailingInvalidManualEdits();
+        return true;
+      }
+      return false;
+    }
+
+    let populatedJson: unknown;
+    try {
+      assertNoReadOnlyStateViolations(this.delegate.zodSchema, lastKnown, resolvedJson);
+      populatedJson = autoPopulatePersistedSubObjectFields(
+        this.delegate.zodSchema,
+        resolvedJson,
+        new Date().toISOString()
+      );
+      assertValidObjectIds(this.delegate.zodSchema, lastKnown, populatedJson, generatedIds);
+    } catch (error) {
+      return this.recordInvalidManualEdit(rawJson, getErrorMessage(error), lastKnown);
+    }
+
     const validation = this.delegate.zodSchema.safeParse(populatedJson);
     if (!validation.success) {
       return this.recordInvalidManualEdit(rawJson, validation.error.message, lastKnown);
     }
 
     const validatedNext = validation.data;
-    const userPatch = compareToJsonPatch(lastKnown, parsedJson);
     const patch = compareToJsonPatch(lastKnown, validatedNext);
-    if (userPatch.length === 0 || patch.length === 0) {
+    if (patch.length === 0) {
       if (this.state.invalidManualEdit) {
-        let firstInvalidIndex = this.history.length;
-        while (firstInvalidIndex > 0 && this.history[firstInvalidIndex - 1]?.invalidRawJson !== undefined) {
-          firstInvalidIndex -= 1;
-        }
-        assert(
-          firstInvalidIndex < this.history.length,
-          'Expected trailing invalid manual edit entry in history'
-        );
-        await this.revertFromIndex(firstInvalidIndex);
+        await this.clearTrailingInvalidManualEdits();
         return true;
       }
       return false;
-    }
-
-    try {
-      assertNoReadOnlyViolations(this.delegate.zodSchema, lastKnown, userPatch);
-    } catch (error) {
-      return this.recordInvalidManualEdit(rawJson, getErrorMessage(error), lastKnown);
     }
 
     await this.delegate.writeObjectState(validatedNext);
@@ -249,6 +257,7 @@ export class ObjectEditor<TObjectType> {
       userMessage: '',
       agentMessage: 'Updated object manually via raw JSON.',
       objectPatch: canonicalPatch,
+      rawAgentPatch: undefined,
       humanReadableChanges,
       invalidRawJson: undefined,
       validationError: undefined,
@@ -311,6 +320,7 @@ export class ObjectEditor<TObjectType> {
           userMessage: message,
           agentMessage: result.message,
           objectPatch: [],
+          rawAgentPatch: [],
           humanReadableChanges: [],
           invalidRawJson: undefined,
           validationError: undefined,
@@ -330,6 +340,7 @@ export class ObjectEditor<TObjectType> {
           userMessage: message,
           agentMessage: result.message,
           objectPatch: result.patch,
+          rawAgentPatch: result.patch,
           humanReadableChanges: [],
           invalidRawJson: undefined,
           validationError: applied.error,
@@ -361,6 +372,7 @@ export class ObjectEditor<TObjectType> {
         userMessage: message,
         agentMessage: result.message,
         objectPatch: finalPatch,
+        rawAgentPatch: result.patch,
         humanReadableChanges: finalChanges,
         invalidRawJson: undefined,
         validationError: undefined,
@@ -399,8 +411,9 @@ export class ObjectEditor<TObjectType> {
         content: h.userMessage,
       });
 
+      const assistantPatch = h.rawAgentPatch ?? h.objectPatch;
       const assistantContent =
-        `${h.agentMessage}\n\n<json_patch>\n${JSON.stringify(h.objectPatch)}\n</json_patch>`.trim();
+        `${h.agentMessage}\n\n<json_patch>\n${JSON.stringify(assistantPatch)}\n</json_patch>`.trim();
 
       historyMessages.push({
         role: 'assistant',
@@ -472,15 +485,19 @@ export class ObjectEditor<TObjectType> {
       }
     | { ok: false; error: string } {
     try {
-      const resolvedPatch = replaceNewIdPlaceholdersInPatch(rawPatch);
+      const { patch: resolvedPatch, generatedIds } = replaceNewIdPlaceholdersInPatch(rawPatch);
       assertNoReadOnlyViolations(this.delegate.zodSchema, oldObjectState, resolvedPatch);
 
       const patchedDocument = applyPatch(oldObjectState, resolvedPatch, true, false).newDocument;
+      assertNoReadOnlyStateViolations(this.delegate.zodSchema, oldObjectState, patchedDocument);
+
       const populatedDocument = autoPopulatePersistedSubObjectFields(
         this.delegate.zodSchema,
         patchedDocument,
         new Date().toISOString()
       );
+      assertValidObjectIds(this.delegate.zodSchema, oldObjectState, populatedDocument, generatedIds);
+
       const parsed = this.delegate.zodSchema.safeParse(populatedDocument);
 
       if (!parsed.success) {
@@ -505,6 +522,15 @@ export class ObjectEditor<TObjectType> {
     }
   }
 
+  private async clearTrailingInvalidManualEdits(): Promise<void> {
+    let firstInvalidIndex = this.history.length;
+    while (firstInvalidIndex > 0 && this.history[firstInvalidIndex - 1]?.invalidRawJson !== undefined) {
+      firstInvalidIndex -= 1;
+    }
+    assert(firstInvalidIndex < this.history.length, 'Expected trailing invalid manual edit entry in history');
+    await this.revertFromIndex(firstInvalidIndex);
+  }
+
   private recordInvalidManualEdit(rawJson: string, error: string, lastKnown: TObjectType): boolean {
     const entry: ObjectEditorHistoryEntry<TObjectType> = {
       id: newId(),
@@ -515,6 +541,7 @@ export class ObjectEditor<TObjectType> {
       userMessage: '',
       agentMessage: 'Manual JSON edit failed validation.',
       objectPatch: [],
+      rawAgentPatch: undefined,
       humanReadableChanges: [],
       invalidRawJson: rawJson,
       validationError: error,

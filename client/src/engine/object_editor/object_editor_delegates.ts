@@ -298,7 +298,7 @@ export function buildExternalAiInstructions<TObjectType>(
     '1. Review the JSON Schema and Current Object JSON below.',
     '2. When the user asks for changes, return the **complete updated JSON object** inside a single `json` code block (not a partial diff or JSON patch), so the user can paste it directly into the Raw JSON editor.',
     '3. Do **not** modify or remove fields marked `"readOnly": true` on existing objects (such as existing `id`, `createdAt`, or `updatedAt` values).',
-    '4. For any newly added sub-objects or array items that require `id`, `createdAt`, or `updatedAt`, you may omit those fields, leave them as empty strings `""`, or generate 18-character lowercase hexadecimal IDs (matching `^[0-9a-f]{18}$`).',
+    '4. For any newly added sub-objects or array items that require `id`, you MUST set `id` to a unique snake-case placeholder starting with `new_id_` (matching `^new_id_[a-z0-9_]+$`, e.g., `"new_id_town_square"` or `"new_id_room_2"`), and reuse that same placeholder anywhere else in the JSON that references that new item. You may omit `createdAt` and `updatedAt` (or set them to `""`) and they will be populated automatically.',
     '5. Preserve all unrelated existing fields and ensure the output strictly conforms to the JSON Schema.',
     '',
     '## JSON Schema',

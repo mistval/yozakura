@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database.js';
 import { importDemoMaps } from '../backend_bridge/demo_import.js';
-import { normalizeMapAdjacencies } from '../engine/map/world_map.js';
+import { normalizeWorldMap } from '../engine/map/world_map.js';
 import type { WorldMap } from '../engine/types.js';
 import { concatUniqueByIds, findRequiredById } from '../util/array.js';
 import { ephemeralStateSlice, IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
@@ -28,7 +28,7 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
 
   ...ephemeralStateSlice<WorldMap>({
     setStoreState(entities: WorldMap[]) {
-      get().setMaps(concatUniqueByIds(get().maps, entities.map(normalizeMapAdjacencies)));
+      get().setMaps(concatUniqueByIds(get().maps, entities.map(normalizeWorldMap)));
     },
 
     deleteStoreState(entities: WorldMap[]) {
@@ -111,7 +111,7 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
   },
 
   saveMap(map: WorldMap, syncOptions: SyncOptions = IMMEDIATE_SYNC) {
-    const normalized = normalizeMapAdjacencies(map);
+    const normalized = normalizeWorldMap(map);
     const withUpdatedFields = {
       ...normalized,
       updatedAt: new Date().toISOString(),

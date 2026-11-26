@@ -171,6 +171,7 @@ export async function generateWardrobe(
 
 export function createBlankCharacter(): Character {
   const id = newId();
+  const nowIso = new Date().toISOString();
 
   return {
     id,
@@ -186,8 +187,8 @@ export function createBlankCharacter(): Character {
     locationId: '',
     wardrobes: [],
     exampleDialogue: '',
-    createdAt: '',
-    updatedAt: '',
+    createdAt: nowIso,
+    updatedAt: nowIso,
     rollingConversationSummaries: [],
     nextConversationWithCharacterId: '',
     groupIds: [],

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { WorldMap, WorldMapLocation } from '../types.js';
-import { normalizeMapAdjacencies, removeMapLocation, setMapAdjacency, validateWorldMap } from './world_map';
+import {
+  normalizeMapAdjacencies,
+  normalizeWorldMap,
+  removeMapLocation,
+  setMapAdjacency,
+  validateWorldMap,
+} from './world_map';
 
 function makeLocation(id: string, adjacency: string[] = []): WorldMapLocation {
   return {
@@ -113,5 +119,20 @@ describe('normalizeMapAdjacencies', () => {
       description: 'Test map description',
     };
     expect(validateWorldMap(asymmetricMap)).toEqual([]);
+  });
+});
+
+describe('normalizeWorldMap', () => {
+  it('prunes dangling/duplicate zone locationIds, forces isEphemeral: false, normalizes adjacencies, and preserves unchanged references', () => {
+    const map = makeMap(
+      [{ ...makeLocation('A', ['B', 'missing']), isEphemeral: true }, makeLocation('B', [])],
+      ['A', 'missing', 'A', 'B']
+    );
+    const normalized = normalizeWorldMap(map);
+    expect(adjacencyOf(normalized, 'A')).toEqual(['B']);
+    expect(adjacencyOf(normalized, 'B')).toEqual(['A']);
+    expect(normalized.locations[0]?.isEphemeral).toBe(false);
+    expect(normalized.zones[0]?.locationIds).toEqual(['A', 'B']);
+    expect(normalizeWorldMap(normalized)).toBe(normalized);
   });
 });
