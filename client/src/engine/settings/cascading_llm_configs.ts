@@ -86,7 +86,7 @@ const KNOWN_CLOUD_LLM_HOSTNAMES = [
   'nano-gpt.com',
 ];
 
-export const APP_IDENTIFICATION_URL = 'https://github.com/mistval/yozakura';
+export const APP_IDENTIFICATION_URL = 'https://mistval.github.io/yozakura/docs/intro';
 export const APP_IDENTIFICATION_NAME = 'Yozakura';
 export const PROXY_REFERER_HEADER = 'X-Proxy-Referer';
 

@@ -76,7 +76,7 @@ export const settingsTooltips = {
   'llm.tokenStreaming':
     'When enabled (or when all matching groups are set to Inherit), responses stream token-by-token. Requires your OpenAI-compatible API provider to support streaming (SSE).',
   'llm.appIdentificationHeaders':
-    'When enabled (or when all matching groups are set to Inherit), includes HTTP-Referer, Referer, and X-Title/X-OpenRouter-Title headers identifying Yozakura (https://github.com/mistval/yozakura) on requests to supported providers. Providers use these headers for app attribution, usage analytics, and public leaderboards.',
+    'When enabled (or when all matching groups are set to Inherit), includes headers identifying Yozakura on requests to supported providers. Providers use these headers for app attribution, usage analytics, and public leaderboards.',
 } as const;
 
 export const settingsDangerousHtmlTooltips = {
