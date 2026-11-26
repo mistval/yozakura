@@ -12,7 +12,7 @@ import {
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 import {
-  OBJECT_EDITOR_AUTO_DEFER_SYNC,
+  USER_SYNC,
   useAreAnyEntitiesLockedForEditing,
   isEntityLockedForEditing,
 } from '../../state/ephemeral_state_helper.js';
@@ -113,7 +113,7 @@ export default function CharacterOverviewPairData({
   }, [idA, idB, familiarityBetween]);
 
   const saveRelationshipPatch = async (saveKey: RelationshipIds, update: Partial<CharacterRelationship>) => {
-    await saveRelationshipFields(saveKey, update, OBJECT_EDITOR_AUTO_DEFER_SYNC);
+    await saveRelationshipFields(saveKey, update, USER_SYNC);
   };
 
   const savePairFamiliarity = async () => {

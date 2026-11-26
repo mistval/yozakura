@@ -7,10 +7,7 @@ import { useActiveChatParticipants, useTurnMachineStore } from '../../state/turn
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
-import {
-  OBJECT_EDITOR_AUTO_DEFER_SYNC,
-  useIsEntityLockedForEditing,
-} from '../../state/ephemeral_state_helper.js';
+import { USER_SYNC, useIsEntityLockedForEditing } from '../../state/ephemeral_state_helper.js';
 import CharacterLocationSelect from '../CharacterLocationSelect.js';
 import CharacterAvatar from '../CharacterAvatar.js';
 import { useQueryParam } from '../../util/queryParams.js';
@@ -46,12 +43,12 @@ export default function CharacterChatSettings() {
 
   const isUserCharacter = character.id === scenario.userCharacterId;
   const persistWardrobes = (updatedWardrobes: Character['wardrobes']) => {
-    saveScenarioCharacterFields(
+    void saveScenarioCharacterFields(
       character.id,
       {
         wardrobes: updatedWardrobes,
       },
-      OBJECT_EDITOR_AUTO_DEFER_SYNC
+      USER_SYNC
     );
   };
 

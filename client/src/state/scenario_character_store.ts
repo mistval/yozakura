@@ -12,7 +12,13 @@ import {
 } from './scenario_store.js';
 import { useMapStore } from './map_store.js';
 import { addOrReplaceVersionQueryParam, newId } from '../util/id.js';
-import { ephemeralStateSlice, IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
+import {
+  ephemeralStateSlice,
+  IMMEDIATE_SYNC,
+  USER_SYNC,
+  waitForEntitiesUnlockedByObjectEditor,
+  type SyncOptions,
+} from './ephemeral_state_helper.js';
 import { applyDailyWardrobeAutoselect } from '../engine/wardrobes.js';
 import { useGlobalCharactersStore } from './global_character_store.js';
 
@@ -32,7 +38,7 @@ type ScenarioCharacterStoreState = {
   removeCharacterLocal: (characterId: string) => void;
   removeScenarioCharacter: (characterId: string, syncOptions?: SyncOptions) => Promise<void>;
   loadScenarioCharacters: () => Promise<void>;
-  saveScenarioCharacters: (character: Character[], syncOptions?: SyncOptions) => void;
+  saveScenarioCharacters: (character: Character[], syncOptions?: SyncOptions) => Promise<void>;
   saveScenarioCharacter: (
     character: Character,
     imageFile?: File,
@@ -40,7 +46,11 @@ type ScenarioCharacterStoreState = {
     syncOptions?: SyncOptions
   ) => void;
   saveInactiveScenarioCharacterImmediate: (character: Character) => Promise<void>;
-  saveScenarioCharacterFields: (id: string, fields: Partial<Character>, syncOptions?: SyncOptions) => void;
+  saveScenarioCharacterFields: (
+    id: string,
+    fields: Partial<Character>,
+    syncOptions?: SyncOptions
+  ) => Promise<void>;
   addGlobalCharacterToActiveScenarioImmediate: (
     character: Character,
     scenarioArgs?: {
@@ -246,16 +256,24 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
   },
 
   saveScenarioCharacterFields: (id, fields, syncOptions = IMMEDIATE_SYNC) => {
-    const char = get().scenarioCharactersById[id];
-    assertNonNullish(char, 'saveScenarioCharacterFields called for non-existent characterId: ' + id);
+    const stageFields = () => {
+      const char = get().scenarioCharactersById[id];
+      assertNonNullish(char, 'saveScenarioCharacterFields called for non-existent characterId: ' + id);
 
-    void get().ephemeralStateHelper.stageUpdatedEntity(
-      {
-        ...char,
-        ...fields,
-      },
-      syncOptions
-    );
+      return get().ephemeralStateHelper.stageUpdatedEntity(
+        {
+          ...char,
+          ...fields,
+        },
+        syncOptions
+      );
+    };
+
+    if (syncOptions.syncMode !== 'immediate' || syncOptions.source === 'user') {
+      return stageFields();
+    }
+
+    return waitForEntitiesUnlockedByObjectEditor([id]).then(stageFields);
   },
 
   getCharactersByIds: (ids) => {
@@ -282,10 +300,10 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
 
   saveScenarioCharacters(characters: Character[], syncOptions = IMMEDIATE_SYNC) {
     if (characters.length === 0) {
-      return;
+      return Promise.resolve();
     }
 
-    void get().ephemeralStateHelper.stageUpdatedEntities(characters, syncOptions);
+    return get().ephemeralStateHelper.stageUpdatedEntities(characters, syncOptions);
   },
 
   async copyGlobalCharactersToInactiveScenarioImmediate(
@@ -389,7 +407,7 @@ function ensureCharacterLocationsValid() {
       locationId: getRequiredRandomChoice(locationIds),
     }));
 
-  saveScenarioCharacters(movedCharacters);
+  void saveScenarioCharacters(movedCharacters, USER_SYNC);
 }
 
 useScenarioStore.subscribe(async (newScenario, prevScenario) => {

@@ -148,8 +148,8 @@ export class ChatCoordinator {
     );
   }
 
-  public static deactivate() {
-    this.turnMachineStore().deactivateChat();
+  public static async deactivate() {
+    await this.turnMachineStore().deactivateChat();
   }
 
   public static addParticipant(participantId: string) {
@@ -403,7 +403,7 @@ export class ChatCoordinator {
       );
     }
 
-    this.deactivate();
+    await this.deactivate();
   }
 
   public static async speakAsNpc(npcId: string) {

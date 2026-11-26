@@ -26,10 +26,7 @@ import { useScenarioCharacterStore } from '../../state/scenario_character_store.
 import type { CharacterEditorModalProps, PendingCardImport } from './types';
 import { generateCharacterCard } from '../../engine/image_gen';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
-import {
-  OBJECT_EDITOR_AUTO_DEFER_SYNC,
-  useIsEntityLockedForEditing,
-} from '../../state/ephemeral_state_helper.js';
+import { USER_SYNC, useIsEntityLockedForEditing } from '../../state/ephemeral_state_helper.js';
 import { addOrReplaceVersionQueryParam } from '../../util/id.js';
 
 type CharacterEditorModalContextValue = {
@@ -400,15 +397,11 @@ export function CharacterEditorModalProvider({
       if (isGlobalMode) {
         void useGlobalCharactersStore
           .getState()
-          .saveGlobalCharacter(sanitizedCharacter, selectedImageFile, OBJECT_EDITOR_AUTO_DEFER_SYNC);
+          .saveGlobalCharacter(sanitizedCharacter, selectedImageFile, USER_SYNC);
       } else if (opts?.alsoSaveGlobal) {
         const savedGlobal = await useGlobalCharactersStore
           .getState()
-          .saveScenarioCharacterAsGlobal(
-            sanitizedCharacter,
-            selectedImageFile,
-            OBJECT_EDITOR_AUTO_DEFER_SYNC
-          );
+          .saveScenarioCharacterAsGlobal(sanitizedCharacter, selectedImageFile, USER_SYNC);
         saveScenarioCharacter(
           {
             ...sanitizedCharacter,
@@ -416,15 +409,10 @@ export function CharacterEditorModalProvider({
           },
           selectedImageFile,
           undefined,
-          OBJECT_EDITOR_AUTO_DEFER_SYNC
+          USER_SYNC
         );
       } else {
-        saveScenarioCharacter(
-          sanitizedCharacter,
-          selectedImageFile,
-          undefined,
-          OBJECT_EDITOR_AUTO_DEFER_SYNC
-        );
+        saveScenarioCharacter(sanitizedCharacter, selectedImageFile, undefined, USER_SYNC);
       }
 
       onClose();
@@ -438,11 +426,9 @@ export function CharacterEditorModalProvider({
   const remove = async () => {
     await runWithField('delete', async () => {
       if (isGlobalMode) {
-        await useGlobalCharactersStore
-          .getState()
-          .deleteGlobalCharacter(character, OBJECT_EDITOR_AUTO_DEFER_SYNC);
+        await useGlobalCharactersStore.getState().deleteGlobalCharacter(character, USER_SYNC);
       } else {
-        await removeScenarioCharacter(character.id, OBJECT_EDITOR_AUTO_DEFER_SYNC);
+        await removeScenarioCharacter(character.id, USER_SYNC);
         // We leave the image since chat logs still reference it. Will be deleted when/if the scenario gets deleted.
       }
 

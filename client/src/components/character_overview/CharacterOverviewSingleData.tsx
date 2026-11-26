@@ -14,10 +14,7 @@ import ConversationSearchList from '../conversation_log/ConversationSearchList.j
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
-import {
-  OBJECT_EDITOR_AUTO_DEFER_SYNC,
-  useIsEntityLockedForEditing,
-} from '../../state/ephemeral_state_helper.js';
+import { USER_SYNC, useIsEntityLockedForEditing } from '../../state/ephemeral_state_helper.js';
 import { AiEditButton } from '../object_editor/AiEditButton.js';
 import CharacterLocationSelect from '../CharacterLocationSelect.js';
 
@@ -44,7 +41,7 @@ export default function CharacterOverviewSingleData({
   const chatSessionIsActive = useTurnMachineStore((state) => state.chatState !== 'inactive');
   const { closeCharacterOverview, openCharacterOverviewEditor, openCharacterOverviewGroup } =
     useCharacterOverview();
-  const { openScenarioCharacterObjectEditor } = useObjectEditor();
+  const { open: objectEditorOpen, openScenarioCharacterObjectEditor } = useObjectEditor();
   const groups = useCharacterGroupStore((state) => state.groups);
 
   assertNonNullish(scenario, 'CharacterOverviewSingleData rendered without active scenario');
@@ -52,6 +49,8 @@ export default function CharacterOverviewSingleData({
 
   const isUser = selectedSingleCharacter.id === scenario.userCharacterId;
   const isCharacterSyncing = useIsEntityLockedForEditing(selectedSingleCharacter.id);
+  const saveCharacterFields = (fields: Partial<Character>) =>
+    saveScenarioCharacterFields(selectedSingleCharacter.id, fields, USER_SYNC);
 
   const memberGroups = useMemo(
     () =>
@@ -113,7 +112,7 @@ export default function CharacterOverviewSingleData({
         {!isUser && (
           <button
             type="button"
-            disabled={chatSessionIsActive}
+            disabled={chatSessionIsActive || objectEditorOpen}
             onClick={() => {
               void setUserCharacter(selectedSingleCharacter.id);
             }}
@@ -123,6 +122,7 @@ export default function CharacterOverviewSingleData({
         )}
         <button
           type="button"
+          disabled={objectEditorOpen}
           onClick={() => {
             if (chatSessionIsActive) {
               ChatCoordinator.addParticipant(selectedSingleCharacter.id);
@@ -167,13 +167,9 @@ export default function CharacterOverviewSingleData({
                 value={selectedSingleCharacter.nextConversationWithCharacterId || ''}
                 disabled={isCharacterSyncing}
                 onChange={(event) => {
-                  void saveScenarioCharacterFields(
-                    selectedSingleCharacter.id,
-                    {
-                      nextConversationWithCharacterId: event.target.value.trim(),
-                    },
-                    OBJECT_EDITOR_AUTO_DEFER_SYNC
-                  );
+                  void saveCharacterFields({
+                    nextConversationWithCharacterId: event.target.value.trim(),
+                  });
                 }}
                 className="border rounded-sm px-2 py-1 bg-inset"
               >
@@ -199,13 +195,9 @@ export default function CharacterOverviewSingleData({
             disabled={isCharacterSyncing}
             initialValue={selectedSingleCharacter.globalMemories || ''}
             onSave={(newValue: string) =>
-              saveScenarioCharacterFields(
-                selectedSingleCharacter.id,
-                {
-                  globalMemories: newValue.trim(),
-                },
-                OBJECT_EDITOR_AUTO_DEFER_SYNC
-              )
+              saveCharacterFields({
+                globalMemories: newValue.trim(),
+              })
             }
           >
             {selectedSingleCharacter.globalMemories || '(none)'}
@@ -232,26 +224,18 @@ export default function CharacterOverviewSingleData({
                             : entry
                       );
 
-                      return saveScenarioCharacterFields(
-                        selectedSingleCharacter.id,
-                        {
-                          rollingConversationSummaries: updatedSummaries,
-                        },
-                        OBJECT_EDITOR_AUTO_DEFER_SYNC
-                      );
+                      return saveCharacterFields({
+                        rollingConversationSummaries: updatedSummaries,
+                      });
                     }}
                     onDelete={() => {
                       const updatedSummaries = selectedSingleCharacter.rollingConversationSummaries.filter(
                         (_, entryIndex) => entryIndex !== index
                       );
 
-                      return saveScenarioCharacterFields(
-                        selectedSingleCharacter.id,
-                        {
-                          rollingConversationSummaries: updatedSummaries,
-                        },
-                        OBJECT_EDITOR_AUTO_DEFER_SYNC
-                      );
+                      return saveCharacterFields({
+                        rollingConversationSummaries: updatedSummaries,
+                      });
                     }}
                   >
                     {summary.summary || '(none)'}

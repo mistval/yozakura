@@ -160,12 +160,12 @@ export function ObjectEditorChatPane({
 
       result.push({
         id: `${entry.id}:ai`,
-        speakerName: 'AI Editor',
+        speakerName: 'Assistant',
         content: entry.agentMessage,
         customContent: (
           <div className="rounded-sm border border-border-default bg-emphasized p-2.5 space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-secondary">AI Editor</span>
+              <span className="text-xs font-semibold text-secondary">Assistant</span>
               {entry.canRevert && (
                 <button
                   type="button"
@@ -206,11 +206,11 @@ export function ObjectEditorChatPane({
 
       result.push({
         id: 'pending:ai',
-        speakerName: 'AI Editor',
+        speakerName: 'Assistant',
         content: pendingTurn.streamingMessage,
         customContent: (
           <div className="rounded-sm border border-border-default bg-emphasized p-2.5 space-y-2">
-            <div className="text-xs font-semibold text-secondary">AI Editor</div>
+            <div className="text-xs font-semibold text-secondary">Assistant</div>
             {streamingPreview.visibleText && (
               <div className="text-sm leading-relaxed wrap-break-word text-primary [&>p+p]:mt-2">
                 <Markdown>{streamingPreview.visibleText}</Markdown>

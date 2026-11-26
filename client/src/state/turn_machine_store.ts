@@ -27,6 +27,7 @@ import {
 } from './scenario_store.js';
 import { useScenarioCharacterStore } from './scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
+import { waitForEntitiesUnlockedByObjectEditor } from './ephemeral_state_helper.js';
 import { assert, assertNonNullish } from '../errors/application_error.js';
 import {
   applyPostConversationWardrobeAutoRevert,
@@ -96,8 +97,8 @@ type BaseTurnMachineStoreState = {
   setWardrobeAutoselectRan: (ran: boolean) => void;
   recordChat: (initiatorId: string, withIds: string[]) => void;
   hasChatted: (characterAId: string, characterBId: string) => boolean;
-  beginChat: (args: StartChatSessionArgs) => void;
-  deactivateChat: () => void;
+  beginChat: (args: StartChatSessionArgs) => Promise<void>;
+  deactivateChat: () => Promise<void>;
   reset: () => void;
   serialize: () => SerializedTurn | undefined;
   hydrate: (snapshot: SerializedTurn, ragDeps: TranscriptRagDeps) => void;
@@ -262,7 +263,7 @@ export async function getActiveChatGossipCharacter(fromCharacterId?: string, res
   };
 }
 
-export function applyMapZoneWardrobeTriggersForParticipants(participants: Character[]) {
+export async function applyMapZoneWardrobeTriggersForParticipants(participants: Character[]): Promise<void> {
   const activeMap = getActiveScenarioMap();
   if (!activeMap || !activeMap.zones) {
     return;
@@ -285,7 +286,7 @@ export function applyMapZoneWardrobeTriggersForParticipants(participants: Charac
   }
 
   if (updatedCharacters.length > 0) {
-    useScenarioCharacterStore.getState().saveScenarioCharacters(updatedCharacters);
+    await useScenarioCharacterStore.getState().saveScenarioCharacters(updatedCharacters);
   }
 }
 
@@ -385,7 +386,8 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     );
   },
 
-  beginChat(args) {
+  async beginChat(args) {
+    await waitForEntitiesUnlockedByObjectEditor(args.participantIds);
     const participants = getCharactersByIds(args.participantIds);
 
     set({
@@ -401,14 +403,15 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       ),
     } satisfies Partial<BaseTurnMachineStoreState>);
 
-    applyMapZoneWardrobeTriggersForParticipants(participants);
+    await applyMapZoneWardrobeTriggersForParticipants(participants);
   },
 
-  deactivateChat() {
+  async deactivateChat() {
     const activeChatState = get();
 
     const snapshot = activeChatState.preConversationWardrobeSnapshotByCharacterId;
     const idsToAutoRevert = activeChatState.participantIds.concat(activeChatState.removedParticipantIds);
+    await waitForEntitiesUnlockedByObjectEditor(idsToAutoRevert);
     const charactersToAutoRevert = useScenarioCharacterStore.getState().getCharactersByIds(idsToAutoRevert);
 
     const wardrobeAutoRevertedCharacters = applyPostConversationWardrobeAutoRevert(
@@ -416,7 +419,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       snapshot
     );
 
-    useScenarioCharacterStore.getState().saveScenarioCharacters(wardrobeAutoRevertedCharacters);
+    await useScenarioCharacterStore.getState().saveScenarioCharacters(wardrobeAutoRevertedCharacters);
 
     set(inactiveChatTurnMachineState);
   },
@@ -502,7 +505,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       },
     } satisfies Partial<BaseTurnMachineStoreState>);
 
-    applyMapZoneWardrobeTriggersForParticipants([participant]);
+    void applyMapZoneWardrobeTriggersForParticipants([participant]);
   },
 
   removeChatParticipant(participantId: string) {

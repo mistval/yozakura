@@ -8,7 +8,7 @@ import Tabs from '../ui/Tabs.js';
 import ScheduleEditor from './ScheduleEditor.js';
 import { findById } from '../../util/array.js';
 import {
-  OBJECT_EDITOR_AUTO_DEFER_SYNC,
+  USER_SYNC,
   isEntityLockedForEditing,
   useDeferredSyncStore,
 } from '../../state/ephemeral_state_helper.js';
@@ -48,7 +48,7 @@ export default function CharacterGroupsTab() {
     const next = character.groupIds.includes(selectedGroup.id)
       ? character.groupIds.filter((id) => id !== selectedGroup.id)
       : character.groupIds.concat(selectedGroup.id);
-    useCharacterGroupStore.getState().setCharacterGroups(character.id, next, OBJECT_EDITOR_AUTO_DEFER_SYNC);
+    useCharacterGroupStore.getState().setCharacterGroups(character.id, next, USER_SYNC);
   };
 
   return (

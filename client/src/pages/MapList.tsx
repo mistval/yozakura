@@ -6,7 +6,7 @@ import { useMapModal } from '../components/MapModalContext.js';
 import ConfirmDialog from '../components/ui/ConfirmDialog.js';
 import type { WorldMap } from '../engine/types.js';
 import { createEmptyWorldMap } from '../engine/map/map_factories.js';
-import { OBJECT_EDITOR_AUTO_DEFER_SYNC } from '../state/ephemeral_state_helper.js';
+import { USER_SYNC } from '../state/ephemeral_state_helper.js';
 import { newId } from '../util/id.js';
 
 export default function MapList() {
@@ -33,7 +33,7 @@ export default function MapList() {
             type="button"
             onClick={() => {
               const newMap = createEmptyWorldMap();
-              useMapStore.getState().saveMap(newMap, OBJECT_EDITOR_AUTO_DEFER_SYNC);
+              useMapStore.getState().saveMap(newMap, USER_SYNC);
               showMap(newMap.id);
             }}
           >
@@ -78,7 +78,7 @@ export default function MapList() {
                     createdAt: now,
                     updatedAt: now,
                   };
-                  useMapStore.getState().saveMap(duplicatedMap, OBJECT_EDITOR_AUTO_DEFER_SYNC);
+                  useMapStore.getState().saveMap(duplicatedMap, USER_SYNC);
                 }}
                 aria-label={`Copy map ${map.name}`}
                 title="Copy map"
@@ -113,7 +113,7 @@ export default function MapList() {
             return;
           }
 
-          useMapStore.getState().deleteMap(mapPendingDelete.id, OBJECT_EDITOR_AUTO_DEFER_SYNC);
+          useMapStore.getState().deleteMap(mapPendingDelete.id, USER_SYNC);
           setMapPendingDelete(undefined);
         }}
       />

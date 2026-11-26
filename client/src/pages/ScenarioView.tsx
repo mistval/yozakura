@@ -196,7 +196,7 @@ export default function ScenarioView() {
     (perspectiveLocationId ? locationById[perspectiveLocationId] : activeMap?.locations[0]);
 
   const closeActiveChatSession = () => {
-    ChatCoordinator.deactivate();
+    void ChatCoordinator.deactivate();
   };
 
   const charactersHere = useMemo(() => {

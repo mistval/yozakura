@@ -13,7 +13,7 @@ import { AiEditButton } from './object_editor/AiEditButton.js';
 import MapGraphEditor from './MapGraphEditor.js';
 import MapZoneEditor from './map_zones/MapZoneEditor.js';
 import { useMapStore } from '../state/map_store.js';
-import { OBJECT_EDITOR_AUTO_DEFER_SYNC } from '../state/ephemeral_state_helper.js';
+import { USER_SYNC } from '../state/ephemeral_state_helper.js';
 import CharacterAvatar from './CharacterAvatar.js';
 import { useDraft } from '../hooks/useDraft.js';
 
@@ -154,7 +154,7 @@ function MapModalInner() {
   const saveModalMap = (
     id: string,
     mutator: (prev: NonNullable<typeof targetMap>) => NonNullable<typeof targetMap>
-  ) => updateMap(id, mutator, OBJECT_EDITOR_AUTO_DEFER_SYNC);
+  ) => updateMap(id, mutator, USER_SYNC);
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
   const explicitMap = useMapStore((s) => (explicitMapId ? s.mapsById[explicitMapId] : undefined));
   const activeScenarioMap = useActiveScenarioMap();

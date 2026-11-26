@@ -37,7 +37,7 @@ export type NpcInputResolvers = {
   getCharacterLocationId: (characterId: string) => string;
   hasChatted: (characterIdA: string, characterIdB: string) => boolean;
   recordChat: (npcId: string, otherParticipantIds: string[]) => void;
-  clearForcedConversationTarget: (npcId: string) => void;
+  clearForcedConversationTarget: (npcId: string) => Promise<void> | void;
   getCharacterRelationships: (
     pairs: { fromId: string; toId: string }[]
   ) => Promise<Record<string, NpcCharacterRelationship>>;
@@ -138,7 +138,7 @@ export class NPCInputInterface extends CharacterInputInterface {
       assert(forcedConversationTargetId !== npc.id, 'Character has force chat target set to themself');
 
       const forcedConversationTarget = this.resolvers.getCharacterById(forcedConversationTargetId);
-      this.resolvers.clearForcedConversationTarget(npc.id);
+      await this.resolvers.clearForcedConversationTarget(npc.id);
 
       if (forcedConversationTarget) {
         this.resolvers.recordChat(npc.id, [forcedConversationTarget.id]);

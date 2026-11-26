@@ -104,7 +104,7 @@ async function runTurnLoopTick(opts?: { prioritizeUser?: boolean | undefined }) 
 
   if (move.actionType === 'chat' && move.rich) {
     const chatStart = await ChatCoordinator.prepareChatStart(move.participantIds);
-    useTurnMachineStore.getState().beginChat(chatStart);
+    await useTurnMachineStore.getState().beginChat(chatStart);
     persistTurn();
     return;
   }
@@ -212,7 +212,7 @@ async function applySimpleTurnMove(characterId: string, move: TurnMove): Promise
 
   if (move.actionType === 'move') {
     recordMovement(characterId, move.destinationLocationId, move.movementPolicy);
-    moveScenarioCharacter(characterId, move.destinationLocationId);
+    await moveScenarioCharacter(characterId, move.destinationLocationId);
     return { noEffect: true };
   }
 
@@ -253,8 +253,8 @@ async function closeChatSession(forceNoEffect?: boolean): Promise<{ noEffect: bo
   return { noEffect };
 }
 
-function moveScenarioCharacter(characterId: string, toId: string) {
-  useScenarioCharacterStore.getState().saveScenarioCharacterFields(characterId, {
+async function moveScenarioCharacter(characterId: string, toId: string) {
+  await useScenarioCharacterStore.getState().saveScenarioCharacterFields(characterId, {
     locationId: toId,
   });
 }
@@ -331,7 +331,9 @@ async function recomputeTemporalContextAndAutoselectWardrobes() {
     const updatedWardrobes = applyDailyWardrobeAutoselect(c.wardrobes);
     if (updatedWardrobes) {
       updatedAnyWardrobe = true;
-      useScenarioCharacterStore.getState().saveScenarioCharacterFields(c.id, { wardrobes: updatedWardrobes });
+      await useScenarioCharacterStore
+        .getState()
+        .saveScenarioCharacterFields(c.id, { wardrobes: updatedWardrobes });
     }
   }
 
