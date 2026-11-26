@@ -87,7 +87,7 @@ export default function ChatTopBarStatus() {
                     setShowWorkingPopover(false);
                     openActiveJobsModal();
                   }}
-                  className="w-full text-xs"
+                  className="w-full text-xs hidden"
                 >
                   Manage Jobs
                 </button>
