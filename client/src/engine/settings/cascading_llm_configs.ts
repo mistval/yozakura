@@ -296,6 +296,6 @@ export const DEFAULT_LLM_CONFIGS: LLMConfigById = {
     rule: "context.promptTemplateGroup === 'object_editor'",
     llmMetaOptions: JSON.stringify({ max_tokens: 4000 }, null, 2),
     // Keep the plain-text explanation alongside <json_patch>...</json_patch> instead of stripping outer text.
-    responsePreParserSource: "(response) => response.replaceAll('[TOOL_CALLS]', '')",
+    responsePreParserSource: '(response) => response',
   },
 };

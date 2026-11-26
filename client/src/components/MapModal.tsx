@@ -1,6 +1,5 @@
 import _ from 'lodash';
 import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
-import { useQueryParam } from '../util/queryParams.js';
 import RoutedModalFrame from './ui/RoutedModalFrame.js';
 import type { Character } from '../engine/types.js';
 import { useActiveScenarioMap, useScenarioStore } from '../state/scenario_store.js';
@@ -10,9 +9,11 @@ import type { ScenarioEvent, MovementPolicy } from '../engine/types.js';
 import { useCharacterOverview } from './character_overview/CharacterOverviewContext.js';
 import { useMapModal } from './MapModalContext.js';
 import { useObjectEditor } from './object_editor/ObjectEditorContext.js';
+import { AiEditButton } from './object_editor/AiEditButton.js';
 import MapGraphEditor from './MapGraphEditor.js';
 import MapZoneEditor from './map_zones/MapZoneEditor.js';
 import { useMapStore } from '../state/map_store.js';
+import { OBJECT_EDITOR_AUTO_DEFER_SYNC } from '../state/ephemeral_state_helper.js';
 import CharacterAvatar from './CharacterAvatar.js';
 import { useDraft } from '../hooks/useDraft.js';
 
@@ -147,9 +148,13 @@ function InlineEditableField({
 }
 
 function MapModalInner() {
-  const { closeMap, open, mapId: explicitMapId } = useMapModal();
+  const { closeMap, open, mapId: explicitMapId, viewParam, setViewParam } = useMapModal();
   const { openMapObjectEditor } = useObjectEditor();
   const updateMap = useMapStore((s) => s.updateMap);
+  const saveModalMap = (
+    id: string,
+    mutator: (prev: NonNullable<typeof targetMap>) => NonNullable<typeof targetMap>
+  ) => updateMap(id, mutator, OBJECT_EDITOR_AUTO_DEFER_SYNC);
   const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
   const explicitMap = useMapStore((s) => (explicitMapId ? s.mapsById[explicitMapId] : undefined));
   const activeScenarioMap = useActiveScenarioMap();
@@ -167,7 +172,6 @@ function MapModalInner() {
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const { showCharacterOverview } = useCharacterOverview();
 
-  const [viewParam, setViewParam] = useQueryParam('mapview');
   const view =
     viewParam === 'zones' ? 'zones' : !isGlobalContext && viewParam === 'log' ? 'log' : 'characters';
   const setView = (next: 'characters' | 'zones' | 'log') =>
@@ -181,12 +185,6 @@ function MapModalInner() {
   useEffect(() => {
     setLogPage(1);
   }, [scenario?.id, view]);
-
-  useEffect(() => {
-    if (!open) {
-      setViewParam(undefined);
-    }
-  }, [open]);
 
   useEffect(() => {
     if (view !== 'log' || !scenario || !open) {
@@ -263,17 +261,14 @@ function MapModalInner() {
               Movement
             </button>
           )}
-          <button
-            type="button"
+          <AiEditButton
             disabled={!mapId}
             onClick={() => {
               if (mapId) {
                 openMapObjectEditor(mapId);
               }
             }}
-          >
-            🤖 AI Edit
-          </button>
+          />
         </>
       }
     >
@@ -283,7 +278,7 @@ function MapModalInner() {
             <MapZoneEditor
               mapId={mapId}
               isGlobalContext={isGlobalContext}
-              updateMap={(mutator) => updateMap(mapId, mutator)}
+              updateMap={(mutator) => saveModalMap(mapId, mutator)}
             />
           ) : (
             <div className="text-sm text-muted">{emptyMapMessage}</div>
@@ -357,7 +352,7 @@ function MapModalInner() {
           <MapGraphEditor
             className="min-h-0 flex-1"
             mapId={mapId}
-            updateMap={(mutator) => updateMap(mapId, mutator)}
+            updateMap={(mutator) => saveModalMap(mapId, mutator)}
             charactersByLocationId={isGlobalContext ? undefined : charactersByLocationId}
             onCharacterClick={isGlobalContext ? undefined : showCharacter}
             leadingElement={({ addLocation }) => (
@@ -369,7 +364,7 @@ function MapModalInner() {
                     fieldLabel="map name"
                     placeholder="Map name"
                     inputClassName="min-w-44 flex-1 border border-border-strong rounded-sm px-2 py-1 text-sm sm:text-base font-semibold bg-surface-soft"
-                    onSave={(name) => updateMap(mapId, (prev) => ({ ...prev, name }))}
+                    onSave={(name) => saveModalMap(mapId, (prev) => ({ ...prev, name }))}
                   >
                     {(startEditing) => (
                       <div className="flex w-full items-center justify-between gap-2">
@@ -398,7 +393,7 @@ function MapModalInner() {
                     fieldLabel="map description"
                     placeholder="Describe the world setting..."
                     inputClassName="min-w-0 flex-1 min-h-20 border border-border-strong rounded-sm px-2 py-1 text-xs sm:text-sm bg-surface-soft resize-y"
-                    onSave={(description) => updateMap(mapId, (prev) => ({ ...prev, description }))}
+                    onSave={(description) => saveModalMap(mapId, (prev) => ({ ...prev, description }))}
                   >
                     {(startEditing) => (
                       <>

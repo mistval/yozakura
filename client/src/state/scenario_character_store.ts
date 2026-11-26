@@ -30,13 +30,14 @@ type ScenarioCharacterStoreState = {
   getCharactersByIds: (ids: string[]) => Character[];
   setScenarioCharacters: (characters: Character[]) => void;
   removeCharacterLocal: (characterId: string) => void;
-  removeScenarioCharacter: (characterId: string) => Promise<void>;
+  removeScenarioCharacter: (characterId: string, syncOptions?: SyncOptions) => Promise<void>;
   loadScenarioCharacters: () => Promise<void>;
   saveScenarioCharacters: (character: Character[], syncOptions?: SyncOptions) => void;
   saveScenarioCharacter: (
     character: Character,
     imageFile?: File,
-    setter?: (prevCharacter: Character | undefined) => Character
+    setter?: (prevCharacter: Character | undefined) => Character,
+    syncOptions?: SyncOptions
   ) => void;
   saveInactiveScenarioCharacterImmediate: (character: Character) => Promise<void>;
   saveScenarioCharacterFields: (id: string, fields: Partial<Character>, syncOptions?: SyncOptions) => void;
@@ -194,13 +195,13 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     });
   },
 
-  removeScenarioCharacter: async (characterId) => {
+  removeScenarioCharacter: async (characterId, syncOptions = IMMEDIATE_SYNC) => {
     const characterToDelete = get().scenarioCharactersById[characterId];
     if (!characterToDelete) {
       return;
     }
 
-    await get().ephemeralStateHelper.stageDeletedEntity(characterToDelete, IMMEDIATE_SYNC);
+    await get().ephemeralStateHelper.stageDeletedEntity(characterToDelete, syncOptions);
   },
 
   loadScenarioCharacters: async () => {
@@ -233,7 +234,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     set({ scenarioCharactersAreLoaded: true });
   },
 
-  saveScenarioCharacter: (character, imageFile, setter) => {
+  saveScenarioCharacter: (character, imageFile, setter, syncOptions = IMMEDIATE_SYNC) => {
     setter ??= (prev) => ({ ...prev, ...character });
 
     const newCharacter: UpdatedScenarioCharacter = {
@@ -241,7 +242,7 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
       imageFile,
     };
 
-    void get().ephemeralStateHelper.stageUpdatedEntity(newCharacter, IMMEDIATE_SYNC);
+    void get().ephemeralStateHelper.stageUpdatedEntity(newCharacter, syncOptions);
   },
 
   saveScenarioCharacterFields: (id, fields, syncOptions = IMMEDIATE_SYNC) => {

@@ -535,6 +535,134 @@ describe('ObjectEditor', () => {
       expect(editor.getState().history).toEqual([]);
       expect(editor.getState().isDirty).toBe(false);
     });
+
+    it('auto-populates omitted or empty id, createdAt, and updatedAt on newly added sub-objects during applyManualJsonEdit', async () => {
+      const alice = createCharacterFixture();
+      const { editor, writtenStates } = createEditorHarness(alice, characterSchema);
+      await editor.initialize();
+
+      const nextRaw = JSON.stringify(
+        {
+          ...alice,
+          wardrobes: [
+            ...alice.wardrobes,
+            {
+              id: '',
+              createdAt: '',
+              updatedAt: '',
+              text: 'leather jacket, boots',
+              enabled: true,
+              tags: ['street'],
+              autoRevert: false,
+            },
+            {
+              text: 'swimsuit',
+              enabled: false,
+              tags: ['beach'],
+              autoRevert: true,
+            },
+          ],
+        },
+        null,
+        2
+      );
+
+      const applied = await editor.applyManualJsonEdit(nextRaw);
+      expect(applied).toBe(true);
+      expect(writtenStates).toHaveLength(1);
+
+      const current = editor.getState().currentObject!;
+      expect(current.wardrobes).toHaveLength(3);
+      for (const added of [current.wardrobes[1]!, current.wardrobes[2]!]) {
+        expect(idSchema.safeParse(added.id).success).toBe(true);
+        expect(added.createdAt).not.toBe('');
+        expect(added.updatedAt).not.toBe('');
+      }
+    });
+
+    it('rejects modifications to readOnly fields during applyManualJsonEdit without calling writeObjectState', async () => {
+      const alice = createCharacterFixture();
+      const { editor, writtenStates } = createEditorHarness(alice, characterSchema);
+      await editor.initialize();
+
+      const modifiedReadOnlyRaw = JSON.stringify({ ...alice, id: newId() }, null, 2);
+      const applied = await editor.applyManualJsonEdit(modifiedReadOnlyRaw);
+
+      expect(applied).toBe(false);
+      expect(writtenStates).toHaveLength(0);
+      expect(editor.getState().currentObject).toEqual(alice);
+      expect(editor.getState().invalidManualEdit?.rawJson).toBe(modifiedReadOnlyRaw);
+      expect(editor.getState().invalidManualEdit?.error).toContain('/id');
+      expect(editor.getState().isDirty).toBe(true);
+    });
+
+    it('syncs store-side normalization from writeObjectState back into currentObject so notifyPossibleManualChange returns false', async () => {
+      const map = createWorldMapFixture();
+      const firstId = map.locations[0]!.id;
+      const secondLoc = {
+        id: newId(),
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        name: 'East Gate',
+        description: 'Guarded archway.',
+        adjacency: [] as string[],
+        isEphemeral: false,
+      };
+      const initialWithTwo: WorldMap = {
+        ...map,
+        locations: [map.locations[0]!, secondLoc],
+      };
+
+      const symmetrizeAdjacency = (candidate: WorldMap): WorldMap => {
+        const loc0 = candidate.locations[0]!;
+        const loc1 = candidate.locations[1]!;
+        const has0To1 = loc0.adjacency.includes(loc1.id);
+        const has1To0 = loc1.adjacency.includes(loc0.id);
+        if (has0To1 && !has1To0) {
+          return {
+            ...candidate,
+            locations: [loc0, { ...loc1, adjacency: [...loc1.adjacency, loc0.id] }],
+          };
+        }
+        return candidate;
+      };
+
+      // Test both AI runUserMessage and manual applyManualJsonEdit normalization paths.
+      let externalState = initialWithTwo;
+      const normalizingDelegate: ObjectEditorDelegate<WorldMap> = {
+        zodSchema: worldMapSchema,
+        getObjectCurrentState: async () => externalState,
+        writeObjectState: async (next) => {
+          externalState = symmetrizeAdjacency(next);
+        },
+        executePrompt: async () => ({
+          message: 'Connected Central Park to East Gate.',
+          patch: [{ op: 'add', path: '/locations/0/adjacency/-', value: secondLoc.id }],
+        }),
+      };
+
+      const editor = new ObjectEditor(normalizingDelegate);
+      await editor.initialize();
+      await editor.runUserMessage('Connect Central Park to East Gate.');
+
+      expect(editor.getState().currentObject).toEqual(externalState);
+      expect(editor.getState().currentObject!.locations[1]!.adjacency).toEqual([firstId]);
+      expect(await editor.notifyPossibleManualChange()).toBe(false);
+      expect(editor.getState().history).toHaveLength(1);
+
+      const renamedNext: WorldMap = {
+        ...externalState,
+        name: 'Rivendell Normalized',
+        locations: [externalState.locations[0]!, { ...externalState.locations[1]!, adjacency: [] }],
+      };
+      // Trigger symmetrization again via manual edit where loc0 has loc1, loc1 lost loc0.
+      const manualApplied = await editor.applyManualJsonEdit(JSON.stringify(renamedNext, null, 2));
+      expect(manualApplied).toBe(true);
+      expect(editor.getState().currentObject).toEqual(externalState);
+      expect(editor.getState().currentObject!.locations[1]!.adjacency).toEqual([firstId]);
+      expect(await editor.notifyPossibleManualChange()).toBe(false);
+      expect(editor.getState().history).toHaveLength(2);
+    });
   });
 });
 

@@ -196,14 +196,20 @@ export class ObjectEditor<TObjectType> {
       return this.recordInvalidManualEdit(rawJson, `Invalid JSON: ${getErrorMessage(error)}`, lastKnown);
     }
 
-    const validation = this.delegate.zodSchema.safeParse(parsedJson);
+    const populatedJson = autoPopulatePersistedSubObjectFields(
+      this.delegate.zodSchema,
+      parsedJson,
+      new Date().toISOString()
+    );
+    const validation = this.delegate.zodSchema.safeParse(populatedJson);
     if (!validation.success) {
       return this.recordInvalidManualEdit(rawJson, validation.error.message, lastKnown);
     }
 
     const validatedNext = validation.data;
+    const userPatch = compareToJsonPatch(lastKnown, parsedJson);
     const patch = compareToJsonPatch(lastKnown, validatedNext);
-    if (patch.length === 0) {
+    if (userPatch.length === 0 || patch.length === 0) {
       if (this.state.invalidManualEdit) {
         let firstInvalidIndex = this.history.length;
         while (firstInvalidIndex > 0 && this.history[firstInvalidIndex - 1]?.invalidRawJson !== undefined) {
@@ -219,24 +225,36 @@ export class ObjectEditor<TObjectType> {
       return false;
     }
 
-    const humanReadableChanges = computeHumanReadableChanges(this.delegate.zodSchema, lastKnown, patch);
+    try {
+      assertNoReadOnlyViolations(this.delegate.zodSchema, lastKnown, userPatch);
+    } catch (error) {
+      return this.recordInvalidManualEdit(rawJson, getErrorMessage(error), lastKnown);
+    }
+
     await this.delegate.writeObjectState(validatedNext);
+    const canonicalNext = await this.delegate.getObjectCurrentState();
+    const canonicalPatch = compareToJsonPatch(lastKnown, canonicalNext);
+    const humanReadableChanges = computeHumanReadableChanges(
+      this.delegate.zodSchema,
+      lastKnown,
+      canonicalPatch
+    );
 
     const entry: ObjectEditorHistoryEntry<TObjectType> = {
       id: newId(),
       source: 'manual',
       objectBeforeState: lastKnown,
-      objectAfterState: validatedNext,
+      objectAfterState: canonicalNext,
       canRevert: true,
       userMessage: '',
       agentMessage: 'Updated object manually via raw JSON.',
-      objectPatch: patch,
+      objectPatch: canonicalPatch,
       humanReadableChanges,
       invalidRawJson: undefined,
       validationError: undefined,
     };
 
-    this.commitNewHistoryState(entry, validatedNext, undefined);
+    this.commitNewHistoryState(entry, canonicalNext, undefined);
     return true;
   }
 
@@ -321,23 +339,33 @@ export class ObjectEditor<TObjectType> {
       }
 
       const hasNetChanges = applied.resolvedPatch.length > 0;
+      let nextObjectState = applied.newObjectState;
+      let finalPatch = applied.resolvedPatch;
+      let finalChanges = applied.humanReadableChanges;
+      let canRevert = false;
+
       if (hasNetChanges) {
         await this.delegate.writeObjectState(applied.newObjectState);
+        nextObjectState = await this.delegate.getObjectCurrentState();
+        finalPatch = compareToJsonPatch(oldObjectState, nextObjectState);
+        canRevert = finalPatch.length > 0;
+        finalChanges = computeHumanReadableChanges(this.delegate.zodSchema, oldObjectState, finalPatch);
       }
+
       const entry: ObjectEditorHistoryEntry<TObjectType> = {
         id: newId(),
         source: 'ai',
         objectBeforeState: oldObjectState,
-        objectAfterState: applied.newObjectState,
-        canRevert: hasNetChanges,
+        objectAfterState: nextObjectState,
+        canRevert,
         userMessage: message,
         agentMessage: result.message,
-        objectPatch: applied.resolvedPatch,
-        humanReadableChanges: applied.humanReadableChanges,
+        objectPatch: finalPatch,
+        humanReadableChanges: finalChanges,
         invalidRawJson: undefined,
         validationError: undefined,
       };
-      this.commitNewHistoryState(entry, applied.newObjectState, undefined);
+      this.commitNewHistoryState(entry, nextObjectState, undefined);
     } finally {
       if (this.activeTurnCancellation === turnCancellation) {
         this.activeTurnCancellation = undefined;

@@ -8,11 +8,16 @@ vi.mock('./scenario_store', () => ({
 
 import {
   DEFERRED_SYNC,
+  DEFERRED_SYNC_OWNERS,
   EphemeralStateHelper,
   IMMEDIATE_SYNC,
+  OBJECT_EDITOR_AUTO_DEFER_SYNC,
+  commitDeferredSyncForOwner,
+  discardDeferredSyncForOwner,
   ephemeralStateSlice,
   getActiveDeferredSyncOwner,
   isEntityInDeferredSync,
+  isEntityLockedForEditing,
   useDeferredSyncStore,
   type IEphemeralStateDelegate,
 } from './ephemeral_state_helper';
@@ -68,6 +73,7 @@ describe('EphemeralStateHelper', () => {
     useDeferredSyncStore.setState({
       activeOwner: undefined,
       syncingEntityIds: {},
+      mutatedEntityIds: {},
     });
   });
 
@@ -360,5 +366,130 @@ describe('EphemeralStateHelper', () => {
     await helper2.commitChanges();
     expect(getActiveDeferredSyncOwner()).toBeUndefined();
     expect(isEntityInDeferredSync(entity2.id)).toBe(false);
+  });
+
+  it('auto-defers sync into an active owner transaction and supports cross-store commit and discard', async () => {
+    const { helper: helper1, store: store1, delegate: delegate1 } = createHelper();
+    const { helper: helper2, store: store2, delegate: delegate2 } = createHelper();
+    const primary = { id: 'auto-1', value: 'orig-1' };
+    const secondary = { id: 'auto-2', value: 'orig-2' };
+
+    await helper1.stageUpdatedEntity(primary, IMMEDIATE_SYNC);
+    await helper2.stageUpdatedEntity(secondary, IMMEDIATE_SYNC);
+    vi.clearAllMocks();
+
+    // When no transaction is open, autoAddToTransactionForOwner still writes immediately.
+    await helper2.stageUpdatedEntity(
+      { id: secondary.id, value: 'immediate-ok' },
+      OBJECT_EDITOR_AUTO_DEFER_SYNC
+    );
+    expect(delegate2.setDatabaseState).toHaveBeenCalledTimes(1);
+
+    // When objectEditor holds a lock on helper1, edits on both helpers defer into that transaction.
+    helper1.lockEntitiesForDeferredSync([primary], DEFERRED_SYNC_OWNERS.objectEditor);
+    expect(isEntityInDeferredSync(primary.id, { ignoreOwner: DEFERRED_SYNC_OWNERS.objectEditor })).toBe(
+      false
+    );
+
+    vi.clearAllMocks();
+    await helper1.stageUpdatedEntity({ id: primary.id, value: 'edited-1' }, OBJECT_EDITOR_AUTO_DEFER_SYNC);
+    await helper2.stageUpdatedEntity({ id: secondary.id, value: 'edited-2' }, OBJECT_EDITOR_AUTO_DEFER_SYNC);
+    expect(delegate1.setDatabaseState).not.toHaveBeenCalled();
+    expect(delegate2.setDatabaseState).not.toHaveBeenCalled();
+    expect(isEntityInDeferredSync(secondary.id)).toBe(true);
+
+    // Discarding owner transaction rolls back both stores cleanly and clears the owner.
+    await discardDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor);
+    expect(store1.get(primary.id)?.value).toBe('orig-1');
+    expect(store2.get(secondary.id)?.value).toBe('immediate-ok');
+    expect(getActiveDeferredSyncOwner()).toBeUndefined();
+    expect(isEntityInDeferredSync(primary.id)).toBe(false);
+    expect(isEntityInDeferredSync(secondary.id)).toBe(false);
+
+    // Committing owner transaction flushes both stores and clears the owner.
+    helper1.lockEntitiesForDeferredSync([primary], DEFERRED_SYNC_OWNERS.objectEditor);
+    await helper1.stageUpdatedEntity({ id: primary.id, value: 'committed-1' }, OBJECT_EDITOR_AUTO_DEFER_SYNC);
+    await helper2.stageUpdatedEntity(
+      { id: secondary.id, value: 'committed-2' },
+      OBJECT_EDITOR_AUTO_DEFER_SYNC
+    );
+    await commitDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor);
+    expect(delegate1.setDatabaseState).toHaveBeenCalledWith([{ id: primary.id, value: 'committed-1' }]);
+    expect(delegate2.setDatabaseState).toHaveBeenCalledWith([{ id: secondary.id, value: 'committed-2' }]);
+    expect(getActiveDeferredSyncOwner()).toBeUndefined();
+  });
+
+  it('tracks mutatedEntityIds only for staged upsert/delete operations and clears them on commit or discard', async () => {
+    const { helper } = createHelper();
+    const lockedOnly = { id: 'mut-lock-1', value: 'initial' };
+    const upserted = { id: 'mut-upsert-1', value: 'v1' };
+    const deleted = { id: 'mut-delete-1', value: 'v2' };
+
+    helper.lockEntitiesForDeferredSync([lockedOnly], 'owner_a');
+    expect(useDeferredSyncStore.getState().syncingEntityIds[lockedOnly.id]).toBe(true);
+    expect(useDeferredSyncStore.getState().mutatedEntityIds).toEqual({});
+
+    await helper.stageUpdatedEntity(upserted, DEFERRED_SYNC);
+    expect(useDeferredSyncStore.getState().mutatedEntityIds).toEqual({
+      [upserted.id]: true,
+    });
+
+    await helper.commitChanges();
+    expect(useDeferredSyncStore.getState().mutatedEntityIds).toEqual({});
+    expect(useDeferredSyncStore.getState().syncingEntityIds).toEqual({});
+
+    await helper.stageDeletedEntity(deleted, DEFERRED_SYNC);
+    expect(useDeferredSyncStore.getState().mutatedEntityIds).toEqual({
+      [deleted.id]: true,
+    });
+
+    await helper.discardPendingChanges();
+    expect(useDeferredSyncStore.getState().mutatedEntityIds).toEqual({});
+    expect(useDeferredSyncStore.getState().syncingEntityIds).toEqual({});
+  });
+
+  it('scopes commitDeferredSyncForOwner to helpers owned by the given owner without flushing ownerless helpers', async () => {
+    const { helper: ownerHelper, delegate: ownerDelegate } = createHelper();
+    const { helper: ownerlessHelper, delegate: ownerlessDelegate } = createHelper();
+    const ownedEntity = { id: 'scoped-owned-1', value: 'owned' };
+    const ownerlessEntity = { id: 'scoped-ownerless-1', value: 'ownerless' };
+
+    // Stage ownerless deferred edit first while no owner is active.
+    await ownerlessHelper.stageUpdatedEntity(ownerlessEntity, DEFERRED_SYNC);
+    expect(ownerlessHelper.activeTransactionOwner).toBeUndefined();
+
+    // Acquire and mutate under owner_a on a separate helper.
+    ownerHelper.lockEntitiesForDeferredSync([ownedEntity], 'owner_a');
+    await ownerHelper.stageUpdatedEntity({ id: ownedEntity.id, value: 'owned-updated' }, DEFERRED_SYNC);
+    expect(ownerHelper.activeTransactionOwner).toBe('owner_a');
+
+    await commitDeferredSyncForOwner('owner_a');
+
+    expect(ownerDelegate.setDatabaseState).toHaveBeenCalledWith([
+      { id: ownedEntity.id, value: 'owned-updated' },
+    ]);
+    expect(ownerlessDelegate.setDatabaseState).not.toHaveBeenCalled();
+    expect(isEntityInDeferredSync(ownerlessEntity.id)).toBe(true);
+
+    // Clean up ownerless helper
+    await ownerlessHelper.commitChanges();
+    expect(ownerlessDelegate.setDatabaseState).toHaveBeenCalledWith([ownerlessEntity]);
+  });
+
+  it('treats objectEditor locks as unlocked for editing and characterMemoryGenerator locks as locked', () => {
+    const { helper: editorHelper } = createHelper();
+    const { helper: generatorHelper } = createHelper();
+    const entity1 = { id: 'edit-lock-1', value: 'v1' };
+    const entity2 = { id: 'edit-lock-2', value: 'v2' };
+
+    editorHelper.lockEntitiesForDeferredSync([entity1], DEFERRED_SYNC_OWNERS.objectEditor);
+    expect(isEntityInDeferredSync(entity1.id)).toBe(true);
+    expect(isEntityLockedForEditing(entity1.id)).toBe(false);
+    editorHelper.abandonPendingChanges();
+
+    generatorHelper.lockEntitiesForDeferredSync([entity2], DEFERRED_SYNC_OWNERS.characterMemoryGenerator);
+    expect(isEntityInDeferredSync(entity2.id)).toBe(true);
+    expect(isEntityLockedForEditing(entity2.id)).toBe(true);
+    generatorHelper.abandonPendingChanges();
   });
 });

@@ -28,8 +28,12 @@ type GlobalCharactersStoreState = {
     imageFile?: File,
     syncOptions?: SyncOptions
   ) => Promise<Character>;
-  saveScenarioCharacterAsGlobal: (scenarioChar: Character, imageFile?: File) => Promise<Character>;
-  deleteGlobalCharacter: (character: Pick<Character, 'id' | 'imagePath'>) => void;
+  saveScenarioCharacterAsGlobal: (
+    scenarioChar: Character,
+    imageFile?: File,
+    syncOptions?: SyncOptions
+  ) => Promise<Character>;
+  deleteGlobalCharacter: (character: Pick<Character, 'id' | 'imagePath'>, syncOptions?: SyncOptions) => void;
 } & ReturnType<typeof ephemeralStateSlice<UpdatedGlobalCharacter>>;
 
 function toPlainCharacter(updatedCharacter: UpdatedGlobalCharacter): Character {
@@ -174,7 +178,11 @@ export const useGlobalCharactersStore = create<GlobalCharactersStoreState>((set,
     return get().globalCharactersById[withUpdatedFields.id] ?? withUpdatedFields;
   },
 
-  async saveScenarioCharacterAsGlobal(scenarioChar: Character, imageFile?: File): Promise<Character> {
+  async saveScenarioCharacterAsGlobal(
+    scenarioChar: Character,
+    imageFile?: File,
+    syncOptions: SyncOptions = IMMEDIATE_SYNC
+  ): Promise<Character> {
     assert(get().globalCharactersAreLoaded, 'Global characters not yet loaded');
     const targetId = scenarioChar.globalCharacterId?.trim() || scenarioChar.id;
     const imagePath = imageFile
@@ -194,10 +202,13 @@ export const useGlobalCharactersStore = create<GlobalCharactersStoreState>((set,
       imagePath: Files.isApiFilePath(imagePath) ? addOrReplaceVersionQueryParam(imagePath) : imagePath,
     };
 
-    return get().saveGlobalCharacter(cleanGlobalChar, imageFile);
+    return get().saveGlobalCharacter(cleanGlobalChar, imageFile, syncOptions);
   },
 
-  deleteGlobalCharacter(character: Pick<Character, 'id' | 'imagePath'>) {
+  deleteGlobalCharacter(
+    character: Pick<Character, 'id' | 'imagePath'>,
+    syncOptions: SyncOptions = IMMEDIATE_SYNC
+  ) {
     assert(get().globalCharactersAreLoaded, 'Global characters not yet loaded');
 
     const target: UpdatedGlobalCharacter = get().globalCharactersById[character.id] ?? {
@@ -221,7 +232,7 @@ export const useGlobalCharactersStore = create<GlobalCharactersStoreState>((set,
       groupIds: [],
     };
 
-    void get().ephemeralStateHelper.stageDeletedEntity(target, IMMEDIATE_SYNC);
+    void get().ephemeralStateHelper.stageDeletedEntity(target, syncOptions);
   },
 
   async installDemoCharactersGlobally() {

@@ -1,13 +1,18 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import type {
-  CharacterDraftAccessor,
-  ObjectEditorTarget,
+import {
+  OBJECT_EDITOR_OWNED_KEYS,
+  parseObjectEditorTarget,
+  serializeObjectEditorTarget,
+  type CharacterDraftAccessor,
+  type ObjectEditorTarget,
 } from '../../engine/object_editor/object_editor_delegates.js';
-import { useQueryParams } from '../../util/queryParams.js';
+import { useModalQueryParam } from '../../hooks/useModalQueryParam.js';
 
 type ObjectEditorContextType = {
   open: boolean;
   target: ObjectEditorTarget | undefined;
+  hasOverlayAbove: boolean;
+  openObjectEditor: (target: ObjectEditorTarget) => void;
   openMapObjectEditor: (mapId: string) => void;
   openScenarioCharacterObjectEditor: (characterId: string) => void;
   openGlobalCharacterObjectEditor: (characterId: string) => void;
@@ -18,132 +23,63 @@ type ObjectEditorContextType = {
 
 const ObjectEditorContext = createContext<ObjectEditorContextType | undefined>(undefined);
 
-function parseObjectEditorTarget(
-  params: URLSearchParams,
-  draftAccessor: CharacterDraftAccessor | undefined
-): ObjectEditorTarget | undefined {
-  const isOpen = params.has('objecteditor') && params.get('objecteditor') !== 'false';
-  if (!isOpen) {
-    return undefined;
-  }
-
-  const type = params.get('oe_type');
-  if (type === 'world_map') {
-    const mapId = params.get('oe_id');
-    return mapId ? { kind: 'world_map', mapId } : undefined;
-  }
-  if (type === 'scenario_character') {
-    const characterId = params.get('oe_id');
-    return characterId ? { kind: 'scenario_character', characterId } : undefined;
-  }
-  if (type === 'global_character') {
-    const characterId = params.get('oe_id');
-    return characterId ? { kind: 'global_character', characterId } : undefined;
-  }
-  if (type === 'character_draft') {
-    return draftAccessor ? { kind: 'character_draft', accessor: draftAccessor } : undefined;
-  }
-  if (type === 'character_relationship') {
-    const fromId = params.get('oe_from');
-    const toId = params.get('oe_to');
-    return fromId && toId ? { kind: 'character_relationship', fromId, toId } : undefined;
-  }
-
-  return undefined;
-}
-
 export function ObjectEditorProvider({ children }: { children: ReactNode }) {
-  const [params, setParams] = useQueryParams();
+  const { pushModal, closeModal, layerParams, hasOverlayAbove } = useModalQueryParam(
+    'objecteditor',
+    OBJECT_EDITOR_OWNED_KEYS
+  );
   const [draftAccessor, setDraftAccessor] = useState<CharacterDraftAccessor | undefined>(undefined);
 
-  const target = useMemo(() => parseObjectEditorTarget(params, draftAccessor), [params, draftAccessor]);
+  const target = useMemo(
+    () => parseObjectEditorTarget(layerParams, draftAccessor),
+    [layerParams, draftAccessor]
+  );
   const open = Boolean(target);
 
-  const openMapObjectEditor = useCallback(
-    (mapId: string) => {
-      setDraftAccessor(undefined);
-      setParams({
-        objecteditor: true,
-        oe_type: 'world_map',
-        oe_id: mapId,
-        oe_from: undefined,
-        oe_to: undefined,
-      });
+  const openObjectEditor = useCallback(
+    (nextTarget: ObjectEditorTarget) => {
+      setDraftAccessor(nextTarget.kind === 'character_draft' ? nextTarget.accessor : undefined);
+      pushModal(serializeObjectEditorTarget(nextTarget));
     },
-    [setParams]
+    [pushModal]
+  );
+
+  const openMapObjectEditor = useCallback(
+    (mapId: string) => openObjectEditor({ kind: 'world_map', mapId }),
+    [openObjectEditor]
   );
 
   const openScenarioCharacterObjectEditor = useCallback(
-    (characterId: string) => {
-      setDraftAccessor(undefined);
-      setParams({
-        objecteditor: true,
-        oe_type: 'scenario_character',
-        oe_id: characterId,
-        oe_from: undefined,
-        oe_to: undefined,
-      });
-    },
-    [setParams]
+    (characterId: string) => openObjectEditor({ kind: 'scenario_character', characterId }),
+    [openObjectEditor]
   );
 
   const openGlobalCharacterObjectEditor = useCallback(
-    (characterId: string) => {
-      setDraftAccessor(undefined);
-      setParams({
-        objecteditor: true,
-        oe_type: 'global_character',
-        oe_id: characterId,
-        oe_from: undefined,
-        oe_to: undefined,
-      });
-    },
-    [setParams]
+    (characterId: string) => openObjectEditor({ kind: 'global_character', characterId }),
+    [openObjectEditor]
   );
 
   const openDraftCharacterObjectEditor = useCallback(
-    (accessor: CharacterDraftAccessor) => {
-      setDraftAccessor(accessor);
-      setParams({
-        objecteditor: true,
-        oe_type: 'character_draft',
-        oe_id: undefined,
-        oe_from: undefined,
-        oe_to: undefined,
-      });
-    },
-    [setParams]
+    (accessor: CharacterDraftAccessor) => openObjectEditor({ kind: 'character_draft', accessor }),
+    [openObjectEditor]
   );
 
   const openRelationshipObjectEditor = useCallback(
-    (fromId: string, toId: string) => {
-      setDraftAccessor(undefined);
-      setParams({
-        objecteditor: true,
-        oe_type: 'character_relationship',
-        oe_id: undefined,
-        oe_from: fromId,
-        oe_to: toId,
-      });
-    },
-    [setParams]
+    (fromId: string, toId: string) => openObjectEditor({ kind: 'character_relationship', fromId, toId }),
+    [openObjectEditor]
   );
 
   const closeObjectEditor = useCallback(() => {
     setDraftAccessor(undefined);
-    setParams({
-      objecteditor: undefined,
-      oe_type: undefined,
-      oe_id: undefined,
-      oe_from: undefined,
-      oe_to: undefined,
-    });
-  }, [setParams]);
+    closeModal();
+  }, [closeModal]);
 
   const value = useMemo<ObjectEditorContextType>(
     () => ({
       open,
       target,
+      hasOverlayAbove,
+      openObjectEditor,
       openMapObjectEditor,
       openScenarioCharacterObjectEditor,
       openGlobalCharacterObjectEditor,
@@ -154,6 +90,8 @@ export function ObjectEditorProvider({ children }: { children: ReactNode }) {
     [
       open,
       target,
+      hasOverlayAbove,
+      openObjectEditor,
       openMapObjectEditor,
       openScenarioCharacterObjectEditor,
       openGlobalCharacterObjectEditor,

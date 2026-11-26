@@ -15,11 +15,9 @@ import CharacterGroupsTab from './CharacterGroupsTab.js';
 import RoutedModalFrame from '../ui/RoutedModalFrame.js';
 import CharacterEditorModal from '../character_editor_modal/CharacterEditorModal.js';
 import { assertNonNullish } from '../../errors/application_error.js';
-import { useQueryParam } from '../../util/queryParams.js';
 import { useConversationLog } from '../conversation_log/ConversationLogContext.js';
 
 function CharacterOverviewInner() {
-  const [scrollDown, setScrollDown] = useQueryParam('scrolldown');
   const scenario = useScenarioStore((state) => state.activeScenario);
   const activeMap = useActiveScenarioMap();
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
@@ -29,38 +27,31 @@ function CharacterOverviewInner() {
   const { showConversationLog } = useConversationLog();
 
   const {
-    open,
     closeCharacterOverview,
     routeEditingCharacterId,
     backToCharacterOverview,
     setSelectedIds,
     validSelectedIds,
+    tabParam,
+    setTabParam,
+    scrollDownParam,
+    setScrollDownParam,
   } = useCharacterOverview();
 
   const userId = scenario?.userCharacterId || '';
-  const [tabParam, setTabParam] = useQueryParam('cotab');
-  const [, setGroupParam] = useQueryParam('cogroup');
   const tab = tabParam === 'groups' ? 'groups' : 'overview';
   const setTab = (next: 'overview' | 'groups') => setTabParam(next === 'overview' ? undefined : next);
   const relationships = useCachedCharacterRelationships();
   const contentRef = useRef<HTMLDivElement>(undefined);
 
   useEffect(() => {
-    if (scrollDown === 'true') {
+    if (scrollDownParam === 'true') {
       requestAnimationFrame(() => {
         contentRef.current?.scrollTo({ top: contentRef.current.scrollHeight });
-        setScrollDown('');
+        setScrollDownParam(undefined);
       });
     }
-  }, [scrollDown]);
-
-  useEffect(() => {
-    if (!open) {
-      setSelectedIds([]);
-      setTabParam(undefined);
-      setGroupParam(undefined);
-    }
-  }, [open]);
+  }, [scrollDownParam, setScrollDownParam]);
 
   useEffect(() => {
     async function run() {

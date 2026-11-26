@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useQueryParam } from '../../util/queryParams.js';
+import { useCharacterOverview } from './CharacterOverviewContext.js';
 import type { Character } from '../../engine/types.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
@@ -7,7 +7,11 @@ import DeleteButton from '../ui/DeleteButton.js';
 import Tabs from '../ui/Tabs.js';
 import ScheduleEditor from './ScheduleEditor.js';
 import { findById } from '../../util/array.js';
-import { useDeferredSyncStore } from '../../state/ephemeral_state_helper.js';
+import {
+  OBJECT_EDITOR_AUTO_DEFER_SYNC,
+  isEntityLockedForEditing,
+  useDeferredSyncStore,
+} from '../../state/ephemeral_state_helper.js';
 import CharacterAvatar from '../CharacterAvatar.js';
 
 export default function CharacterGroupsTab() {
@@ -15,7 +19,7 @@ export default function CharacterGroupsTab() {
   const characters = useScenarioCharacterStore((state) => state.scenarioCharacters);
   const syncingEntityIds = useDeferredSyncStore((state) => state.syncingEntityIds);
 
-  const [selectedGroupId, setSelectedGroupId] = useQueryParam('cogroup');
+  const { selectedGroupId, setSelectedGroupId } = useCharacterOverview();
   const [subTab, setSubTab] = useState<'members' | 'schedule'>('members');
 
   const selectedGroup = findById(groups, selectedGroupId ?? '');
@@ -44,7 +48,7 @@ export default function CharacterGroupsTab() {
     const next = character.groupIds.includes(selectedGroup.id)
       ? character.groupIds.filter((id) => id !== selectedGroup.id)
       : character.groupIds.concat(selectedGroup.id);
-    useCharacterGroupStore.getState().setCharacterGroups(character.id, next);
+    useCharacterGroupStore.getState().setCharacterGroups(character.id, next, OBJECT_EDITOR_AUTO_DEFER_SYNC);
   };
 
   return (
@@ -110,7 +114,7 @@ export default function CharacterGroupsTab() {
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {orderedCharacters.map((character) => {
                   const isMember = character.groupIds.includes(selectedGroup.id);
-                  const isSyncing = Boolean(syncingEntityIds[character.id]);
+                  const isSyncing = isEntityLockedForEditing(character.id);
                   return (
                     <button
                       key={character.id}

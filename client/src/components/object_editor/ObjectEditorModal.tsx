@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  canInspectObjectEditorTarget,
   createObjectEditorSession,
+  getObjectEditorTargetKey,
+  inspectObjectEditorTarget,
   type ObjectEditorTarget,
 } from '../../engine/object_editor/object_editor_delegates.js';
 import { getErrorMessage } from '../../errors/error_util.js';
-import { DEFERRED_SYNC_OWNERS, useActiveDeferredSyncOwner } from '../../state/ephemeral_state_helper.js';
+import {
+  DEFERRED_SYNC_OWNERS,
+  useActiveDeferredSyncOwner,
+  useHasPendingDeferredSyncMutations,
+} from '../../state/ephemeral_state_helper.js';
+import { useActiveScenarioMap } from '../../state/scenario_store.js';
+import { useGlobalCharacterEditor } from '../character_editor_modal/GlobalCharacterEditorContext.js';
+import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
+import { useMapModal } from '../MapModalContext.js';
 import ConfirmDialog from '../ui/ConfirmDialog.js';
 import RoutedModalFrame from '../ui/RoutedModalFrame.js';
 import { ObjectEditorChatPane } from './ObjectEditorChatPane.js';
@@ -12,21 +23,6 @@ import { useObjectEditor } from './ObjectEditorContext.js';
 import { ObjectEditorRawJsonSection } from './ObjectEditorRawJsonSection.js';
 
 type LockStatus = 'waiting' | 'ready' | 'error';
-
-function getObjectEditorTargetKey(target: ObjectEditorTarget): string {
-  switch (target.kind) {
-    case 'world_map':
-      return `world_map:${target.mapId}`;
-    case 'scenario_character':
-      return `scenario_character:${target.characterId}`;
-    case 'global_character':
-      return `global_character:${target.characterId}`;
-    case 'character_draft':
-      return 'character_draft';
-    case 'character_relationship':
-      return `character_relationship:${target.fromId}:${target.toId}`;
-  }
-}
 
 function formatLockOwnerName(owner: string | undefined): string {
   if (owner === DEFERRED_SYNC_OWNERS.characterMemoryGenerator) {
@@ -40,15 +36,22 @@ function formatLockOwnerName(owner: string | undefined): string {
 
 function ObjectEditorModalContent({
   target,
+  hasOverlayAbove,
   closeObjectEditor,
 }: {
   target: ObjectEditorTarget;
+  hasOverlayAbove: boolean;
   closeObjectEditor: () => void;
 }) {
   const [session] = useState(() => createObjectEditorSession(target));
   const editorState = session.useState((state) => state);
   const displayName = session.useDisplayName();
   const activeLockOwner = useActiveDeferredSyncOwner();
+  const hasPendingDeferredMutations = useHasPendingDeferredSyncMutations(DEFERRED_SYNC_OWNERS.objectEditor);
+  const activeScenarioMap = useActiveScenarioMap();
+  const { showMap } = useMapModal();
+  const { showCharacterOverview } = useCharacterOverview();
+  const { showCharacterEditor } = useGlobalCharacterEditor();
 
   const [lockStatus, setLockStatus] = useState<LockStatus>('waiting');
   const [lockError, setLockError] = useState<string | undefined>(undefined);
@@ -58,6 +61,20 @@ function ObjectEditorModalContent({
 
   const lockAcquiredRef = useRef(false);
   const resolvedRef = useRef(false);
+  const hadModalAboveRef = useRef(false);
+
+  useEffect(() => {
+    if (hasOverlayAbove) {
+      hadModalAboveRef.current = true;
+      return;
+    }
+    if (hadModalAboveRef.current) {
+      hadModalAboveRef.current = false;
+      if (lockStatus === 'ready' && !session.getState().pendingTurn) {
+        void session.notifyPossibleManualChange();
+      }
+    }
+  }, [hasOverlayAbove, lockStatus, session]);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -139,11 +156,14 @@ function ObjectEditorModalContent({
     }
   };
 
+  const hasUnsavedChanges =
+    editorState.isDirty || (target.kind !== 'character_draft' && hasPendingDeferredMutations);
+
   const handleRequestClose = () => {
     if (isSubmitting) {
       return;
     }
-    if (editorState.isDirty) {
+    if (hasUnsavedChanges) {
       setConfirmDiscardOpen(true);
       return;
     }
@@ -156,6 +176,16 @@ function ObjectEditorModalContent({
     Boolean(editorState.pendingTurn) ||
     Boolean(editorState.invalidManualEdit) ||
     isSubmitting;
+  const canInspect = canInspectObjectEditorTarget(target);
+
+  const handleInspect = () => {
+    inspectObjectEditorTarget(target, {
+      activeScenarioMapId: activeScenarioMap?.id,
+      showMap,
+      showCharacterOverview,
+      showCharacterEditor,
+    });
+  };
 
   return (
     <RoutedModalFrame
@@ -164,9 +194,20 @@ function ObjectEditorModalContent({
       maxWidthClassName="max-w-5xl"
       panelClassName="flex h-[calc(100dvh-2rem)] md:h-[calc(100dvh-3rem)] flex-col overflow-hidden"
       headerActions={
-        <span className="px-2 py-1 font-medium text-sm text-primary truncate max-w-xs sm:max-w-md">
-          {session.targetTitle}: {displayName}
-        </span>
+        <>
+          <span className="px-2 py-1 font-medium text-sm text-primary truncate max-w-xs sm:max-w-md">
+            {session.targetTitle}: {displayName}
+          </span>
+          {canInspect && (
+            <button
+              type="button"
+              onClick={handleInspect}
+              disabled={lockStatus !== 'ready' || Boolean(editorState.pendingTurn)}
+            >
+              🔍 Inspect
+            </button>
+          )}
+        </>
       }
     >
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pt-2">
@@ -198,7 +239,7 @@ function ObjectEditorModalContent({
             <span className="text-danger-text text-sm">
               Invalid JSON — resolve or revert before accepting or chatting
             </span>
-          ) : editorState.isDirty ? (
+          ) : hasUnsavedChanges ? (
             <span className="text-warning-text text-sm">Unsaved changes</span>
           ) : (
             <span className="text-muted text-sm">No unsaved changes</span>
@@ -237,7 +278,7 @@ function ObjectEditorModalContent({
 }
 
 export function ObjectEditorModal() {
-  const { open, target, closeObjectEditor } = useObjectEditor();
+  const { open, target, hasOverlayAbove, closeObjectEditor } = useObjectEditor();
   if (!open || !target) {
     return undefined;
   }
@@ -246,6 +287,7 @@ export function ObjectEditorModal() {
     <ObjectEditorModalContent
       key={getObjectEditorTargetKey(target)}
       target={target}
+      hasOverlayAbove={hasOverlayAbove}
       closeObjectEditor={closeObjectEditor}
     />
   );

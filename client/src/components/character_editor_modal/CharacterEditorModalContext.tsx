@@ -26,7 +26,10 @@ import { useScenarioCharacterStore } from '../../state/scenario_character_store.
 import type { CharacterEditorModalProps, PendingCardImport } from './types';
 import { generateCharacterCard } from '../../engine/image_gen';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
-import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
+import {
+  OBJECT_EDITOR_AUTO_DEFER_SYNC,
+  useIsEntityLockedForEditing,
+} from '../../state/ephemeral_state_helper.js';
 import { addOrReplaceVersionQueryParam } from '../../util/id.js';
 
 type CharacterEditorModalContextValue = {
@@ -128,7 +131,7 @@ export function CharacterEditorModalProvider({
     );
   };
 
-  const isCharacterSyncing = useIsEntityInDeferredSync(!isGlobalMode ? character.id : undefined);
+  const isCharacterSyncing = useIsEntityLockedForEditing(!isGlobalMode ? character.id : undefined);
   const isBusy = Boolean(loadingField) || cardImportBusy || isCharacterSyncing;
   const currentImagePath = character.imagePath?.trim();
   const currentImageSrc = previewUrl
@@ -395,20 +398,33 @@ export function CharacterEditorModalProvider({
 
     await runWithField('save', async () => {
       if (isGlobalMode) {
-        void useGlobalCharactersStore.getState().saveGlobalCharacter(sanitizedCharacter, selectedImageFile);
+        void useGlobalCharactersStore
+          .getState()
+          .saveGlobalCharacter(sanitizedCharacter, selectedImageFile, OBJECT_EDITOR_AUTO_DEFER_SYNC);
       } else if (opts?.alsoSaveGlobal) {
         const savedGlobal = await useGlobalCharactersStore
           .getState()
-          .saveScenarioCharacterAsGlobal(sanitizedCharacter, selectedImageFile);
+          .saveScenarioCharacterAsGlobal(
+            sanitizedCharacter,
+            selectedImageFile,
+            OBJECT_EDITOR_AUTO_DEFER_SYNC
+          );
         saveScenarioCharacter(
           {
             ...sanitizedCharacter,
             globalCharacterId: savedGlobal.id,
           },
-          selectedImageFile
+          selectedImageFile,
+          undefined,
+          OBJECT_EDITOR_AUTO_DEFER_SYNC
         );
       } else {
-        saveScenarioCharacter(sanitizedCharacter, selectedImageFile);
+        saveScenarioCharacter(
+          sanitizedCharacter,
+          selectedImageFile,
+          undefined,
+          OBJECT_EDITOR_AUTO_DEFER_SYNC
+        );
       }
 
       onClose();
@@ -422,9 +438,11 @@ export function CharacterEditorModalProvider({
   const remove = async () => {
     await runWithField('delete', async () => {
       if (isGlobalMode) {
-        await useGlobalCharactersStore.getState().deleteGlobalCharacter(character);
+        await useGlobalCharactersStore
+          .getState()
+          .deleteGlobalCharacter(character, OBJECT_EDITOR_AUTO_DEFER_SYNC);
       } else {
-        await removeScenarioCharacter(character.id);
+        await removeScenarioCharacter(character.id, OBJECT_EDITOR_AUTO_DEFER_SYNC);
         // We leave the image since chat logs still reference it. Will be deleted when/if the scenario gets deleted.
       }
 

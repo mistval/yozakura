@@ -1,12 +1,19 @@
 import z from 'zod';
 import { assert, assertNonNullish } from '../../errors/application_error.js';
-import { DEFERRED_SYNC, DEFERRED_SYNC_OWNERS, type SyncOptions } from '../../state/ephemeral_state_helper.js';
+import {
+  commitDeferredSyncForOwner,
+  DEFERRED_SYNC,
+  DEFERRED_SYNC_OWNERS,
+  discardDeferredSyncForOwner,
+  type SyncOptions,
+} from '../../state/ephemeral_state_helper.js';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
 import { useMapStore } from '../../state/map_store.js';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { useTemplateRenderLogStore } from '../../state/template_render_log_store.js';
 import { newId } from '../../util/id.js';
+import type { QueryParamsMap } from '../../util/queryParams.js';
 import { chatCompletion } from '../llm.js';
 import { globalParallelJobManager } from '../parallelization/job_manager.js';
 import { ParallelJobCancellationError } from '../parallelization/job_manager_types.js';
@@ -248,11 +255,6 @@ export interface ObjectEditorSessionBinding<TObjectType> {
   buildExternalAiInstructions: (currentObject: TObjectType) => string;
 }
 
-export type AnyObjectEditorSessionBinding =
-  | ObjectEditorSessionBinding<WorldMap>
-  | ObjectEditorSessionBinding<Character>
-  | ObjectEditorSessionBinding<BidirectionalCharacterRelationship>;
-
 export interface ObjectEditorSession {
   targetTitle: string;
   fileNameBase: string;
@@ -261,6 +263,7 @@ export interface ObjectEditorSession {
   useDisplayName: () => string;
   getDisplayName: () => string;
   initialize: () => Promise<void>;
+  notifyPossibleManualChange: () => Promise<boolean>;
   applyManualJsonEdit: (rawJson: string) => Promise<boolean>;
   runUserMessage: (message: string) => Promise<void>;
   cancelPendingTurn: () => void;
@@ -319,7 +322,6 @@ function formatCharacterDisplayName(character: Character | undefined, fallback: 
 
 async function commitPersistedObjectChanges<TObjectType extends RootPersistedObject>(
   delegate: ObjectEditorDelegate<TObjectType>,
-  commitAllChanges: () => Promise<void>,
   finalObject: TObjectType,
   isDirty: boolean
 ): Promise<void> {
@@ -329,7 +331,7 @@ async function commitPersistedObjectChanges<TObjectType extends RootPersistedObj
       updatedAt: new Date().toISOString(),
     });
   }
-  await commitAllChanges();
+  await commitDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor);
 }
 
 export function createWorldMapSessionBinding(mapId: string): ObjectEditorSessionBinding<WorldMap> {
@@ -346,14 +348,8 @@ export function createWorldMapSessionBinding(mapId: string): ObjectEditorSession
         .getState()
         .waitToLockEntitiesForDeferredSync([map], DEFERRED_SYNC_OWNERS.objectEditor, abortSignal);
     },
-    commitChanges: (finalObject, isDirty) =>
-      commitPersistedObjectChanges(
-        delegate,
-        () => useMapStore.getState().commitAllChanges(),
-        finalObject,
-        isDirty
-      ),
-    discardChanges: () => useMapStore.getState().discardPendingChanges(),
+    commitChanges: (finalObject, isDirty) => commitPersistedObjectChanges(delegate, finalObject, isDirty),
+    discardChanges: () => discardDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor),
     buildExternalAiInstructions: (currentObject) =>
       buildExternalAiInstructions('World Map', worldMapSchema, currentObject),
   };
@@ -374,14 +370,8 @@ export function createScenarioCharacterSessionBinding(
         .getState()
         .waitToLockEntitiesForDeferredSync([character], DEFERRED_SYNC_OWNERS.objectEditor, abortSignal);
     },
-    commitChanges: (finalObject, isDirty) =>
-      commitPersistedObjectChanges(
-        delegate,
-        () => useScenarioCharacterStore.getState().commitAllChanges(),
-        finalObject,
-        isDirty
-      ),
-    discardChanges: () => useScenarioCharacterStore.getState().discardPendingChanges(),
+    commitChanges: (finalObject, isDirty) => commitPersistedObjectChanges(delegate, finalObject, isDirty),
+    discardChanges: () => discardDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor),
     buildExternalAiInstructions: (currentObject) =>
       buildExternalAiInstructions('Scenario Character', characterSchema, currentObject),
   };
@@ -403,14 +393,8 @@ export function createGlobalCharacterSessionBinding(
         .getState()
         .waitToLockEntitiesForDeferredSync([character], DEFERRED_SYNC_OWNERS.objectEditor, abortSignal);
     },
-    commitChanges: (finalObject, isDirty) =>
-      commitPersistedObjectChanges(
-        delegate,
-        () => useGlobalCharactersStore.getState().commitAllChanges(),
-        finalObject,
-        isDirty
-      ),
-    discardChanges: () => useGlobalCharactersStore.getState().discardPendingChanges(),
+    commitChanges: (finalObject, isDirty) => commitPersistedObjectChanges(delegate, finalObject, isDirty),
+    discardChanges: () => discardDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor),
     buildExternalAiInstructions: (currentObject) =>
       buildExternalAiInstructions('Global Character', characterSchema, currentObject),
   };
@@ -472,27 +456,12 @@ export function createCharacterRelationshipSessionBinding(
           bToA: { ...finalPair.bToA, updatedAt: now },
         });
       }
-      await useScenarioCharacterRelationshipStore.getState().commitAllChanges();
+      await commitDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor);
     },
-    discardChanges: () => useScenarioCharacterRelationshipStore.getState().discardPendingChanges(),
+    discardChanges: () => discardDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor),
     buildExternalAiInstructions: (currentObject) =>
       buildExternalAiInstructions('Character Relationship', zodSchema, currentObject),
   };
-}
-
-export function createObjectEditorSessionBinding(target: ObjectEditorTarget): AnyObjectEditorSessionBinding {
-  switch (target.kind) {
-    case 'world_map':
-      return createWorldMapSessionBinding(target.mapId);
-    case 'scenario_character':
-      return createScenarioCharacterSessionBinding(target.characterId);
-    case 'global_character':
-      return createGlobalCharacterSessionBinding(target.characterId);
-    case 'character_draft':
-      return createCharacterDraftSessionBinding(target.accessor);
-    case 'character_relationship':
-      return createCharacterRelationshipSessionBinding(target.fromId, target.toId);
-  }
 }
 
 function createSessionFromBinding<TObjectType>(
@@ -508,6 +477,7 @@ function createSessionFromBinding<TObjectType>(
     useDisplayName: () => editor.useState((state) => binding.getEntityDisplayName(state.currentObject)),
     getDisplayName: () => binding.getEntityDisplayName(editor.getState().currentObject),
     initialize: () => editor.initialize(),
+    notifyPossibleManualChange: () => editor.notifyPossibleManualChange(),
     applyManualJsonEdit: (rawJson) => editor.applyManualJsonEdit(rawJson),
     runUserMessage: (message) => editor.runUserMessage(message),
     cancelPendingTurn: () => editor.cancelPendingTurn(),
@@ -529,17 +499,178 @@ function createSessionFromBinding<TObjectType>(
   };
 }
 
-export function createObjectEditorSession(target: ObjectEditorTarget): ObjectEditorSession {
+export interface ObjectEditorInspectNavigator {
+  activeScenarioMapId: string | undefined;
+  showMap: (mapId?: string) => void;
+  showCharacterOverview: (params: { selectedIds: string[]; scrolldown?: boolean }) => void;
+  showCharacterEditor: (characterId: string) => void;
+}
+
+interface ObjectEditorEntityDescriptor<TTarget extends ObjectEditorTarget> {
+  parseParams: (
+    params: URLSearchParams,
+    draftAccessor: CharacterDraftAccessor | undefined
+  ) => TTarget | undefined;
+  toParams: (target: TTarget) => QueryParamsMap;
+  getTargetKey: (target: TTarget) => string;
+  createSession: (target: TTarget) => ObjectEditorSession;
+  inspect?: ((target: TTarget, navigator: ObjectEditorInspectNavigator) => void) | undefined;
+}
+
+type ObjectEditorEntityDescriptorMap = {
+  [K in ObjectEditorTarget['kind']]: ObjectEditorEntityDescriptor<Extract<ObjectEditorTarget, { kind: K }>>;
+};
+
+const OBJECT_EDITOR_ENTITY_DESCRIPTORS: ObjectEditorEntityDescriptorMap = {
+  world_map: {
+    parseParams: (params) => {
+      const mapId = params.get('oe_id');
+      return mapId ? { kind: 'world_map', mapId } : undefined;
+    },
+    toParams: (target) => ({
+      oe_type: 'world_map',
+      oe_id: target.mapId,
+    }),
+    getTargetKey: (target) => `world_map:${target.mapId}`,
+    createSession: (target) => createSessionFromBinding(createWorldMapSessionBinding(target.mapId)),
+    inspect: (target, navigator) => {
+      navigator.showMap(navigator.activeScenarioMapId === target.mapId ? undefined : target.mapId);
+    },
+  },
+  scenario_character: {
+    parseParams: (params) => {
+      const characterId = params.get('oe_id');
+      return characterId ? { kind: 'scenario_character', characterId } : undefined;
+    },
+    toParams: (target) => ({
+      oe_type: 'scenario_character',
+      oe_id: target.characterId,
+    }),
+    getTargetKey: (target) => `scenario_character:${target.characterId}`,
+    createSession: (target) =>
+      createSessionFromBinding(createScenarioCharacterSessionBinding(target.characterId)),
+    inspect: (target, navigator) => {
+      navigator.showCharacterOverview({ selectedIds: [target.characterId], scrolldown: true });
+    },
+  },
+  global_character: {
+    parseParams: (params) => {
+      const characterId = params.get('oe_id');
+      return characterId ? { kind: 'global_character', characterId } : undefined;
+    },
+    toParams: (target) => ({
+      oe_type: 'global_character',
+      oe_id: target.characterId,
+    }),
+    getTargetKey: (target) => `global_character:${target.characterId}`,
+    createSession: (target) =>
+      createSessionFromBinding(createGlobalCharacterSessionBinding(target.characterId)),
+    inspect: (target, navigator) => {
+      navigator.showCharacterEditor(target.characterId);
+    },
+  },
+  character_draft: {
+    parseParams: (_params, draftAccessor) =>
+      draftAccessor ? { kind: 'character_draft', accessor: draftAccessor } : undefined,
+    toParams: () => ({
+      oe_type: 'character_draft',
+    }),
+    getTargetKey: () => 'character_draft',
+    createSession: (target) => createSessionFromBinding(createCharacterDraftSessionBinding(target.accessor)),
+    inspect: undefined,
+  },
+  character_relationship: {
+    parseParams: (params) => {
+      const fromId = params.get('oe_from');
+      const toId = params.get('oe_to');
+      return fromId && toId ? { kind: 'character_relationship', fromId, toId } : undefined;
+    },
+    toParams: (target) => ({
+      oe_type: 'character_relationship',
+      oe_from: target.fromId,
+      oe_to: target.toId,
+    }),
+    getTargetKey: (target) => `character_relationship:${target.fromId}:${target.toId}`,
+    createSession: (target) =>
+      createSessionFromBinding(createCharacterRelationshipSessionBinding(target.fromId, target.toId)),
+    inspect: (target, navigator) => {
+      navigator.showCharacterOverview({
+        selectedIds: [target.fromId, target.toId],
+        scrolldown: true,
+      });
+    },
+  },
+};
+
+export const OBJECT_EDITOR_OWNED_KEYS = ['oe_type', 'oe_id', 'oe_from', 'oe_to'] as const;
+
+function isObjectEditorKind(value: string): value is ObjectEditorTarget['kind'] {
+  return Object.hasOwn(OBJECT_EDITOR_ENTITY_DESCRIPTORS, value);
+}
+
+function withEntityDescriptor<TReturn>(
+  target: ObjectEditorTarget,
+  fn: <K extends ObjectEditorTarget['kind']>(
+    descriptor: ObjectEditorEntityDescriptor<Extract<ObjectEditorTarget, { kind: K }>>,
+    narrowedTarget: Extract<ObjectEditorTarget, { kind: K }>
+  ) => TReturn
+): TReturn {
   switch (target.kind) {
     case 'world_map':
-      return createSessionFromBinding(createWorldMapSessionBinding(target.mapId));
+      return fn(OBJECT_EDITOR_ENTITY_DESCRIPTORS.world_map, target);
     case 'scenario_character':
-      return createSessionFromBinding(createScenarioCharacterSessionBinding(target.characterId));
+      return fn(OBJECT_EDITOR_ENTITY_DESCRIPTORS.scenario_character, target);
     case 'global_character':
-      return createSessionFromBinding(createGlobalCharacterSessionBinding(target.characterId));
+      return fn(OBJECT_EDITOR_ENTITY_DESCRIPTORS.global_character, target);
     case 'character_draft':
-      return createSessionFromBinding(createCharacterDraftSessionBinding(target.accessor));
+      return fn(OBJECT_EDITOR_ENTITY_DESCRIPTORS.character_draft, target);
     case 'character_relationship':
-      return createSessionFromBinding(createCharacterRelationshipSessionBinding(target.fromId, target.toId));
+      return fn(OBJECT_EDITOR_ENTITY_DESCRIPTORS.character_relationship, target);
   }
+}
+
+export function parseObjectEditorTarget(
+  params: URLSearchParams,
+  draftAccessor: CharacterDraftAccessor | undefined
+): ObjectEditorTarget | undefined {
+  const isOpen = params.has('objecteditor') && params.get('objecteditor') !== 'false';
+  if (!isOpen) {
+    return undefined;
+  }
+
+  const type = params.get('oe_type');
+  if (!type || !isObjectEditorKind(type)) {
+    return undefined;
+  }
+
+  return OBJECT_EDITOR_ENTITY_DESCRIPTORS[type].parseParams(params, draftAccessor);
+}
+
+export function serializeObjectEditorTarget(target: ObjectEditorTarget): QueryParamsMap {
+  return withEntityDescriptor(target, (descriptor, narrowedTarget) => descriptor.toParams(narrowedTarget));
+}
+
+export function getObjectEditorTargetKey(target: ObjectEditorTarget): string {
+  return withEntityDescriptor(target, (descriptor, narrowedTarget) =>
+    descriptor.getTargetKey(narrowedTarget)
+  );
+}
+
+export function canInspectObjectEditorTarget(target: ObjectEditorTarget): boolean {
+  return withEntityDescriptor(target, (descriptor) => Boolean(descriptor.inspect));
+}
+
+export function inspectObjectEditorTarget(
+  target: ObjectEditorTarget,
+  navigator: ObjectEditorInspectNavigator
+): void {
+  withEntityDescriptor(target, (descriptor, narrowedTarget) => {
+    descriptor.inspect?.(narrowedTarget, navigator);
+  });
+}
+
+export function createObjectEditorSession(target: ObjectEditorTarget): ObjectEditorSession {
+  return withEntityDescriptor(target, (descriptor, narrowedTarget) =>
+    descriptor.createSession(narrowedTarget)
+  );
 }

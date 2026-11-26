@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useIsEntityInDeferredSync } from '../state/ephemeral_state_helper.js';
+import { USER_SYNC, useIsEntityLockedForEditing } from '../state/ephemeral_state_helper.js';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
 import { useActiveScenarioMap } from '../state/scenario_store.js';
 import { getRequiredRandomChoice } from '../util/array.js';
@@ -21,7 +21,7 @@ export default function CharacterLocationSelect({
     (state) => state.scenarioCharactersById[characterId]?.locationId || ''
   );
   const saveScenarioCharacterFields = useScenarioCharacterStore((state) => state.saveScenarioCharacterFields);
-  const isCharacterSyncing = useIsEntityInDeferredSync(characterId);
+  const isCharacterSyncing = useIsEntityLockedForEditing(characterId);
 
   const sortedLocations = useMemo(() => {
     if (!activeMap) {
@@ -47,9 +47,13 @@ export default function CharacterLocationSelect({
                 .id
             : event.target.value;
 
-        saveScenarioCharacterFields(characterId, {
-          locationId: locationId.trim(),
-        });
+        void saveScenarioCharacterFields(
+          characterId,
+          {
+            locationId: locationId.trim(),
+          },
+          USER_SYNC
+        );
       }}
       className={`border rounded-sm px-2 py-1 bg-inset ${className}`.trim()}
     >

@@ -15,8 +15,8 @@ type MapStoreState = {
 
   setMaps: (maps: WorldMap[]) => void;
   saveMap: (map: WorldMap, syncOptions?: SyncOptions) => WorldMap;
-  updateMap: (mapId: string, mutator: (prev: WorldMap) => WorldMap) => WorldMap;
-  deleteMap: (mapId: string) => void;
+  updateMap: (mapId: string, mutator: (prev: WorldMap) => WorldMap, syncOptions?: SyncOptions) => WorldMap;
+  deleteMap: (mapId: string, syncOptions?: SyncOptions) => void;
   refreshMaps: () => Promise<void>;
   importDemoMaps: () => Promise<void>;
 } & ReturnType<typeof ephemeralStateSlice<WorldMap>>;
@@ -122,19 +122,19 @@ export const useMapStore = create<MapStoreState>((set, get) => ({
     return withUpdatedFields;
   },
 
-  updateMap(mapId, mutator) {
+  updateMap(mapId, mutator, syncOptions: SyncOptions = IMMEDIATE_SYNC) {
     const currentMap = findRequiredById(get().maps, mapId);
     const newMap = mutator(currentMap);
-    return get().saveMap(newMap);
+    return get().saveMap(newMap, syncOptions);
   },
 
-  deleteMap(mapId: string) {
+  deleteMap(mapId: string, syncOptions: SyncOptions = IMMEDIATE_SYNC) {
     const existing = get().mapsById[mapId];
     if (!existing) {
       return;
     }
 
-    void get().ephemeralStateHelper.stageDeletedEntity(existing, IMMEDIATE_SYNC);
+    void get().ephemeralStateHelper.stageDeletedEntity(existing, syncOptions);
   },
 }));
 

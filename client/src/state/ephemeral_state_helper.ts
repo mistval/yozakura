@@ -6,7 +6,10 @@ import { useScenarioStore } from './scenario_store';
 type OperationType = 'upsert' | 'delete' | 'lock';
 
 export type SyncMode = 'defer' | 'immediate';
-export type SyncOptions = { syncMode: SyncMode };
+export type SyncOptions = {
+  syncMode: SyncMode;
+  autoAddToTransactionForOwner?: DeferredSyncOwner | undefined;
+};
 
 export const IMMEDIATE_SYNC = { syncMode: 'immediate' } as const satisfies SyncOptions;
 export const DEFERRED_SYNC = { syncMode: 'defer' } as const satisfies SyncOptions;
@@ -16,20 +19,27 @@ export const DEFERRED_SYNC_OWNERS = {
   objectEditor: 'object_editor',
 } as const;
 
+export const OBJECT_EDITOR_AUTO_DEFER_SYNC = {
+  syncMode: 'immediate',
+  autoAddToTransactionForOwner: DEFERRED_SYNC_OWNERS.objectEditor,
+} as const satisfies SyncOptions;
+
 export type DeferredSyncOwner =
   (typeof DEFERRED_SYNC_OWNERS)[keyof typeof DEFERRED_SYNC_OWNERS] | (string & {});
 
 type DeferredSyncStoreState = {
   activeOwner: string | undefined;
   syncingEntityIds: Record<string, true>;
-  addSyncingEntityIds: (ids: string[], owner?: string) => void;
+  mutatedEntityIds: Record<string, true>;
+  addSyncingEntityIds: (ids: string[], owner?: string, options?: { isMutation?: boolean }) => void;
   removeSyncingEntityIds: (ids: string[]) => void;
 };
 
 export const useDeferredSyncStore = create<DeferredSyncStoreState>((set) => ({
   activeOwner: undefined,
   syncingEntityIds: {},
-  addSyncingEntityIds: (ids, owner) => {
+  mutatedEntityIds: {},
+  addSyncingEntityIds: (ids, owner, options) => {
     if (owner !== undefined) {
       assert(owner.trim().length > 0, 'Deferred sync owner must be a non-empty string.');
     }
@@ -41,53 +51,77 @@ export const useDeferredSyncStore = create<DeferredSyncStoreState>((set) => ({
         );
       }
 
-      let hasNew = false;
-      const next = { ...state.syncingEntityIds };
+      let hasNewSync = false;
+      const nextSync = { ...state.syncingEntityIds };
+      const isMutation = options?.isMutation === true;
+      let hasNewMutated = false;
+      const nextMutated = isMutation ? { ...state.mutatedEntityIds } : state.mutatedEntityIds;
+
       for (const id of ids) {
-        if (!next[id]) {
-          next[id] = true;
-          hasNew = true;
+        if (!nextSync[id]) {
+          nextSync[id] = true;
+          hasNewSync = true;
+        }
+        if (isMutation && !nextMutated[id]) {
+          nextMutated[id] = true;
+          hasNewMutated = true;
         }
       }
 
       const nextOwner = owner ?? state.activeOwner;
       const ownerChanged = nextOwner !== state.activeOwner;
 
-      if (!hasNew && !ownerChanged) {
+      if (!hasNewSync && !hasNewMutated && !ownerChanged) {
         return state;
       }
 
       return {
         activeOwner: nextOwner,
-        syncingEntityIds: hasNew ? next : state.syncingEntityIds,
+        syncingEntityIds: hasNewSync ? nextSync : state.syncingEntityIds,
+        mutatedEntityIds: hasNewMutated ? nextMutated : state.mutatedEntityIds,
       };
     });
   },
   removeSyncingEntityIds: (ids) => {
     set((state) => {
-      let hasRemoved = false;
-      const next = { ...state.syncingEntityIds };
+      let hasRemovedSync = false;
+      const nextSync = { ...state.syncingEntityIds };
+      let hasRemovedMutated = false;
+      const nextMutated = { ...state.mutatedEntityIds };
+
       for (const id of ids) {
-        if (next[id]) {
-          delete next[id];
-          hasRemoved = true;
+        if (nextSync[id]) {
+          delete nextSync[id];
+          hasRemovedSync = true;
+        }
+        if (nextMutated[id]) {
+          delete nextMutated[id];
+          hasRemovedMutated = true;
         }
       }
 
-      const nextOwner = Object.keys(next).length === 0 ? undefined : state.activeOwner;
+      const nextOwner = Object.keys(nextSync).length === 0 ? undefined : state.activeOwner;
       const ownerChanged = nextOwner !== state.activeOwner;
 
-      if (!hasRemoved && !ownerChanged) {
+      if (!hasRemovedSync && !hasRemovedMutated && !ownerChanged) {
         return state;
       }
 
       return {
         activeOwner: nextOwner,
-        syncingEntityIds: hasRemoved ? next : state.syncingEntityIds,
+        syncingEntityIds: hasRemovedSync ? nextSync : state.syncingEntityIds,
+        mutatedEntityIds: hasRemovedMutated ? nextMutated : state.mutatedEntityIds,
       };
     });
   },
 }));
+
+export function useHasPendingDeferredSyncMutations(owner?: DeferredSyncOwner): boolean {
+  return useDeferredSyncStore(
+    (state) =>
+      Object.keys(state.mutatedEntityIds).length > 0 && (owner === undefined || state.activeOwner === owner)
+  );
+}
 
 export function useActiveDeferredSyncOwner(): string | undefined {
   return useDeferredSyncStore((state) => state.activeOwner);
@@ -153,19 +187,60 @@ export function waitForDeferredSyncLockAvailability(owner: string, abortSignal?:
   });
 }
 
-export function useIsEntityInDeferredSync(entityId: string | undefined): boolean {
-  return useDeferredSyncStore((state) => (entityId ? Boolean(state.syncingEntityIds[entityId]) : false));
+export type DeferredSyncCheckOptions = {
+  ignoreOwner?: DeferredSyncOwner | undefined;
+};
+
+function isSyncIgnoredForOwner(activeOwner: string | undefined, options?: DeferredSyncCheckOptions): boolean {
+  return options?.ignoreOwner !== undefined && activeOwner === options.ignoreOwner;
 }
 
-export function useAreAnyEntitiesInDeferredSync(entityIds: ReadonlyArray<string | undefined>): boolean {
-  return useDeferredSyncStore((state) =>
-    entityIds.some((id) => (id ? Boolean(state.syncingEntityIds[id]) : false))
-  );
+export function useIsEntityInDeferredSync(
+  entityId: string | undefined,
+  options?: DeferredSyncCheckOptions
+): boolean {
+  return useDeferredSyncStore((state) => {
+    if (!entityId || isSyncIgnoredForOwner(state.activeOwner, options)) {
+      return false;
+    }
+    return Boolean(state.syncingEntityIds[entityId]);
+  });
 }
 
-export function isEntityInDeferredSync(entityId: string | undefined): boolean {
+export function useAreAnyEntitiesInDeferredSync(
+  entityIds: ReadonlyArray<string | undefined>,
+  options?: DeferredSyncCheckOptions
+): boolean {
+  return useDeferredSyncStore((state) => {
+    if (isSyncIgnoredForOwner(state.activeOwner, options)) {
+      return false;
+    }
+    return entityIds.some((id) => (id ? Boolean(state.syncingEntityIds[id]) : false));
+  });
+}
+
+export function isEntityInDeferredSync(
+  entityId: string | undefined,
+  options?: DeferredSyncCheckOptions
+): boolean {
   if (!entityId) return false;
-  return Boolean(useDeferredSyncStore.getState().syncingEntityIds[entityId]);
+  const state = useDeferredSyncStore.getState();
+  if (isSyncIgnoredForOwner(state.activeOwner, options)) {
+    return false;
+  }
+  return Boolean(state.syncingEntityIds[entityId]);
+}
+
+export function useIsEntityLockedForEditing(entityId: string | undefined): boolean {
+  return useIsEntityInDeferredSync(entityId, { ignoreOwner: DEFERRED_SYNC_OWNERS.objectEditor });
+}
+
+export function useAreAnyEntitiesLockedForEditing(entityIds: ReadonlyArray<string | undefined>): boolean {
+  return useAreAnyEntitiesInDeferredSync(entityIds, { ignoreOwner: DEFERRED_SYNC_OWNERS.objectEditor });
+}
+
+export function isEntityLockedForEditing(entityId: string | undefined): boolean {
+  return isEntityInDeferredSync(entityId, { ignoreOwner: DEFERRED_SYNC_OWNERS.objectEditor });
 }
 
 export interface IEphemeralStateDelegate<TEntityType> {
@@ -181,6 +256,26 @@ export interface IEphemeralStateDelegate<TEntityType> {
   readonly getEntitiesFromDatabase: (entities: TEntityType[]) => Promise<TEntityType[]>;
 }
 
+const activeHelpersWithPendingOperations = new Set<{
+  readonly activeTransactionOwner: string | undefined;
+  commitChanges: () => Promise<void>;
+  discardPendingChanges: () => Promise<void>;
+}>();
+
+export async function commitDeferredSyncForOwner(owner: DeferredSyncOwner): Promise<void> {
+  const helpers = [...activeHelpersWithPendingOperations].filter(
+    (helper) => helper.activeTransactionOwner === owner
+  );
+  await Promise.all(helpers.map((helper) => helper.commitChanges()));
+}
+
+export async function discardDeferredSyncForOwner(owner: DeferredSyncOwner): Promise<void> {
+  const helpers = [...activeHelpersWithPendingOperations].filter(
+    (helper) => helper.activeTransactionOwner === owner
+  );
+  await Promise.all(helpers.map((helper) => helper.discardPendingChanges()));
+}
+
 export class EphemeralStateHelper<TEntityType extends { id: string }> {
   private readonly pendingOperations = new Map<
     string,
@@ -191,6 +286,11 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
   >();
 
   private databaseQueuePromise = Promise.resolve();
+  private transactionOwner: string | undefined = undefined;
+
+  public get activeTransactionOwner(): string | undefined {
+    return this.transactionOwner;
+  }
 
   constructor(
     // Upsert these entities into the store state
@@ -220,9 +320,12 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
         });
       }
     }
+    this.transactionOwner = owner ?? this.transactionOwner ?? getActiveDeferredSyncOwner();
+    activeHelpersWithPendingOperations.add(this);
     useDeferredSyncStore.getState().addSyncingEntityIds(
       entities.map((e) => e.id),
-      owner
+      owner,
+      { isMutation: false }
     );
   }
 
@@ -273,6 +376,8 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
       .filter((operation) => operation.operationType !== 'lock')
       .map((operation) => operation.entity);
     this.pendingOperations.clear();
+    this.transactionOwner = undefined;
+    activeHelpersWithPendingOperations.delete(this);
 
     if (entitiesToRefresh.length > 0) {
       this.databaseQueuePromise = this.databaseQueuePromise
@@ -297,6 +402,8 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     const flushedIds = Array.from(this.pendingOperations.keys());
     const uniqueOperations = [...this.pendingOperations.values()];
     this.pendingOperations.clear();
+    this.transactionOwner = undefined;
+    activeHelpersWithPendingOperations.delete(this);
 
     const updates = uniqueOperations.filter((o) => o.operationType === 'upsert').map((o) => o.entity);
     const deletes = uniqueOperations.filter((o) => o.operationType === 'delete').map((o) => o.entity);
@@ -318,11 +425,23 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
   public abandonPendingChanges() {
     const flushedIds = Array.from(this.pendingOperations.keys());
     this.pendingOperations.clear();
+    this.transactionOwner = undefined;
+    activeHelpersWithPendingOperations.delete(this);
     useDeferredSyncStore.getState().removeSyncingEntityIds(flushedIds);
   }
 
+  private resolveAutoDeferOwner(options: SyncOptions): string | undefined {
+    if (options.syncMode === 'defer' || options.autoAddToTransactionForOwner === undefined) {
+      return undefined;
+    }
+
+    return getActiveDeferredSyncOwner() === options.autoAddToTransactionForOwner
+      ? options.autoAddToTransactionForOwner
+      : undefined;
+  }
+
   private assertCanSyncImmediately(entities: TEntityType[], options: SyncOptions) {
-    if (options.syncMode !== 'immediate') {
+    if (options.syncMode !== 'immediate' || this.resolveAutoDeferOwner(options) !== undefined) {
       return;
     }
 
@@ -338,7 +457,8 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     entities: TEntityType[],
     options: SyncOptions
   ) {
-    if (options.syncMode === 'defer') {
+    const autoDeferOwner = this.resolveAutoDeferOwner(options);
+    if (options.syncMode === 'defer' || autoDeferOwner !== undefined) {
       const ids = entities.map((e) => e.id);
       for (const entity of entities) {
         this.pendingOperations.set(entity.id, {
@@ -346,7 +466,9 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
           entity,
         });
       }
-      useDeferredSyncStore.getState().addSyncingEntityIds(ids);
+      this.transactionOwner = autoDeferOwner ?? this.transactionOwner ?? getActiveDeferredSyncOwner();
+      activeHelpersWithPendingOperations.add(this);
+      useDeferredSyncStore.getState().addSyncingEntityIds(ids, autoDeferOwner, { isMutation: true });
       return;
     }
 

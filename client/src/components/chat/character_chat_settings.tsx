@@ -7,7 +7,10 @@ import { useActiveChatParticipants, useTurnMachineStore } from '../../state/turn
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
 import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
-import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
+import {
+  OBJECT_EDITOR_AUTO_DEFER_SYNC,
+  useIsEntityLockedForEditing,
+} from '../../state/ephemeral_state_helper.js';
 import CharacterLocationSelect from '../CharacterLocationSelect.js';
 import CharacterAvatar from '../CharacterAvatar.js';
 import { useQueryParam } from '../../util/queryParams.js';
@@ -22,7 +25,7 @@ export default function CharacterChatSettings() {
   const participants = useActiveChatParticipants();
   const chatInstructionsByCharacterId = useTurnMachineStore((state) => state.chatInstructionsByCharacterId);
   const { showCharacterOverview } = useCharacterOverview();
-  const isCharacterSyncing = useIsEntityInDeferredSync(settingsCharacterId);
+  const isCharacterSyncing = useIsEntityLockedForEditing(settingsCharacterId);
   const activeMap = useActiveScenarioMap();
 
   const onClose = () => setSettingsCharacterId(undefined);
@@ -43,9 +46,13 @@ export default function CharacterChatSettings() {
 
   const isUserCharacter = character.id === scenario.userCharacterId;
   const persistWardrobes = (updatedWardrobes: Character['wardrobes']) => {
-    saveScenarioCharacterFields(character.id, {
-      wardrobes: updatedWardrobes,
-    });
+    saveScenarioCharacterFields(
+      character.id,
+      {
+        wardrobes: updatedWardrobes,
+      },
+      OBJECT_EDITOR_AUTO_DEFER_SYNC
+    );
   };
 
   return (

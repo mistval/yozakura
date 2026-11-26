@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { ObjectEditorSession } from '../../engine/object_editor/object_editor_delegates.js';
 import { getErrorMessage } from '../../errors/error_util.js';
 import { useCopyToClipboard } from '../../hooks/use_copy_to_clipboard.js';
+import { useDraft } from '../../hooks/useDraft.js';
 import AIAssistantInstructionsButton from '../ui/AIAssistantInstructionsButton.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
 
@@ -27,12 +28,8 @@ export function ObjectEditorRawJsonSection({
   );
 
   const syncedValue = invalidManualEdit?.rawJson ?? formattedCurrentObject;
-  const [draft, setDraft] = useState(syncedValue);
+  const [draft, setDraft] = useDraft(syncedValue);
   const { copied, copy } = useCopyToClipboard();
-
-  useEffect(() => {
-    setDraft(syncedValue);
-  }, [syncedValue]);
 
   const isLockedOrBusy = disabled || Boolean(pendingTurn);
 
