@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 import { ConversationTranscript } from '../../engine/chat/transcript.js';
 import type { ConversationStateUpdateNode, StoredConversation } from '../../engine/types.js';
-import { useIsMobileLayout } from '../../hooks/use_mobile_layout.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
-import ChatView from '../chat/ChatView.js';
+import ChatView, { type ChatViewParticipant } from '../chat/ChatView.js';
 import { transcriptToChatViewMessages } from '../chat/transcript_chat_messages.js';
 import { useViewRelationshipCapability } from '../chat/capabilities/use_view_relationship_capability.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
@@ -63,7 +62,6 @@ function StateUpdateNodeView({ node, pathKey }: { node: ConversationStateUpdateN
 }
 
 export default function ConversationLogView({ userId, selectedEntry, onBack }: ConversationLogViewProps) {
-  const isMobileLayout = useIsMobileLayout();
   const charactersById = useScenarioCharacterStore((s) => s.scenarioCharactersById);
 
   const transcript = useMemo(
@@ -72,15 +70,31 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
     [selectedEntry]
   );
 
-  const chatMessages = useMemo(
-    () => (transcript ? transcriptToChatViewMessages(transcript, userId) : []),
-    [transcript, userId]
-  );
-
   const participants = selectedEntry?.serializedTranscript.participants ?? [];
   const participantById = useMemo(
     () => Object.fromEntries(participants.map((participant) => [participant.id, participant] as const)),
     [participants]
+  );
+
+  const chatViewParticipants = useMemo<ChatViewParticipant[]>(
+    () =>
+      participants.map((participant) => ({
+        id: participant.id,
+        name: `${participant.firstName} ${participant.lastName}`.trim() || 'Unknown',
+        imageUrl: participant.imagePath,
+      })),
+    [participants]
+  );
+
+  const chatMessages = useMemo(
+    () =>
+      transcript
+        ? transcriptToChatViewMessages(transcript, userId, {
+            resolveAvatarImagePath: (senderId) =>
+              participantById[senderId]?.imagePath ?? charactersById[senderId]?.imagePath,
+          })
+        : [],
+    [charactersById, participantById, transcript, userId]
   );
 
   const viewRelationshipCapability = useViewRelationshipCapability({ participants });
@@ -93,24 +107,11 @@ export default function ConversationLogView({ userId, selectedEntry, onBack }: C
     <ChatView
       messages={chatMessages}
       isEmpty={transcript.countAllMessages() === 0}
-      participants={participants}
-      resolveAvatarImagePath={(senderId) =>
-        participantById[senderId]?.imagePath ?? charactersById[senderId]?.imagePath
-      }
-      headerPlacement="top"
+      participants={chatViewParticipants}
+      containerStyle="page"
+      messageStyle="transcript"
       autoScroll={false}
-      messageActionsEnabled={false}
       sidebarQueryParam="cl_participants"
-      sidebarInlineClassName="w-44 shrink-0 min-h-0 flex flex-col gap-3"
-      sidebarListDesktopClassName="space-y-2 overflow-y-auto min-h-0"
-      sidebarCardImageClassName="w-full object-cover object-top border rounded-sm"
-      hideMissingParticipantImage={true}
-      messageListClassName={
-        isMobileLayout
-          ? 'space-y-3 flex-1 min-w-0'
-          : 'border rounded-sm p-3 overflow-y-auto space-y-3 flex-1 min-h-0'
-      }
-      messageRowClassName={isMobileLayout ? 'flow-root text-left py-0.5' : 'flow-root text-left px-1 py-0.5'}
       renderHeader={({ isMobileLayout: mobile, participantsDrawerButton }) => (
         <div className="flex justify-between items-center gap-2">
           <div className="flex items-center gap-2 min-w-0">

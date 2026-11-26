@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import type { TranscriptParticipant } from '../../../engine/types.js';
 import { assertNonNullish } from '../../../errors/application_error.js';
 import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_store.js';
-import type { ChatViewProps } from '../ChatView.js';
+import type { ParticipantCardAction } from '../ChatView.js';
 
 export function useParticipantSpeakCapability({
   participants,
@@ -16,7 +16,7 @@ export function useParticipantSpeakCapability({
   participantById: Record<string, TranscriptParticipant>;
   triggerParticipantSpeak: (participantId: string) => void;
   canLongPressAvatar: (senderId: string) => boolean;
-  paneProps: Pick<ChatViewProps, 'getParticipantAction' | 'canLongPressAvatar' | 'onAvatarLongPress'>;
+  getParticipantAction: (participant: TranscriptParticipant) => ParticipantCardAction | undefined;
 } {
   const submitChatSpeakAs = useScenarioLoopStateStore((state) => state.submitChatSpeakAs);
 
@@ -40,21 +40,22 @@ export function useParticipantSpeakCapability({
     [participantById, userCanInputChat, userCharacterId]
   );
 
+  const getParticipantAction = useCallback(
+    (participant: TranscriptParticipant): ParticipantCardAction | undefined =>
+      participant.id !== userCharacterId
+        ? {
+            label: 'Speak',
+            disabled: !userCanInputChat,
+            onClick: () => triggerParticipantSpeak(participant.id),
+          }
+        : undefined,
+    [triggerParticipantSpeak, userCanInputChat, userCharacterId]
+  );
+
   return {
     participantById,
     triggerParticipantSpeak,
     canLongPressAvatar,
-    paneProps: {
-      getParticipantAction: (participant) =>
-        participant.id !== userCharacterId
-          ? {
-              label: 'Speak',
-              disabled: !userCanInputChat,
-              onClick: () => triggerParticipantSpeak(participant.id),
-            }
-          : undefined,
-      canLongPressAvatar,
-      onAvatarLongPress: triggerParticipantSpeak,
-    },
+    getParticipantAction,
   };
 }

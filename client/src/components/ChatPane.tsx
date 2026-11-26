@@ -19,7 +19,7 @@ import {
 } from '../state/turn_machine_store.js';
 import ImagePromptModal from './ImagePromptModal.js';
 import ChatTopBarStatus from './chat/ChatTopBarStatus.js';
-import ChatView from './chat/ChatView.js';
+import ChatView, { type ChatViewMessageAction, type ChatViewParticipant } from './chat/ChatView.js';
 import { transcriptToChatViewMessages } from './chat/transcript_chat_messages.js';
 import SceneImageControls from './chat/SceneImageControls.js';
 import { useCharacterChatSettingsCapability } from './chat/capabilities/use_character_chat_settings_capability.js';
@@ -62,25 +62,39 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   const isFinalizingChat = useIsChatFinalizing();
   const userCanInputChat = useUserCanInputChat();
 
-  const characterSettingsCapability = useCharacterChatSettingsCapability();
-  const speakCapability = useParticipantSpeakCapability({
-    participants,
-    userCharacterId: userCharacter.id,
-    userCanInputChat,
-  });
-  const messageActionsCapability = useChatMessageActionsCapability({
+  const { openCharacterChatSettings } = useCharacterChatSettingsCapability();
+  const { participantById, triggerParticipantSpeak, canLongPressAvatar, getParticipantAction } =
+    useParticipantSpeakCapability({
+      participants,
+      userCharacterId: userCharacter.id,
+      userCanInputChat,
+    });
+  const {
+    deleteMessage,
+    editMessage,
+    retryMessage,
+    canModifyMessages,
+    canLongPressMessage,
+    retryDisabled,
+    canRetrySender,
+  } = useChatMessageActionsCapability({
     userCharacterId: userCharacter.id,
     userCanInputChat,
     isFinalizingChat,
   });
-  const sceneImageCapability = useSceneImageCapability({ isFinalizingChat });
+  const {
+    requestSceneImage,
+    canGenerateImages,
+    controlsProps: sceneImageControlsProps,
+    modalProps: sceneImageModalProps,
+  } = useSceneImageCapability({ isFinalizingChat });
 
   const canFinishChat = chatJobs.length === 0 && inChatTurnFor === scenario.userCharacterId;
   const isGenerating = chatJobs.length > 0;
   const hasRunningJobs = chatJobs.some((job) => job.state === 'running');
   const includesUser = useMemo(
     () => participants.some((participant) => participant.id === userCharacter.id),
-    [speakCapability.participantById, userCharacter]
+    [participantById, participants, userCharacter]
   );
   const nonUserParticipants = useMemo(
     () => participants.filter((participant) => participant.id !== userCharacter.id),
@@ -93,6 +107,18 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
 
     return nonUserParticipants.concat(userCharacter);
   }, [includesUser, userCharacter, nonUserParticipants]);
+
+  const chatViewParticipants = useMemo<ChatViewParticipant[]>(
+    () =>
+      participantsCardOrder.map((participant) => ({
+        id: participant.id,
+        name: `${participant.firstName} ${participant.lastName}`.trim() || 'Unknown',
+        imageUrl: participant.imagePath,
+        onClick: () => openCharacterChatSettings(participant.id),
+        action: getParticipantAction(participant),
+      })),
+    [getParticipantAction, openCharacterChatSettings, participantsCardOrder]
+  );
 
   const isTwoParticipantChat = participants.length === 2;
   const isPaused = userRequestedPhaseTransition === 'paused';
@@ -123,8 +149,80 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
   }, [transcript?.countAllMessages() === 0]);
 
   const chatMessages = useMemo(
-    () => (transcript ? transcriptToChatViewMessages(transcript, userCharacter.id) : []),
-    [transcript, userCharacter.id]
+    () =>
+      transcript
+        ? transcriptToChatViewMessages(transcript, userCharacter.id, {
+            resolveAvatarImagePath: (senderId) =>
+              participantById[senderId]?.imagePath ?? charactersById[senderId]?.imagePath,
+            buildAvatar: ({ senderId, speakerName, imageUrl }) => {
+              const longPressAllowed = canLongPressAvatar(senderId);
+              return {
+                imageUrl,
+                title: longPressAllowed
+                  ? `Tap for ${speakerName} settings, hold to speak`
+                  : `${speakerName} settings`,
+                onClick: () => openCharacterChatSettings(senderId),
+                onLongPress: longPressAllowed ? () => triggerParticipantSpeak(senderId) : undefined,
+              };
+            },
+            buildMessageCapabilities: (entry) => {
+              if (!canModifyMessages) {
+                return {};
+              }
+
+              const messageId = entry.getId();
+              const actions: ChatViewMessageAction[] = [];
+
+              if (entry.isCharacterChatMessage()) {
+                actions.push({
+                  id: 'generate-image',
+                  label: 'Generate image',
+                  icon: '🖼️',
+                  disabled: !canGenerateImages,
+                  onClick: () => requestSceneImage(messageId),
+                });
+
+                if (canRetrySender(entry.asCharacterChatMessage().senderId)) {
+                  actions.push({
+                    id: 'retry',
+                    label: 'Retry message',
+                    icon: '↻',
+                    disabled: retryDisabled,
+                    onClick: () => retryMessage(messageId),
+                  });
+                }
+              }
+
+              return {
+                onDelete: () => deleteMessage(messageId),
+                edit: !entry.isImageMessage()
+                  ? {
+                      initialContent: entry.getContent(),
+                      onSave: (newContent) => editMessage(messageId, newContent),
+                    }
+                  : undefined,
+                actions: actions.length > 0 ? actions : undefined,
+              };
+            },
+          })
+        : [],
+    [
+      canGenerateImages,
+      canLongPressAvatar,
+      canModifyMessages,
+      canRetrySender,
+      charactersById,
+      deleteMessage,
+      editMessage,
+      openCharacterChatSettings,
+      participantById,
+      requestSceneImage,
+      retryDisabled,
+      retryMessage,
+      transcript,
+      triggerParticipantSpeak,
+      userCharacter.id,
+    ]
   );
 
   if (!transcript || !primaryNpc) {
@@ -234,19 +332,15 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
       <ChatView
         messages={chatMessages}
         isEmpty={transcript.countAllMessages() === 0}
-        participants={participantsCardOrder}
-        resolveAvatarImagePath={(senderId) =>
-          speakCapability.participantById[senderId]?.imagePath ?? charactersById[senderId]?.imagePath
-        }
+        participants={chatViewParticipants}
+        containerStyle="panel"
+        messageStyle="transcript"
+        participantImageStyle={isTwoParticipantChat ? 'full' : 'compact'}
         sidebarQueryParam="chatparticipants"
         sidebarZIndex={40}
-        sidebarCardImageClassName={
-          isTwoParticipantChat || isMobileLayout
-            ? 'w-full h-auto border rounded-sm'
-            : 'w-full h-36 object-cover object-top border rounded-sm'
-        }
         participantsDrawerAriaLabel="Open character tray"
         participantsDrawerTitle="Chat participants"
+        canLongPressMessage={canLongPressMessage}
         renderHeader={({ isMobileLayout: mobile, participantsDrawerButton }) =>
           mobile ? (
             <div className="space-y-2 shrink-0">
@@ -305,15 +399,6 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
                 : 'Conversation in progress...'}
           </div>
         }
-        getAvatarTitle={(senderId, speakerName) =>
-          speakCapability.canLongPressAvatar(senderId)
-            ? `Tap for ${speakerName} settings, hold to speak`
-            : `${speakerName} settings`
-        }
-        {...characterSettingsCapability.paneProps}
-        {...speakCapability.paneProps}
-        {...messageActionsCapability.paneProps}
-        {...sceneImageCapability.paneProps}
         onSendMessage={sendMessage}
         inputPlaceholder={
           includesUser ? 'Enter a message' : 'Entering a message will add the user to the chat.'
@@ -338,16 +423,14 @@ export default function ChatPane({ onOpenScenarioMenu }: ChatPaneProps) {
               </button>
             )}
             <SceneImageControls
-              {...sceneImageCapability.controlsProps}
-              onRequestLatestImage={() =>
-                sceneImageCapability.requestSceneImage(transcript.getMostRecentChatMessage()?.id)
-              }
+              {...sceneImageControlsProps}
+              onRequestLatestImage={() => requestSceneImage(transcript.getMostRecentChatMessage()?.id)}
             />
           </>
         }
       />
 
-      <ImagePromptModal {...sceneImageCapability.modalProps} />
+      <ImagePromptModal {...sceneImageModalProps} />
 
       <ChatSettings />
 

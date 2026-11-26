@@ -1,11 +1,10 @@
 import { useMemo, useRef, useState } from 'react';
-import Markdown from 'react-markdown';
 import type { ObjectEditorSession } from '../../engine/object_editor/object_editor_delegates.js';
 import { ParallelJobCancellationError } from '../../engine/parallelization/job_manager_types.js';
 import { getErrorMessage } from '../../errors/error_util.js';
-import ChatView, { type ChatViewMessage } from '../chat/ChatView.js';
+import ChatView, { type ChatViewMessage, type ChatViewMessagePart } from '../chat/ChatView.js';
 import ConfirmDialog from '../ui/ConfirmDialog.js';
-import { ObjectEditorPatchDisplay } from './ObjectEditorPatchDisplay.js';
+import { buildObjectEditorPatchParts } from './object_editor_patch_parts.js';
 
 const JSON_PATCH_TAG_PATTERN = /<json_patch/i;
 
@@ -112,34 +111,31 @@ export function ObjectEditorChatPane({
 
   const chatMessages = useMemo<ChatViewMessage[]>(() => {
     const result: ChatViewMessage[] = [];
+    const revertDisabled = disabled || Boolean(pendingTurn) || isReverting;
 
     history.forEach((entry, index) => {
       if (entry.source === 'manual') {
         result.push({
           id: entry.id,
           speakerName: 'Manual Edit',
-          content: entry.agentMessage,
-          customContent: (
-            <div className="rounded-sm border border-border-default bg-surface-subtle p-2.5 space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
-                  Manual Edit
-                </span>
-                {entry.canRevert && (
-                  <button
-                    type="button"
-                    disabled={disabled || Boolean(pendingTurn) || isReverting}
-                    onClick={() => handleRevertClick(index)}
-                    className="px-2 py-0.5 text-xs"
-                  >
-                    ↻ Revert
-                  </button>
-                )}
-              </div>
-              <div className="text-sm text-secondary">{entry.agentMessage}</div>
-              <ObjectEditorPatchDisplay entry={entry} />
-            </div>
-          ),
+          speakerStyle: 'uppercase',
+          tone: 'subtle',
+          parts: [
+            { type: 'text', text: entry.agentMessage, tone: 'secondary' },
+            ...buildObjectEditorPatchParts(entry),
+          ],
+          actions: entry.canRevert
+            ? [
+                {
+                  id: 'revert',
+                  label: 'Revert',
+                  icon: '↻',
+                  placement: 'header',
+                  disabled: revertDisabled,
+                  onClick: () => handleRevertClick(index),
+                },
+              ]
+            : undefined,
         });
         return;
       }
@@ -147,44 +143,33 @@ export function ObjectEditorChatPane({
       result.push({
         id: `${entry.id}:user`,
         speakerName: 'You',
-        content: entry.userMessage,
-        customContent: (
-          <div className="rounded-sm border border-border-default bg-surface-subtle p-2.5 space-y-1">
-            <div className="text-xs font-semibold text-secondary">You</div>
-            <div className="text-sm whitespace-pre-wrap wrap-break-word text-primary">
-              {entry.userMessage}
-            </div>
-          </div>
-        ),
+        tone: 'subtle',
+        parts: [{ type: 'text', text: entry.userMessage }],
       });
+
+      const aiParts: ChatViewMessagePart[] = [];
+      if (entry.agentMessage) {
+        aiParts.push({ type: 'markdown', text: entry.agentMessage });
+      }
+      aiParts.push(...buildObjectEditorPatchParts(entry));
 
       result.push({
         id: `${entry.id}:ai`,
         speakerName: 'Assistant',
-        content: entry.agentMessage,
-        customContent: (
-          <div className="rounded-sm border border-border-default bg-emphasized p-2.5 space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-secondary">Assistant</span>
-              {entry.canRevert && (
-                <button
-                  type="button"
-                  disabled={disabled || Boolean(pendingTurn) || isReverting}
-                  onClick={() => handleRevertClick(index)}
-                  className="px-2 py-0.5 text-xs"
-                >
-                  ↻ Revert
-                </button>
-              )}
-            </div>
-            {entry.agentMessage && (
-              <div className="text-sm leading-relaxed wrap-break-word text-primary [&>p+p]:mt-2">
-                <Markdown>{entry.agentMessage}</Markdown>
-              </div>
-            )}
-            <ObjectEditorPatchDisplay entry={entry} />
-          </div>
-        ),
+        tone: 'emphasized',
+        parts: aiParts,
+        actions: entry.canRevert
+          ? [
+              {
+                id: 'revert',
+                label: 'Revert',
+                icon: '↻',
+                placement: 'header',
+                disabled: revertDisabled,
+                onClick: () => handleRevertClick(index),
+              },
+            ]
+          : undefined,
       });
     });
 
@@ -193,36 +178,25 @@ export function ObjectEditorChatPane({
       result.push({
         id: 'pending:user',
         speakerName: 'You',
-        content: pendingTurn.userMessage,
-        customContent: (
-          <div className="rounded-sm border border-border-default bg-surface-subtle p-2.5 space-y-1">
-            <div className="text-xs font-semibold text-secondary">You</div>
-            <div className="text-sm whitespace-pre-wrap wrap-break-word text-primary">
-              {pendingTurn.userMessage}
-            </div>
-          </div>
-        ),
+        tone: 'subtle',
+        parts: [{ type: 'text', text: pendingTurn.userMessage }],
       });
+
+      const pendingParts: ChatViewMessagePart[] = [];
+      if (streamingPreview.visibleText) {
+        pendingParts.push({ type: 'markdown', text: streamingPreview.visibleText });
+      }
+      if (streamingPreview.hasPatchStarted) {
+        pendingParts.push({ type: 'text', text: 'Generating patch...', tone: 'muted', italic: true });
+      } else if (!streamingPreview.visibleText) {
+        pendingParts.push({ type: 'text', text: 'Thinking...', tone: 'muted', italic: true });
+      }
 
       result.push({
         id: 'pending:ai',
         speakerName: 'Assistant',
-        content: pendingTurn.streamingMessage,
-        customContent: (
-          <div className="rounded-sm border border-border-default bg-emphasized p-2.5 space-y-2">
-            <div className="text-xs font-semibold text-secondary">Assistant</div>
-            {streamingPreview.visibleText && (
-              <div className="text-sm leading-relaxed wrap-break-word text-primary [&>p+p]:mt-2">
-                <Markdown>{streamingPreview.visibleText}</Markdown>
-              </div>
-            )}
-            {streamingPreview.hasPatchStarted ? (
-              <div className="text-sm text-muted italic">Generating patch...</div>
-            ) : !streamingPreview.visibleText ? (
-              <div className="text-sm text-muted italic">Thinking...</div>
-            ) : undefined}
-          </div>
-        ),
+        tone: 'emphasized',
+        parts: pendingParts,
       });
     }
 
@@ -238,16 +212,14 @@ export function ObjectEditorChatPane({
       <ChatView
         messages={chatMessages}
         isEmpty={history.length === 0 && !pendingTurn}
-        className="flex min-h-0 flex-1 flex-col gap-2"
-        messageListClassName="min-h-0 flex-1 overflow-y-auto rounded-sm border border-border-default bg-inset p-3"
-        messageRowClassName="relative group text-left"
+        containerStyle="embedded"
+        messageListStyle="inset"
+        messageStyle="cards"
         emptyState={
           <div className="py-6 text-center text-sm text-muted">
             Ask questions about this object or describe edits you&apos;d like me to make.
           </div>
         }
-        messageActionsEnabled={!disabled && !pendingTurn}
-        canLongPressMessage={!disabled && !pendingTurn}
         onSendMessage={(message) => void handleSend(message)}
         inputDraft={draft}
         onInputDraftChange={setDraft}

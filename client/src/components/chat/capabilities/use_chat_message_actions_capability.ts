@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { ChatCoordinator } from '../../../engine/chat/chat_coordinator.js';
 import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_store.js';
-import type { ChatViewMessage, ChatViewProps } from '../ChatView.js';
 
 export function useChatMessageActionsCapability({
   userCharacterId,
@@ -12,41 +11,33 @@ export function useChatMessageActionsCapability({
   userCanInputChat: boolean;
   isFinalizingChat: boolean;
 }): {
-  paneProps: Pick<
-    ChatViewProps,
-    | 'messageActionsEnabled'
-    | 'canLongPressMessage'
-    | 'onDeleteMessage'
-    | 'onEditMessage'
-    | 'onRetryMessage'
-    | 'canShowRetryMessage'
-    | 'retryMessageDisabled'
-  >;
+  deleteMessage: (messageId: string) => void;
+  editMessage: (messageId: string, newContent: string) => void;
+  retryMessage: (messageId: string) => void;
+  canModifyMessages: boolean;
+  canLongPressMessage: boolean;
+  retryDisabled: boolean;
+  canRetrySender: (senderId: string) => boolean;
 } {
   const submitChatRedoMessage = useScenarioLoopStateStore((state) => state.submitChatRedoMessage);
 
-  const onDeleteMessage = useCallback((messageId: string) => {
+  const deleteMessage = useCallback((messageId: string) => {
     ChatCoordinator.deleteMessageById(messageId);
   }, []);
 
-  const onEditMessage = useCallback((messageId: string, newContent: string) => {
+  const editMessage = useCallback((messageId: string, newContent: string) => {
     ChatCoordinator.editMessageById(messageId, newContent);
   }, []);
 
-  const canShowRetryMessage = useCallback(
-    (message: ChatViewMessage) => Boolean(message.isCharacterMessage && message.senderId !== userCharacterId),
-    [userCharacterId]
-  );
+  const canRetrySender = useCallback((senderId: string) => senderId !== userCharacterId, [userCharacterId]);
 
   return {
-    paneProps: {
-      messageActionsEnabled: !isFinalizingChat,
-      canLongPressMessage: userCanInputChat,
-      onDeleteMessage,
-      onEditMessage,
-      onRetryMessage: submitChatRedoMessage,
-      canShowRetryMessage,
-      retryMessageDisabled: !userCanInputChat,
-    },
+    deleteMessage,
+    editMessage,
+    retryMessage: submitChatRedoMessage,
+    canModifyMessages: !isFinalizingChat,
+    canLongPressMessage: userCanInputChat,
+    retryDisabled: !userCanInputChat,
+    canRetrySender,
   };
 }

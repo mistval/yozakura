@@ -5,7 +5,6 @@ import { useTemporaryFlag } from '../../../hooks/use_temporary_flag.js';
 import { ChatJobTags, useImageGenerationJobs } from '../../../state/chat_state.js';
 import { useScenarioLoopStateStore } from '../../../state/scenario_loop_state_store.js';
 import { useSettingsStore } from '../../../state/settings_store.js';
-import type { ChatViewProps } from '../ChatView.js';
 
 export function useSceneImageCapability({ isFinalizingChat }: { isFinalizingChat: boolean }) {
   const selectedSceneImageTemplateChainId = useSettingsStore((s) => s.selectedSceneImageTemplateChainId);
@@ -57,14 +56,9 @@ export function useSceneImageCapability({ isFinalizingChat }: { isFinalizingChat
     [setSettings]
   );
 
-  const paneProps: Pick<ChatViewProps, 'onGenerateImageForMessage' | 'generateImageDisabled'> = {
-    onGenerateImageForMessage: requestSceneImage,
-    generateImageDisabled: !canGenerateImages,
-  };
-
   return {
     requestSceneImage,
-    paneProps,
+    canGenerateImages,
     controlsProps: {
       canGenerateImages,
       imageRequestedRecently,
