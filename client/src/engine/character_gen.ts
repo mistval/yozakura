@@ -4,11 +4,12 @@ import {
   embedYozakuraCharacterInPng,
   extractSillyTavernNameParts,
   extractSillyTavernRawImportFields,
+  extractSillyTavernTimestamps,
   type YozakuraCardPayload,
   type SillyTavernCardPayload,
   type DetectedCardMetadata,
 } from './character_card_metadata.js';
-import { type Character, type ParallelPromptJobConfig } from './types.js';
+import { timestampSchema, type Character, type ParallelPromptJobConfig } from './types.js';
 import { createWardrobe, DAILY_AUTOSELECT_TAG_PREFIX, formatPrefixedTag } from './wardrobes.js';
 import {
   baseAppearanceGenerationTemplateChain,
@@ -195,6 +196,15 @@ export function createBlankCharacter(): Character {
   };
 }
 
+function pickValidTimestamp(...candidates: Array<string | undefined>): string {
+  for (const candidate of candidates) {
+    if (candidate !== undefined && timestampSchema.safeParse(candidate).success) {
+      return candidate;
+    }
+  }
+  return new Date().toISOString();
+}
+
 export function mergeYozakuraCardIntoCharacter(
   character: Character,
   payload: YozakuraCardPayload
@@ -204,11 +214,16 @@ export function mergeYozakuraCardIntoCharacter(
     importedCharacter.wardrobes.length > 0
       ? importedCharacter.wardrobes.map((w) => createWardrobe(w))
       : character.wardrobes;
+  const nowIso = new Date().toISOString();
+  const createdAt = pickValidTimestamp(importedCharacter.createdAt, character.createdAt, nowIso);
+  const updatedAt = pickValidTimestamp(importedCharacter.updatedAt, character.updatedAt, createdAt);
 
   return {
     ...character,
     ..._.pickBy(importedCharacter),
     wardrobes,
+    createdAt,
+    updatedAt,
   };
 }
 
@@ -218,19 +233,23 @@ export function buildSillyTavernExtractionCharacter(
 ): Character {
   const extractionDescription = buildSillyTavernExtractionDescription(payload);
   const nameParts = extractSillyTavernNameParts(payload);
+  const timestamps = extractSillyTavernTimestamps(payload);
 
   return {
     ...character,
     ..._.pickBy(nameParts),
+    ...timestamps,
     internalDescription: extractionDescription,
   };
 }
 
 export function applySillyTavernRawImport(character: Character, payload: SillyTavernCardPayload): Character {
   const importedFields = extractSillyTavernRawImportFields(payload);
+  const timestamps = extractSillyTavernTimestamps(payload);
 
   return {
     ...character,
+    ...timestamps,
     firstName: importedFields.firstName || character.firstName,
     lastName: importedFields.lastName ?? character.lastName,
     internalDescription: importedFields.internalDescription || character.internalDescription,

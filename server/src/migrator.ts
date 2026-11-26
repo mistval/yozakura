@@ -10,6 +10,7 @@ import { migration as migration0007NormalizeEntityIds } from './migrations/0007_
 import { migration as migration0008RemoteChatMedium } from './migrations/0008_remote_chat_medium.js';
 import { migration as migration0009TurnWardrobeAutoselectFlag } from './migrations/0009_turn_wardrobe_autoselect_flag.js';
 import { migration as migration0010ScenarioTurnOffset } from './migrations/0010_scenario_turn_offset.js';
+import { migration as migration0011BackfillCharacterTimestamps } from './migrations/0011_backfill_character_timestamps.js';
 import type { Migration, MigrationContext } from './types.js';
 
 /**
@@ -31,6 +32,7 @@ const migrations: Migration[] = [
   migration0008RemoteChatMedium,
   migration0009TurnWardrobeAutoselectFlag,
   migration0010ScenarioTurnOffset,
+  migration0011BackfillCharacterTimestamps,
 ];
 
 function getUserVersion(db: Database.Database): number {

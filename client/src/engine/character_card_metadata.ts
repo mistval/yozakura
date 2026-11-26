@@ -1,5 +1,5 @@
 import { addMetadata, getMetadata } from 'meta-png';
-import { characterSchema, wardrobeSchema } from './types.js';
+import { characterSchema, timestampSchema, wardrobeSchema } from './types.js';
 import z from 'zod';
 import { safeParseJson } from '../util/json.js';
 import { CURRENT_CHARACTER_CARD_VERSION, runCharacterCardMigrations } from './character_card_migrator.js';
@@ -56,6 +56,9 @@ type SillyTavernCardData = {
   personality?: unknown;
   example_dialogue?: unknown;
   tags?: unknown;
+  creation_date?: unknown;
+  modification_date?: unknown;
+  create_date?: unknown;
 };
 
 export type SillyTavernCardPayload = {
@@ -199,6 +202,9 @@ function toSillyTavernCardPayload(value: unknown): SillyTavernCardPayload | unde
       personality: dataRecord.personality,
       example_dialogue: dataRecord.mes_example || dataRecord.example_dialogue,
       tags: dataRecord.tags,
+      creation_date: dataRecord.creation_date,
+      modification_date: dataRecord.modification_date,
+      create_date: dataRecord.create_date ?? value.create_date,
     },
   };
 }
@@ -326,4 +332,70 @@ export function extractSillyTavernRawImportFields(payload: SillyTavernCardPayloa
     internalDescription,
     exampleDialogue,
   };
+}
+
+const SILLY_TAVERN_V2_DATE_PATTERN =
+  /^(\d{4})-(\d{1,2})-(\d{1,2})\s*@(\d{1,2})h\s*(\d{1,2})m\s*(\d{1,2})s(?:\s*(\d{1,3})ms)?$/i;
+
+function parseCardTimestamp(candidate: unknown): string | undefined {
+  if (typeof candidate === 'number') {
+    if (!Number.isFinite(candidate) || candidate <= 0) {
+      return undefined;
+    }
+    const ms = candidate < 1e12 ? candidate * 1000 : candidate;
+    const date = new Date(ms);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+  }
+
+  if (typeof candidate !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = candidate.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const v2Match = SILLY_TAVERN_V2_DATE_PATTERN.exec(trimmed);
+  if (v2Match) {
+    const year = Number(v2Match[1]);
+    const month = Number(v2Match[2]);
+    const day = Number(v2Match[3]);
+    const hour = Number(v2Match[4]);
+    const minute = Number(v2Match[5]);
+    const second = Number(v2Match[6]);
+    const millisecond = v2Match[7] !== undefined ? Number(v2Match[7]) : 0;
+
+    const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second, millisecond));
+    if (
+      Number.isNaN(utcDate.getTime()) ||
+      utcDate.getUTCFullYear() !== year ||
+      utcDate.getUTCMonth() !== month - 1 ||
+      utcDate.getUTCDate() !== day ||
+      utcDate.getUTCHours() !== hour ||
+      utcDate.getUTCMinutes() !== minute ||
+      utcDate.getUTCSeconds() !== second
+    ) {
+      return undefined;
+    }
+    return utcDate.toISOString();
+  }
+
+  if (timestampSchema.safeParse(trimmed).success) {
+    return trimmed;
+  }
+
+  const parsedMs = Date.parse(trimmed);
+  return Number.isNaN(parsedMs) ? undefined : new Date(parsedMs).toISOString();
+}
+
+export function extractSillyTavernTimestamps(
+  payload: SillyTavernCardPayload,
+  nowIso: string = new Date().toISOString()
+): { createdAt: string; updatedAt: string } {
+  const createdAt =
+    parseCardTimestamp(payload.data.creation_date) ?? parseCardTimestamp(payload.data.create_date) ?? nowIso;
+  const updatedAt = parseCardTimestamp(payload.data.modification_date) ?? createdAt;
+
+  return { createdAt, updatedAt };
 }
