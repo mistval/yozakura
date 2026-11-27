@@ -137,7 +137,6 @@ function ConfigEditor({
     concurrencyGroupLimit: config.concurrencyGroupLimit?.toString() || '',
   });
 
-  const [showToken, setShowToken] = useState(false);
   const [saveError, setSaveError] = useState('');
   const {
     loading: connectionTestLoading,
@@ -273,78 +272,29 @@ function ConfigEditor({
         />
       </div>
 
-      <div>
-        <SettingFieldLabel
-          text="Completions API Provider"
-          htmlFor={`llm-config-url-${config.id}`}
-          tooltip={settingsTooltips['llm.url']}
-        />
-        <CompletionsProviderField
-          id={`llm-config-url-${config.id}`}
-          value={draft.llmUrl}
-          onChange={(nextUrl) => setDraft((prev) => ({ ...prev, llmUrl: nextUrl }) satisfies typeof prev)}
-          allowInherit={config.id !== BASE_DEFAULTS_LLM_CONFIG_ID}
-        />
-      </div>
-
-      <div>
-        <SettingFieldLabel
-          text="Bearer Token (optional)"
-          htmlFor={`llm-config-auth-${config.id}`}
-          tooltip={settingsTooltips['llm.authToken']}
-        />
-        <div className="flex gap-2">
-          <input
-            id={`llm-config-auth-${config.id}`}
-            type={showToken ? 'text' : 'password'}
-            value={draft.llmAuthToken}
-            onChange={(event) =>
-              setDraft(
-                (prev) =>
-                  ({
-                    ...prev,
-                    llmAuthToken: event.target.value,
-                  }) satisfies typeof prev
-              )
-            }
-            placeholder="Bearer token"
-            className="rounded-input"
-          />
-          <button
-            type="button"
-            onClick={() => setShowToken((prev) => !prev)}
-            className="shrink-0 px-2 py-1 border rounded-sm"
-          >
-            {showToken ? 'Hide' : 'Show'}
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <SettingFieldLabel
-          text="Model (optional)"
-          htmlFor={`llm-config-model-${config.id}`}
-          tooltipDangerousHtml={settingsDangerousHtmlTooltips['llm.model']}
-        />
-        <input
-          id={`llm-config-model-${config.id}`}
-          value={readModelFromMetaOptions(draft.llmMetaOptionsSource)}
-          onChange={(event) =>
-            setDraft(
-              (prev) =>
-                ({
-                  ...prev,
-                  llmMetaOptionsSource: writeModelToMetaOptions(
-                    prev.llmMetaOptionsSource,
-                    event.target.value
-                  ),
-                }) satisfies typeof prev
-            )
-          }
-          placeholder="deepseek/deepseek-v4.1-flash-1017"
-          className="rounded-input"
-        />
-      </div>
+      <CompletionsProviderField
+        idPrefix={`llm-config-${config.id}`}
+        url={draft.llmUrl}
+        onUrlChange={(nextUrl) => setDraft((prev) => ({ ...prev, llmUrl: nextUrl }) satisfies typeof prev)}
+        authToken={draft.llmAuthToken}
+        onAuthTokenChange={(nextToken) =>
+          setDraft((prev) => ({ ...prev, llmAuthToken: nextToken }) satisfies typeof prev)
+        }
+        model={readModelFromMetaOptions(draft.llmMetaOptionsSource)}
+        onModelChange={(nextModel) =>
+          setDraft(
+            (prev) =>
+              ({
+                ...prev,
+                llmMetaOptionsSource: writeModelToMetaOptions(prev.llmMetaOptionsSource, nextModel),
+              }) satisfies typeof prev
+          )
+        }
+        allowInherit={config.id !== BASE_DEFAULTS_LLM_CONFIG_ID}
+        providerTooltip={settingsTooltips['llm.url']}
+        tokenTooltip={settingsTooltips['llm.authToken']}
+        modelTooltipDangerousHtml={settingsDangerousHtmlTooltips['llm.model']}
+      />
 
       <SpoilerSection title="Advanced Settings" revealedQueryParam="llmoptionsadvanced">
         <div>
@@ -493,7 +443,7 @@ function ConfigEditor({
           disabled={connectionTestLoading}
           className="px-3 py-1 border rounded-sm"
         >
-          {connectionTestLoading ? 'Testing...' : 'Test Generate Text'}
+          {connectionTestLoading ? 'Testing...' : 'Test Generation'}
         </button>
         {connectionTestSuccess && (
           <p className="text-sm text-secondary self-center">

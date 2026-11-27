@@ -15,7 +15,7 @@ export async function testLlmGenerateText(
       completionRequestId: '',
       configsOverride,
       skipInteractiveRetry: true,
-      jobConfig: { name: 'Test Generate Text' },
+      jobConfig: { name: 'Test Generation' },
     });
 
     return { ok: true, responseText };
