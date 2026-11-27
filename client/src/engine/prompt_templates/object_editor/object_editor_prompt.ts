@@ -40,9 +40,9 @@ How to edit the object:
 - Always include a <json_patch>...</json_patch> block at the end of every response. If the user is only asking a question or no changes are needed, explain clearly and finish with <json_patch>[]</json_patch>.
 - Write a concise, helpful plain-text explanation before the <json_patch> block describing what you changed (or answering the user's question).
 - Never modify or remove any field marked with "readOnly": true, except when creating a new element.
+- Always omit "createdAt" and "updatedAt" on newly added objects (and never patch them on existing objects) — they are managed automatically.
 - When adding a brand-new sub-object or array item that has an "id" field:
   - Always set its "id" field to a unique snake-case placeholder starting with "new_id_" (matching /^new_id_[a-z0-9_]+$/), such as "new_id_town_square" or "new_id_room_2", and reuse that same placeholder anywhere else in the patch that references that new item (such as adjacency or zone locationIds). Every occurrence of the same placeholder in the patch will resolve to the same generated ID, and you must not omit "id" or hardcode an arbitrary ID.
-  - Omit "createdAt" and "updatedAt" (or set them to "") and they will be populated automatically.
 - Ensure the resulting object strictly conforms to the JSON Schema above.
 - The latest user message includes <object_current_state> containing the exact current JSON state of the object. Earlier conversation turns may omit old snapshots, include manual user patches as system messages, or report patch validation errors as system messages.`,
     },

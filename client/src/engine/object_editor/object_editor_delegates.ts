@@ -285,10 +285,11 @@ export function buildExternalAiInstructions<TObjectType>(
   zodSchema: z.ZodType<TObjectType>,
   currentObject: TObjectType
 ): string {
-  const jsonSchemaString = JSON.stringify(z.toJSONSchema(zodSchema), null, 2);
-  const currentObjectJson = JSON.stringify(currentObject, null, 2);
+  const jsonSchemaString = JSON.stringify(z.toJSONSchema(zodSchema));
+  const currentObjectJson = JSON.stringify(currentObject);
 
   return [
+    '<instructions>',
     `# ${targetTitle} — External AI Assistant Instructions`,
     '',
     `You are helping the user inspect and edit a **${targetTitle}** JSON object.`,
@@ -297,21 +298,24 @@ export function buildExternalAiInstructions<TObjectType>(
     '',
     '1. Review the JSON Schema and Current Object JSON below.',
     '2. When the user asks for changes, return the **complete updated JSON object** inside a single `json` code block (not a partial diff or JSON patch), so the user can paste it directly into the Raw JSON editor.',
-    '3. Do **not** modify or remove fields marked `"readOnly": true` on existing objects (such as existing `id`, `createdAt`, or `updatedAt` values).',
-    '4. For any newly added sub-objects or array items that require `id`, you MUST set `id` to a unique snake-case placeholder starting with `new_id_` (matching `^new_id_[a-z0-9_]+$`, e.g., `"new_id_town_square"` or `"new_id_room_2"`), and reuse that same placeholder anywhere else in the JSON that references that new item. You may omit `createdAt` and `updatedAt` (or set them to `""`) and they will be populated automatically.',
+    '3. Do **not** modify or remove fields marked `"readOnly": true` on existing objects (such as existing `id` values). Always omit `createdAt` and `updatedAt` (on both existing and newly added objects) — they are managed automatically.',
+    '4. For any newly added sub-objects or array items that require `id`, you MUST set `id` to a unique snake-case placeholder starting with `new_id_` (matching `^new_id_[a-z0-9_]+$`, e.g., `"new_id_town_square"` or `"new_id_room_2"`), and reuse that same placeholder anywhere else in the JSON that references that new item.',
     '5. Preserve all unrelated existing fields and ensure the output strictly conforms to the JSON Schema.',
+    '6. New array elements must always be inserted to the end of the array, otherwise the system will think you are editing an existing element. If you need to delete an element and add a new one, you can either copy the fields of the new element to the old one (preserving the ID), or else you will need to give the user two separate JSON blobs to paste in sequentially.',
+    '7. If the user asks for followup edits and it sounds like they already pasted your changes back into the application, you should ask them to provide you with the updated raw JSON so you get the generated IDs and such. Do not skip this, it might lead to confusing errors for the user. Err on the side of caution.',
     '',
     '## JSON Schema',
     '',
-    '```json',
+    '<json>',
     jsonSchemaString,
-    '```',
+    '</json>',
     '',
     '## Current Object JSON',
     '',
-    '```json',
+    '<json>',
     currentObjectJson,
-    '```',
+    '</json>',
+    '</instructions>',
   ].join('\n');
 }
 

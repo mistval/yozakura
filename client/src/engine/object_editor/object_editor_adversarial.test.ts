@@ -218,12 +218,6 @@ describe('ObjectEditor adversarial red-team suite', () => {
           label: 'replace /bToA changing id to new_id_* placeholder',
           patch: [{ op: 'replace', path: '/bToA', value: { ...pair.bToA, id: 'new_id_hijacked_rel' } }],
         },
-        {
-          label: 'replace /bToA altering createdAt to forged timestamp',
-          patch: [
-            { op: 'replace', path: '/bToA', value: { ...pair.bToA, createdAt: '1999-01-01T00:00:00.000Z' } },
-          ],
-        },
       ]);
 
       await expectManualAttackRejected(pair, relSchema, [
@@ -253,23 +247,13 @@ describe('ObjectEditor adversarial red-team suite', () => {
           patch: [{ op: 'replace', path: '/locations/0', value: { ...locA, isEphemeral: true } }],
         },
         {
-          label: 'replace /locations altering existing location createdAt',
-          patch: [
-            {
-              op: 'replace',
-              path: '/locations',
-              value: [{ ...locA, createdAt: '1999-01-01T00:00:00.000Z' }, locB],
-            },
-          ],
-        },
-        {
-          label: 'remove + add laundering with forged createdAt and isEphemeral',
+          label: 'remove + add laundering with flipped isEphemeral',
           patch: [
             { op: 'remove', path: '/locations/0' },
             {
               op: 'add',
               path: '/locations/-',
-              value: { ...locA, createdAt: '1999-01-01T00:00:00.000Z', isEphemeral: true },
+              value: { ...locA, isEphemeral: true },
             },
           ],
         },
@@ -291,26 +275,14 @@ describe('ObjectEditor adversarial red-team suite', () => {
             locations: [locB, { ...locA, isEphemeral: true }],
           }),
         },
-        {
-          label: 'manual Raw JSON forging createdAt on existing zone',
-          rawJson: JSON.stringify({
-            ...map,
-            zones: [{ ...map.zones[0]!, createdAt: '1999-01-01T00:00:00.000Z' }],
-          }),
-        },
       ]);
     });
 
-    it('blocks container replace and remove+add laundering on Character wardrobes & rolling summaries', async () => {
+    it('blocks container replace and remove+add laundering on Character rolling summaries', async () => {
       const alice = makeCharacter();
       const summary0 = alice.rollingConversationSummaries[0]!;
-      const wardrobe0 = alice.wardrobes[0]!;
 
       await expectAiAttackRejected(alice, characterSchema, [
-        {
-          label: 'replace /wardrobes/0 altering readOnly updatedAt',
-          patch: [{ op: 'replace', path: '/wardrobes/0', value: { ...wardrobe0, updatedAt: '1999-01-01' } }],
-        },
         {
           label: 'remove + add rollingConversationSummaries/0 altering conversationId',
           patch: [
@@ -322,20 +294,10 @@ describe('ObjectEditor adversarial red-team suite', () => {
             },
           ],
         },
-        {
-          label: 'replace /wardrobes forging createdAt on existing wardrobe',
-          patch: [
-            {
-              op: 'replace',
-              path: '/wardrobes',
-              value: [{ ...wardrobe0, createdAt: '1999-01-01T00:00:00.000Z' }],
-            },
-          ],
-        },
       ]);
     });
 
-    it('preserves existing createdAt and updatedAt when blank or omitted on existing objects', async () => {
+    it('ignores incoming createdAt and updatedAt (blank, omitted, or forged) and manages them automatically', async () => {
       const locA = makeLocation({ name: 'Loc A' });
       const locB = makeLocation({ name: 'Loc B' });
       const map = makeWorldMap([locA, locB]);
@@ -344,34 +306,47 @@ describe('ObjectEditor adversarial red-team suite', () => {
       const { editor, getExternalState } = createHarness(map, worldMapSchema);
       await editor.initialize();
 
-      // Pasting identical map JSON with blank createdAt/updatedAt on existing locations & zones is a clean no-op
+      // Pasting identical map JSON with blank or forged createdAt/updatedAt on existing items is a clean no-op
       const noOpResult = await editor.applyManualJsonEdit(
         JSON.stringify({
           ...map,
-          locations: map.locations.map((loc) => ({ ...loc, createdAt: '', updatedAt: '' })),
-          zones: map.zones.map((zone) => ({ ...zone, createdAt: '', updatedAt: '' })),
+          createdAt: '1999-01-01T00:00:00.000Z',
+          updatedAt: 'not-a-timestamp',
+          locations: map.locations.map((loc) => ({ ...loc, createdAt: '', updatedAt: '1999-01-01' })),
+          zones: map.zones.map((zone) => ({ ...zone, createdAt: 'yesterday', updatedAt: '' })),
         })
       );
       expect(noOpResult).toBe(false);
       expect(editor.getState().invalidManualEdit).toBeUndefined();
+      expect(getExternalState().createdAt).toBe(map.createdAt);
+      expect(getExternalState().updatedAt).toBe(map.updatedAt);
       expect(getExternalState().locations[0]!.createdAt).toBe(locA.createdAt);
       expect(getExternalState().locations[0]!.updatedAt).toBe(locA.updatedAt);
 
-      // Multi-turn external AI workflow: updating an existing location and adding a new one with blank timestamps
-      const { createdAt: _omitCreatedAt, updatedAt: _omitUpdatedAt, ...locBWithoutTimestamps } = locB;
+      // Multi-turn external AI workflow: updating an existing location and adding a new one with omitted/blank/forged timestamps & omitted isEphemeral
+      const {
+        createdAt: _omitCreatedAt,
+        updatedAt: _omitUpdatedAt,
+        isEphemeral: _omitExistingEphemeral,
+        ...locBWithoutReadOnlyFields
+      } = locB;
+      const { isEphemeral: _omitNewEphemeral, ...newSpotWithoutEphemeral } = makeLocation({
+        id: 'new_id_new_spot',
+        name: 'New Spot',
+      });
       const editResult = await editor.applyManualJsonEdit(
         JSON.stringify({
           ...map,
           locations: [
-            { ...locA, name: 'Loc A (Updated)', createdAt: '', updatedAt: '' },
-            locBWithoutTimestamps,
+            { ...locA, name: 'Loc A (Updated)', createdAt: '1999-01-01T00:00:00.000Z', updatedAt: '' },
+            locBWithoutReadOnlyFields,
             {
-              ...makeLocation({ id: 'new_id_new_spot', name: 'New Spot' }),
-              createdAt: '',
-              updatedAt: '',
+              ...newSpotWithoutEphemeral,
+              createdAt: '1999-01-01T00:00:00.000Z',
+              updatedAt: 'bogus',
             },
           ],
-          zones: [{ ...originalZone, createdAt: '', updatedAt: '' }],
+          zones: [{ ...originalZone, createdAt: '', updatedAt: '1999-01-01T00:00:00.000Z' }],
         })
       );
       expect(editResult).toBe(true);
@@ -387,15 +362,18 @@ describe('ObjectEditor adversarial red-team suite', () => {
       expect(updatedLocA.updatedAt).toBe(locA.updatedAt);
       expect(updatedLocB.createdAt).toBe(locB.createdAt);
       expect(updatedLocB.updatedAt).toBe(locB.updatedAt);
+      expect(updatedLocB.isEphemeral).toBe(false);
       expect(updatedMap.zones[0]!.createdAt).toBe(originalZone.createdAt);
       expect(updatedMap.zones[0]!.updatedAt).toBe(originalZone.updatedAt);
 
-      // Brand new location gets freshly populated timestamps (not the old fixture timestamp)
-      expect(newLoc.createdAt).not.toBe('');
+      // Brand new location gets freshly populated timestamps (ignoring incoming forged/bogus values) and default isEphemeral: false
+      expect(timestampSchema.safeParse(newLoc.createdAt).success).toBe(true);
+      expect(newLoc.createdAt).not.toBe('1999-01-01T00:00:00.000Z');
       expect(newLoc.createdAt).not.toBe(locA.createdAt);
-      expect(newLoc.updatedAt).not.toBe('');
+      expect(timestampSchema.safeParse(newLoc.updatedAt).success).toBe(true);
+      expect(newLoc.isEphemeral).toBe(false);
 
-      // Container replace via AI patch with blank createdAt/updatedAt also preserves existing timestamps
+      // Container replace via AI patch with blank or forged createdAt/updatedAt also preserves existing timestamps
       const alice = makeCharacter();
       const wardrobe0 = alice.wardrobes[0]!;
       const charHarness = createHarness(alice, characterSchema);
@@ -404,7 +382,14 @@ describe('ObjectEditor adversarial red-team suite', () => {
         {
           op: 'replace',
           path: '/wardrobes',
-          value: [{ ...wardrobe0, text: 'Updated outfit description', createdAt: '', updatedAt: '' }],
+          value: [
+            {
+              ...wardrobe0,
+              text: 'Updated outfit description',
+              createdAt: '1999-01-01T00:00:00.000Z',
+              updatedAt: '1999-01-01',
+            },
+          ],
         },
       ]);
       await charHarness.editor.runUserMessage('Update wardrobe');
@@ -664,82 +649,24 @@ describe('ObjectEditor adversarial red-team suite', () => {
   });
 
   describe('4b. timestamp format enforcement', () => {
-    it('rejects invalid timestamp formats on newly added sub-objects while accepting SQLite UTC and JS ISO timestamps', async () => {
-      const alice = makeCharacter();
-
-      await expectAiAttackRejected(alice, characterSchema, [
-        {
-          label: 'AI non-date string createdAt',
-          patch: [
-            {
-              op: 'add',
-              path: '/wardrobes/-',
-              value: {
-                id: 'new_id_bad_date',
-                createdAt: 'yesterday',
-                updatedAt: '',
-                text: 'linen tunic',
-                enabled: true,
-                tags: [],
-                autoRevert: false,
-              },
-            },
-          ],
-        },
-        {
-          label: 'AI invalid calendar date createdAt',
-          patch: [
-            {
-              op: 'add',
-              path: '/wardrobes/-',
-              value: {
-                id: 'new_id_bad_calendar',
-                createdAt: '2026-99-99T00:00:00Z',
-                updatedAt: '',
-                text: 'linen tunic',
-                enabled: true,
-                tags: [],
-                autoRevert: false,
-              },
-            },
-          ],
-        },
-      ]);
-
-      await expectManualAttackRejected(alice, characterSchema, [
-        {
-          label: 'manual Raw JSON non-date string createdAt',
-          rawJson: JSON.stringify({
-            ...alice,
-            wardrobes: [
-              ...alice.wardrobes,
-              {
-                id: 'new_id_bad_manual_date',
-                createdAt: 'not-a-timestamp',
-                updatedAt: '2026-01-01T00:00:00.000Z',
-                text: 'linen tunic',
-                enabled: true,
-                tags: [],
-                autoRevert: false,
-              },
-            ],
-          }),
-        },
-      ]);
-
+    it('enforces timestampSchema format directly while auto-populating valid ISO timestamps on newly added sub-objects regardless of incoming values', async () => {
+      expect(timestampSchema.safeParse('yesterday').success).toBe(false);
+      expect(timestampSchema.safeParse('2026-99-99T00:00:00Z').success).toBe(false);
+      expect(timestampSchema.safeParse('not-a-timestamp').success).toBe(false);
       expect(timestampSchema.safeParse('2026-11-26 11:24:33Z').success).toBe(true);
       expect(timestampSchema.safeParse('2026-11-26T11:24:33.123Z').success).toBe(true);
 
-      const validSqlHarness = createHarness(alice, characterSchema);
-      await validSqlHarness.editor.initialize();
-      validSqlHarness.setNextPatch([
+      const alice = makeCharacter();
+      const aiHarness = createHarness(alice, characterSchema);
+      await aiHarness.editor.initialize();
+      aiHarness.setNextPatch([
         {
           op: 'add',
           path: '/wardrobes/-',
           value: {
-            id: 'new_id_sql_date_cloak',
-            createdAt: '2026-11-26 11:24:33Z',
-            updatedAt: '',
+            id: 'new_id_traveling_cloak',
+            createdAt: 'yesterday',
+            updatedAt: '2026-99-99T00:00:00Z',
             text: 'traveling cloak',
             enabled: true,
             tags: [],
@@ -747,12 +674,13 @@ describe('ObjectEditor adversarial red-team suite', () => {
           },
         },
       ]);
-      await validSqlHarness.editor.runUserMessage('Add cloak with SQLite UTC timestamp.');
-      const latest = validSqlHarness.editor.getState().history[0]!;
+      await aiHarness.editor.runUserMessage('Add cloak with hallucinated timestamps.');
+      const latest = aiHarness.editor.getState().history[0]!;
       expect(latest.validationError).toBeUndefined();
-      const addedWardrobe = validSqlHarness.editor.getState().currentObject!.wardrobes[1]!;
-      expect(addedWardrobe.createdAt).toBe('2026-11-26 11:24:33Z');
+      const addedWardrobe = aiHarness.editor.getState().currentObject!.wardrobes[1]!;
+      expect(timestampSchema.safeParse(addedWardrobe.createdAt).success).toBe(true);
       expect(timestampSchema.safeParse(addedWardrobe.updatedAt).success).toBe(true);
+      expect(addedWardrobe.createdAt).not.toBe('yesterday');
     });
   });
 

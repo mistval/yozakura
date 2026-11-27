@@ -569,6 +569,14 @@ function isStringLikeSchema(schema: z.ZodType | undefined): boolean {
   return unwrapped instanceof z.ZodString;
 }
 
+function isBooleanLikeSchema(schema: z.ZodType | undefined): boolean {
+  if (!schema) {
+    return false;
+  }
+  const { schema: unwrapped } = unwrapSchemaWithMeta(schema);
+  return unwrapped instanceof z.ZodBoolean;
+}
+
 function assertObjectIdValue(
   id: unknown,
   expectedOldId: string | undefined,
@@ -773,16 +781,24 @@ export function autoPopulatePersistedSubObjectFields(
     const nextObj: Record<string, unknown> = { ...nextValue };
 
     for (const timestampField of ['createdAt', 'updatedAt'] as const) {
-      if (
-        Object.hasOwn(shape, timestampField) &&
-        isStringLikeSchema(shape[timestampField]) &&
-        (nextObj[timestampField] === undefined || nextObj[timestampField] === '')
-      ) {
+      if (Object.hasOwn(shape, timestampField) && isStringLikeSchema(shape[timestampField])) {
         const existingTimestamp = oldObj?.[timestampField];
-        nextObj[timestampField] =
+        const desiredTimestamp =
           typeof existingTimestamp === 'string' && existingTimestamp !== '' ? existingTimestamp : nowIso;
-        changed = true;
+        if (nextObj[timestampField] !== desiredTimestamp) {
+          nextObj[timestampField] = desiredTimestamp;
+          changed = true;
+        }
       }
+    }
+
+    if (
+      Object.hasOwn(shape, 'isEphemeral') &&
+      isBooleanLikeSchema(shape.isEphemeral) &&
+      nextObj.isEphemeral === undefined
+    ) {
+      nextObj.isEphemeral = typeof oldObj?.isEphemeral === 'boolean' ? oldObj.isEphemeral : false;
+      changed = true;
     }
 
     for (const [key, fieldSchema] of Object.entries(shape)) {
