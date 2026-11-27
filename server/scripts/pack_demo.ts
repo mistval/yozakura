@@ -131,6 +131,7 @@ const sourceScenarioSchema = z.object({
     updatedAt: z.string(),
     mapId: hexIdSchema,
     userCharacterId: hexIdSchema,
+    turnOffset: z.number().int(),
     turnNumber: z.number().int().nonnegative(),
     saveName: z.string(),
     remoteChatMedium: z.string().min(1),

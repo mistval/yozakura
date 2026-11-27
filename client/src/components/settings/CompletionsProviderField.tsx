@@ -13,6 +13,14 @@ interface CompletionsApiProvider {
 
 export const COMPLETIONS_API_PROVIDERS: readonly CompletionsApiProvider[] = [
   {
+    id: 'koboldcpp',
+    label: 'KoboldCpp',
+    url: 'http://127.0.0.1:5001/v1/chat/completions',
+    aliases: ['http://localhost:5001/v1/chat/completions'],
+    tokenRecommended: false,
+    modelRecommended: false,
+  },
+  {
     id: 'openrouter',
     label: 'OpenRouter',
     url: 'https://openrouter.ai/api/v1/chat/completions',
@@ -52,14 +60,6 @@ export const COMPLETIONS_API_PROVIDERS: readonly CompletionsApiProvider[] = [
     aliases: [],
     tokenRecommended: true,
     modelRecommended: true,
-  },
-  {
-    id: 'koboldcpp',
-    label: 'KoboldCpp',
-    url: 'http://127.0.0.1:5001/v1/chat/completions',
-    aliases: ['http://localhost:5001/v1/chat/completions'],
-    tokenRecommended: false,
-    modelRecommended: false,
   },
   {
     id: 'lmstudio',
