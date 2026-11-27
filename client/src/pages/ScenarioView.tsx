@@ -47,6 +47,7 @@ export default function ScenarioView() {
   const navigate = useNavigate();
   const { scenarioId } = useParams<{ scenarioId: string }>();
   const scenario = useScenarioStore((state) => state.activeScenario);
+  const scenariosLoaded = useScenarioStore((state) => state.scenarioSummariesAreLoaded);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const scenarioCharactersAreLoaded = useScenarioCharacterStore((s) => s.scenarioCharactersAreLoaded);
   const scenarioCharacters = useScenarioCharacterStore((s) => s.scenarioCharacters);
@@ -336,9 +337,11 @@ export default function ScenarioView() {
   }
 
   if (!scenario || !user || !perspectiveCharacter || !activeMap) {
+    const text = scenariosLoaded ? 'That scenario does not exist' : 'Loading...';
+
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-3">
-        <h1 className="text-2xl font-semibold">Loading...</h1>
+        <h1 className="text-2xl font-semibold">{text}</h1>
         <button type="button" onClick={() => navigate('/')} disabled={!canReturnToMainMenu}>
           Main Menu
         </button>
