@@ -17,6 +17,7 @@ import {
 } from '../engine/settings/cascading_llm_configs.js';
 import { getBuiltinImageScript } from '../engine/settings/settings_scripts/image/image_scripts.js';
 import CustomScriptSettings from './settings/settingsScripts/CustomScriptSettings.js';
+import CompletionsProviderField from './settings/CompletionsProviderField.js';
 import {
   IMAGE_SCRIPT_DESCRIPTOR,
   useImageScriptSelection,
@@ -103,11 +104,11 @@ export default function MainMenuFtueModal() {
     setSettings(() => ({ mainMenuFtueSeen: true }));
   };
 
-  const saveConnectionDetails = () => {
+  const saveConnectionDetails = (nextUrl: string = llmUrlDraft) => {
     setSettings((previous: Settings) => ({
       llmConfigs: updateLLMConfigsWithBaseDefaultsConnection(
         previous.llmConfigs,
-        llmUrlDraft,
+        nextUrl,
         llmAuthTokenDraft,
         llmModelDraft
       ),
@@ -161,21 +162,22 @@ export default function MainMenuFtueModal() {
             <div className="space-y-1">
               <div className="flex items-center gap-3">
                 <label className="block text-sm font-medium" htmlFor="ftue-llm-url">
-                  Completions API URL
+                  Completions API Provider
                 </label>
                 <InfoTooltip
-                  label="About Completions API URL"
+                  label="About Completions API Provider"
                   dangerouslySetHtml={FTUE_API_URL_TOOLTIP_HTML}
                   align="center"
                 />
               </div>
-              <input
+              <CompletionsProviderField
                 id="ftue-llm-url"
                 value={llmUrlDraft}
-                onChange={(event) => setLlmUrlDraft(event.target.value)}
-                onBlur={saveConnectionDetails}
-                placeholder="http://localhost:5001/v1/chat/completions"
-                className={FTUE_INPUT_CLASS}
+                onChange={setLlmUrlDraft}
+                onPresetSelect={saveConnectionDetails}
+                onCustomInputBlur={() => saveConnectionDetails()}
+                selectClassName={FTUE_INPUT_CLASS}
+                inputClassName={FTUE_INPUT_CLASS}
               />
             </div>
 
@@ -195,7 +197,7 @@ export default function MainMenuFtueModal() {
                 type="password"
                 value={llmAuthTokenDraft}
                 onChange={(event) => setLlmAuthTokenDraft(event.target.value)}
-                onBlur={saveConnectionDetails}
+                onBlur={() => saveConnectionDetails()}
                 placeholder="Bearer token"
                 className={FTUE_INPUT_CLASS}
               />
@@ -216,7 +218,7 @@ export default function MainMenuFtueModal() {
                 id="ftue-llm-model"
                 value={llmModelDraft}
                 onChange={(event) => setLlmModelDraft(event.target.value)}
-                onBlur={saveConnectionDetails}
+                onBlur={() => saveConnectionDetails()}
                 placeholder="deepseek/deepseek-v4.1-flash-1017"
                 className={FTUE_INPUT_CLASS}
               />

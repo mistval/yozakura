@@ -12,10 +12,12 @@ import { useLlmConnectionTest } from '../../hooks/useLlmConnectionTest.js';
 import { useTextareaPasteWarningGate } from './pasteWarning/useTextareaPasteWarningGate.js';
 import { newId } from '../../util/id.js';
 import {
+  BASE_DEFAULTS_LLM_CONFIG_ID,
   llmConfigSchema,
   parseLlmMetaOptions,
   type LlmInheritToggleMode,
 } from '../../engine/settings/cascading_llm_configs.js';
+import CompletionsProviderField from './CompletionsProviderField.js';
 import { readModelFromMetaOptions, writeModelToMetaOptions } from './meta_options_model.js';
 import DeleteButton from '../ui/DeleteButton.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
@@ -242,18 +244,15 @@ function ConfigEditor({
 
       <div>
         <SettingFieldLabel
-          text="Completions API URL"
+          text="Completions API Provider"
           htmlFor={`llm-config-url-${config.id}`}
           tooltip={settingsTooltips['llm.url']}
         />
-        <input
+        <CompletionsProviderField
           id={`llm-config-url-${config.id}`}
           value={draft.llmUrl}
-          onChange={(event) =>
-            setDraft((prev) => ({ ...prev, llmUrl: event.target.value }) satisfies typeof prev)
-          }
-          placeholder="http://localhost:5001/v1/chat/completions"
-          className="rounded-input"
+          onChange={(nextUrl) => setDraft((prev) => ({ ...prev, llmUrl: nextUrl }) satisfies typeof prev)}
+          allowInherit={config.id !== BASE_DEFAULTS_LLM_CONFIG_ID}
         />
       </div>
 

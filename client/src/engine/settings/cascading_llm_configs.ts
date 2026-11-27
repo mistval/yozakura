@@ -84,6 +84,9 @@ const KNOWN_CLOUD_LLM_HOSTNAMES = [
   'huggingface.co',
   'replicate.com',
   'nano-gpt.com',
+  'demonroute.com',
+  'featherless.ai',
+  'chutes.ai',
 ];
 
 export const APP_IDENTIFICATION_URL = 'https://mistval.github.io/yozakura/docs/intro';
