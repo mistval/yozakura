@@ -34,7 +34,7 @@ The Object Editor is designed so you can experiment freely without committing ha
 ## Choosing a Model
 
 - **Stronger models do better:** Editing structured data with interconnected parts — like keeping map connections consistent or filling out detailed character fields — benefits noticeably from stronger models. You can configure a dedicated model just for the **Object Editor** group in **Settings → LLM Settings** without affecting the models you use for chat or background memories — see [Using Different Models for Different Prompt Types](how-to-different-models-per-prompt.md) and [Suggested Models](suggested-models.md).
-- **Agentic capabilities are not required:** Standard chat models work fine; tool-calling or agentic capabilities are not needed to use the Object Editor.
+- **Agentic capabilities are not required:** This feature does not use tool calling, though it still benefits from a model that's good at JSON syntax.
 
 :::info[Coming Later: Agentic Mode]
 A planned future **agentic mode** will let the AI make coordinated edits across multiple different data types in a single session (for example, updating a map, characters, groups, and relationships together) when using models that support agentic capabilities.
