@@ -219,8 +219,10 @@ describe('ObjectEditor adversarial red-team suite', () => {
           patch: [{ op: 'replace', path: '/bToA', value: { ...pair.bToA, id: 'new_id_hijacked_rel' } }],
         },
         {
-          label: 'replace /bToA clearing createdAt to blank',
-          patch: [{ op: 'replace', path: '/bToA', value: { ...pair.bToA, createdAt: '' } }],
+          label: 'replace /bToA altering createdAt to forged timestamp',
+          patch: [
+            { op: 'replace', path: '/bToA', value: { ...pair.bToA, createdAt: '1999-01-01T00:00:00.000Z' } },
+          ],
         },
       ]);
 
@@ -290,10 +292,10 @@ describe('ObjectEditor adversarial red-team suite', () => {
           }),
         },
         {
-          label: 'manual Raw JSON clearing createdAt to "" on existing zone',
+          label: 'manual Raw JSON forging createdAt on existing zone',
           rawJson: JSON.stringify({
             ...map,
-            zones: [{ ...map.zones[0]!, createdAt: '' }],
+            zones: [{ ...map.zones[0]!, createdAt: '1999-01-01T00:00:00.000Z' }],
           }),
         },
       ]);
@@ -321,10 +323,94 @@ describe('ObjectEditor adversarial red-team suite', () => {
           ],
         },
         {
-          label: 'replace /wardrobes clearing createdAt on existing wardrobe',
-          patch: [{ op: 'replace', path: '/wardrobes', value: [{ ...wardrobe0, createdAt: '' }] }],
+          label: 'replace /wardrobes forging createdAt on existing wardrobe',
+          patch: [
+            {
+              op: 'replace',
+              path: '/wardrobes',
+              value: [{ ...wardrobe0, createdAt: '1999-01-01T00:00:00.000Z' }],
+            },
+          ],
         },
       ]);
+    });
+
+    it('preserves existing createdAt and updatedAt when blank or omitted on existing objects', async () => {
+      const locA = makeLocation({ name: 'Loc A' });
+      const locB = makeLocation({ name: 'Loc B' });
+      const map = makeWorldMap([locA, locB]);
+      const originalZone = map.zones[0]!;
+
+      const { editor, getExternalState } = createHarness(map, worldMapSchema);
+      await editor.initialize();
+
+      // Pasting identical map JSON with blank createdAt/updatedAt on existing locations & zones is a clean no-op
+      const noOpResult = await editor.applyManualJsonEdit(
+        JSON.stringify({
+          ...map,
+          locations: map.locations.map((loc) => ({ ...loc, createdAt: '', updatedAt: '' })),
+          zones: map.zones.map((zone) => ({ ...zone, createdAt: '', updatedAt: '' })),
+        })
+      );
+      expect(noOpResult).toBe(false);
+      expect(editor.getState().invalidManualEdit).toBeUndefined();
+      expect(getExternalState().locations[0]!.createdAt).toBe(locA.createdAt);
+      expect(getExternalState().locations[0]!.updatedAt).toBe(locA.updatedAt);
+
+      // Multi-turn external AI workflow: updating an existing location and adding a new one with blank timestamps
+      const { createdAt: _omitCreatedAt, updatedAt: _omitUpdatedAt, ...locBWithoutTimestamps } = locB;
+      const editResult = await editor.applyManualJsonEdit(
+        JSON.stringify({
+          ...map,
+          locations: [
+            { ...locA, name: 'Loc A (Updated)', createdAt: '', updatedAt: '' },
+            locBWithoutTimestamps,
+            {
+              ...makeLocation({ id: 'new_id_new_spot', name: 'New Spot' }),
+              createdAt: '',
+              updatedAt: '',
+            },
+          ],
+          zones: [{ ...originalZone, createdAt: '', updatedAt: '' }],
+        })
+      );
+      expect(editResult).toBe(true);
+      expect(editor.getState().invalidManualEdit).toBeUndefined();
+
+      const updatedMap = getExternalState();
+      const updatedLocA = updatedMap.locations.find((loc) => loc.id === locA.id)!;
+      const updatedLocB = updatedMap.locations.find((loc) => loc.id === locB.id)!;
+      const newLoc = updatedMap.locations.find((loc) => loc.name === 'New Spot')!;
+
+      expect(updatedLocA.name).toBe('Loc A (Updated)');
+      expect(updatedLocA.createdAt).toBe(locA.createdAt);
+      expect(updatedLocA.updatedAt).toBe(locA.updatedAt);
+      expect(updatedLocB.createdAt).toBe(locB.createdAt);
+      expect(updatedLocB.updatedAt).toBe(locB.updatedAt);
+      expect(updatedMap.zones[0]!.createdAt).toBe(originalZone.createdAt);
+      expect(updatedMap.zones[0]!.updatedAt).toBe(originalZone.updatedAt);
+
+      // Brand new location gets freshly populated timestamps (not the old fixture timestamp)
+      expect(newLoc.createdAt).not.toBe('');
+      expect(newLoc.createdAt).not.toBe(locA.createdAt);
+      expect(newLoc.updatedAt).not.toBe('');
+
+      // Container replace via AI patch with blank createdAt/updatedAt also preserves existing timestamps
+      const alice = makeCharacter();
+      const wardrobe0 = alice.wardrobes[0]!;
+      const charHarness = createHarness(alice, characterSchema);
+      await charHarness.editor.initialize();
+      charHarness.setNextPatch([
+        {
+          op: 'replace',
+          path: '/wardrobes',
+          value: [{ ...wardrobe0, text: 'Updated outfit description', createdAt: '', updatedAt: '' }],
+        },
+      ]);
+      await charHarness.editor.runUserMessage('Update wardrobe');
+      expect(charHarness.getExternalState().wardrobes[0]!.text).toBe('Updated outfit description');
+      expect(charHarness.getExternalState().wardrobes[0]!.createdAt).toBe(wardrobe0.createdAt);
+      expect(charHarness.getExternalState().wardrobes[0]!.updatedAt).toBe(wardrobe0.updatedAt);
     });
   });
 

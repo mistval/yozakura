@@ -703,70 +703,97 @@ export function assertValidObjectIds(
 
 export function autoPopulatePersistedSubObjectFields(
   schema: z.ZodType,
-  value: unknown,
+  oldValue: unknown,
+  nextValue: unknown,
   nowIso: string
 ): unknown {
   const { schema: unwrapped } = unwrapSchemaWithMeta(schema);
 
-  if (unwrapped instanceof z.ZodArray && Array.isArray(value)) {
+  if (unwrapped instanceof z.ZodArray && Array.isArray(nextValue)) {
+    const idArrayInfo = getObjectWithIdElementInfo(unwrapped);
+    if (idArrayInfo) {
+      const oldById = indexPlainRecordsById(oldValue);
+      let changed = false;
+      const nextArray = nextValue.map((item) => {
+        const matchedOld =
+          isPlainRecord(item) && typeof item.id === 'string' ? oldById.get(item.id) : undefined;
+        const updatedItem = autoPopulatePersistedSubObjectFields(
+          idArrayInfo.elementSchema,
+          matchedOld,
+          item,
+          nowIso
+        );
+        if (updatedItem !== item) {
+          changed = true;
+        }
+        return updatedItem;
+      });
+      return changed ? nextArray : nextValue;
+    }
+
     const elementSchema = asZodType(unwrapped.element);
     if (!elementSchema) {
-      return value;
+      return nextValue;
     }
+    const oldArr = Array.isArray(oldValue) ? oldValue : undefined;
     let changed = false;
-    const nextArray = value.map((item) => {
-      const updatedItem = autoPopulatePersistedSubObjectFields(elementSchema, item, nowIso);
+    const nextArray = nextValue.map((item, index) => {
+      const updatedItem = autoPopulatePersistedSubObjectFields(elementSchema, oldArr?.[index], item, nowIso);
       if (updatedItem !== item) {
         changed = true;
       }
       return updatedItem;
     });
-    return changed ? nextArray : value;
+    return changed ? nextArray : nextValue;
   }
 
-  if (unwrapped instanceof z.ZodRecord && isPlainRecord(value)) {
+  if (unwrapped instanceof z.ZodRecord && isPlainRecord(nextValue)) {
     const valueSchema = asZodType(unwrapped.valueType);
     if (!valueSchema) {
-      return value;
+      return nextValue;
     }
+    const oldRecord = isPlainRecord(oldValue) ? oldValue : undefined;
     let changed = false;
     const nextRecord: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value)) {
-      const updatedEntry = autoPopulatePersistedSubObjectFields(valueSchema, entry, nowIso);
+    for (const [key, entry] of Object.entries(nextValue)) {
+      const oldEntry = oldRecord && Object.hasOwn(oldRecord, key) ? oldRecord[key] : undefined;
+      const updatedEntry = autoPopulatePersistedSubObjectFields(valueSchema, oldEntry, entry, nowIso);
       if (updatedEntry !== entry) {
         changed = true;
       }
       nextRecord[key] = updatedEntry;
     }
-    return changed ? nextRecord : value;
+    return changed ? nextRecord : nextValue;
   }
 
-  if (unwrapped instanceof z.ZodObject && isPlainRecord(value)) {
+  if (unwrapped instanceof z.ZodObject && isPlainRecord(nextValue)) {
     const shape = unwrapped.shape;
+    const oldObj = isPlainRecord(oldValue) ? oldValue : undefined;
     let changed = false;
-    const nextObj: Record<string, unknown> = { ...value };
+    const nextObj: Record<string, unknown> = { ...nextValue };
 
-    if (
-      Object.hasOwn(shape, 'createdAt') &&
-      isStringLikeSchema(shape.createdAt) &&
-      (nextObj.createdAt === undefined || nextObj.createdAt === '')
-    ) {
-      nextObj.createdAt = nowIso;
-      changed = true;
-    }
-
-    if (
-      Object.hasOwn(shape, 'updatedAt') &&
-      isStringLikeSchema(shape.updatedAt) &&
-      (nextObj.updatedAt === undefined || nextObj.updatedAt === '')
-    ) {
-      nextObj.updatedAt = nowIso;
-      changed = true;
+    for (const timestampField of ['createdAt', 'updatedAt'] as const) {
+      if (
+        Object.hasOwn(shape, timestampField) &&
+        isStringLikeSchema(shape[timestampField]) &&
+        (nextObj[timestampField] === undefined || nextObj[timestampField] === '')
+      ) {
+        const existingTimestamp = oldObj?.[timestampField];
+        nextObj[timestampField] =
+          typeof existingTimestamp === 'string' && existingTimestamp !== '' ? existingTimestamp : nowIso;
+        changed = true;
+      }
     }
 
     for (const [key, fieldSchema] of Object.entries(shape)) {
       if (Object.hasOwn(nextObj, key) && fieldSchema instanceof z.ZodType) {
-        const updatedChild = autoPopulatePersistedSubObjectFields(fieldSchema, nextObj[key], nowIso);
+        const childOld = oldObj && Object.hasOwn(oldObj, key) ? oldObj[key] : undefined;
+        const updatedChild = autoPopulatePersistedSubObjectFields(
+          fieldSchema,
+          childOld,
+          nextObj[key],
+          nowIso
+        );
         if (updatedChild !== nextObj[key]) {
           nextObj[key] = updatedChild;
           changed = true;
@@ -774,10 +801,10 @@ export function autoPopulatePersistedSubObjectFields(
       }
     }
 
-    return changed ? nextObj : value;
+    return changed ? nextObj : nextValue;
   }
 
-  return value;
+  return nextValue;
 }
 
 function humanizeKey(key: string): string {

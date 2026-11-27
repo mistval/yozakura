@@ -202,7 +202,13 @@ export class ObjectEditor<TObjectType> {
     }
 
     const { value: resolvedJson, generatedIds } = replaceNewIdPlaceholdersInValue(parsedJson);
-    const userPatch = compareToJsonPatch(lastKnown, resolvedJson);
+    const populatedJson = autoPopulatePersistedSubObjectFields(
+      this.delegate.zodSchema,
+      lastKnown,
+      resolvedJson,
+      new Date().toISOString()
+    );
+    const userPatch = compareToJsonPatch(lastKnown, populatedJson);
     if (userPatch.length === 0) {
       if (this.state.invalidManualEdit) {
         await this.clearTrailingInvalidManualEdits();
@@ -211,14 +217,8 @@ export class ObjectEditor<TObjectType> {
       return false;
     }
 
-    let populatedJson: unknown;
     try {
-      assertNoReadOnlyStateViolations(this.delegate.zodSchema, lastKnown, resolvedJson);
-      populatedJson = autoPopulatePersistedSubObjectFields(
-        this.delegate.zodSchema,
-        resolvedJson,
-        new Date().toISOString()
-      );
+      assertNoReadOnlyStateViolations(this.delegate.zodSchema, lastKnown, populatedJson);
       assertValidObjectIds(this.delegate.zodSchema, lastKnown, populatedJson, generatedIds);
     } catch (error) {
       return this.recordInvalidManualEdit(rawJson, getErrorMessage(error), lastKnown);
@@ -489,13 +489,13 @@ export class ObjectEditor<TObjectType> {
       assertNoReadOnlyViolations(this.delegate.zodSchema, oldObjectState, resolvedPatch);
 
       const patchedDocument = applyPatch(oldObjectState, resolvedPatch, true, false).newDocument;
-      assertNoReadOnlyStateViolations(this.delegate.zodSchema, oldObjectState, patchedDocument);
-
       const populatedDocument = autoPopulatePersistedSubObjectFields(
         this.delegate.zodSchema,
+        oldObjectState,
         patchedDocument,
         new Date().toISOString()
       );
+      assertNoReadOnlyStateViolations(this.delegate.zodSchema, oldObjectState, populatedDocument);
       assertValidObjectIds(this.delegate.zodSchema, oldObjectState, populatedDocument, generatedIds);
 
       const parsed = this.delegate.zodSchema.safeParse(populatedDocument);
