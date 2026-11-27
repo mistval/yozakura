@@ -17,6 +17,7 @@ type RunWithInteractiveRetryOptions<T> = {
   abortSignal?: AbortSignal | undefined;
   retryDelayMs?: number;
   maxRetries?: number;
+  skipInteraction?: boolean | undefined;
   shouldRetry?: (error: unknown, attempt: number) => boolean;
   hint?: string | ((error: unknown, attempt: number) => string | undefined);
 };
@@ -296,6 +297,10 @@ export async function runWithInteractiveRetry<T>(options: RunWithInteractiveRetr
             ? raceWithAbort(handleSessionSuperseded(error), options.abortSignal)
             : handleSessionSuperseded(error));
           throw new InteractiveRetryError(error);
+        }
+
+        if (options.skipInteraction) {
+          throw error;
         }
 
         lastOriginalError = error;

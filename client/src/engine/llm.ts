@@ -9,7 +9,11 @@ import { getErrorMessage } from '../errors/error_util.js';
 import type { PromptExecutionContext } from './prompt_templates/prompt_template_context_fields';
 import { globalParallelJobManager } from './parallelization/job_manager.js';
 import { DEFAULT_LLM_PARALLELISM_GROUP } from './parallelization/yozakura_job_manager_types.js';
-import { parseLlmMetaOptions, type LlmInheritToggleMode } from './settings/cascading_llm_configs.js';
+import {
+  parseLlmMetaOptions,
+  type LLMConfig,
+  type LlmInheritToggleMode,
+} from './settings/cascading_llm_configs.js';
 
 type ResponsePreParser = (response: string) => string;
 
@@ -21,6 +25,8 @@ type ChatCompletionOptions = {
   onTokens?: (fullText: string) => void | undefined;
   completionRequestId: string;
   jobConfig?: ParallelPromptJobConfig | undefined;
+  configsOverride?: readonly LLMConfig[] | undefined;
+  skipInteractiveRetry?: boolean | undefined;
   [key: string]: unknown;
 };
 
@@ -92,9 +98,10 @@ function notifyNoMatchingConfig(promptTemplateGroup: string): never {
 
 export function resolveLlmPromptOptions(
   promptTemplateGroup: string,
-  executionContext: PromptExecutionContext
+  executionContext: PromptExecutionContext,
+  configsOverride?: readonly LLMConfig[]
 ): ResolvedLlmPromptOptions {
-  const configs = Object.values(useSettingsStore.getState().llmConfigs);
+  const configs = configsOverride ?? Object.values(useSettingsStore.getState().llmConfigs);
   const context: ConfigRuleContext = { ...executionContext, promptTemplateGroup };
 
   let matchedCount = 0;
@@ -227,9 +234,17 @@ export async function chatCompletion(
   messages: PromptMessage[],
   options: ChatCompletionOptions
 ): Promise<string> {
-  const { promptTemplateGroup, onTokens, completionRequestId, promptContext, jobConfig, ...llmOptions } =
-    options;
-  let resolvedPromptOptions = resolveLlmPromptOptions(promptTemplateGroup, promptContext);
+  const {
+    promptTemplateGroup,
+    onTokens,
+    completionRequestId,
+    promptContext,
+    jobConfig,
+    configsOverride,
+    skipInteractiveRetry,
+    ...llmOptions
+  } = options;
+  let resolvedPromptOptions = resolveLlmPromptOptions(promptTemplateGroup, promptContext, configsOverride);
   const parallelismGroup =
     resolvedPromptOptions.concurrencyGroupName?.trim() || DEFAULT_LLM_PARALLELISM_GROUP;
   const jobName = jobConfig?.name ?? promptTemplateGroup;
@@ -245,9 +260,14 @@ export async function chatCompletion(
         operationType: 'api.llm_completion',
         abortSignal: jobAbortSignal,
         maxRetries: Number.POSITIVE_INFINITY,
+        skipInteraction: skipInteractiveRetry,
         run: async () => {
           // Resolve them again in case user edited config to fix an error
-          resolvedPromptOptions = resolveLlmPromptOptions(promptTemplateGroup, promptContext);
+          resolvedPromptOptions = resolveLlmPromptOptions(
+            promptTemplateGroup,
+            promptContext,
+            configsOverride
+          );
           const targetUrl = resolvedPromptOptions.targetUrl?.trim();
           if (!targetUrl) {
             throw new Error(

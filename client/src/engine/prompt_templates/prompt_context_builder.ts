@@ -119,7 +119,7 @@ ${summariesText || '(none yet)'}
 </summaries>`;
 }
 
-function buildGlobalTemplateContext(): GlobalExecutionContext {
+export function buildGlobalTemplateContext(): GlobalExecutionContext {
   return {
     settings: _.omitBy(useSettingsStore.getState(), _.isFunction),
     globalWritableContext,

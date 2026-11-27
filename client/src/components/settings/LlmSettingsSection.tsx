@@ -13,6 +13,7 @@ import { useTextareaPasteWarningGate } from './pasteWarning/useTextareaPasteWarn
 import { newId } from '../../util/id.js';
 import {
   BASE_DEFAULTS_LLM_CONFIG_ID,
+  findBaseDefaultsLLMConfig,
   llmConfigSchema,
   parseLlmMetaOptions,
   type LlmInheritToggleMode,
@@ -142,20 +143,27 @@ function ConfigEditor({
     loading: connectionTestLoading,
     error: connectionTestError,
     success: connectionTestSuccess,
-    testConnection,
+    responsePreview: connectionTestResponsePreview,
+    testGenerateText,
   } = useLlmConnectionTest();
   const { onPasteWithWarning, warningModal } = useTextareaPasteWarningGate({});
 
   const invalid = !draft.name.trim();
 
-  const handleSave = () => {
+  const buildValidatedConfig = (requireName: boolean): ConfigDraft | undefined => {
+    const trimmedName = draft.name.trim();
+    if (requireName && !trimmedName) {
+      setSaveError('Name is required.');
+      return undefined;
+    }
+
     const trimmedRule = draft.rule.trim();
     if (trimmedRule) {
       try {
         new Function('context', `return (${trimmedRule});`);
       } catch (error) {
         setSaveError(`Rule is invalid JavaScript: ${getErrorMessage(error)}`);
-        return;
+        return undefined;
       }
     }
 
@@ -164,12 +172,12 @@ function ConfigEditor({
       llmMetaOptions = JSON.parse(draft.llmMetaOptionsSource);
     } catch (error) {
       setSaveError(`LLM Meta Options must be valid JSON: ${getErrorMessage(error)}`);
-      return;
+      return undefined;
     }
 
     if (!llmMetaOptions || typeof llmMetaOptions !== 'object' || Array.isArray(llmMetaOptions)) {
       setSaveError('LLM Meta Options must be a JSON object.');
-      return;
+      return undefined;
     }
 
     const trimmedUrl = draft.llmUrl.trim();
@@ -185,43 +193,66 @@ function ConfigEditor({
         maybeParser = new Function(`return (${trimmedResponsePreParserSource});`)();
       } catch (error) {
         setSaveError(`Response Pre-parser is invalid JavaScript: ${getErrorMessage(error)}`);
-        return;
+        return undefined;
       }
 
       if (typeof maybeParser !== 'function') {
         setSaveError('Response Pre-parser must evaluate to a function.');
-        return;
+        return undefined;
       }
     }
 
     setSaveError('');
-    onSave(
-      llmConfigSchema.parse(
-        _.omitBy(
-          {
-            id: draft.id,
-            name: draft.name.trim(),
-            rule: trimmedRule,
-            llmMetaOptions: JSON.stringify(llmMetaOptions, null, 2),
-            llmUrl: trimmedUrl || undefined,
-            llmAuthToken: trimmedToken || undefined,
-            responsePreParserSource: trimmedResponsePreParserSource || undefined,
-            tokenStreamingEnabled:
-              draft.tokenStreamingEnabled !== 'inherit' ? draft.tokenStreamingEnabled : undefined,
-            appIdentificationHeadersEnabled:
-              draft.appIdentificationHeadersEnabled !== 'inherit'
-                ? draft.appIdentificationHeadersEnabled
-                : undefined,
-            concurrencyGroupName: trimmedConcurrencyGroupName || undefined,
-            concurrencyGroupLimit: validLimit,
-          },
-          _.isUndefined
-        )
+    return llmConfigSchema.parse(
+      _.omitBy(
+        {
+          id: draft.id,
+          name: trimmedName || config.name || 'Test Config',
+          rule: trimmedRule,
+          llmMetaOptions: JSON.stringify(llmMetaOptions, null, 2),
+          llmUrl: trimmedUrl || undefined,
+          llmAuthToken: trimmedToken || undefined,
+          responsePreParserSource: trimmedResponsePreParserSource || undefined,
+          tokenStreamingEnabled:
+            draft.tokenStreamingEnabled !== 'inherit' ? draft.tokenStreamingEnabled : undefined,
+          appIdentificationHeadersEnabled:
+            draft.appIdentificationHeadersEnabled !== 'inherit'
+              ? draft.appIdentificationHeadersEnabled
+              : undefined,
+          concurrencyGroupName: trimmedConcurrencyGroupName || undefined,
+          concurrencyGroupLimit: validLimit,
+        },
+        _.isUndefined
       )
     );
   };
 
-  const handleTestConnection = () => testConnection(draft.llmUrl.trim(), draft.llmAuthToken.trim());
+  const handleSave = () => {
+    const validatedConfig = buildValidatedConfig(true);
+    if (!validatedConfig) {
+      return;
+    }
+    onSave(validatedConfig);
+  };
+
+  const handleTestGenerateText = async () => {
+    const validatedConfig = buildValidatedConfig(false);
+    if (!validatedConfig) {
+      return;
+    }
+
+    const testedConfig: ConfigDraft = {
+      ...validatedConfig,
+      rule: 'true',
+    };
+    const baseDefaults = findBaseDefaultsLLMConfig(useSettingsStore.getState().llmConfigs);
+    const configsToTest =
+      config.id !== BASE_DEFAULTS_LLM_CONFIG_ID && baseDefaults
+        ? [baseDefaults, testedConfig]
+        : [testedConfig];
+
+    await testGenerateText(configsToTest);
+  };
 
   return (
     <div className="space-y-2">
@@ -458,14 +489,16 @@ function ConfigEditor({
         </button>
         <button
           type="button"
-          onClick={() => void handleTestConnection()}
+          onClick={() => void handleTestGenerateText()}
           disabled={connectionTestLoading}
           className="px-3 py-1 border rounded-sm"
         >
-          {connectionTestLoading ? 'Testing...' : 'Test Connection'}
+          {connectionTestLoading ? 'Testing...' : 'Test Generate Text'}
         </button>
         {connectionTestSuccess && (
-          <p className="text-sm text-secondary self-center">✓ Connection successful.</p>
+          <p className="text-sm text-secondary self-center">
+            ✓ Model responded: &ldquo;{connectionTestResponsePreview}&rdquo;
+          </p>
         )}
       </div>
       {warningModal}

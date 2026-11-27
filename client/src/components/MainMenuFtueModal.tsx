@@ -8,6 +8,7 @@ import { useModalPanelClasses } from '../hooks/use_mobile_layout.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import Modal from './ui/Modal.js';
 import InfoTooltip from './ui/InfoTooltip.js';
+import { assertNonNullish } from '../errors/application_error.js';
 import { getErrorMessage } from '../errors/error_util.js';
 import { useLlmConnectionTest } from '../hooks/useLlmConnectionTest.js';
 import {
@@ -60,7 +61,8 @@ export default function MainMenuFtueModal() {
     loading: llmConnectionTestLoading,
     error: llmConnectionTestError,
     success: llmConnectionTestSuccess,
-    testConnection: testLlmConnectionFromHook,
+    responsePreview: llmConnectionTestResponsePreview,
+    testGenerateText,
   } = useLlmConnectionTest();
 
   const baseDefaultsConfig = useMemo(() => findBaseDefaultsLLMConfig(llmConfigs), [llmConfigs]);
@@ -141,7 +143,17 @@ export default function MainMenuFtueModal() {
     navigate('/characters');
   };
 
-  const handleTestConnection = () => testLlmConnectionFromHook(llmUrlDraft, llmAuthTokenDraft);
+  const handleTestGenerateText = () => {
+    const updatedConfigs = updateLLMConfigsWithBaseDefaultsConnection(
+      llmConfigs,
+      llmUrlDraft,
+      llmAuthTokenDraft,
+      llmModelDraft
+    );
+    const baseConfig = findBaseDefaultsLLMConfig(updatedConfigs);
+    assertNonNullish(baseConfig, 'unable to find base LLM config');
+    return testGenerateText([baseConfig]);
+  };
 
   return (
     <Modal open={open} onClose={closeModal} closeOnBackdropClick={false}>
@@ -225,14 +237,18 @@ export default function MainMenuFtueModal() {
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-1">
-              {llmConnectionTestSuccess && <p className="text-sm text-secondary">✓ Connection successful.</p>}
+              {llmConnectionTestSuccess && (
+                <p className="text-sm text-secondary">
+                  ✓ Model responded: &ldquo;{llmConnectionTestResponsePreview}&rdquo;
+                </p>
+              )}
               <button
                 type="button"
-                onClick={() => void handleTestConnection()}
+                onClick={() => void handleTestGenerateText()}
                 disabled={llmConnectionTestLoading}
                 className={`px-3 py-1 border rounded-sm ${FTUE_BUTTON_CLASS}`}
               >
-                {llmConnectionTestLoading ? 'Testing...' : 'Test Connection'}
+                {llmConnectionTestLoading ? 'Testing...' : 'Test Generate Text'}
               </button>
             </div>
             {llmConnectionTestError && <div className="error-card">{llmConnectionTestError}</div>}
