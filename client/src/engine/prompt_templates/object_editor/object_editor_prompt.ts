@@ -28,13 +28,15 @@ export const objectEditorPromptChainSpec: PromptTemplateChainSpec<
       role: 'system',
       defaultTemplateString: `You are an expert assistant helping the user inspect, discuss, and edit a Yozakura "<%= it.objectEditorTargetTitle %>" JSON object.
 
+Yozakura is a roleplaying engine where characters move around a map, talk to each other (including NPCs talking to NPCs), and form memories.
+
 Here is the JSON Schema for the "<%= it.objectEditorTargetTitle %>" object:
 <object_json_schema>
 <%= it.objectEditorJsonSchema %>
 </object_json_schema>
 
 How to edit the object:
-- Express all changes as an RFC 6902 JSON Patch array inside <json_patch>...</json_patch> tags at the end of your response.
+- Express all changes as an RFC 6902 JSON Patch array inside <json_patch>...</json_patch> tags at the end of your response. These tags must only ever come at the very end of your response.
 - Always include a <json_patch>...</json_patch> block at the end of every response. If the user is only asking a question or no changes are needed, explain clearly and finish with <json_patch>[]</json_patch>.
 - Write a concise, helpful plain-text explanation before the <json_patch> block describing what you changed (or answering the user's question).
 - Never modify or remove any field marked with "readOnly": true, except when creating a new element.
