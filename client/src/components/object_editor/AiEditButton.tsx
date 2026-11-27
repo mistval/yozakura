@@ -11,7 +11,7 @@ export function AiEditButton({ onClick, disabled = false, className }: AiEditBut
 
   return (
     <button type="button" disabled={disabled || objectEditorOpen} onClick={onClick} className={className}>
-      🤖 AI Edit
+      🤖
     </button>
   );
 }
