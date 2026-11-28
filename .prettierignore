@@ -17,3 +17,4 @@ Dockerfile
 .nvmrc
 *.sh
 .gitattributes
+.gitignore

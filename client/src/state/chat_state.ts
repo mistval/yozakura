@@ -13,6 +13,10 @@ export function abortCurrentChatGeneration() {
   );
 }
 
+export function cancelParallelJob(jobId: string) {
+  globalParallelJobManager.cancelJobById(jobId, new UserAbortCurrentGenerationSignalException());
+}
+
 export function useChatJobs() {
   return useJobsWithTags(ChatJobTags.chatJob);
 }

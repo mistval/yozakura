@@ -238,7 +238,7 @@ export function migrateSettingsOverrides(overrides: Record<string, unknown>): Re
 
   return {
     ...rest,
-    ...(Object.keys(migratedGroupData).length > 0 ? { templateGroupData: migratedGroupData } : {}),
+    templateGroupData: Object.keys(migratedGroupData).length > 0 ? migratedGroupData : rest.templateGroupData,
   };
 }
 

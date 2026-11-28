@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { WorldMap, WorldMapLocation } from '../types.js';
-import { removeMapLocation, setMapAdjacency } from './world_map';
+import {
+  normalizeMapAdjacencies,
+  normalizeWorldMap,
+  removeMapLocation,
+  setMapAdjacency,
+  validateWorldMap,
+} from './world_map';
 
 function makeLocation(id: string, adjacency: string[] = []): WorldMapLocation {
   return {
@@ -85,5 +91,48 @@ describe('removeMapLocation', () => {
   it('refuses to remove the last location', () => {
     const map = makeMap([makeLocation('A')]);
     expect(() => removeMapLocation(map, 'A')).toThrow();
+  });
+});
+
+describe('normalizeMapAdjacencies', () => {
+  it('prunes nonexistent/self references, symmetrizes edges, and preserves unchanged references', () => {
+    const map = makeMap([
+      makeLocation('A', ['B', 'missing-1', 'A']),
+      makeLocation('B', ['missing-2']),
+      makeLocation('C', ['A']),
+    ]);
+    const normalized = normalizeMapAdjacencies(map);
+    expect(adjacencyOf(normalized, 'A')).toEqual(['B', 'C']);
+    expect(adjacencyOf(normalized, 'B')).toEqual(['A']);
+    expect(adjacencyOf(normalized, 'C')).toEqual(['A']);
+
+    const unchanged = makeMap([makeLocation('A', ['B']), makeLocation('B', ['A'])]);
+    expect(normalizeMapAdjacencies(unchanged)).toBe(unchanged);
+  });
+
+  it('does not report an error in validateWorldMap for asymmetric adjacency', () => {
+    const asymmetricMap = {
+      ...makeMap([
+        { ...makeLocation('A', ['B']), description: 'Location A' },
+        { ...makeLocation('B', []), description: 'Location B' },
+      ]),
+      description: 'Test map description',
+    };
+    expect(validateWorldMap(asymmetricMap)).toEqual([]);
+  });
+});
+
+describe('normalizeWorldMap', () => {
+  it('prunes dangling/duplicate zone locationIds, forces isEphemeral: false, normalizes adjacencies, and preserves unchanged references', () => {
+    const map = makeMap(
+      [{ ...makeLocation('A', ['B', 'missing']), isEphemeral: true }, makeLocation('B', [])],
+      ['A', 'missing', 'A', 'B']
+    );
+    const normalized = normalizeWorldMap(map);
+    expect(adjacencyOf(normalized, 'A')).toEqual(['B']);
+    expect(adjacencyOf(normalized, 'B')).toEqual(['A']);
+    expect(normalized.locations[0]?.isEphemeral).toBe(false);
+    expect(normalized.zones[0]?.locationIds).toEqual(['A', 'B']);
+    expect(normalizeWorldMap(normalized)).toBe(normalized);
   });
 });

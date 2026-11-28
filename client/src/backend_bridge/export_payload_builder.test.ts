@@ -10,6 +10,7 @@ describe('export_payload_builder', () => {
       mapId: 'map_001',
       userCharacterId: 'char_001',
       turnNumber: 5,
+      turnOffset: 0,
       saveName: '',
       remoteChatMedium: 'text messaging',
       temporalContext: { selectedScriptId: 'default', controlValues: {} },

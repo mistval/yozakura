@@ -9,7 +9,13 @@ import { getRequiredUserCharacterId, useScenarioStore } from '../../state/scenar
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store';
 import { useSettingsStore } from '../../state/settings_store';
-import { DEFERRED_SYNC } from '../../state/ephemeral_state_helper';
+import {
+  DEFERRED_SYNC,
+  DEFERRED_SYNC_OWNERS,
+  getActiveDeferredSyncOwner,
+  waitForDeferredSyncLockAvailability,
+} from '../../state/ephemeral_state_helper';
+import { globalParallelJobManager } from '../parallelization/job_manager';
 import { trimNewestByCreatedAt } from '../../util/array';
 import { newId } from '../../util/id';
 import {
@@ -101,7 +107,26 @@ export async function lockEntitiesForEndOfChatUpdates(npcSpeakers: Character[]) 
     return;
   }
 
-  useScenarioCharacterStore.getState().lockEntitiesForDeferredSync(npcSpeakers);
+  const characterStore = useScenarioCharacterStore.getState();
+
+  while (true) {
+    const activeOwner = getActiveDeferredSyncOwner();
+    if (activeOwner && activeOwner !== DEFERRED_SYNC_OWNERS.characterMemoryGenerator) {
+      await globalParallelJobManager.enqueue({
+        name: 'Waiting for Object Editor lock',
+        tags: [ChatJobTags.chatJob, ChatJobTags.abortOnPause, ChatJobTags.finalizingChat],
+        job: (abortSignal) =>
+          waitForDeferredSyncLockAvailability(DEFERRED_SYNC_OWNERS.characterMemoryGenerator, abortSignal),
+      });
+      continue;
+    }
+
+    await characterStore.waitToLockEntitiesForDeferredSync(
+      npcSpeakers,
+      DEFERRED_SYNC_OWNERS.characterMemoryGenerator
+    );
+    break;
+  }
 
   const transcript = useTurnMachineStore.getState().transcript;
   if (!transcript) {
@@ -123,7 +148,10 @@ export async function lockEntitiesForEndOfChatUpdates(npcSpeakers: Character[]) 
   if (pairs.length > 0) {
     const relationshipStore = useScenarioCharacterRelationshipStore.getState();
     const relationships = await relationshipStore.getCharacterRelationships(pairs);
-    relationshipStore.lockEntitiesForDeferredSync(Object.values(relationships));
+    await relationshipStore.waitToLockEntitiesForDeferredSync(
+      Object.values(relationships),
+      DEFERRED_SYNC_OWNERS.characterMemoryGenerator
+    );
   }
 }
 

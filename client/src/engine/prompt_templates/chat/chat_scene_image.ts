@@ -60,7 +60,7 @@ Conversation Transcript:
 
 The focus of the image prompt should be <%= it.focusedCharacter.firstName %>, whose appearance (and potentially some environmental information) is:
 <appearance>
-<%= it.focusedCharacterAppearance %>
+<%= it.focusedCharacterAppearance.replaceAll(/<lora:[^:]+:[^>]+>/g, '') %>
 
 </appearance>
 
@@ -117,7 +117,7 @@ Conversation Transcript:
 
 The focus of the image is <%= it.focusedCharacter.firstName %>, whose appearance details are:
 <appearance>
-<%= it.focusedCharacterAppearance %>
+<%= it.focusedCharacterAppearance.replaceAll(/<lora:[^:]+:[^>]+>/g, '') %>
 
 </appearance>
 

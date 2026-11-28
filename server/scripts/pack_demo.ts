@@ -15,7 +15,7 @@ const outZipPath = path.join(serverDir, 'demo_data.yozakura_export.zip');
 const TIMESTAMP_ISO = '2026-11-01T12:00:00.000Z';
 const TIMESTAMP_SQL = '2026-11-01 12:00:00Z';
 const EXPORT_NAME = 'yozakura_export_demo';
-const DB_USER_VERSION = 9;
+const DB_USER_VERSION = 10;
 
 const hexIdSchema = z.string().regex(/^[a-f0-9]{18}$/, 'Expected 18-char lowercase hex ID');
 
@@ -131,6 +131,7 @@ const sourceScenarioSchema = z.object({
     updatedAt: z.string(),
     mapId: hexIdSchema,
     userCharacterId: hexIdSchema,
+    turnOffset: z.number().int(),
     turnNumber: z.number().int().nonnegative(),
     saveName: z.string(),
     remoteChatMedium: z.string().min(1),
@@ -481,6 +482,7 @@ function compileDemoSource(): void {
         .filter((id) => id !== userChar.scenarioCharacterId),
     ],
     chatsSoFar: {},
+    wardrobeAutoselectRan: true,
     activeChat: {
       participantIds: [openingInitiator.scenarioCharacterId, openingSpeaker.scenarioCharacterId],
       removedParticipantIds: [],

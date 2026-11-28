@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useMemo } from 'react';
-import { useQueryParams } from '../../util/queryParams.js';
+import { useModalQueryParam } from '../../hooks/useModalQueryParam.js';
 
 type ShowConversationLogParams = {
   conversationId?: string;
   page?: number;
 };
+
+const CONVERSATION_LOG_OWNED_KEYS = ['cl_conversation', 'cl_page', 'cl_participants'] as const;
 
 type ConversationLogContextType = {
   open: boolean;
@@ -28,51 +30,45 @@ function sanitizePage(page?: number | undefined) {
 }
 
 export function ConversationLogProvider({ children }: { children: ReactNode }) {
-  const [params, setParams] = useQueryParams();
+  const { open, pushModal, closeModal, updateModalParams, layerParams } = useModalQueryParam(
+    'conversationlog',
+    CONVERSATION_LOG_OWNED_KEYS
+  );
 
-  const open = params.has('conversationlog') && params.get('conversationlog') !== 'false';
-  const routeConversationId = params.get('cl_conversation') ?? undefined;
-  const rawPage = params.get('cl_page');
+  const routeConversationId = layerParams.get('cl_conversation') ?? undefined;
+  const rawPage = layerParams.get('cl_page');
   const routePage = sanitizePage(rawPage ? Number(rawPage) : undefined);
   const showBackButton = Boolean(routeConversationId);
 
   const showConversationLog = useCallback(
     (incoming?: ShowConversationLogParams) => {
       const next = incoming || {};
-      setParams({
-        conversationlog: true,
+      pushModal({
         cl_conversation: next.conversationId ?? undefined,
-        cl_page: next.page ? sanitizePage(next.page) : sanitizePage(routePage),
+        cl_page: next.page ? sanitizePage(next.page) : 1,
       });
     },
-    [setParams, routePage]
+    [pushModal]
   );
 
-  const closeConversationLog = useCallback(() => {
-    setParams({
-      conversationlog: undefined,
-      cl_conversation: undefined,
-      cl_page: undefined,
-      cl_participants: undefined,
-    });
-  }, [setParams]);
+  const closeConversationLog = closeModal;
 
   const backToConversationLog = useCallback(() => {
-    setParams({ cl_conversation: undefined, cl_page: routePage, cl_participants: undefined });
-  }, [setParams, routePage]);
+    updateModalParams({ cl_conversation: undefined, cl_page: routePage, cl_participants: undefined });
+  }, [updateModalParams, routePage]);
 
   const setConversationLogPage = useCallback(
     (page: number) => {
-      setParams({ cl_page: sanitizePage(page) });
+      updateModalParams({ cl_page: sanitizePage(page) });
     },
-    [setParams]
+    [updateModalParams]
   );
 
   const openConversationDetail = useCallback(
     (entryId: string) => {
-      setParams({ cl_conversation: entryId });
+      updateModalParams({ cl_conversation: entryId });
     },
-    [setParams]
+    [updateModalParams]
   );
 
   const value = useMemo(
@@ -93,7 +89,6 @@ export function ConversationLogProvider({ children }: { children: ReactNode }) {
       routeConversationId,
       routePage,
       showBackButton,
-      params,
       showConversationLog,
       closeConversationLog,
       backToConversationLog,

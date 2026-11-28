@@ -7,7 +7,7 @@ import {
   type ScheduleSegment,
 } from '../../engine/types.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
-import { useScenarioStore } from '../../state/scenario_store.js';
+import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import { useMapModal } from '../MapModalContext.js';
 import InfoTooltip from './../ui/InfoTooltip';
 import { newId } from '../../util/id.js';
@@ -35,7 +35,7 @@ function assignLanes(segments: ScheduleSegment[]): {
   laneBySegmentId: Record<string, number>;
   laneCount: number;
 } {
-  const ordered = [...segments].sort((a, b) => a.startTurn - b.startTurn || a.endTurn - b.endTurn);
+  const ordered = segments.toSorted((a, b) => a.startTurn - b.startTurn || a.endTurn - b.endTurn);
   const laneEndTurns: number[] = [];
   const laneBySegmentId: Record<string, number> = {};
 
@@ -55,7 +55,7 @@ function assignLanes(segments: ScheduleSegment[]): {
 
 export default function ScheduleEditor({ groupId }: { groupId: string }) {
   const storedSchedule = useCharacterGroupStore((state) => state.schedulesByGroupId[groupId]);
-  const map = useScenarioStore((s) => s.activeScenarioMap);
+  const map = useActiveScenarioMap();
   const scenario = useScenarioStore((state) => state.activeScenario);
 
   const { showMapZones } = useMapModal();
@@ -67,7 +67,7 @@ export default function ScheduleEditor({ groupId }: { groupId: string }) {
   const lengthInTurns = storedSchedule?.lengthInTurns ?? 56;
   const zones = map?.zones ?? [];
   const segments = storedSchedule?.segments ?? [];
-  const turnNumber = scenario?.turnNumber ?? 0;
+  const turnNumber = (scenario?.turnNumber ?? 0) + (scenario?.turnOffset ?? 0);
   const nowTurn = ((turnNumber % lengthInTurns) + lengthInTurns) % lengthInTurns;
 
   const { laneBySegmentId, laneCount } = useMemo(() => assignLanes(segments), [segments]);

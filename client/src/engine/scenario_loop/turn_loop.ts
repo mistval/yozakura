@@ -3,7 +3,11 @@ import { useTurnMachineStore } from '../../state/turn_machine_store';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store';
-import { getRequiredUserCharacterId, useScenarioStore } from '../../state/scenario_store';
+import {
+  getActiveScenarioMap,
+  getRequiredUserCharacterId,
+  useScenarioStore,
+} from '../../state/scenario_store';
 import { createPersistedObject, doAsDataWrite, mainDatabase } from '../../backend_bridge/database';
 import { useSettingsStore } from '../../state/settings_store';
 import { useTemporalContextStore } from '../../state/temporal_context_store';
@@ -65,16 +69,15 @@ export async function runTurnLoop(
 }
 
 async function runTurnLoopTick(opts?: { prioritizeUser?: boolean | undefined }) {
-  const { turnMachineState, currentCharacterId, startNewTurn } = useTurnMachineStore.getState();
-
-  await recomputeTemporalContextAndAutoselectWardrobes();
-
-  if (turnMachineState === undefined) {
-    startNewTurn({
+  if (useTurnMachineStore.getState().turnMachineState === undefined) {
+    useTurnMachineStore.getState().startNewTurn({
       userMovesFirst: opts?.prioritizeUser,
     });
   }
 
+  await recomputeTemporalContextAndAutoselectWardrobes();
+
+  const { turnMachineState, currentCharacterId } = useTurnMachineStore.getState();
   const characterId = currentCharacterId();
   assertNonNullish(characterId, 'No current character to process');
   const character = useScenarioCharacterStore.getState().getCharacterById(characterId);
@@ -101,7 +104,7 @@ async function runTurnLoopTick(opts?: { prioritizeUser?: boolean | undefined }) 
 
   if (move.actionType === 'chat' && move.rich) {
     const chatStart = await ChatCoordinator.prepareChatStart(move.participantIds);
-    useTurnMachineStore.getState().beginChat(chatStart);
+    await useTurnMachineStore.getState().beginChat(chatStart);
     persistTurn();
     return;
   }
@@ -143,6 +146,7 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
 
     while (true) {
       try {
+        useTurnMachineStore.getState().markInChatTurnFor(nextSpeaker.id);
         const speakerInput = makeInputInterface(nextSpeaker.id);
         const { input } = await speakerInput.getNextChatInput();
 
@@ -172,6 +176,7 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
           err instanceof UserPauseSignalException ||
           err instanceof UserAbortCurrentGenerationSignalException
         ) {
+          useScenarioLoopStateStore.getState().setUserRequestedPhaseTransition('paused');
           nextSpeaker = await ChatCoordinator.selectNextSpeaker({
             forcedSpeakerId: getRequiredUserCharacterId(),
           });
@@ -195,6 +200,8 @@ async function runChatLoop(opts?: { userSpeaksFirst?: boolean | undefined }): Pr
   } catch (err) {
     await closeChatSession(true);
     throw err;
+  } finally {
+    useTurnMachineStore.getState().markInChatTurnFor(undefined);
   }
 }
 
@@ -205,7 +212,7 @@ async function applySimpleTurnMove(characterId: string, move: TurnMove): Promise
 
   if (move.actionType === 'move') {
     recordMovement(characterId, move.destinationLocationId, move.movementPolicy);
-    moveScenarioCharacter(characterId, move.destinationLocationId);
+    await moveScenarioCharacter(characterId, move.destinationLocationId);
     return { noEffect: true };
   }
 
@@ -246,8 +253,8 @@ async function closeChatSession(forceNoEffect?: boolean): Promise<{ noEffect: bo
   return { noEffect };
 }
 
-function moveScenarioCharacter(characterId: string, toId: string) {
-  useScenarioCharacterStore.getState().saveScenarioCharacterFields(characterId, {
+async function moveScenarioCharacter(characterId: string, toId: string) {
+  await useScenarioCharacterStore.getState().saveScenarioCharacterFields(characterId, {
     locationId: toId,
   });
 }
@@ -255,7 +262,7 @@ function moveScenarioCharacter(characterId: string, toId: string) {
 function recordMovement(characterId: string, toId: string, movementPolicy: MovementPolicy | undefined) {
   const scenario = useScenarioStore.getState().activeScenario;
   const character = useScenarioCharacterStore.getState().scenarioCharactersById[characterId];
-  const map = useScenarioStore.getState().activeScenarioMap;
+  const map = getActiveScenarioMap();
   if (!scenario || !character || !map || character.locationId === toId) {
     return;
   }
@@ -288,8 +295,14 @@ async function recomputeTemporalContextAndAutoselectWardrobes() {
   const lastDayIndex = loopState.lastTemporalDayIndex;
   loopState.setLastTemporalDayIndex(temporalContext.dayIndex);
 
+  const turnMachineStore = useTurnMachineStore.getState();
+  if (turnMachineStore.wardrobeAutoselectRan) {
+    return;
+  }
+
   // If day index has not changed, don't trigger auto select
   if (temporalContext.dayIndex === lastDayIndex) {
+    turnMachineStore.setWardrobeAutoselectRan(true);
     return;
   }
 
@@ -307,16 +320,26 @@ async function recomputeTemporalContextAndAutoselectWardrobes() {
       });
 
       if (computedLastDayContext?.dayIndex === temporalContext.dayIndex) {
+        turnMachineStore.setWardrobeAutoselectRan(true);
         return;
       }
     }
   }
 
+  let updatedAnyWardrobe = false;
   for (const c of useScenarioCharacterStore.getState().scenarioCharacters) {
     const updatedWardrobes = applyDailyWardrobeAutoselect(c.wardrobes);
     if (updatedWardrobes) {
-      useScenarioCharacterStore.getState().saveScenarioCharacterFields(c.id, { wardrobes: updatedWardrobes });
+      updatedAnyWardrobe = true;
+      await useScenarioCharacterStore
+        .getState()
+        .saveScenarioCharacterFields(c.id, { wardrobes: updatedWardrobes });
     }
+  }
+
+  turnMachineStore.setWardrobeAutoselectRan(true);
+  if (updatedAnyWardrobe) {
+    persistTurn();
   }
 }
 

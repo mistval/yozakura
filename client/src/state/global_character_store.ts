@@ -4,10 +4,17 @@ import * as Files from '../backend_bridge/files.js';
 import type { Character } from '../engine/types.js';
 import { assert } from '../errors/application_error.js';
 import { importDemoGlobalCharacters } from '../backend_bridge/demo_import.js';
-import { concatUniqueById } from '../util/array.js';
+import { concatUniqueByIds } from '../util/array.js';
 import { addOrReplaceVersionQueryParam } from '../util/id.js';
+import { ephemeralStateSlice, IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
 
-export const useGlobalCharactersStore = create<{
+const DATABASE_OBJECT_NAME = 'global_character';
+
+type UpdatedGlobalCharacter = Character & {
+  imageFile?: File | undefined;
+};
+
+type GlobalCharactersStoreState = {
   globalCharacters: Character[];
   globalCharactersById: Record<string, Character>;
   globalCharactersAreLoaded: boolean;
@@ -16,13 +23,110 @@ export const useGlobalCharactersStore = create<{
   installDemoCharactersGlobally: () => Promise<void>;
   refresh: () => Promise<void>;
   bustImageCache: (characterIds: string[]) => void;
-  saveGlobalCharacter: (character: Character, imageFile?: File) => Promise<Character>;
-  saveScenarioCharacterAsGlobal: (scenarioChar: Character, imageFile?: File) => Promise<Character>;
-  deleteGlobalCharacter: (character: Character) => void;
-}>((set, get) => ({
+  saveGlobalCharacter: (
+    character: Character,
+    imageFile?: File,
+    syncOptions?: SyncOptions
+  ) => Promise<Character>;
+  saveScenarioCharacterAsGlobal: (
+    scenarioChar: Character,
+    imageFile?: File,
+    syncOptions?: SyncOptions
+  ) => Promise<Character>;
+  deleteGlobalCharacter: (character: Pick<Character, 'id' | 'imagePath'>, syncOptions?: SyncOptions) => void;
+} & ReturnType<typeof ephemeralStateSlice<UpdatedGlobalCharacter>>;
+
+function toPlainCharacter(updatedCharacter: UpdatedGlobalCharacter): Character {
+  const { imageFile: _imageFile, ...character } = updatedCharacter;
+  return character;
+}
+
+export const useGlobalCharactersStore = create<GlobalCharactersStoreState>((set, get) => ({
   globalCharacters: [],
   globalCharactersById: {},
   globalCharactersAreLoaded: false,
+
+  ...ephemeralStateSlice<UpdatedGlobalCharacter>({
+    setStoreState(entities: UpdatedGlobalCharacter[]) {
+      get().setGlobalCharacters(concatUniqueByIds(get().globalCharacters, entities.map(toPlainCharacter)));
+    },
+
+    deleteStoreState(entities: UpdatedGlobalCharacter[]) {
+      const ids = new Set(entities.map((entity) => entity.id));
+      get().setGlobalCharacters(get().globalCharacters.filter((character) => !ids.has(character.id)));
+    },
+
+    async setDatabaseState(entities: UpdatedGlobalCharacter[]) {
+      const debouncerKey = entities.length === 1 ? entities[0]!.id : `${DATABASE_OBJECT_NAME}.all`;
+
+      await doAsDataWrite(
+        async () => {
+          const characters = await Promise.all(
+            entities.map(async (entity) => {
+              const character = get().globalCharactersById[entity.id];
+              if (!character) {
+                return undefined;
+              }
+
+              if (!entity.imageFile) {
+                return character;
+              }
+
+              const baseImagePath = Files.getGlobalCharacterImagePath(character.id);
+              await Files.upload(
+                baseImagePath,
+                entity.imageFile,
+                entity.imageFile.type || 'application/octet-stream'
+              );
+
+              const latestCharacter = get().globalCharactersById[entity.id];
+              if (!latestCharacter) {
+                return undefined;
+              }
+
+              const updatedCharacter = {
+                ...latestCharacter,
+                imagePath: addOrReplaceVersionQueryParam(baseImagePath),
+              };
+              get().setGlobalCharacters(concatUniqueByIds(get().globalCharacters, [updatedCharacter]));
+              return updatedCharacter;
+            })
+          );
+
+          const existingCharacters = characters.filter((character): character is Character =>
+            Boolean(character)
+          );
+          if (existingCharacters.length === 0) {
+            return;
+          }
+
+          await mainDatabase.storeGlobalCharacters(existingCharacters);
+        },
+        DATABASE_OBJECT_NAME,
+        { debouncerKey }
+      );
+    },
+
+    deleteDatabaseState(entities: UpdatedGlobalCharacter[]) {
+      const debouncerKey = entities.length === 1 ? entities[0]!.id : `${DATABASE_OBJECT_NAME}.all`;
+
+      return doAsDataWrite(
+        async () => {
+          await mainDatabase.deleteGlobalCharacters(entities.map((entity) => entity.id));
+          await Promise.all(entities.map((entity) => Files.deleteCharacterImage(entity.imagePath)));
+        },
+        DATABASE_OBJECT_NAME,
+        { debouncerKey }
+      );
+    },
+
+    getEntitiesFromDatabase(entities: UpdatedGlobalCharacter[]) {
+      return doAsDataRead(
+        () => mainDatabase.loadGlobalCharactersByIds(entities.map((entity) => entity.id)),
+        `${DATABASE_OBJECT_NAME}.partial.refresh`
+      );
+    },
+  }),
 
   setGlobalCharacters(characters: Character[]) {
     set({
@@ -51,51 +155,34 @@ export const useGlobalCharactersStore = create<{
     }
   },
 
-  async saveGlobalCharacter(character: Character, imageFile?: File) {
+  async saveGlobalCharacter(
+    character: Character,
+    imageFile?: File,
+    syncOptions: SyncOptions = IMMEDIATE_SYNC
+  ) {
     assert(get().globalCharactersAreLoaded, 'Global characters not yet loaded');
-    const baseImagePath = Files.getGlobalCharacterImagePath(character.id);
     const withUpdatedFields = {
       ...character,
       updatedAt: new Date().toISOString(),
       imagePath: character.imagePath || '/images/character/default_character.png',
     } satisfies Character;
 
-    get().setGlobalCharacters(concatUniqueById(get().globalCharacters, withUpdatedFields));
-
-    await doAsDataWrite(
-      async () => {
-        let latestCharacter = get().globalCharactersById[withUpdatedFields.id];
-        if (!latestCharacter) {
-          return;
-        }
-
-        if (imageFile) {
-          await Files.upload(baseImagePath, imageFile, imageFile.type || 'application/octet-stream');
-
-          latestCharacter = get().globalCharactersById[withUpdatedFields.id];
-          if (!latestCharacter) {
-            return;
-          }
-
-          latestCharacter = {
-            ...latestCharacter,
-            imagePath: addOrReplaceVersionQueryParam(baseImagePath),
-          };
-          get().setGlobalCharacters(concatUniqueById(get().globalCharacters, latestCharacter));
-        }
-
-        await mainDatabase.storeGlobalCharacters([latestCharacter]);
-      },
-      'global_character',
+    await get().ephemeralStateHelper.stageUpdatedEntity(
       {
-        debouncerKey: withUpdatedFields.id,
-      }
+        ...withUpdatedFields,
+        imageFile,
+      },
+      syncOptions
     );
 
     return get().globalCharactersById[withUpdatedFields.id] ?? withUpdatedFields;
   },
 
-  async saveScenarioCharacterAsGlobal(scenarioChar: Character, imageFile?: File): Promise<Character> {
+  async saveScenarioCharacterAsGlobal(
+    scenarioChar: Character,
+    imageFile?: File,
+    syncOptions: SyncOptions = IMMEDIATE_SYNC
+  ): Promise<Character> {
     assert(get().globalCharactersAreLoaded, 'Global characters not yet loaded');
     const targetId = scenarioChar.globalCharacterId?.trim() || scenarioChar.id;
     const imagePath = imageFile
@@ -115,25 +202,37 @@ export const useGlobalCharactersStore = create<{
       imagePath: Files.isApiFilePath(imagePath) ? addOrReplaceVersionQueryParam(imagePath) : imagePath,
     };
 
-    return get().saveGlobalCharacter(cleanGlobalChar, imageFile);
+    return get().saveGlobalCharacter(cleanGlobalChar, imageFile, syncOptions);
   },
 
-  deleteGlobalCharacter(character: Pick<Character, 'id' | 'imagePath'>) {
+  deleteGlobalCharacter(
+    character: Pick<Character, 'id' | 'imagePath'>,
+    syncOptions: SyncOptions = IMMEDIATE_SYNC
+  ) {
     assert(get().globalCharactersAreLoaded, 'Global characters not yet loaded');
 
-    void doAsDataWrite(
-      async () => {
-        await mainDatabase.deleteGlobalCharacter(character.id);
-        await Files.deleteCharacterImage(character.imagePath);
-      },
-      'global_character',
-      {
-        debouncerKey: character.id,
-      }
-    );
+    const target: UpdatedGlobalCharacter = get().globalCharactersById[character.id] ?? {
+      id: character.id,
+      imagePath: character.imagePath,
+      createdAt: '',
+      updatedAt: '',
+      globalCharacterId: character.id,
+      scenarioId: '',
+      firstName: '',
+      lastName: '',
+      internalDescription: '',
+      externalDescription: '',
+      baseAppearanceTags: '',
+      wardrobes: [],
+      globalMemories: '',
+      locationId: '',
+      nextConversationWithCharacterId: '',
+      exampleDialogue: '',
+      rollingConversationSummaries: [],
+      groupIds: [],
+    };
 
-    const newCharacters = get().globalCharacters.filter((c) => c.id !== character.id);
-    get().setGlobalCharacters(newCharacters);
+    void get().ephemeralStateHelper.stageDeletedEntity(target, syncOptions);
   },
 
   async installDemoCharactersGlobally() {

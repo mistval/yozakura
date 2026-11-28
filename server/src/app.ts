@@ -122,14 +122,14 @@ export function createApp(options: CreateAppOptions = {}): Express {
   fs.mkdirSync(tempDir, { recursive: true });
 
   const app = express();
-  app.use('/api', createSingleActiveSessionMiddleware());
-  app.use('/api', proxyRouter());
-  app.use(express.json({ limit: '10mb' }));
-
   if (corsOrigin) {
     console.log('Configuration allowed custom CORS origins:', corsOrigin.toString());
     app.use(cors({ origin: corsOrigin }));
   }
+
+  app.use('/api', createSingleActiveSessionMiddleware());
+  app.use('/api', proxyRouter());
+  app.use(express.json({ limit: '10mb' }));
 
   app.use('/api', filesRouter(dataDir));
   app.use('/api', dbRouter(db));

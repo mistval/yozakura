@@ -83,15 +83,31 @@ export function interpolateCurve(points: number[], count: number): number[] {
   return result;
 }
 
+export function temporalSeedControl(): SettingsScriptControl {
+  return {
+    id: 'seed',
+    type: 'string',
+    label: 'Weather seed',
+    default: '',
+    placeholder: 'Leave empty to use scenario ID',
+    tooltipHtml: 'Optional seed for deterministic weather generation. Leave empty to use the scenario ID.',
+  };
+}
+
+export function resolveTemporalSeed(controlValues: SettingsControlValues, scenarioId: string): string {
+  const trimmed = controlValues.seed?.trim();
+  return trimmed ? trimmed : scenarioId;
+}
+
 export function temporalControls(defaults: TemporalDefaults): SettingsScriptControl[] {
   return [
+    temporalSeedControl(),
     {
       id: 'jumpByDays',
       type: 'number',
       label: 'Jump by days',
       default: String(defaults.jumpByDays ?? DEFAULT_JUMP_BY_DAYS),
       min: 0,
-      width: 'full',
       tooltipHtml:
         "Extra days skipped each time an in-world day passes. With the default of 7, every day jumps the calendar forward by an extra week, so the day after Monday is <strong>the following week's</strong> Tuesday. Set lower if you want months to pass by more slowly, higher for them to pass by more quickly.",
     },
@@ -100,7 +116,6 @@ export function temporalControls(defaults: TemporalDefaults): SettingsScriptCont
       type: 'string',
       label: 'Time periods',
       default: (defaults.periods ?? DEFAULT_PERIODS).join(', '),
-      width: 'full',
       tooltipHtml:
         'Comma-separated names for the periods within a day. Each turn advances to the next period, so the number of periods is the number of turns per day.',
     },
@@ -109,7 +124,6 @@ export function temporalControls(defaults: TemporalDefaults): SettingsScriptCont
       type: 'string',
       label: 'Temperature curve',
       default: defaults.tempFrac?.join(', '),
-      width: 'full',
       tooltipHtml:
         'Comma-separated fractions from 0 (daily low) to 1 (daily high) describing temperature through the day. If the number of points differs from the number of time periods, the curve is linearly interpolated to fit.',
     },
@@ -118,7 +132,6 @@ export function temporalControls(defaults: TemporalDefaults): SettingsScriptCont
       type: 'string',
       label: 'Daylight periods',
       default: (defaults.daylightPeriods ?? DEFAULT_DAYLIGHT_PERIODS).join(', '),
-      width: 'full',
       tooltipHtml:
         'Comma-separated subset of the time period names that count as daylight. Affects sky descriptions and day/night emoji.',
     },

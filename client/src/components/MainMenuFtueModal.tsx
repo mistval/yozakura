@@ -7,15 +7,18 @@ import { useSettingsStore, type Settings } from '../state/settings_store.js';
 import { useModalPanelClasses } from '../hooks/use_mobile_layout.js';
 import { useScenarioStore } from '../state/scenario_store.js';
 import Modal from './ui/Modal.js';
-import InfoTooltip from './ui/InfoTooltip.js';
+import { assertNonNullish } from '../errors/application_error.js';
 import { getErrorMessage } from '../errors/error_util.js';
 import { useLlmConnectionTest } from '../hooks/useLlmConnectionTest.js';
 import {
   findBaseDefaultsLLMConfig,
+  parseLlmMetaOptions,
   updateLLMConfigsWithBaseDefaultsConnection,
 } from '../engine/settings/cascading_llm_configs.js';
 import { getBuiltinImageScript } from '../engine/settings/settings_scripts/image/image_scripts.js';
 import CustomScriptSettings from './settings/settingsScripts/CustomScriptSettings.js';
+import CompletionsProviderField from './settings/CompletionsProviderField.js';
+import CheckboxSettingRow from './settings/ui/CheckboxSettingRow.js';
 import {
   IMAGE_SCRIPT_DESCRIPTOR,
   useImageScriptSelection,
@@ -25,13 +28,14 @@ const FTUE_API_URL_TOOLTIP_HTML =
   'Use an OpenAI-compatible completions API endpoint (usually an endpoint that ends in <code>/v1/chat/completions</code>).';
 
 const FTUE_AUTH_TOKEN_TOOLTIP_HTML =
-  'A bearer token is often required for cloud providers. Local/self-hosted endpoints may not require one.';
+  'An auth token is usually required for cloud providers. Local/self-hosted software typically does not require one and this can be left empty.';
 
 const FTUE_MODEL_TOOLTIP_HTML =
-  'If your API accepts a <code>model</code> field in request bodies to specify the model to use, you can set that model here.';
+  'Configure which <code>model</code> to use. This can be left empty and is usually not required for local/self-hosted software. Some cloud providers may require it. If you do not specify this for a cloud provider, they may use a default model which works but is not very good.';
 
 const MOBILE_DEFAULT_COMPLETIONS_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MOBILE_DEFAULT_MODEL = 'deepseek/deepseek-v4.1-flash-1017';
+const FTUE_AUTO_IMAGE_RATE = 0.15;
 
 const FTUE_SECTION_CLASS = 'space-y-3 rounded-lg border border-[#31234a]! bg-[#0f0a1c]/90 p-4';
 const FTUE_INPUT_CLASS =
@@ -42,6 +46,7 @@ export default function MainMenuFtueModal() {
   const navigate = useNavigate();
   const location = useLocation();
   const llmConfigs = useSettingsStore((s) => s.llmConfigs);
+  const autoImageRate = useSettingsStore((s) => s.autoImageRate);
   const mainMenuFtueSeen = useSettingsStore((s) => s.mainMenuFtueSeen);
   const setSettings = useSettingsStore((s) => s.setSettings);
   const { outerClassName, panelClassName } = useModalPanelClasses({
@@ -58,15 +63,15 @@ export default function MainMenuFtueModal() {
     loading: llmConnectionTestLoading,
     error: llmConnectionTestError,
     success: llmConnectionTestSuccess,
-    testConnection: testLlmConnectionFromHook,
+    responsePreview: llmConnectionTestResponsePreview,
+    testGenerateText,
   } = useLlmConnectionTest();
 
   const baseDefaultsConfig = useMemo(() => findBaseDefaultsLLMConfig(llmConfigs), [llmConfigs]);
   const llmModelSource = useMemo(() => {
-    const meta = baseDefaultsConfig
-      ? (JSON.parse(baseDefaultsConfig.llmMetaOptions) as Record<string, unknown>)
-      : {};
-    const model = meta.model;
+    const model = baseDefaultsConfig
+      ? parseLlmMetaOptions(baseDefaultsConfig.llmMetaOptions).model
+      : undefined;
     return typeof model === 'string' ? model : '';
   }, [baseDefaultsConfig?.llmMetaOptions]);
 
@@ -103,13 +108,13 @@ export default function MainMenuFtueModal() {
     setSettings(() => ({ mainMenuFtueSeen: true }));
   };
 
-  const saveConnectionDetails = () => {
+  const saveConnectionDetails = (overrides?: { url?: string; model?: string }) => {
     setSettings((previous: Settings) => ({
       llmConfigs: updateLLMConfigsWithBaseDefaultsConnection(
         previous.llmConfigs,
-        llmUrlDraft,
+        overrides?.url ?? llmUrlDraft,
         llmAuthTokenDraft,
-        llmModelDraft
+        overrides?.model ?? llmModelDraft
       ),
     }));
   };
@@ -140,7 +145,17 @@ export default function MainMenuFtueModal() {
     navigate('/characters');
   };
 
-  const handleTestConnection = () => testLlmConnectionFromHook(llmUrlDraft, llmAuthTokenDraft);
+  const handleTestGenerateText = () => {
+    const updatedConfigs = updateLLMConfigsWithBaseDefaultsConnection(
+      llmConfigs,
+      llmUrlDraft,
+      llmAuthTokenDraft,
+      llmModelDraft
+    );
+    const baseConfig = findBaseDefaultsLLMConfig(updatedConfigs);
+    assertNonNullish(baseConfig, 'unable to find base LLM config');
+    return testGenerateText([baseConfig]);
+  };
 
   return (
     <Modal open={open} onClose={closeModal} closeOnBackdropClick={false}>
@@ -158,79 +173,41 @@ export default function MainMenuFtueModal() {
           <section className={FTUE_SECTION_CLASS}>
             <h3 className="text-lg font-semibold">Completions API Setup</h3>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <label className="block text-sm font-medium" htmlFor="ftue-llm-url">
-                  Completions API URL
-                </label>
-                <InfoTooltip
-                  label="About Completions API URL"
-                  dangerouslySetHtml={FTUE_API_URL_TOOLTIP_HTML}
-                  align="center"
-                />
-              </div>
-              <input
-                id="ftue-llm-url"
-                value={llmUrlDraft}
-                onChange={(event) => setLlmUrlDraft(event.target.value)}
-                onBlur={saveConnectionDetails}
-                placeholder="http://localhost:5001/v1/chat/completions"
-                className={FTUE_INPUT_CLASS}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <label className="block text-sm font-medium" htmlFor="ftue-llm-token">
-                  Bearer/Auth Token (optional)
-                </label>
-                <InfoTooltip
-                  label="About Bearer/Auth Token"
-                  value={FTUE_AUTH_TOKEN_TOOLTIP_HTML}
-                  align="center"
-                />
-              </div>
-              <input
-                id="ftue-llm-token"
-                type="password"
-                value={llmAuthTokenDraft}
-                onChange={(event) => setLlmAuthTokenDraft(event.target.value)}
-                onBlur={saveConnectionDetails}
-                placeholder="Bearer token"
-                className={FTUE_INPUT_CLASS}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <label className="block text-sm font-medium" htmlFor="ftue-llm-model">
-                  Model (Optional)
-                </label>
-                <InfoTooltip
-                  label="About Model"
-                  dangerouslySetHtml={FTUE_MODEL_TOOLTIP_HTML}
-                  align="center"
-                />
-              </div>
-              <input
-                id="ftue-llm-model"
-                value={llmModelDraft}
-                onChange={(event) => setLlmModelDraft(event.target.value)}
-                onBlur={saveConnectionDetails}
-                placeholder="deepseek/deepseek-v4.1-flash-1017"
-                className={FTUE_INPUT_CLASS}
-              />
-            </div>
+            <CompletionsProviderField
+              idPrefix="ftue-llm"
+              url={llmUrlDraft}
+              onUrlChange={setLlmUrlDraft}
+              authToken={llmAuthTokenDraft}
+              onAuthTokenChange={setLlmAuthTokenDraft}
+              model={llmModelDraft}
+              onModelChange={setLlmModelDraft}
+              onPresetSelect={(next) => saveConnectionDetails(next)}
+              onFieldBlur={() => saveConnectionDetails()}
+              providerTooltipDangerousHtml={FTUE_API_URL_TOOLTIP_HTML}
+              tokenTooltip={FTUE_AUTH_TOKEN_TOOLTIP_HTML}
+              modelTooltipDangerousHtml={FTUE_MODEL_TOOLTIP_HTML}
+              className="space-y-3"
+              fieldWrapperClassName="space-y-1"
+              labelClassName="block text-sm font-medium"
+              labelWrapperClassName="gap-3"
+              selectClassName={FTUE_INPUT_CLASS}
+              inputClassName={FTUE_INPUT_CLASS}
+              tokenToggleButtonClassName={`shrink-0 px-3 py-2 border rounded-sm ${FTUE_BUTTON_CLASS}`}
+            />
 
             <div className="flex items-center justify-end gap-3 pt-1">
-              {llmConnectionTestSuccess && <p className="text-sm text-secondary">✓ Connection successful.</p>}
+              {llmConnectionTestSuccess && (
+                <p className="text-sm text-secondary">
+                  ✓ Model responded: &ldquo;{llmConnectionTestResponsePreview}&rdquo;
+                </p>
+              )}
               <button
                 type="button"
-                onClick={() => void handleTestConnection()}
+                onClick={() => void handleTestGenerateText()}
                 disabled={llmConnectionTestLoading}
                 className={`px-3 py-1 border rounded-sm ${FTUE_BUTTON_CLASS}`}
               >
-                {llmConnectionTestLoading ? 'Testing...' : 'Test Connection'}
+                {llmConnectionTestLoading ? 'Testing...' : 'Test Generation'}
               </button>
             </div>
             {llmConnectionTestError && <div className="error-card">{llmConnectionTestError}</div>}
@@ -248,6 +225,18 @@ export default function MainMenuFtueModal() {
                 selection={imageSelection}
                 visibleControlIds={ftueImageControlIds}
               />
+
+              <div className="mt-2 flex justify-end">
+                <CheckboxSettingRow
+                  id="ftue-enable-auto-image"
+                  label="Enable auto image"
+                  tooltip="Automatically generate an image on 15% of new chat messages when NPCs are chatting autonomously (adjustable later in Settings)."
+                  checked={autoImageRate > 0}
+                  onChange={(nextChecked) =>
+                    setSettings({ autoImageRate: nextChecked ? FTUE_AUTO_IMAGE_RATE : 0 })
+                  }
+                />
+              </div>
             </div>
           </section>
 

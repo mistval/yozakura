@@ -30,7 +30,7 @@ const ASPECT_OPTIONS = [
 const API_URL_TOOLTIP =
   'Image API endpoint URL. For OpenRouter (or similar), use the <code>/v1/chat/completions</code> endpoint.';
 const AUTH_TOKEN_TOOLTIP =
-  'Optional bearer token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Required for most cloud providers.';
+  'Optional auth token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Required for most cloud providers.';
 const MODEL_TOOLTIP =
   'The image model to request (for example <code>x-ai/grok-imagine-image-quality</code>).';
 const META_OPTIONS_TOOLTIP = 'Extra JSON fields merged into every image generation request.';
@@ -57,7 +57,7 @@ export const openRouterScript: ImageGenerationSettingsScript = {
     {
       id: 'authToken',
       type: 'password',
-      label: 'Bearer Token (optional)',
+      label: 'Auth Token (optional)',
       width: 'full',
       tooltipHtml: AUTH_TOKEN_TOOLTIP,
     },

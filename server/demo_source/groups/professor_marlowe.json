@@ -1,0 +1,74 @@
+{
+  "group": {
+    "id": "a20000000000000006",
+    "createdAt": "2026-11-01T12:00:00.000Z",
+    "updatedAt": "2026-11-01T12:00:00.000Z",
+    "scenarioId": "a10000000000000001",
+    "name": "Professor Marlowe",
+    "privateZones": []
+  },
+  "schedule": {
+    "id": "a30000000000000006",
+    "createdAt": "2026-11-01T12:00:00.000Z",
+    "updatedAt": "2026-11-01T12:00:00.000Z",
+    "scenarioId": "a10000000000000001",
+    "groupId": "a20000000000000006",
+    "lengthInTurns": 56,
+    "segments": [
+      {
+        "id": "a4000000000000000e",
+        "startTurn": 0,
+        "endTurn": 1,
+        "zoneId": "5d4f493e1031ae0103",
+        "movementPolicy": "teleport",
+        "obedienceRate": 1,
+        "reason": "Professor Marlowe is preparing her Potions lecture"
+      },
+      {
+        "id": "a4000000000000000f",
+        "startTurn": 1,
+        "endTurn": 2,
+        "zoneId": "5d4f493e1031ae0103",
+        "movementPolicy": "teleport",
+        "obedienceRate": 1,
+        "reason": "Professor Marlowe is teaching Potions class"
+      },
+      {
+        "id": "a40000000000000010",
+        "startTurn": 16,
+        "endTurn": 17,
+        "zoneId": "5d4f493e1031ae0103",
+        "movementPolicy": "teleport",
+        "obedienceRate": 1,
+        "reason": "Professor Marlowe is preparing her Potions lecture"
+      },
+      {
+        "id": "a40000000000000011",
+        "startTurn": 17,
+        "endTurn": 18,
+        "zoneId": "5d4f493e1031ae0103",
+        "movementPolicy": "teleport",
+        "obedienceRate": 1,
+        "reason": "Professor Marlowe is teaching Potions class"
+      },
+      {
+        "id": "a40000000000000012",
+        "startTurn": 32,
+        "endTurn": 33,
+        "zoneId": "5d4f493e1031ae0103",
+        "movementPolicy": "teleport",
+        "obedienceRate": 1,
+        "reason": "Professor Marlowe is preparing her Potions lecture"
+      },
+      {
+        "id": "a40000000000000013",
+        "startTurn": 33,
+        "endTurn": 34,
+        "zoneId": "5d4f493e1031ae0103",
+        "movementPolicy": "teleport",
+        "obedienceRate": 1,
+        "reason": "Professor Marlowe is teaching Potions class"
+      }
+    ]
+  }
+}

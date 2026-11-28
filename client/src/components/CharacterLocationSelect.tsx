@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { useIsEntityInDeferredSync } from '../state/ephemeral_state_helper.js';
+import { USER_SYNC, useIsEntityLockedForEditing } from '../state/ephemeral_state_helper.js';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
-import { useScenarioStore } from '../state/scenario_store.js';
+import { useActiveScenarioMap } from '../state/scenario_store.js';
 import { getRequiredRandomChoice } from '../util/array.js';
 
 interface CharacterLocationSelectProps {
@@ -16,19 +16,19 @@ export default function CharacterLocationSelect({
   id,
   className = '',
 }: CharacterLocationSelectProps) {
-  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const activeMap = useActiveScenarioMap();
   const currentLocationId = useScenarioCharacterStore(
     (state) => state.scenarioCharactersById[characterId]?.locationId || ''
   );
   const saveScenarioCharacterFields = useScenarioCharacterStore((state) => state.saveScenarioCharacterFields);
-  const isCharacterSyncing = useIsEntityInDeferredSync(characterId);
+  const isCharacterSyncing = useIsEntityLockedForEditing(characterId);
 
   const sortedLocations = useMemo(() => {
     if (!activeMap) {
       return [];
     }
 
-    return [...activeMap.locations].sort((a, b) => a.name.localeCompare(b.name));
+    return activeMap.locations.toSorted((a, b) => a.name.localeCompare(b.name));
   }, [activeMap?.locations]);
 
   if (!activeMap || sortedLocations.length === 0) {
@@ -47,9 +47,13 @@ export default function CharacterLocationSelect({
                 .id
             : event.target.value;
 
-        saveScenarioCharacterFields(characterId, {
-          locationId: locationId.trim(),
-        });
+        void saveScenarioCharacterFields(
+          characterId,
+          {
+            locationId: locationId.trim(),
+          },
+          USER_SYNC
+        );
       }}
       className={`border rounded-sm px-2 py-1 bg-inset ${className}`.trim()}
     >

@@ -164,14 +164,7 @@ export default function ConversationSearchList({
       return [] as Array<[number, ConversationWithTranscript[]]>;
     }
 
-    const byTurn = new Map<number, ConversationWithTranscript[]>();
-    for (const entry of entries) {
-      const turn = Number(entry.turnNumber || 0);
-      if (!byTurn.has(turn)) {
-        byTurn.set(turn, []);
-      }
-      byTurn.get(turn)?.push(entry);
-    }
+    const byTurn = Map.groupBy(entries, (entry) => Number(entry.turnNumber || 0));
 
     return [...byTurn.entries()].sort((a, b) => b[0] - a[0]);
   }, [entries, isFiltered]);

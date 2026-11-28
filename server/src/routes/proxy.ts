@@ -3,6 +3,8 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { Agent, fetch, type RequestInit, Headers } from 'undici';
 
+const PROXY_REFERER_HEADER = 'x-proxy-referer';
+
 const EXCLUDED_REQUEST_HEADERS = new Set([
   'host',
   'connection',
@@ -13,7 +15,9 @@ const EXCLUDED_REQUEST_HEADERS = new Set([
   'trailers',
   'transfer-encoding',
   'upgrade',
+  'referer',
   'x-target-url',
+  PROXY_REFERER_HEADER,
 ]);
 
 const EXCLUDED_RESPONSE_HEADERS = new Set([
@@ -53,6 +57,11 @@ export default function proxyRouter(): Router {
         if (!EXCLUDED_REQUEST_HEADERS.has(name.toLowerCase()) && typeof value === 'string') {
           requestHeaders[name] = value;
         }
+      }
+
+      const proxyReferer = req.headers[PROXY_REFERER_HEADER];
+      if (typeof proxyReferer === 'string' && proxyReferer.trim()) {
+        requestHeaders['referer'] = proxyReferer.trim();
       }
 
       const method = req.method.toUpperCase();

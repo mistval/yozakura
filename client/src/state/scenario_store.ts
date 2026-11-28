@@ -1,8 +1,11 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { createPersistedObject, doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database';
 import * as Files from '../backend_bridge/files';
 import {
   DEFAULT_REMOTE_CHAT_MEDIUM,
+  DEFAULT_TURN_OFFSET,
+  MAX_TURN_OFFSET,
   type Scenario,
   type ScenarioSummary,
   type WorldMap,
@@ -10,13 +13,12 @@ import {
 import * as MapHelper from '../engine/map/world_map.js';
 import { useMapStore } from './map_store.js';
 import { importDemoScenario } from '../backend_bridge/demo_import.js';
-import { assert, assertNonNullish } from '../errors/application_error.js';
+import { assertNonNullish } from '../errors/application_error.js';
 import { createDefaultTemporalSectionState } from '../engine/settings/settings_scripts/temporal/temporal_scripts.js';
+import { clamp } from '../util/numeric.js';
 
 type ScenarioStoreState = {
   activeScenario: Scenario | undefined;
-  activeScenarioMap: WorldMap | undefined;
-  pendingScenarioId: string | undefined;
   scenarioSummaries: ScenarioSummary[];
   scenarioSummariesAreLoaded: boolean;
   updateActiveScenario: (updater: (prev: Scenario) => Scenario) => Scenario;
@@ -29,6 +31,7 @@ type ScenarioStoreState = {
   setTemporalControlValue: (scriptId: string, controlId: string, value: string) => void;
   resetTemporalControlValues: (scriptId: string) => void;
   setSaveName: (saveName: string) => void;
+  setTurnOffset: (turnOffset: number) => void;
   setRemoteChatMedium: (remoteChatMedium: string) => void;
   deleteScenario: (scenarioId: string) => void;
   saveImmediateBlankInactiveScenario: (mapId: string) => Promise<Scenario>;
@@ -43,18 +46,34 @@ type ScenarioStoreState = {
   importDemoScenario: () => Promise<{ newScenarioId: string }>;
 };
 
-function applyMapOverrides(map: WorldMap, scenario: Scenario): WorldMap {
+function resolveScenarioBaseMap(
+  scenario: Scenario | undefined,
+  maps: WorldMap[],
+  mapsById: Record<string, WorldMap>
+): WorldMap | undefined {
+  if (!scenario || maps.length === 0) {
+    return undefined;
+  }
+
+  return (
+    (scenario.mapId ? mapsById[scenario.mapId] : undefined) ?? MapHelper.getDeterministicFallbackMap(maps)
+  );
+}
+
+function applyMapOverrides(map: WorldMap, mapOverrides: Scenario['mapOverrides']): WorldMap {
+  if (mapOverrides?.name === undefined && mapOverrides?.description === undefined) {
+    return map;
+  }
+
   return {
     ...map,
-    name: scenario.mapOverrides?.name ?? map.name,
-    description: scenario.mapOverrides?.description ?? map.description,
+    name: mapOverrides.name ?? map.name,
+    description: mapOverrides.description ?? map.description,
   };
 }
 
 export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
   activeScenario: undefined,
-  activeScenarioMap: undefined,
-  pendingScenarioId: undefined,
   scenarioSummariesAreLoaded: false,
   scenarioSummaries: [],
 
@@ -68,14 +87,6 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     if (get().activeScenario?.id === scenarioId) {
       return;
     }
-
-    const maps = useMapStore.getState().maps;
-    if (maps.length === 0) {
-      set({ pendingScenarioId: scenarioId });
-      return;
-    }
-
-    set({ pendingScenarioId: undefined });
 
     const loadedScenario = await doAsDataRead(
       () => {
@@ -91,24 +102,15 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
       return undefined;
     }
 
-    const newestMap = MapHelper.getNewestUpdatedMap(maps);
-    assertNonNullish(newestMap, 'No maps available after seeding.');
-
-    const selectedMap = maps.find((map) => map.id === loadedScenario.mapId) || newestMap;
-    const locationIds = MapHelper.getLocationIds(selectedMap);
-    assertNonNullish(locationIds[0], 'Selected map has no locations.');
-
-    const nextScenario: Scenario = {
-      ...loadedScenario,
-      mapId: selectedMap.id,
-    };
+    const { maps, mapsById } = useMapStore.getState();
+    const resolvedMap = resolveScenarioBaseMap(loadedScenario, maps, mapsById);
 
     set({
-      activeScenario: nextScenario,
-      activeScenarioMap: applyMapOverrides(selectedMap, nextScenario),
+      activeScenario:
+        resolvedMap && resolvedMap.id !== loadedScenario.mapId
+          ? { ...loadedScenario, mapId: resolvedMap.id }
+          : loadedScenario,
     });
-
-    get().updateActiveScenario(() => nextScenario);
   },
 
   updateActiveScenario: (updater) => {
@@ -157,45 +159,28 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
   },
 
   setScenarioMap: (mapId) => {
-    const maps = useMapStore.getState().maps;
-    const selectedMap = maps.find((map) => map.id === mapId);
+    const selectedMap = useMapStore.getState().mapsById[mapId];
     if (!selectedMap) {
       throw new Error(`Map not found: ${mapId}`);
     }
 
-    const nextScenario = get().updateActiveScenario(
+    get().updateActiveScenario(
       (prev) =>
         ({
           ...prev,
           mapId: selectedMap.id,
         }) satisfies typeof prev
     );
-
-    set({
-      activeScenarioMap: applyMapOverrides(selectedMap, nextScenario),
-    });
   },
 
   mergeMapOverrides: (overrides) => {
-    const scenario = getRequiredActiveScenario();
-
-    const maps = useMapStore.getState().maps;
-    const baseMap = maps.find((map) => map.id === scenario.mapId);
-    assert(baseMap, 'could not find map');
-
-    const newOverrides = {
-      ...scenario.mapOverrides,
-      ...overrides,
-    };
-
-    const nextScenario = get().updateActiveScenario((prev) => ({
+    get().updateActiveScenario((prev) => ({
       ...prev,
-      mapOverrides: newOverrides,
+      mapOverrides: {
+        ...prev.mapOverrides,
+        ...overrides,
+      },
     }));
-
-    set({
-      activeScenarioMap: applyMapOverrides(baseMap, nextScenario),
-    });
   },
 
   setTemporalSelectedScriptId: (scriptId) => {
@@ -237,6 +222,19 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     }));
   },
 
+  setTurnOffset: (turnOffset) => {
+    const clampedOffset = clamp(Math.round(turnOffset), -MAX_TURN_OFFSET, MAX_TURN_OFFSET);
+    const scenario = getRequiredActiveScenario();
+    if (clampedOffset === scenario.turnOffset) {
+      return;
+    }
+
+    get().updateActiveScenario((prev) => ({
+      ...prev,
+      turnOffset: clampedOffset,
+    }));
+  },
+
   setRemoteChatMedium: (remoteChatMedium) => {
     get().updateActiveScenario((prev) => ({
       ...prev,
@@ -248,6 +246,7 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
     const scenario = createPersistedObject({
       mapId,
       turnNumber: 0,
+      turnOffset: DEFAULT_TURN_OFFSET,
       userCharacterId: '',
       saveName: '',
       remoteChatMedium: DEFAULT_REMOTE_CHAT_MEDIUM,
@@ -275,17 +274,14 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
   },
 
   deleteScenario: (scenarioId: string) => {
-    const { scenarioSummaries, activeScenario, activeScenarioMap, pendingScenarioId } = get();
+    const { scenarioSummaries, activeScenario } = get();
     const newScenarioSummaries = scenarioSummaries.filter((s) => s.scenario.id !== scenarioId);
     const isActive = activeScenario?.id === scenarioId;
-    const isPending = pendingScenarioId === scenarioId;
 
-    if (newScenarioSummaries.length !== scenarioSummaries.length || isActive || isPending) {
+    if (newScenarioSummaries.length !== scenarioSummaries.length || isActive) {
       set({
         scenarioSummaries: newScenarioSummaries,
         activeScenario: isActive ? undefined : activeScenario,
-        activeScenarioMap: isActive ? undefined : activeScenarioMap,
-        pendingScenarioId: isPending ? undefined : pendingScenarioId,
       });
 
       void doAsDataWrite(
@@ -311,42 +307,61 @@ export const useScenarioStore = create<ScenarioStoreState>((set, get) => ({
   },
 }));
 
-useMapStore.subscribe((newState, prevState) => {
-  const scenarioState = useScenarioStore.getState();
-  const pendingScenarioId = scenarioState.pendingScenarioId;
-  if (pendingScenarioId && newState.maps.length > 0) {
-    void scenarioState.refreshScenario(pendingScenarioId);
+useMapStore.subscribe((newState) => {
+  const activeScenario = useScenarioStore.getState().activeScenario;
+  if (!activeScenario || newState.maps.length === 0) {
     return;
   }
 
-  const activeMapId = scenarioState.activeScenarioMap?.id;
-  if (!activeMapId) {
-    return;
-  }
-
-  const newMap = newState.mapsById[activeMapId];
-  if (newMap) {
-    if (newMap !== prevState.mapsById[activeMapId]) {
-      scenarioState.setScenarioMap(activeMapId);
-    }
-    return;
-  }
-
-  // The active map was deleted; switch to another map, or if none are left,
-  // unload the scenario and reload it once a map exists again.
-  const fallbackMap = MapHelper.getNewestUpdatedMap(newState.maps);
-  if (fallbackMap) {
-    scenarioState.setScenarioMap(fallbackMap.id);
-  } else {
+  // Repair stale mapId in memory without writing to DB; the next real scenario write persists it lazily.
+  const resolvedMap = resolveScenarioBaseMap(activeScenario, newState.maps, newState.mapsById);
+  if (resolvedMap && resolvedMap.id !== activeScenario.mapId) {
     useScenarioStore.setState({
-      activeScenario: undefined,
-      activeScenarioMap: undefined,
-      pendingScenarioId: scenarioState.activeScenario?.id,
+      activeScenario: {
+        ...activeScenario,
+        mapId: resolvedMap.id,
+      },
     });
   }
 });
 
 useScenarioStore.getState().refreshScenarioSummaries();
+
+export function getActiveScenarioBaseMap(): WorldMap | undefined {
+  const scenario = useScenarioStore.getState().activeScenario;
+  const { maps, mapsById } = useMapStore.getState();
+  return resolveScenarioBaseMap(scenario, maps, mapsById);
+}
+
+/** Resolves the active scenario map with deterministic fallback and scenario overrides applied. */
+export function getActiveScenarioMap(): WorldMap | undefined {
+  const scenario = useScenarioStore.getState().activeScenario;
+  const baseMap = getActiveScenarioBaseMap();
+  if (!scenario || !baseMap) {
+    return undefined;
+  }
+
+  return applyMapOverrides(baseMap, scenario.mapOverrides);
+}
+
+/** React hook returning the memoized active scenario map with overrides applied. */
+export function useActiveScenarioMap(): WorldMap | undefined {
+  const hasScenario = useScenarioStore((s) => Boolean(s.activeScenario));
+  const scenarioMapId = useScenarioStore((s) => s.activeScenario?.mapId);
+  const mapOverrides = useScenarioStore((s) => s.activeScenario?.mapOverrides);
+  const matchingMap = useMapStore((s) =>
+    hasScenario && scenarioMapId ? s.mapsById[scenarioMapId] : undefined
+  );
+  const fallbackMap = useMapStore((s) =>
+    hasScenario && !matchingMap ? MapHelper.getDeterministicFallbackMap(s.maps) : undefined
+  );
+
+  const baseMap = matchingMap ?? fallbackMap;
+  return useMemo(
+    () => (baseMap ? applyMapOverrides(baseMap, mapOverrides) : undefined),
+    [baseMap, mapOverrides]
+  );
+}
 
 export function getRequiredActiveScenario() {
   const scenario = useScenarioStore.getState().activeScenario;
@@ -355,7 +370,7 @@ export function getRequiredActiveScenario() {
 }
 
 export function getRequiredActiveScenarioMap() {
-  const activeMap = useScenarioStore.getState().activeScenarioMap;
+  const activeMap = getActiveScenarioMap();
   assertNonNullish(activeMap, 'no active map');
   return activeMap;
 }

@@ -9,7 +9,7 @@ import {
   getActiveChatParticipants,
   useTurnMachineStore,
 } from '../../state/turn_machine_store.js';
-import { useScenarioStore } from '../../state/scenario_store.js';
+import { getActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import type {
   CharacterEditorExecutionContext,
   ContextCharacter,
@@ -20,6 +20,7 @@ import type {
   GlobalExecutionContext,
   MemoryRagExecutionContext,
   ModerationNextSpeakerExecutionContext,
+  ObjectEditorExecutionContext,
   ScenarioExecutionContext,
   TargetedConversationExecutionContext,
 } from './prompt_template_context_fields.js';
@@ -98,8 +99,8 @@ function formatGlobalMemoriesForPrompt(
   focusedCharacter: ContextCharacter,
   allCharacters: ContextCharacter[]
 ): string {
-  const summariesText = Array.from(focusedCharacter.rollingConversationSummaries)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  const summariesText = focusedCharacter.rollingConversationSummaries
+    .toSorted((a, b) => a.createdAt.localeCompare(b.createdAt))
     .map((entry) => {
       const participantNames = entry.participantIds.map(
         (id) => allCharacters.find((p) => p.id === id)?.firstName || 'Unknown Person'
@@ -118,7 +119,7 @@ ${summariesText || '(none yet)'}
 </summaries>`;
 }
 
-function buildGlobalTemplateContext(): GlobalExecutionContext {
+export function buildGlobalTemplateContext(): GlobalExecutionContext {
   return {
     settings: _.omitBy(useSettingsStore.getState(), _.isFunction),
     globalWritableContext,
@@ -135,7 +136,8 @@ function buildScenarioTemplateContext(resolvers?: ContextResolvers): ScenarioExe
   );
   assertNonNullish(userCharacter, 'User character not found in scenario characters');
 
-  if (!scenarioStore.activeScenario || !scenarioStore.activeScenarioMap) {
+  const activeMap = getActiveScenarioMap();
+  if (!scenarioStore.activeScenario || !activeMap) {
     throw new Error('Failed to build scenario context. Scenario or active map not found');
   }
 
@@ -147,7 +149,7 @@ function buildScenarioTemplateContext(resolvers?: ContextResolvers): ScenarioExe
     userCharacter: toContextCharacter(userCharacter),
     scenario: scenarioStore.activeScenario,
     temporalContext: useTemporalContextStore.getState().plainText,
-    worldMap: scenarioStore.activeScenarioMap,
+    worldMap: activeMap,
     getRelationship: (characterAId: string, characterBId: string) =>
       resolveContextRelationship(characterAId, characterBId, resolvers),
   };
@@ -311,5 +313,16 @@ export async function buildMemoryRagTemplateContext(
   return {
     ...(await buildTargetedChatTemplateContext(focusedCharacter.id, mentionedCharacter.id)),
     mentionedByCharacter: toContextCharacter(mentionedByCharacter),
+  };
+}
+
+export function buildObjectEditorContext(params: {
+  targetTitle: string;
+  jsonSchemaString: string;
+}): ObjectEditorExecutionContext {
+  return {
+    ...buildGlobalTemplateContext(),
+    objectEditorTargetTitle: params.targetTitle,
+    objectEditorJsonSchema: params.jsonSchemaString,
   };
 }

@@ -1,6 +1,8 @@
 export const settingsTooltips = {
   'scenario.saveName':
     'Optional display name shown in the main menu Load list in place of the User and Map fields. Leave blank to show User and Map.',
+  'scenario.turnOffset':
+    'Integer offset added to the current turn when calculating temporal context (date, time of day, weather) and evaluating character schedules. Use this to shift the calendar forwards or backwards.',
   'scenario.activeMap': 'Change the map. Moves characters to random locations on the new map.',
   'scenario.activeMapName':
     'Change the map name, just for this scenario. Your global map will remain unchanged.',
@@ -69,10 +71,11 @@ export const settingsTooltips = {
     'Maximum number of concurrent requests allowed for this concurrency group. If multiple option groups specify limits for the same group name, the lowest limit is used.',
   'llm.name': 'Friendly label for this LLM option group.',
   'llm.url': 'Optional endpoint override. Leave blank to inherit URL from earlier matching groups.',
-  'llm.authToken':
-    'Optional bearer token override. Leave blank to inherit token from earlier matching groups.',
+  'llm.authToken': 'Optional auth token override. Leave blank to inherit token from earlier matching groups.',
   'llm.tokenStreaming':
-    'When enabled, responses stream token-by-token. Select Inherit to use the setting from earlier matching groups. Requires your OpenAI-compatible API provider to support streaming (SSE).',
+    'When enabled (or when all matching groups are set to Inherit), responses stream token-by-token. Requires your OpenAI-compatible API provider to support streaming (SSE).',
+  'llm.appIdentificationHeaders':
+    'When enabled (or when all matching groups are set to Inherit), includes headers identifying Yozakura on requests to supported providers. Providers use these headers for app attribution, usage analytics, and public leaderboards.',
 } as const;
 
 export const settingsDangerousHtmlTooltips = {
@@ -83,7 +86,7 @@ export const settingsDangerousHtmlTooltips = {
   'image.apiUrl':
     'Image API endpoint URL. For AUTOMATIC1111, typically you should use the <code>/sdapi/v1/txt2img</code> endpoint. For OpenRouter (or similar), use the <code>/v1/chat/completions</code> endpoint.',
   'image.authToken':
-    'Optional bearer token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Required for most cloud  providers.',
+    'Optional auth token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Required for most cloud  providers.',
   'image.metaOptions':
     'Extra JSON fields merged into every image generation request. For OpenRouter, this is where you set <code>model</code>, <code>size</code>, <code>n</code>, etc. For AUTOMATIC1111, this controls diffusion parameters such as <code>steps</code>, <code>sampler_name</code>, <code>cfg_scale</code>.',
   'image.model':

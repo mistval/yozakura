@@ -15,5 +15,5 @@ export const LLM_DEFAULTS: Record<string, unknown> = {
 // Higher temperature for chat messages to encourage more interesting responses
 export const LLM_DEFAULTS_CHAT: Record<string, unknown> = {
   temperature: 1.0,
-  max_tokens: 250,
+  max_tokens: 400,
 };

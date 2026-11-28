@@ -1,15 +1,11 @@
-import { SpoilerSection } from '../ui/SpoilerSection.js';
-import type { StoredConversation, ConversationStateUpdateNode } from '../../engine/types.js';
-import { ConversationTranscript } from '../../engine/chat/transcript.js';
 import { useMemo } from 'react';
-import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
-import { useConversationLog } from './ConversationLogContext.js';
+import { ConversationTranscript } from '../../engine/chat/transcript.js';
+import type { ConversationStateUpdateNode, StoredConversation } from '../../engine/types.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
-import TranscriptMessageContent from '../chat/TranscriptMessageContent.js';
-import ResponsiveDrawerSidebar, {
-  ParticipantsDrawerButton,
-  useMobileDrawer,
-} from '../ui/ResponsiveDrawerSidebar.js';
+import ChatView, { type ChatViewParticipant } from '../chat/ChatView.js';
+import { transcriptToChatViewMessages } from '../chat/transcript_chat_messages.js';
+import { useViewRelationshipCapability } from '../chat/capabilities/use_view_relationship_capability.js';
+import { SpoilerSection } from '../ui/SpoilerSection.js';
 
 type ConversationLogViewProps = {
   userId: string;
@@ -66,149 +62,99 @@ function StateUpdateNodeView({ node, pathKey }: { node: ConversationStateUpdateN
 }
 
 export default function ConversationLogView({ userId, selectedEntry, onBack }: ConversationLogViewProps) {
-  const { showCharacterOverview } = useCharacterOverview();
-  const { closeConversationLog } = useConversationLog();
   const charactersById = useScenarioCharacterStore((s) => s.scenarioCharactersById);
-  const {
-    isMobileLayout,
-    openDrawer: openParticipantsDrawer,
-    closeDrawer: closeParticipantsDrawer,
-  } = useMobileDrawer('cl_participants');
 
-  if (!selectedEntry) return undefined;
-
-  const transcript = useMemo(() => {
-    return ConversationTranscript.deserialize(selectedEntry.serializedTranscript);
-  }, [selectedEntry.serializedTranscript]);
-
-  const participantById = useMemo(
+  const transcript = useMemo(
     () =>
-      Object.fromEntries(
-        selectedEntry.serializedTranscript.participants.map((participant) => [participant.id, participant])
-      ),
-    [selectedEntry.serializedTranscript.participants]
+      selectedEntry ? ConversationTranscript.deserialize(selectedEntry.serializedTranscript) : undefined,
+    [selectedEntry]
   );
 
-  const sidebarContent = (
-    <div className="space-y-3">
-      <div
-        className={
-          isMobileLayout
-            ? 'grid grid-cols-1 @[420px]:grid-cols-2 gap-2 items-start'
-            : 'space-y-2 overflow-y-auto min-h-0'
-        }
-      >
-        {selectedEntry.serializedTranscript.participants.map((participant) => {
-          const name = `${participant.firstName} ${participant.lastName}`.trim() || 'Unknown';
-          const imagePath = participant.imagePath;
-          return (
-            <div key={participant.id} className="border rounded-sm p-2 bg-surface-subtle">
-              {imagePath && (
-                <img
-                  src={imagePath}
-                  alt={name}
-                  className="w-full object-cover object-top border rounded-sm"
-                  onError={(event) => {
-                    event.currentTarget.style.display = 'none';
-                  }}
-                />
-              )}
-              <div className="mt-1 text-sm font-medium text-center">{name}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      {selectedEntry.serializedTranscript.participants.length === 2 && (
-        <button
-          type="button"
-          className="w-full"
-          onClick={() => {
-            closeParticipantsDrawer();
-            closeConversationLog();
-            showCharacterOverview({
-              target: 'overview',
-              selectedIds: selectedEntry.serializedTranscript.participants.map((p) => p.id),
-              scrolldown: true,
-            });
-          }}
-        >
-          View Relationship
-        </button>
-      )}
-    </div>
+  const participants = selectedEntry?.serializedTranscript.participants ?? [];
+  const participantById = useMemo(
+    () => Object.fromEntries(participants.map((participant) => [participant.id, participant] as const)),
+    [participants]
   );
+
+  const chatViewParticipants = useMemo<ChatViewParticipant[]>(
+    () =>
+      participants.map((participant) => ({
+        id: participant.id,
+        name: `${participant.firstName} ${participant.lastName}`.trim() || 'Unknown',
+        imageUrl: participant.imagePath,
+      })),
+    [participants]
+  );
+
+  const chatMessages = useMemo(
+    () =>
+      transcript
+        ? transcriptToChatViewMessages(transcript, userId, {
+            resolveAvatarImagePath: (senderId) =>
+              participantById[senderId]?.imagePath ?? charactersById[senderId]?.imagePath,
+          })
+        : [],
+    [charactersById, participantById, transcript, userId]
+  );
+
+  const viewRelationshipCapability = useViewRelationshipCapability({ participants });
+
+  if (!selectedEntry || !transcript) {
+    return undefined;
+  }
 
   return (
-    <>
-      <div className="flex justify-between items-center gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          {isMobileLayout && <ParticipantsDrawerButton onClick={openParticipantsDrawer} />}
-          {onBack && (
-            <button type="button" onClick={onBack} aria-label="Back" title="Back">
-              ←
-            </button>
-          )}
-          <h2 className="text-lg font-semibold truncate">{selectedEntry.label || 'Conversation'}</h2>
-        </div>
-        <div className="text-sm text-muted shrink-0">Turn {selectedEntry.turnNumber || 0}</div>
-      </div>
-      <div className={isMobileLayout ? 'flex min-w-0' : 'flex gap-3 min-h-104'}>
-        <ResponsiveDrawerSidebar
-          isDrawer={isMobileLayout}
-          queryParam="cl_participants"
-          onClose={closeParticipantsDrawer}
-          drawerSide="left"
-          headerActions={<span className="px-2 py-1 text-sm font-semibold">Participants</span>}
-          inlineClassName="w-44 shrink-0 min-h-0 flex flex-col gap-3"
-        >
-          {sidebarContent}
-        </ResponsiveDrawerSidebar>
-        <div
-          className={
-            isMobileLayout
-              ? 'space-y-3 flex-1 min-w-0'
-              : 'border rounded-sm p-3 overflow-y-auto space-y-3 flex-1 min-h-0'
-          }
-        >
-          {transcript.getVisibleMessages(userId).map((message) => {
-            const isCharacterMessage = message.isCharacterChatMessage();
-            const senderId = isCharacterMessage ? message.asCharacterChatMessage().senderId : undefined;
-            const avatarImagePath = senderId
-              ? (participantById[senderId]?.imagePath ?? charactersById[senderId]?.imagePath)
-              : undefined;
-
-            return (
-              <div
-                key={message.getId()}
-                className={isMobileLayout ? 'flow-root text-left py-0.5' : 'flow-root text-left px-1 py-0.5'}
-              >
-                <TranscriptMessageContent
-                  isImageMessage={message.isImageMessage()}
-                  isCharacterMessage={isCharacterMessage && Boolean(senderId)}
-                  imageUrl={message.isImageMessage() ? message.imageUrl() : undefined}
-                  speakerName={message.getSpeakerName()}
-                  content={message.getContent()}
-                  avatarImagePath={avatarImagePath}
-                />
-              </div>
-            );
-          })}
-          <div className="pt-2 space-y-2 text-sm">
-            {selectedEntry.stateUpdates.length === 0 ? (
-              <div className="text-sm text-muted">No state updates available.</div>
-            ) : (
-              selectedEntry.stateUpdates.map((node, index) => (
-                <StateUpdateNodeView
-                  key={`state-update-${index}`}
-                  node={node}
-                  pathKey={`state-update-${index}`}
-                />
-              ))
+    <ChatView
+      messages={chatMessages}
+      isEmpty={transcript.countAllMessages() === 0}
+      participants={chatViewParticipants}
+      containerStyle="page"
+      messageStyle="transcript"
+      autoScroll={false}
+      sidebarQueryParam="cl_participants"
+      renderHeader={({ isMobileLayout: mobile, participantsDrawerButton }) => (
+        <div className="flex justify-between items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {mobile && participantsDrawerButton}
+            {onBack && (
+              <button type="button" onClick={onBack} aria-label="Back" title="Back">
+                ←
+              </button>
             )}
+            <h2 className="text-lg font-semibold truncate">{selectedEntry.label || 'Conversation'}</h2>
           </div>
+          <div className="text-sm text-muted shrink-0">Turn {selectedEntry.turnNumber || 0}</div>
         </div>
-      </div>
-    </>
+      )}
+      renderSidebarFooter={({ closeParticipantsDrawer }) =>
+        viewRelationshipCapability.canViewRelationship ? (
+          <button
+            type="button"
+            className="w-full"
+            onClick={() => {
+              closeParticipantsDrawer();
+              viewRelationshipCapability.viewRelationship();
+            }}
+          >
+            View Relationship
+          </button>
+        ) : undefined
+      }
+      afterMessages={
+        <div className="pt-2 space-y-2 text-sm">
+          {selectedEntry.stateUpdates.length === 0 ? (
+            <div className="text-sm text-muted">No state updates available.</div>
+          ) : (
+            selectedEntry.stateUpdates.map((node, index) => (
+              <StateUpdateNodeView
+                key={`state-update-${index}`}
+                node={node}
+                pathKey={`state-update-${index}`}
+              />
+            ))
+          )}
+        </div>
+      }
+    />
   );
 }

@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useMemo } from 'react';
-import { useQueryParams } from '../../util/queryParams.js';
+import { useModalQueryParam } from '../../hooks/useModalQueryParam.js';
 import CharacterEditorModal from './CharacterEditorModal.js';
+
+const GLOBAL_CHARACTER_EDITOR_OWNED_KEYS = ['ce_character'] as const;
 
 type GlobalCharacterEditorContextType = {
   open: boolean;
@@ -13,25 +15,25 @@ type GlobalCharacterEditorContextType = {
 const GlobalCharacterEditorContext = createContext<GlobalCharacterEditorContextType | undefined>(undefined);
 
 export function GlobalCharacterEditorProvider({ children }: { children: ReactNode }) {
-  const [params, setParams] = useQueryParams();
+  const { open, pushModal, closeModal, layerParams } = useModalQueryParam(
+    'charactereditor',
+    GLOBAL_CHARACTER_EDITOR_OWNED_KEYS
+  );
 
-  const open = params.has('charactereditor') && params.get('charactereditor') !== 'false';
-  const editingCharacterId = params.get('ce_character') ?? undefined;
+  const editingCharacterId = layerParams.get('ce_character') ?? undefined;
 
   const showCharacterEditor = useCallback(
     (id?: string) => {
-      setParams({ charactereditor: true, ce_character: id ?? undefined });
+      pushModal({ ce_character: id ?? undefined });
     },
-    [setParams]
+    [pushModal]
   );
 
-  const closeCharacterEditor = useCallback(() => {
-    setParams({ charactereditor: undefined, ce_character: undefined });
-  }, [setParams]);
+  const closeCharacterEditor = closeModal;
 
   const value = useMemo(
     () => ({ open, editingCharacterId, showCharacterEditor, closeCharacterEditor }),
-    [open, editingCharacterId, params, showCharacterEditor, closeCharacterEditor]
+    [open, editingCharacterId, showCharacterEditor, closeCharacterEditor]
   );
 
   return (

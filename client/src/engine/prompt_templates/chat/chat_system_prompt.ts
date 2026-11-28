@@ -106,15 +106,11 @@ Location description: <%= it.currentLocation.description %>
 Your instructions:
 <% const isInitialMessage = it.conversationMessages.length === 0; %>
 <instructions>
-- <%= isInitialMessage ? 'Write a proactive first message in the conversation as ' + it.focusedCharacter.firstName + ' in first person perspective' : 'Write the next response as ' + it.focusedCharacter.firstName + ' in first person perspective' %>
+- <%= isInitialMessage ? 'Write a proactive first message in the conversation as ' + it.focusedCharacter.firstName + ' in first person perspective' : 'Write the next response as ' + it.focusedCharacter.firstName %>
 
-- Stay in character as <%= it.focusedCharacter.firstName %> and make sure to behave as they would.
-- <%= it.chatMedium === 'in_person'
-  ? 'Be concise. Output no more than three sentences.'
-  : it.scenario.remoteChatMedium + ' style. Be concise. Output no more than three sentences.' %>
-
-- Use quotes for speech and asterisks for actions and internal speech.
-- Be aware that other characters' internal speech is not directly known to your character.
+- The only participants in this conversation are <%= it.participants.map(p => p.firstName) %>. You may mention other characters, but they will not participate in this conversation.
+- Limit most replies to 1-5 sentences
+- Behave as if the user's internal speech is not directly known to you.
 - Be creative and move the conversation forward in a way that's aligned with <%= it.focusedCharacter.firstName %>'s personality and goals. Be willing to take initiative if doing so is in character.
 - Treat <persona> and <personal_memories_and_goals> as absolute law. You have your own agency, biases, and mood and your goal is to simulate <%= it.focusedCharacter.firstName %> faithfully.
 <% if (it.chatInstructions && it.conversationMessages.length === 0) { %>
@@ -123,6 +119,7 @@ Your instructions:
 <% if (it.focusedCharacterChatInstructions && it.conversationMessages.length === 0) { %>
 - <%= it.focusedCharacterChatInstructions %>
 <% } %>
+- Role play and write the next message as <%= it.focusedCharacter.firstName %>. Stay in character.
 </instructions>`,
     },
     {
@@ -133,26 +130,20 @@ Your instructions:
       role: 'system',
       defaultTemplateString: `Your instructions:
 <instructions>
-- <%= it.conversationMessages.length === 0
-  ? 'Write a proactive first message in the conversation as ' + it.focusedCharacter.firstName + ' in first person perspective.'
-  : 'Write the next response as ' + it.focusedCharacter.firstName + ' in first person perspective.' %>
-
-- Stay in character as <%= it.focusedCharacter.firstName %> and make sure to behave as they would.
-- <%= it.chatMedium === 'in_person'
-  ? 'Be concise. Output no more than three sentences.'
-  : it.scenario.remoteChatMedium + ' style. Be concise. Output no more than three sentences.' %>
-
-- Use quotes for speech and asterisks for actions and internal speech.
-- Be aware that other characters' internal speech is not directly known to your character.
+- Write the next response as <%= it.focusedCharacter.firstName %>.
+- The only participants in this conversation are <%= it.participants.map(p => p.firstName) %>. You may mention other characters, but they will not participate in this conversation.
+- Limit most replies to 1-5 sentences
+- Behave as if the user's internal speech is not directly known to you.
 - Be creative and move the conversation forward in a way that's aligned with <%= it.focusedCharacter.firstName %>'s personality and goals. Be willing to take initiative if doing so is in character.
 - Treat <persona> and <personal_memories_and_goals> as absolute law. You have your own agency, biases, and mood and your goal is to simulate <%= it.focusedCharacter.firstName %> faithfully.
-<% if (it.chatInstructions) { %>
+<% if (it.chatInstructions && it.conversationMessages.length === 0) { %>
 - <%= it.chatInstructions %>
 <% } %>
-<% if (it.focusedCharacterChatInstructions) { %>
+<% if (it.focusedCharacterChatInstructions && it.conversationMessages.length === 0) { %>
 - <%= it.focusedCharacterChatInstructions %>
 <% } %>
-</instructions>`,
+- Role play and write the next message as <%= it.focusedCharacter.firstName %>. Stay in character.
+</instructions`,
     },
     {
       templateId: 'chat_system_user_nudge_prompt',
@@ -165,8 +156,7 @@ Your instructions:
   ],
   parser: {
     defaultParserSource: `async (response, it) => {
-    try { return response.replace(new RegExp(\`^\\*?\\*?\${it.focusedCharacter.firstName}\\*?\\*?:\`), '').trim(); }
-    catch { return response; }
+    return response.replace(new RegExp(\`^\\\\*?\\\\*?\${RegExp.escape(it.focusedCharacter.firstName)}\\\\*?\\\\*?:\`), '').trim();
 }`,
     parserOutputSchema: z.string(),
   },

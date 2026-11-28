@@ -18,9 +18,16 @@ import {
 import { ConversationTranscript, type TranscriptRagDeps } from '../engine/chat/transcript.js';
 import type { ContextResolvers } from '../engine/prompt_templates/prompt_template_context_fields.js';
 import type { OmitFunctions } from '../util/types.js';
-import { getRequiredActiveScenario, getRequiredUserCharacterId, useScenarioStore } from './scenario_store.js';
+import {
+  getActiveScenarioMap,
+  getRequiredActiveScenario,
+  getRequiredUserCharacterId,
+  useActiveScenarioMap,
+  useScenarioStore,
+} from './scenario_store.js';
 import { useScenarioCharacterStore } from './scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
+import { waitForEntitiesUnlockedByObjectEditor } from './ephemeral_state_helper.js';
 import { assert, assertNonNullish } from '../errors/application_error.js';
 import {
   applyPostConversationWardrobeAutoRevert,
@@ -57,6 +64,7 @@ export const serializedTurnSchema = z.object({
   turnMachineState: z.enum(['deciding', 'chatting']),
   pendingTurnCharacterIds: z.array(z.string()),
   chatsSoFar: z.record(z.string(), z.array(z.object({ withIds: z.array(z.string()) }))),
+  wardrobeAutoselectRan: z.boolean(),
   activeChat: persistedActiveChatSchema.optional(),
 });
 
@@ -66,6 +74,8 @@ type BaseTurnMachineStoreState = {
   turnMachineState: TurnMachineState | undefined;
   pendingTurnCharacterIds: string[];
   chatsSoFar: Record<string, { withIds: string[] }[]>;
+  wardrobeAutoselectRan: boolean;
+  inChatTurnForCharacterId: string | undefined;
 
   chatState: ChatState;
   participantIds: string[];
@@ -84,10 +94,11 @@ type BaseTurnMachineStoreState = {
   currentCharacterIsUser: () => boolean;
   finishCurrentCharacter: () => boolean;
   setTurnMachineState: (turnMachineState: TurnMachineState) => void;
+  setWardrobeAutoselectRan: (ran: boolean) => void;
   recordChat: (initiatorId: string, withIds: string[]) => void;
   hasChatted: (characterAId: string, characterBId: string) => boolean;
-  beginChat: (args: StartChatSessionArgs) => void;
-  deactivateChat: () => void;
+  beginChat: (args: StartChatSessionArgs) => Promise<void>;
+  deactivateChat: () => Promise<void>;
   reset: () => void;
   serialize: () => SerializedTurn | undefined;
   hydrate: (snapshot: SerializedTurn, ragDeps: TranscriptRagDeps) => void;
@@ -99,6 +110,7 @@ type BaseTurnMachineStoreState = {
   removeChatParticipant: (participantId: string) => void;
   setChatInstructions: (instructions: string) => void;
   setCharacterChatInstructions: (characterId: string, instructions: string) => void;
+  markInChatTurnFor: (id: string | undefined) => void;
   getChatCharacterLocation: (
     charId: string,
     getCharacterById?: (id: string) => Character,
@@ -120,7 +132,7 @@ type ActiveChatTurnMachineStoreState = OmitFunctions<BaseTurnMachineStoreState> 
 
 type InactiveChatFields = Omit<
   OmitFunctions<BaseTurnMachineStoreState>,
-  'turnMachineState' | 'pendingTurnCharacterIds' | 'chatsSoFar'
+  'turnMachineState' | 'pendingTurnCharacterIds' | 'chatsSoFar' | 'wardrobeAutoselectRan'
 >;
 
 const inactiveChatTurnMachineState: InactiveChatFields = {
@@ -134,6 +146,7 @@ const inactiveChatTurnMachineState: InactiveChatFields = {
   initiatorId: undefined,
   chatInstructions: '',
   chatInstructionsByCharacterId: {},
+  inChatTurnForCharacterId: undefined,
 };
 
 function getRequiredCharacterById(characterId: string): Character {
@@ -188,7 +201,7 @@ export function getActiveChatMedium(
   participants = useTurnMachineStore.getState().participantIds,
   getRequiredCharacterById = useScenarioCharacterStore.getState().getRequiredCharacterById,
   getCharacterLocation = useTurnMachineStore.getState().getChatCharacterLocation,
-  map = useScenarioStore.getState().activeScenarioMap,
+  map = getActiveScenarioMap(),
   ephemeralLocation = useTurnMachineStore.getState().ephemeralLocation
 ): ChatMedium {
   const allLocations = new Set(
@@ -202,7 +215,7 @@ export function useActiveChatMedium(): ChatMedium {
   const getCharacterLocation = useTurnMachineStore((s) => s.getChatCharacterLocation);
   const getRequiredCharacterById = useScenarioCharacterStore((s) => s.getRequiredCharacterById);
   const ephemeralLocation = useTurnMachineStore((s) => s.ephemeralLocation);
-  const map = useScenarioStore((s) => s.activeScenarioMap);
+  const map = useActiveScenarioMap();
   const participants = useActiveChatParticipants();
 
   return getActiveChatMedium(
@@ -214,18 +227,18 @@ export function useActiveChatMedium(): ChatMedium {
   );
 }
 
-export function useChatInitiatorLocation() {
-  const initiatorId = useTurnMachineStore((s) => s.initiatorId);
+export function useChatRootLocation() {
+  const firstParticipantId = useTurnMachineStore((s) => s.participantIds[0]);
   const getCharacterLocation = useTurnMachineStore((s) => s.getChatCharacterLocation);
   const getRequiredCharacterById = useScenarioCharacterStore((s) => s.getRequiredCharacterById);
   const ephemeralLocation = useTurnMachineStore((s) => s.ephemeralLocation);
-  const map = useScenarioStore((s) => s.activeScenarioMap);
+  const map = useActiveScenarioMap();
 
-  if (!initiatorId || !map) {
+  if (!firstParticipantId || !map) {
     return undefined;
   }
 
-  return getCharacterLocation(initiatorId, getRequiredCharacterById, map, ephemeralLocation);
+  return getCharacterLocation(firstParticipantId, getRequiredCharacterById, map, ephemeralLocation);
 }
 
 export async function getActiveChatGossipCharacter(fromCharacterId?: string, resolvers?: ContextResolvers) {
@@ -250,8 +263,8 @@ export async function getActiveChatGossipCharacter(fromCharacterId?: string, res
   };
 }
 
-export function applyMapZoneWardrobeTriggersForParticipants(participants: Character[]) {
-  const activeMap = useScenarioStore.getState().activeScenarioMap;
+export async function applyMapZoneWardrobeTriggersForParticipants(participants: Character[]): Promise<void> {
+  const activeMap = getActiveScenarioMap();
   if (!activeMap || !activeMap.zones) {
     return;
   }
@@ -273,7 +286,7 @@ export function applyMapZoneWardrobeTriggersForParticipants(participants: Charac
   }
 
   if (updatedCharacters.length > 0) {
-    useScenarioCharacterStore.getState().saveScenarioCharacters(updatedCharacters);
+    await useScenarioCharacterStore.getState().saveScenarioCharacters(updatedCharacters);
   }
 }
 
@@ -294,6 +307,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
   turnMachineState: undefined,
   pendingTurnCharacterIds: [],
   chatsSoFar: {},
+  wardrobeAutoselectRan: false,
 
   startNewTurn(opts: { userMovesFirst?: boolean | undefined } = {}) {
     const allCharacterIds = useScenarioCharacterStore.getState().scenarioCharacters.map((c) => c.id);
@@ -310,6 +324,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       turnMachineState: 'deciding',
       pendingTurnCharacterIds: ordered,
       chatsSoFar: {},
+      wardrobeAutoselectRan: false,
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
@@ -349,6 +364,10 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     set({ turnMachineState: machineState } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
+  setWardrobeAutoselectRan(ran) {
+    set({ wardrobeAutoselectRan: ran } satisfies Partial<BaseTurnMachineStoreState>);
+  },
+
   recordChat(initiatorId, withIds) {
     const existing = get().chatsSoFar[initiatorId] ?? [];
     set({
@@ -367,7 +386,8 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     );
   },
 
-  beginChat(args) {
+  async beginChat(args) {
+    await waitForEntitiesUnlockedByObjectEditor(args.participantIds);
     const participants = getCharactersByIds(args.participantIds);
 
     set({
@@ -383,14 +403,15 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       ),
     } satisfies Partial<BaseTurnMachineStoreState>);
 
-    applyMapZoneWardrobeTriggersForParticipants(participants);
+    await applyMapZoneWardrobeTriggersForParticipants(participants);
   },
 
-  deactivateChat() {
+  async deactivateChat() {
     const activeChatState = get();
 
     const snapshot = activeChatState.preConversationWardrobeSnapshotByCharacterId;
     const idsToAutoRevert = activeChatState.participantIds.concat(activeChatState.removedParticipantIds);
+    await waitForEntitiesUnlockedByObjectEditor(idsToAutoRevert);
     const charactersToAutoRevert = useScenarioCharacterStore.getState().getCharactersByIds(idsToAutoRevert);
 
     const wardrobeAutoRevertedCharacters = applyPostConversationWardrobeAutoRevert(
@@ -398,7 +419,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       snapshot
     );
 
-    useScenarioCharacterStore.getState().saveScenarioCharacters(wardrobeAutoRevertedCharacters);
+    await useScenarioCharacterStore.getState().saveScenarioCharacters(wardrobeAutoRevertedCharacters);
 
     set(inactiveChatTurnMachineState);
   },
@@ -409,6 +430,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       turnMachineState: undefined,
       pendingTurnCharacterIds: [],
       chatsSoFar: {},
+      wardrobeAutoselectRan: false,
     } satisfies Partial<BaseTurnMachineStoreState>);
   },
 
@@ -422,6 +444,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       turnMachineState: state.turnMachineState,
       pendingTurnCharacterIds: state.pendingTurnCharacterIds,
       chatsSoFar: state.chatsSoFar,
+      wardrobeAutoselectRan: state.wardrobeAutoselectRan,
       activeChat: state.turnMachineState === 'chatting' ? buildPersistedActiveChat(state) : undefined,
     };
   },
@@ -432,6 +455,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       turnMachineState: snapshot.turnMachineState,
       pendingTurnCharacterIds: snapshot.pendingTurnCharacterIds,
       chatsSoFar: snapshot.chatsSoFar,
+      wardrobeAutoselectRan: snapshot.wardrobeAutoselectRan,
     } satisfies Partial<BaseTurnMachineStoreState>;
 
     if (!snapshot.activeChat) {
@@ -481,7 +505,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       },
     } satisfies Partial<BaseTurnMachineStoreState>);
 
-    applyMapZoneWardrobeTriggersForParticipants([participant]);
+    void applyMapZoneWardrobeTriggersForParticipants([participant]);
   },
 
   removeChatParticipant(participantId: string) {
@@ -527,10 +551,10 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
   },
 
   setEphemeralLocation(setter: (prev: EphemeralLocation) => EphemeralLocation | undefined) {
-    const userId = useScenarioStore.getState().activeScenario?.userCharacterId;
-    assertNonNullish(userId, 'no user for scenario');
+    const firstParticipantId = get().participantIds[0];
+    assertNonNullish(firstParticipantId, 'no participants in active chat');
 
-    const currentLocation = get().getChatCharacterLocation(userId);
+    const currentLocation = get().getChatCharacterLocation(firstParticipantId);
     assertNonNullish(currentLocation, 'unable to get character location');
 
     set({
@@ -546,7 +570,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
   getChatCharacterLocation(
     charId: string,
     getRequiredCharacterById = useScenarioCharacterStore.getState().getRequiredCharacterById,
-    activeScenarioMap = useScenarioStore.getState().activeScenarioMap,
+    activeScenarioMap = getActiveScenarioMap(),
     ephemeralLocation = get().ephemeralLocation
   ) {
     if (ephemeralLocation) {
@@ -558,6 +582,10 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
     const location = activeScenarioMap.locations.find((l) => l.id === character.locationId);
 
     return location;
+  },
+
+  markInChatTurnFor(charId: string | undefined) {
+    set({ inChatTurnForCharacterId: charId });
   },
 }));
 

@@ -8,6 +8,7 @@ import { migration as migration0005WardrobeTags } from './migrations/0005_wardro
 import { migration as migration0006TemplateGroupData } from './migrations/0006_template_group_data.js';
 import { migration as migration0007NormalizeEntityIds } from './migrations/0007_normalize_entity_ids.js';
 import { migration as migration0008RemoteChatMedium } from './migrations/0008_remote_chat_medium.js';
+import { migration as migration0009BackfillTurnAndCharacterFields } from './migrations/0009_backfill_turn_and_character_fields.js';
 import type { Migration, MigrationContext } from './types.js';
 
 /**
@@ -27,6 +28,7 @@ const migrations: Migration[] = [
   migration0006TemplateGroupData,
   migration0007NormalizeEntityIds,
   migration0008RemoteChatMedium,
+  migration0009BackfillTurnAndCharacterFields,
 ];
 
 function getUserVersion(db: Database.Database): number {

@@ -5,9 +5,9 @@ import type { Character } from '../../engine/types.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { useActiveChatParticipants, useTurnMachineStore } from '../../state/turn_machine_store.js';
 import { ChatCoordinator } from '../../engine/chat/chat_coordinator.js';
-import { useScenarioStore } from '../../state/scenario_store.js';
+import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import { useCharacterOverview } from '../character_overview/CharacterOverviewContext.js';
-import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
+import { USER_SYNC, useIsEntityLockedForEditing } from '../../state/ephemeral_state_helper.js';
 import CharacterLocationSelect from '../CharacterLocationSelect.js';
 import CharacterAvatar from '../CharacterAvatar.js';
 import { useQueryParam } from '../../util/queryParams.js';
@@ -22,8 +22,8 @@ export default function CharacterChatSettings() {
   const participants = useActiveChatParticipants();
   const chatInstructionsByCharacterId = useTurnMachineStore((state) => state.chatInstructionsByCharacterId);
   const { showCharacterOverview } = useCharacterOverview();
-  const isCharacterSyncing = useIsEntityInDeferredSync(settingsCharacterId);
-  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const isCharacterSyncing = useIsEntityLockedForEditing(settingsCharacterId);
+  const activeMap = useActiveScenarioMap();
 
   const onClose = () => setSettingsCharacterId(undefined);
 
@@ -43,9 +43,13 @@ export default function CharacterChatSettings() {
 
   const isUserCharacter = character.id === scenario.userCharacterId;
   const persistWardrobes = (updatedWardrobes: Character['wardrobes']) => {
-    saveScenarioCharacterFields(character.id, {
-      wardrobes: updatedWardrobes,
-    });
+    void saveScenarioCharacterFields(
+      character.id,
+      {
+        wardrobes: updatedWardrobes,
+      },
+      USER_SYNC
+    );
   };
 
   return (

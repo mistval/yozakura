@@ -1,24 +1,80 @@
 import { create } from 'zustand';
 import { doAsDataRead, doAsDataWrite, mainDatabase } from '../backend_bridge/database.js';
 import { importDemoMaps } from '../backend_bridge/demo_import.js';
+import { normalizeWorldMap } from '../engine/map/world_map.js';
 import type { WorldMap } from '../engine/types.js';
-import { concatUniqueById, findById, findRequiredById, removeById } from '../util/array.js';
+import { concatUniqueByIds, findRequiredById } from '../util/array.js';
+import { ephemeralStateSlice, IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
 
-export const useMapStore = create<{
+const DATABASE_OBJECT_NAME = 'map';
+
+type MapStoreState = {
   maps: WorldMap[];
   mapsById: Record<string, WorldMap>;
   mapsAreLoaded: boolean;
 
   setMaps: (maps: WorldMap[]) => void;
-  saveMap: (map: WorldMap) => void;
-  updateMap: (mapId: string, mutator: (prev: WorldMap) => WorldMap) => void;
-  deleteMap: (mapId: string) => void;
+  saveMap: (map: WorldMap, syncOptions?: SyncOptions) => WorldMap;
+  updateMap: (mapId: string, mutator: (prev: WorldMap) => WorldMap, syncOptions?: SyncOptions) => WorldMap;
+  deleteMap: (mapId: string, syncOptions?: SyncOptions) => void;
   refreshMaps: () => Promise<void>;
   importDemoMaps: () => Promise<void>;
-}>((set, get) => ({
+} & ReturnType<typeof ephemeralStateSlice<WorldMap>>;
+
+export const useMapStore = create<MapStoreState>((set, get) => ({
   maps: [],
   mapsById: {},
   mapsAreLoaded: false,
+
+  ...ephemeralStateSlice<WorldMap>({
+    setStoreState(entities: WorldMap[]) {
+      get().setMaps(concatUniqueByIds(get().maps, entities.map(normalizeWorldMap)));
+    },
+
+    deleteStoreState(entities: WorldMap[]) {
+      const ids = new Set(entities.map((entity) => entity.id));
+      get().setMaps(get().maps.filter((map) => !ids.has(map.id)));
+    },
+
+    async setDatabaseState(entities: WorldMap[]) {
+      const debouncerKey = entities.length === 1 ? entities[0]!.id : `${DATABASE_OBJECT_NAME}.all`;
+
+      await doAsDataWrite(
+        async () => {
+          const existingMaps = entities
+            .map((entity) => get().mapsById[entity.id])
+            .filter((map): map is WorldMap => Boolean(map));
+
+          if (existingMaps.length === 0) {
+            return;
+          }
+
+          await mainDatabase.storeMaps(existingMaps);
+        },
+        DATABASE_OBJECT_NAME,
+        { debouncerKey }
+      );
+    },
+
+    deleteDatabaseState(entities: WorldMap[]) {
+      const debouncerKey = entities.length === 1 ? entities[0]!.id : `${DATABASE_OBJECT_NAME}.all`;
+
+      return doAsDataWrite(
+        async () => {
+          await mainDatabase.deleteMaps(entities.map((entity) => entity.id));
+        },
+        DATABASE_OBJECT_NAME,
+        { debouncerKey }
+      );
+    },
+
+    getEntitiesFromDatabase(entities: WorldMap[]) {
+      return doAsDataRead(
+        () => mainDatabase.loadMapsByIds(entities.map((entity) => entity.id)),
+        `${DATABASE_OBJECT_NAME}.partial.refresh`
+      );
+    },
+  }),
 
   setMaps(maps: WorldMap[]) {
     set({
@@ -54,45 +110,31 @@ export const useMapStore = create<{
     }
   },
 
-  saveMap(map: WorldMap) {
+  saveMap(map: WorldMap, syncOptions: SyncOptions = IMMEDIATE_SYNC) {
+    const normalized = normalizeWorldMap(map);
     const withUpdatedFields = {
-      ...map,
+      ...normalized,
       updatedAt: new Date().toISOString(),
     } satisfies WorldMap;
 
-    get().setMaps(concatUniqueById(get().maps, withUpdatedFields));
-
-    void doAsDataWrite(
-      async () => {
-        const map = findById(get().maps, withUpdatedFields.id);
-        if (!map) {
-          return;
-        }
-
-        await mainDatabase.storeMaps([map]);
-      },
-      'map',
-      {
-        debouncerKey: withUpdatedFields.id,
-      }
-    );
+    void get().ephemeralStateHelper.stageUpdatedEntity(withUpdatedFields, syncOptions);
 
     return withUpdatedFields;
   },
 
-  updateMap(mapId, mutator) {
+  updateMap(mapId, mutator, syncOptions: SyncOptions = IMMEDIATE_SYNC) {
     const currentMap = findRequiredById(get().maps, mapId);
     const newMap = mutator(currentMap);
-    return get().saveMap(newMap);
+    return get().saveMap(newMap, syncOptions);
   },
 
-  deleteMap(mapId: string) {
-    void doAsDataWrite(async () => {
-      await mainDatabase.deleteMap(mapId);
-    }, 'map');
+  deleteMap(mapId: string, syncOptions: SyncOptions = IMMEDIATE_SYNC) {
+    const existing = get().mapsById[mapId];
+    if (!existing) {
+      return;
+    }
 
-    const newMaps = removeById(get().maps, mapId);
-    get().setMaps(newMaps);
+    void get().ephemeralStateHelper.stageDeletedEntity(existing, syncOptions);
   },
 }));
 

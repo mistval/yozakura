@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from 'react';
 import { useCharacterOverview } from './CharacterOverviewContext.js';
+import { useObjectEditor } from '../object_editor/ObjectEditorContext.js';
 import type { Character, Scenario, WorldMap } from '../../engine/types.js';
-import { useScenarioStore } from '../../state/scenario_store.js';
+import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store.js';
 import InfoTooltip from '../ui/InfoTooltip.js';
@@ -13,8 +14,8 @@ import ConversationSearchList from '../conversation_log/ConversationSearchList.j
 import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 import { useCharacterGroupStore } from '../../state/character_group_store.js';
-import { useQueryParams } from '../../util/queryParams.js';
-import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
+import { USER_SYNC, useIsEntityLockedForEditing } from '../../state/ephemeral_state_helper.js';
+import { AiEditButton } from '../object_editor/AiEditButton.js';
 import CharacterLocationSelect from '../CharacterLocationSelect.js';
 
 type CharacterOverviewSingleDataProps = {
@@ -29,7 +30,7 @@ export default function CharacterOverviewSingleData({
   onShowConversationDetail,
 }: CharacterOverviewSingleDataProps) {
   const scenario = useScenarioStore((state) => state.activeScenario);
-  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const activeMap = useActiveScenarioMap();
   const characters = useScenarioCharacterStore((state) => state.scenarioCharacters);
   const saveScenarioCharacterFields = useScenarioCharacterStore((state) => state.saveScenarioCharacterFields);
   const setUserCharacter = useScenarioStore((state) => state.setUserCharacter);
@@ -38,15 +39,18 @@ export default function CharacterOverviewSingleData({
   );
   const requestDirectNpcChat = useScenarioLoopStateStore((state) => state.submitUserChatAction);
   const chatSessionIsActive = useTurnMachineStore((state) => state.chatState !== 'inactive');
-  const { closeCharacterOverview, openCharacterOverviewEditor } = useCharacterOverview();
+  const { closeCharacterOverview, openCharacterOverviewEditor, openCharacterOverviewGroup } =
+    useCharacterOverview();
+  const { open: objectEditorOpen, openScenarioCharacterObjectEditor } = useObjectEditor();
   const groups = useCharacterGroupStore((state) => state.groups);
-  const [, setOverviewParams] = useQueryParams();
 
   assertNonNullish(scenario, 'CharacterOverviewSingleData rendered without active scenario');
   assertNonNullish(activeMap, 'CharacterOverviewSingleData rendered without active map');
 
   const isUser = selectedSingleCharacter.id === scenario.userCharacterId;
-  const isCharacterSyncing = useIsEntityInDeferredSync(selectedSingleCharacter.id);
+  const isCharacterSyncing = useIsEntityLockedForEditing(selectedSingleCharacter.id);
+  const saveCharacterFields = (fields: Partial<Character>) =>
+    saveScenarioCharacterFields(selectedSingleCharacter.id, fields, USER_SYNC);
 
   const memberGroups = useMemo(
     () =>
@@ -94,7 +98,7 @@ export default function CharacterOverviewSingleData({
                 href={`#`}
                 onClick={(event) => {
                   event.preventDefault();
-                  setOverviewParams({ cotab: 'groups', cogroup: group.id });
+                  openCharacterOverviewGroup(group.id);
                 }}
                 className="underline hover:text-primary"
               >
@@ -108,7 +112,7 @@ export default function CharacterOverviewSingleData({
         {!isUser && (
           <button
             type="button"
-            disabled={chatSessionIsActive}
+            disabled={chatSessionIsActive || objectEditorOpen}
             onClick={() => {
               void setUserCharacter(selectedSingleCharacter.id);
             }}
@@ -118,6 +122,7 @@ export default function CharacterOverviewSingleData({
         )}
         <button
           type="button"
+          disabled={objectEditorOpen}
           onClick={() => {
             if (chatSessionIsActive) {
               ChatCoordinator.addParticipant(selectedSingleCharacter.id);
@@ -140,6 +145,10 @@ export default function CharacterOverviewSingleData({
         >
           Edit {selectedSingleCharacter.firstName}
         </button>
+        <AiEditButton
+          disabled={!selectedSingleCharacter}
+          onClick={() => openScenarioCharacterObjectEditor(selectedSingleCharacter.id)}
+        />
         <label className="flex flex-col items-center gap-2 text-sm">
           <span>Location</span>
           <CharacterLocationSelect characterId={selectedSingleCharacter.id} />
@@ -158,7 +167,7 @@ export default function CharacterOverviewSingleData({
                 value={selectedSingleCharacter.nextConversationWithCharacterId || ''}
                 disabled={isCharacterSyncing}
                 onChange={(event) => {
-                  void saveScenarioCharacterFields(selectedSingleCharacter.id, {
+                  void saveCharacterFields({
                     nextConversationWithCharacterId: event.target.value.trim(),
                   });
                 }}
@@ -166,8 +175,7 @@ export default function CharacterOverviewSingleData({
               >
                 <option value="">Automatic</option>
                 {otherCharactersArr
-                  .concat()
-                  .sort(
+                  .toSorted(
                     (a, b) => a.firstName.localeCompare(b.firstName) || a.lastName.localeCompare(b.lastName)
                   )
                   .map((character) => (
@@ -187,7 +195,7 @@ export default function CharacterOverviewSingleData({
             disabled={isCharacterSyncing}
             initialValue={selectedSingleCharacter.globalMemories || ''}
             onSave={(newValue: string) =>
-              saveScenarioCharacterFields(selectedSingleCharacter.id, {
+              saveCharacterFields({
                 globalMemories: newValue.trim(),
               })
             }
@@ -216,7 +224,7 @@ export default function CharacterOverviewSingleData({
                             : entry
                       );
 
-                      return saveScenarioCharacterFields(selectedSingleCharacter.id, {
+                      return saveCharacterFields({
                         rollingConversationSummaries: updatedSummaries,
                       });
                     }}
@@ -225,7 +233,7 @@ export default function CharacterOverviewSingleData({
                         (_, entryIndex) => entryIndex !== index
                       );
 
-                      return saveScenarioCharacterFields(selectedSingleCharacter.id, {
+                      return saveCharacterFields({
                         rollingConversationSummaries: updatedSummaries,
                       });
                     }}

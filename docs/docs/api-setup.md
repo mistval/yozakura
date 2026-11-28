@@ -30,7 +30,7 @@ In KoboldCpp select the "Browse" button and choose your model file, then click L
 
 Then you can start Yozakura and you're good to go. When the initial setup popup appears, the `Completions API Setup` section will already have the correct values for KoboldCpp, so you don't need to change anything there, if you launched KoboldCpp as described above.
 
-The recommended context size for Yozakura is 16384, which is also the default in KoboldCpp at the time of this writing. Because a scenario in Yozakura is a series of short conversations, the context rarely gets nearly as large as, say, a long SillyTavern chat might require. If you find you prefer having very long chats, consider increasing context size further, there's no harm in doing so if you have extra VRAM.
+The recommended context size for Yozakura is 16384, which is also the default in KoboldCpp at the time of this writing. Because a scenario in Yozakura is a series of short conversations, the context rarely gets nearly as large as, say, a long SillyTavern chat might require. If you find you prefer having very long chats, consider increasing context size further, there's no harm in doing so if you have extra VRAM. Additionally, if you use the [Object Editor](object-editor.md), you may need larger context especially if you request a lot of edits.
 
 You should also strongly consider enabling SmartCache unless you're starved for system RAM. This will speed up NPC chats and group chats, especially longer ones. For CacheSlots, a good rule of thumb is the max number of NPCs you expect to have in a group chat, multiplied by 4. By default, there can be up to 3 NPCs in a group chat (unless you manually add more) so you'd want 12 CacheSlots. If you don't have enough system RAM for that, you can do less and still get partial benefit. (note: this feature requires system RAM, not VRAM).
 
@@ -57,7 +57,7 @@ Setup:
 3. Create an API key on the [Keys page](https://openrouter.ai/keys).
 4. In Yozakura's initial setup popup, under `Completions API Setup` (if you already closed the popup, the same fields are under Base Defaults in [LLM Settings](yozakura://?settings=true&settingspath=llm&llmoptionsid=base)):
    - **Completions API URL**: `https://openrouter.ai/api/v1/chat/completions`
-   - **Bearer/Auth Token**: your OpenRouter API key
+   - **Auth Token**: your OpenRouter API key
    - **Model**: a model ID from the [models page](https://openrouter.ai/models), see below
 5. Click `Test Connection` to confirm you can connect.
 
@@ -75,7 +75,7 @@ To use OpenRouter for images in Yozakura: in the initial setup popup under `Imag
 
 1. Change **Image Generation Provider** to `OpenAI Completions Style (Including OpenRouter and Similar)`.
 2. **Image API URL**: `https://openrouter.ai/api/v1/chat/completions` (the same URL as the text API)
-3. **Bearer/Auth Token**: the same OpenRouter API key
+3. **Auth Token**: the same OpenRouter API key
 4. **Model**: an image-capable model, for example `x-ai/grok-imagine-image-quality`. On the OpenRouter models page you can filter by image output to see what's available.
 5. Click `Test Connection`.
 

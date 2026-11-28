@@ -1,10 +1,11 @@
 import { migration as migration0001WardrobeTags } from './character_card_migrations/0001_wardrobe_tags.js';
+import { migration as migration0002BackfillTimestamps } from './character_card_migrations/0002_backfill_timestamps.js';
 
 export type CharacterCardMigration = {
   doMigration: (rawCard: Record<string, unknown>) => Record<string, unknown>;
 };
 
-const migrations: CharacterCardMigration[] = [migration0001WardrobeTags];
+const migrations: CharacterCardMigration[] = [migration0001WardrobeTags, migration0002BackfillTimestamps];
 
 export const CURRENT_CHARACTER_CARD_VERSION = String(migrations.length + 1);
 

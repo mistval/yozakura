@@ -19,7 +19,7 @@ function mountainPath(peaks: Peak[], baseY = 600): string {
     const my = (y1 + y2) / 2;
     d += `Q ${x1} ${y1} ${mx} ${my} `;
   }
-  const last = peaks[peaks.length - 1]!;
+  const last = peaks.at(-1)!;
   d += `Q ${last[0]} ${last[1]} 1400 ${last[1] + 10} `;
   d += `L 1400 ${baseY} L 0 ${baseY} Z`;
   return d;
@@ -451,7 +451,7 @@ function Pagoda({ x, baseY, scale = 1 }: { x: number; baseY: number; scale?: num
   }
   return (
     <g>
-      {elements.reverse()}
+      {elements.toReversed()}
       {/* Spire */}
       <line x1={x} y1={curY} x2={x} y2={curY - 28 * scale} stroke="#5a4030" strokeWidth={2.5 * scale} />
       {[0, 1, 2, 3].map((i) => (

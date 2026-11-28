@@ -7,7 +7,7 @@
   "author": "mistval",
   "description": "Yozakura is an AI-powered social simulation engine.",
   "scripts": {
-    "dev": "concurrently --kill-others \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev": "node scripts/dev.mjs",
     "build:server": "npm run build --prefix server",
     "build:web": "npm run build --prefix client",
     "build": "npm run build:server && npm run build:web",

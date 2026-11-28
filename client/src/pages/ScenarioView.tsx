@@ -15,7 +15,7 @@ import {
   useTurnMachineStore,
   useCurrentTurnCharacterId,
 } from '../state/turn_machine_store';
-import { useScenarioStore } from '../state/scenario_store.js';
+import { useActiveScenarioMap, useScenarioStore } from '../state/scenario_store.js';
 import { useMapStore } from '../state/map_store.js';
 import { useScenarioLoopStateStore } from '../state/scenario_loop_state_store';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
@@ -47,18 +47,20 @@ export default function ScenarioView() {
   const navigate = useNavigate();
   const { scenarioId } = useParams<{ scenarioId: string }>();
   const scenario = useScenarioStore((state) => state.activeScenario);
+  const scenariosLoaded = useScenarioStore((state) => state.scenarioSummariesAreLoaded);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const scenarioCharactersAreLoaded = useScenarioCharacterStore((s) => s.scenarioCharactersAreLoaded);
   const scenarioCharacters = useScenarioCharacterStore((s) => s.scenarioCharacters);
   const globalCharactersAreLoaded = useGlobalCharactersStore((s) => s.globalCharactersAreLoaded);
   const globalCharacters = useGlobalCharactersStore((s) => s.globalCharacters);
-  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const activeMap = useActiveScenarioMap();
   const noMapsExist = useMapStore((s) => s.mapsAreLoaded && s.maps.length === 0);
   const loadScenarioState = useScenarioStore((state) => state.refreshScenario);
   const getCharacterRelationships = useScenarioCharacterRelationshipStore(
     (state) => state.getCharacterRelationships
   );
   const ephemeralLocation = useTurnMachineStore((s) => s.ephemeralLocation);
+  const characterGroups = useCharacterGroupStore((state) => state.groups);
   const schedulesByGroupId = useCharacterGroupStore((state) => state.schedulesByGroupId);
   const temporalDisplayHtml = useTemporalContextStore((state) => state.displayHtml);
   const { showCharacterOverview } = useCharacterOverview();
@@ -67,6 +69,7 @@ export default function ScenarioView() {
   const { openSettings } = useSettingsModal();
   const activeParticipants = useActiveChatParticipants();
   const freedomOfMovement = useSettingsStore((s) => s.freedomOfMovement);
+  const npcChatRate = useSettingsStore((s) => s.npcChatRate);
   const chatPaneWidth = useSettingsStore((s) => s.chatPaneWidth);
   const isMobileLayout = chatPaneWidth === 'mobile';
   const activeChatState = useTurnMachineStore((state) => state.chatState);
@@ -108,10 +111,10 @@ export default function ScenarioView() {
   }, [scenarioId, loadScenarioState]);
 
   useEffect(() => {
-    if (scenario) {
+    if (scenario && activeMap) {
       void startScenarioLoop();
     }
-  }, [scenario?.id]);
+  }, [scenario?.id, Boolean(activeMap)]);
 
   useEffect(() => {
     if (!scenario) {
@@ -194,7 +197,7 @@ export default function ScenarioView() {
     (perspectiveLocationId ? locationById[perspectiveLocationId] : activeMap?.locations[0]);
 
   const closeActiveChatSession = () => {
-    ChatCoordinator.deactivate();
+    void ChatCoordinator.deactivate();
   };
 
   const charactersHere = useMemo(() => {
@@ -232,11 +235,19 @@ export default function ScenarioView() {
       .filter((l): l is WorldMapLocation => Boolean(l));
   }, [perspectiveLocationId, locationAdjacenyById, locationById]);
 
+  const effectiveScheduleTurn = scenario ? scenario.turnNumber + scenario.turnOffset : undefined;
   const moveSuggestion = useMemo<MoveSuggestion | undefined>(() => {
-    if (!canSubmitUserTurn || !user || !activeMap) {
+    if (!canSubmitUserTurn || !user || !activeMap || effectiveScheduleTurn === undefined) {
       return undefined;
     }
-    const raw = getUserMovementSuggestion(user);
+    const raw = getUserMovementSuggestion({
+      user,
+      turnNumber: effectiveScheduleTurn,
+      map: activeMap,
+      characterGroups,
+      groupSchedulesByGroupId: schedulesByGroupId,
+      npcChatRate,
+    });
     if (!raw) {
       return undefined;
     }
@@ -244,7 +255,16 @@ export default function ScenarioView() {
       .map((id) => locationById[id])
       .filter((entry): entry is WorldMapLocation => Boolean(entry));
     return { ...raw, suggestedLocations };
-  }, [canSubmitUserTurn, user, activeMap, scenario?.turnNumber, schedulesByGroupId, locationById]);
+  }, [
+    canSubmitUserTurn,
+    user,
+    activeMap,
+    effectiveScheduleTurn,
+    characterGroups,
+    schedulesByGroupId,
+    npcChatRate,
+    locationById,
+  ]);
 
   const addCharacterToActiveChat = (npcId: string) => {
     if (!hasActiveChatSession || !scenario) {
@@ -317,9 +337,11 @@ export default function ScenarioView() {
   }
 
   if (!scenario || !user || !perspectiveCharacter || !activeMap) {
+    const text = scenariosLoaded ? 'That scenario does not exist' : 'Loading...';
+
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-3">
-        <h1 className="text-2xl font-semibold">Loading...</h1>
+        <h1 className="text-2xl font-semibold">{text}</h1>
         <button type="button" onClick={() => navigate('/')} disabled={!canReturnToMainMenu}>
           Main Menu
         </button>
@@ -366,7 +388,7 @@ export default function ScenarioView() {
         onMove={(locationId) => {
           submitUserMove(
             locationId,
-            moveSuggestion?.consumesTurnByLocationId[locationId] ?? !freedomOfMovement
+            !freedomOfMovement && (moveSuggestion?.consumesTurnByLocationId[locationId] ?? true)
           );
         }}
         onWait={() => {

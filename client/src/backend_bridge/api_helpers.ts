@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { buildAppIdentificationHeaders } from '../engine/settings/cascading_llm_configs.js';
 import { ApplicationError } from '../errors/application_error';
-import { omitNilValues } from '../util/types';
+import { omitNilValues, type PartialWithUndefined } from '../util/types';
 
 type LlmTokenCallback = (fullText: string) => void;
 
@@ -11,8 +12,9 @@ function buildAuthHeader(authToken: string | undefined): string | undefined {
 }
 
 export type LlmChatOptions = {
-  targetUrl?: string | undefined;
+  targetUrl: string;
   authToken?: string | undefined;
+  appIdentificationHeadersEnabled?: boolean | undefined;
   onTokens?: LlmTokenCallback | undefined;
   signal?: AbortSignal | undefined;
 };
@@ -38,7 +40,7 @@ const openAIChatCompletionSchema = z.object({
 type RawLLMChatMessage = z.infer<typeof openAIChatCompletionSchema>['choices'][number]['message'];
 
 type ExtractedStreamChunk =
-  | { mode: 'delta'; message: Partial<NormalizedLLMChatMessage> }
+  | { mode: 'delta'; message: PartialWithUndefined<NormalizedLLMChatMessage> }
   | { mode: 'full'; message: NormalizedLLMChatMessage }
   | { mode: 'none' };
 
@@ -51,7 +53,9 @@ function normalizeChatMessage(raw: RawLLMChatMessage): NormalizedLLMChatMessage 
   };
 }
 
-function extractStreamMessageFields(value: unknown): Partial<NormalizedLLMChatMessage> | undefined {
+function extractStreamMessageFields(
+  value: unknown
+): PartialWithUndefined<NormalizedLLMChatMessage> | undefined {
   if (!value || typeof value !== 'object') {
     return undefined;
   }
@@ -66,8 +70,8 @@ function extractStreamMessageFields(value: unknown): Partial<NormalizedLLMChatMe
   }
 
   return {
-    ...(typeof content === 'string' ? { content } : {}),
-    ...(typeof reasoningContent === 'string' ? { reasoning_content: reasoningContent } : {}),
+    content: typeof content === 'string' ? content : undefined,
+    reasoning_content: typeof reasoningContent === 'string' ? reasoningContent : undefined,
   };
 }
 
@@ -99,9 +103,7 @@ function extractStreamChunkMessage(chunkPayload: unknown): ExtractedStreamChunk 
       mode: 'full',
       message: {
         content: fullMessage.content,
-        ...(fullMessage.reasoning_content !== undefined
-          ? { reasoning_content: fullMessage.reasoning_content }
-          : {}),
+        reasoning_content: fullMessage.reasoning_content,
       },
     };
   }
@@ -220,9 +222,12 @@ async function parseLlmStreamingResponse(
 
 export async function executeLlmChat(
   payload: Record<string, unknown>,
-  options: LlmChatOptions = {}
+  options: LlmChatOptions
 ): Promise<NormalizedLLMChatMessage | undefined> {
-  const { targetUrl, authToken, onTokens, signal } = options;
+  const { targetUrl, authToken, appIdentificationHeadersEnabled = true, onTokens, signal } = options;
+  if (!targetUrl.trim()) {
+    throw new Error('Target URL is required for LLM chat requests.');
+  }
   const streamingRequested = typeof onTokens === 'function';
 
   if (streamingRequested) {
@@ -234,10 +239,15 @@ export async function executeLlmChat(
     stream: streamingRequested,
   };
 
+  const appIdentificationHeaders = appIdentificationHeadersEnabled
+    ? buildAppIdentificationHeaders(targetUrl)
+    : {};
+
   const headers = omitNilValues({
     'Content-Type': 'application/json',
     'X-Target-URL': targetUrl,
     Authorization: buildAuthHeader(authToken),
+    ...appIdentificationHeaders,
   });
 
   const response = await fetch('/api/proxy/fetch', {

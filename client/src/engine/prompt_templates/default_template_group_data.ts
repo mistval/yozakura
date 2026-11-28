@@ -3,6 +3,7 @@ import {
   CHARACTER_GENERATION_TEMPLATES_GROUP_ID,
   CHAT_SCENE_IMAGE_TEMPLATES_GROUP_ID,
   MEMORIES_GROUP_ID,
+  OBJECT_EDITOR_TEMPLATES_GROUP_ID,
   PROMPT_TEMPLATES_ROOT_GROUP_ID,
   RUNTIME_CHAT_TEMPLATES_GROUP_ID,
   type TemplateGroupData,
@@ -30,6 +31,7 @@ import { offscreenMemoryUpdateConversationGoalChainSpec } from './memories/offsc
 import { relationshipDescriptorUpdateChainSpec } from './memories/relationship_descriptor_update.js';
 import { rollingGlobalMemoryRewriteChainSpec } from './memories/rolling_global_memory_rewrite.js';
 import { rollingPairwiseMemoryRewriteChainSpec } from './memories/rolling_pairwise_memory_rewrite.js';
+import { objectEditorPromptChainSpec } from './object_editor/object_editor_prompt.js';
 
 export const characterGenerationChainSpecs = [
   extractCharacterDescriptionChainSpec,
@@ -64,6 +66,8 @@ export const memoriesChainSpecs = [
   offscreenMemoryUpdateConversationGoalChainSpec,
 ];
 
+export const objectEditorChainSpecs = [objectEditorPromptChainSpec];
+
 export const DEFAULT_TEMPLATE_GROUP_DATA: TemplateGroupData = {
   [PROMPT_TEMPLATES_ROOT_GROUP_ID]: {
     templateChains: {},
@@ -72,4 +76,5 @@ export const DEFAULT_TEMPLATE_GROUP_DATA: TemplateGroupData = {
   [RUNTIME_CHAT_TEMPLATES_GROUP_ID]: chainSpecsToGroupDefaultData(runtimeChatChainSpecs),
   [CHAT_SCENE_IMAGE_TEMPLATES_GROUP_ID]: chainSpecsToGroupDefaultData(chatSceneImageChainSpecs),
   [MEMORIES_GROUP_ID]: chainSpecsToGroupDefaultData(memoriesChainSpecs),
+  [OBJECT_EDITOR_TEMPLATES_GROUP_ID]: chainSpecsToGroupDefaultData(objectEditorChainSpecs),
 };

@@ -1,11 +1,13 @@
 import { useState } from 'react';
+import { useDraft } from '../../hooks/useDraft.js';
 import { useStateRef } from '../../hooks/useStateRef.js';
 import SettingFieldLabel from './ui/SettingFieldLabel.js';
 import { settingsDangerousHtmlTooltips, settingsTooltips } from './settings_tooltips.js';
-import { useScenarioStore } from '../../state/scenario_store.js';
-import { DEFAULT_REMOTE_CHAT_MEDIUM } from '../../engine/types.js';
+import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
+import { DEFAULT_REMOTE_CHAT_MEDIUM, DEFAULT_TURN_OFFSET, MAX_TURN_OFFSET } from '../../engine/types.js';
 import { getErrorMessage } from '../../errors/error_util.js';
 import { useMapStore } from '../../state/map_store.js';
+import { clamp } from '../../util/numeric.js';
 import CustomScriptSettings from './settingsScripts/CustomScriptSettings.js';
 import {
   TEMPORAL_SCRIPT_DESCRIPTOR,
@@ -87,16 +89,20 @@ function ResettableTextField({
 
 export default function ScenarioSettingsSection() {
   const scenario = useScenarioStore((state) => state.activeScenario);
-  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const activeMap = useActiveScenarioMap();
   const setScenarioMap = useScenarioStore((state) => state.setScenarioMap);
   const mergeMapOverrides = useScenarioStore((state) => state.mergeMapOverrides);
   const setSaveName = useScenarioStore((state) => state.setSaveName);
+  const setTurnOffset = useScenarioStore((state) => state.setTurnOffset);
   const setRemoteChatMedium = useScenarioStore((state) => state.setRemoteChatMedium);
   const temporalSelection = useTemporalScriptSelection();
 
   const temporalSection = scenario?.temporalContext;
   const saveNameValue = scenario?.saveName ?? '';
   const hasSaveName = scenario !== undefined && scenario.saveName !== '';
+  const turnOffset = scenario?.turnOffset ?? DEFAULT_TURN_OFFSET;
+  const hasCustomTurnOffset = scenario !== undefined && turnOffset !== DEFAULT_TURN_OFFSET;
+  const [turnOffsetDraft, setTurnOffsetDraft] = useDraft(String(turnOffset));
   const remoteChatMediumValue = scenario?.remoteChatMedium ?? DEFAULT_REMOTE_CHAT_MEDIUM;
   const hasCustomRemoteChatMedium =
     scenario !== undefined && scenario.remoteChatMedium !== DEFAULT_REMOTE_CHAT_MEDIUM;
@@ -153,6 +159,41 @@ export default function ScenarioSettingsSection() {
     mergeMapOverrides({
       description: undefined,
     });
+  };
+
+  const commitTurnOffset = (nextTurnOffset: number) => {
+    const clamped = clamp(Math.round(nextTurnOffset), -MAX_TURN_OFFSET, MAX_TURN_OFFSET);
+    if (!scenario || clamped === scenario.turnOffset) {
+      return;
+    }
+
+    setTurnOffset(clamped);
+  };
+
+  const handleTurnOffsetChange = (rawValue: string) => {
+    setTurnOffsetDraft(rawValue);
+    const trimmed = rawValue.trim();
+    if (trimmed === '' || trimmed === '-') {
+      return;
+    }
+
+    const parsed = Number(trimmed);
+    if (Number.isInteger(parsed) && Math.abs(parsed) <= MAX_TURN_OFFSET) {
+      commitTurnOffset(parsed);
+    }
+  };
+
+  const handleTurnOffsetBlur = () => {
+    const trimmed = turnOffsetDraft.trim();
+    const parsed = Number(trimmed);
+    if (trimmed === '' || trimmed === '-' || !Number.isFinite(parsed)) {
+      setTurnOffsetDraft(String(turnOffset));
+      return;
+    }
+
+    const clamped = clamp(Math.round(parsed), -MAX_TURN_OFFSET, MAX_TURN_OFFSET);
+    commitTurnOffset(clamped);
+    setTurnOffsetDraft(String(clamped));
   };
 
   if (!scenario) {
@@ -256,6 +297,42 @@ export default function ScenarioSettingsSection() {
         onReset={() => setRemoteChatMedium(DEFAULT_REMOTE_CHAT_MEDIUM)}
         className="bordered-section space-y-1"
       />
+
+      <div className="bordered-section space-y-1">
+        <div className="flex items-center justify-between">
+          <SettingFieldLabel
+            text="Turn Offset"
+            htmlFor="scenario-turn-offset"
+            tooltip={settingsTooltips['scenario.turnOffset']}
+            className="text-sm font-medium text-primary"
+          />
+          {hasCustomTurnOffset && (
+            <button
+              type="button"
+              className="text-xs text-secondary hover:text-primary"
+              onClick={() => {
+                commitTurnOffset(DEFAULT_TURN_OFFSET);
+                setTurnOffsetDraft(String(DEFAULT_TURN_OFFSET));
+              }}
+              disabled={!scenarioLoaded}
+            >
+              Reset to default
+            </button>
+          )}
+        </div>
+        <input
+          id="scenario-turn-offset"
+          type="number"
+          min={-MAX_TURN_OFFSET}
+          max={MAX_TURN_OFFSET}
+          step={1}
+          className="mt-1 w-full border rounded-sm px-2 py-2 bg-inset"
+          value={turnOffsetDraft}
+          onChange={(event) => handleTurnOffsetChange(event.target.value)}
+          onBlur={handleTurnOffsetBlur}
+          disabled={!scenarioLoaded}
+        />
+      </div>
 
       {temporalSection && (
         <div className="bordered-section space-y-2">

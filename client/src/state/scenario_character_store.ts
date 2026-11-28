@@ -5,17 +5,25 @@ import { type WorldMap, type Character, type Scenario } from '../engine/types.js
 import { assertNonNullish } from '../errors/application_error.js';
 import { concatUniqueByIds, getRequiredRandomChoice } from '../util/array.js';
 import {
+  getActiveScenarioBaseMap,
   getRequiredActiveScenario,
   getRequiredActiveScenarioMap,
   useScenarioStore,
 } from './scenario_store.js';
+import { useMapStore } from './map_store.js';
 import { addOrReplaceVersionQueryParam, newId } from '../util/id.js';
-import { ephemeralStateSlice, IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
+import {
+  ephemeralStateSlice,
+  IMMEDIATE_SYNC,
+  USER_SYNC,
+  waitForEntitiesUnlockedByObjectEditor,
+  type SyncOptions,
+} from './ephemeral_state_helper.js';
 import { applyDailyWardrobeAutoselect } from '../engine/wardrobes.js';
 import { useGlobalCharactersStore } from './global_character_store.js';
 
 type UpdatedScenarioCharacter = Character & {
-  imageFile?: File;
+  imageFile?: File | undefined;
 };
 
 type ScenarioCharacterStoreState = {
@@ -28,16 +36,21 @@ type ScenarioCharacterStoreState = {
   getCharactersByIds: (ids: string[]) => Character[];
   setScenarioCharacters: (characters: Character[]) => void;
   removeCharacterLocal: (characterId: string) => void;
-  removeScenarioCharacter: (characterId: string) => Promise<void>;
+  removeScenarioCharacter: (characterId: string, syncOptions?: SyncOptions) => Promise<void>;
   loadScenarioCharacters: () => Promise<void>;
-  saveScenarioCharacters: (character: Character[], syncOptions?: SyncOptions) => void;
+  saveScenarioCharacters: (character: Character[], syncOptions?: SyncOptions) => Promise<void>;
   saveScenarioCharacter: (
     character: Character,
     imageFile?: File,
-    setter?: (prevCharacter: Character | undefined) => Character
+    setter?: (prevCharacter: Character | undefined) => Character,
+    syncOptions?: SyncOptions
   ) => void;
   saveInactiveScenarioCharacterImmediate: (character: Character) => Promise<void>;
-  saveScenarioCharacterFields: (id: string, fields: Partial<Character>, syncOptions?: SyncOptions) => void;
+  saveScenarioCharacterFields: (
+    id: string,
+    fields: Partial<Character>,
+    syncOptions?: SyncOptions
+  ) => Promise<void>;
   addGlobalCharacterToActiveScenarioImmediate: (
     character: Character,
     scenarioArgs?: {
@@ -192,13 +205,13 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     });
   },
 
-  removeScenarioCharacter: async (characterId) => {
+  removeScenarioCharacter: async (characterId, syncOptions = IMMEDIATE_SYNC) => {
     const characterToDelete = get().scenarioCharactersById[characterId];
     if (!characterToDelete) {
       return;
     }
 
-    await get().ephemeralStateHelper.stageDeletedEntity(characterToDelete, IMMEDIATE_SYNC);
+    await get().ephemeralStateHelper.stageDeletedEntity(characterToDelete, syncOptions);
   },
 
   loadScenarioCharacters: async () => {
@@ -231,28 +244,36 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     set({ scenarioCharactersAreLoaded: true });
   },
 
-  saveScenarioCharacter: (character, imageFile, setter) => {
+  saveScenarioCharacter: (character, imageFile, setter, syncOptions = IMMEDIATE_SYNC) => {
     setter ??= (prev) => ({ ...prev, ...character });
 
     const newCharacter: UpdatedScenarioCharacter = {
       ...setter(get().scenarioCharactersById[character.id]),
-      ...(imageFile ? { imageFile } : {}),
+      imageFile,
     };
 
-    void get().ephemeralStateHelper.stageUpdatedEntity(newCharacter, IMMEDIATE_SYNC);
+    void get().ephemeralStateHelper.stageUpdatedEntity(newCharacter, syncOptions);
   },
 
   saveScenarioCharacterFields: (id, fields, syncOptions = IMMEDIATE_SYNC) => {
-    const char = get().scenarioCharactersById[id];
-    assertNonNullish(char, 'saveScenarioCharacterFields called for non-existent characterId: ' + id);
+    const stageFields = () => {
+      const char = get().scenarioCharactersById[id];
+      assertNonNullish(char, 'saveScenarioCharacterFields called for non-existent characterId: ' + id);
 
-    void get().ephemeralStateHelper.stageUpdatedEntity(
-      {
-        ...char,
-        ...fields,
-      },
-      syncOptions
-    );
+      return get().ephemeralStateHelper.stageUpdatedEntity(
+        {
+          ...char,
+          ...fields,
+        },
+        syncOptions
+      );
+    };
+
+    if (syncOptions.syncMode !== 'immediate' || syncOptions.source === 'user') {
+      return stageFields();
+    }
+
+    return waitForEntitiesUnlockedByObjectEditor([id]).then(stageFields);
   },
 
   getCharactersByIds: (ids) => {
@@ -279,10 +300,10 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
 
   saveScenarioCharacters(characters: Character[], syncOptions = IMMEDIATE_SYNC) {
     if (characters.length === 0) {
-      return;
+      return Promise.resolve();
     }
 
-    void get().ephemeralStateHelper.stageUpdatedEntities(characters, syncOptions);
+    return get().ephemeralStateHelper.stageUpdatedEntities(characters, syncOptions);
   },
 
   async copyGlobalCharactersToInactiveScenarioImmediate(
@@ -368,19 +389,25 @@ export function whenScenarioCharactersLoaded(): Promise<void> {
   });
 }
 
-function updateCharacterLocationsForMapChange(map: WorldMap) {
-  const scenarioCharacterStore = useScenarioCharacterStore.getState();
-  const locationIds = map.locations.map((location) => location.id);
+function ensureCharacterLocationsValid() {
+  const { scenarioCharactersAreLoaded, scenarioCharacters, saveScenarioCharacters } =
+    useScenarioCharacterStore.getState();
+  const activeBaseMap = getActiveScenarioBaseMap();
+  if (!scenarioCharactersAreLoaded || !activeBaseMap) {
+    return;
+  }
+
+  const locationIds = activeBaseMap.locations.map((location) => location.id);
   const locationIdsSet = new Set(locationIds);
 
-  const movedCharacters = scenarioCharacterStore.scenarioCharacters
+  const movedCharacters = scenarioCharacters
     .filter((c) => !locationIdsSet.has(c.locationId))
     .map((c) => ({
       ...c,
       locationId: getRequiredRandomChoice(locationIds),
     }));
 
-  scenarioCharacterStore.saveScenarioCharacters(movedCharacters);
+  void saveScenarioCharacters(movedCharacters, USER_SYNC);
 }
 
 useScenarioStore.subscribe(async (newScenario, prevScenario) => {
@@ -396,19 +423,16 @@ useScenarioStore.subscribe(async (newScenario, prevScenario) => {
     await useScenarioCharacterStore.getState().loadScenarioCharacters();
   }
 
-  if (newScenario.activeScenarioMap && newScenario.activeScenarioMap !== prevScenario.activeScenarioMap) {
-    updateCharacterLocationsForMapChange(newScenario.activeScenarioMap);
-  }
+  ensureCharacterLocationsValid();
 });
 
+useMapStore.subscribe(ensureCharacterLocationsValid);
+
 async function initialize() {
-  const initialScenarioState = useScenarioStore.getState();
-  if (initialScenarioState.activeScenario) {
+  if (useScenarioStore.getState().activeScenario) {
     await useScenarioCharacterStore.getState().loadScenarioCharacters();
   }
-  if (initialScenarioState.activeScenarioMap) {
-    updateCharacterLocationsForMapChange(initialScenarioState.activeScenarioMap);
-  }
+  ensureCharacterLocationsValid();
 }
 
 await initialize();

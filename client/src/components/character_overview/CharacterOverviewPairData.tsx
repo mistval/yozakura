@@ -12,9 +12,12 @@ import {
 import { useScenarioStore } from '../../state/scenario_store.js';
 import { assertNonNullish } from '../../errors/application_error.js';
 import {
-  useAreAnyEntitiesInDeferredSync,
-  isEntityInDeferredSync,
+  USER_SYNC,
+  useAreAnyEntitiesLockedForEditing,
+  isEntityLockedForEditing,
 } from '../../state/ephemeral_state_helper.js';
+import { AiEditButton } from '../object_editor/AiEditButton.js';
+import { useObjectEditor } from '../object_editor/ObjectEditorContext.js';
 
 type RelationshipIds = Pick<CharacterRelationship, 'fromId' | 'toId'>;
 
@@ -58,6 +61,7 @@ export default function CharacterOverviewPairData({
   const saveRelationshipFields = useScenarioCharacterRelationshipStore(
     (state) => state.saveRelationshipFields
   );
+  const { openRelationshipObjectEditor } = useObjectEditor();
 
   const [idA, idB] = selectedCharacterIds;
   const charA = charactersById[idA];
@@ -65,7 +69,7 @@ export default function CharacterOverviewPairData({
 
   const relationshipAToB = useCachedCharacterRelationship(idA, idB);
   const relationshipBToA = useCachedCharacterRelationship(idB, idA);
-  const isPairFamiliaritySyncing = useAreAnyEntitiesInDeferredSync([
+  const isPairFamiliaritySyncing = useAreAnyEntitiesLockedForEditing([
     relationshipAToB?.id,
     relationshipBToA?.id,
   ]);
@@ -109,7 +113,7 @@ export default function CharacterOverviewPairData({
   }, [idA, idB, familiarityBetween]);
 
   const saveRelationshipPatch = async (saveKey: RelationshipIds, update: Partial<CharacterRelationship>) => {
-    await saveRelationshipFields(saveKey, update);
+    await saveRelationshipFields(saveKey, update, USER_SYNC);
   };
 
   const savePairFamiliarity = async () => {
@@ -222,9 +226,12 @@ export default function CharacterOverviewPairData({
 
   return (
     <div className="border-t pt-4 space-y-3">
-      <h3 className="text-lg font-semibold">
-        {charA.firstName} {charA.lastName} ↔ {charB.firstName} {charB.lastName}
-      </h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-lg font-semibold">
+          {charA.firstName} {charA.lastName} ↔ {charB.firstName} {charB.lastName}
+        </h3>
+        <AiEditButton onClick={() => openRelationshipObjectEditor(charA.id, charB.id)} />
+      </div>
       {relationshipLoadError && <div className="text-sm text-danger-text">{relationshipLoadError}</div>}
 
       <div className="space-y-2">
@@ -271,7 +278,7 @@ export default function CharacterOverviewPairData({
             defaultRevealed={true}
             key={relationshipDescriptor.title}
             title={relationshipDescriptor.title}
-            disabled={isEntityInDeferredSync(relationshipDescriptor.relationshipId)}
+            disabled={isEntityLockedForEditing(relationshipDescriptor.relationshipId)}
             initialValue={relationshipDescriptor.value || ''}
             onSave={(newValue: string) =>
               saveRelationshipPatch(relationshipDescriptor.saveKey, { descriptor: newValue })
@@ -284,7 +291,7 @@ export default function CharacterOverviewPairData({
           <SpoilerSection
             key={memory.title}
             title={memory.title}
-            disabled={isEntityInDeferredSync(memory.relationshipId)}
+            disabled={isEntityLockedForEditing(memory.relationshipId)}
             initialValue={memory.value || ''}
             onSave={(newValue: string) => saveRelationshipPatch(memory.saveKey, { memory: newValue })}
           >
@@ -295,7 +302,7 @@ export default function CharacterOverviewPairData({
           <SpoilerSection
             key={reason.title}
             title={reason.title}
-            disabled={isEntityInDeferredSync(reason.relationshipId)}
+            disabled={isEntityLockedForEditing(reason.relationshipId)}
             initialValue={reason.value || ''}
             onSave={(newValue: string) =>
               saveRelationshipPatch(reason.saveKey, { nextConversationGoal: newValue })
@@ -320,7 +327,7 @@ export default function CharacterOverviewPairData({
                         <SpoilerSection
                           key={`${section.fromId}-${section.toId}-${summary.conversationId}-${index}`}
                           title={`Summary ${index + 1} (Turn ${summary.turnNumber})`}
-                          disabled={isEntityInDeferredSync(section.relationshipId)}
+                          disabled={isEntityLockedForEditing(section.relationshipId)}
                           initialValue={summary.summary || ''}
                           onSave={(newValue: string) => {
                             const updatedSummaries = section.summaries.map((entry, entryIndex) =>
@@ -384,7 +391,7 @@ export default function CharacterOverviewPairData({
                         <SpoilerSection
                           key={learnedInformation.createdAt.toString() + index}
                           title={`Information ${index + 1} (Turn ${learnedInformation.turnNumber})`}
-                          disabled={isEntityInDeferredSync(section.relationshipId)}
+                          disabled={isEntityLockedForEditing(section.relationshipId)}
                           initialValue={learnedInformation.information || ''}
                           onSave={(newValue: string) => {
                             const updatedInformations = section.learnedInformations.map(

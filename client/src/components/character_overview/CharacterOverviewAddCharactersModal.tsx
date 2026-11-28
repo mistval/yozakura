@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useCharacterOverview } from './CharacterOverviewContext.js';
-import { useScenarioStore } from '../../state/scenario_store.js';
+import { useActiveScenarioMap, useScenarioStore } from '../../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store.js';
 import CharacterSelectionGrid from '../CharacterSelectionGrid.js';
 import RoutedModalFrame from '../ui/RoutedModalFrame.js';
@@ -10,7 +10,7 @@ import { useGlobalCharactersStore } from '../../state/global_character_store.js'
 export default function CharacterOverviewAddCharactersModal() {
   const { backToCharacterOverview } = useCharacterOverview();
   const scenario = useScenarioStore((state) => state.activeScenario);
-  const activeMap = useScenarioStore((state) => state.activeScenarioMap);
+  const activeMap = useActiveScenarioMap();
   const scenarioCharactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const globalCharacters = useGlobalCharactersStore((s) => s.globalCharacters);
   const globalCharactersAreLoaded = useGlobalCharactersStore((s) => s.globalCharactersAreLoaded);
@@ -30,7 +30,7 @@ export default function CharacterOverviewAddCharactersModal() {
   }, [currentScenarioCharacterGlobalIds, addCharacterSelectedGlobalIds]);
 
   const sortedCharacters = useMemo(() => {
-    return globalCharacters.concat().sort((a, b) => {
+    return globalCharacters.toSorted((a, b) => {
       if (currentScenarioCharacterGlobalIdsSet.has(a.id) && !currentScenarioCharacterGlobalIdsSet.has(b.id)) {
         return 1;
       }

@@ -65,7 +65,7 @@ export function SpoilerSection({
   useEffect(
     () => () => {
       if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
+        window.clearTimeout(saveTimerRef.current);
       }
     },
     []
@@ -77,8 +77,8 @@ export function SpoilerSection({
     try {
       await onSave(draft);
       setSaved(true);
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = window.setTimeout(() => {
         setSaved(false);
       }, 1500);
     } finally {

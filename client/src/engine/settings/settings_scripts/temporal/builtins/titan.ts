@@ -1,6 +1,10 @@
 import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
-import { SCENARIO_CREATE_DATE_SENTINEL } from '../builtin_utility.js';
+import {
+  resolveTemporalSeed,
+  SCENARIO_CREATE_DATE_SENTINEL,
+  temporalSeedControl,
+} from '../builtin_utility.js';
 import type { TemporalContext, TemporalContextBuiltInSettingsScript } from '../temporal_script_types.js';
 
 export const titanTemporalScript: TemporalContextBuiltInSettingsScript = {
@@ -29,6 +33,7 @@ export const titanTemporalScript: TemporalContextBuiltInSettingsScript = {
         { name: '°F (Fahrenheit)', value: 'F' },
       ],
     },
+    temporalSeedControl(),
   ]) as SettingsScriptControlsDefinition,
 
   async getTemporalContext(controlValues, request, helpers): Promise<TemporalContext> {
@@ -89,6 +94,7 @@ export const titanTemporalScript: TemporalContextBuiltInSettingsScript = {
     const equinoxPass = Math.round(daysSinceEquinox / (TITAN_YEAR_DAYS / 2));
     const nearestEquinoxMs = EQUINOX_EPOCH_MS + equinoxPass * (TITAN_YEAR_DAYS / 2) * DAY_MS;
     const nearestEquinoxSol = Math.round((nearestEquinoxMs - startMs) / (EARTH_DAYS_PER_SOL * DAY_MS));
+    const seed = resolveTemporalSeed(controlValues, request.scenario.id);
     const equinoxEvent = (
       type: string,
       prob: number,
@@ -96,7 +102,7 @@ export const titanTemporalScript: TemporalContextBuiltInSettingsScript = {
       minDur: number,
       maxDur: number
     ) => {
-      const r = helpers.createSeededRandom(`${request.scenario.id}-titan-${type}-${equinoxPass}`);
+      const r = helpers.createSeededRandom(`${seed}-titan-${type}-${equinoxPass}`);
       if (r() >= prob) return false;
       const startSol = nearestEquinoxSol + Math.round((r() * 2 - 1) * maxOffsetSols);
       const duration = minDur + Math.floor(r() * (maxDur - minDur + 1));
@@ -106,7 +112,7 @@ export const titanTemporalScript: TemporalContextBuiltInSettingsScript = {
     const windstorm = !cloudburst && equinoxEvent('windstorm', 0.5, 18, 1, 2);
 
     // --- Per-sol weather, stable for a given scenario + sol -------------------
-    const d = helpers.createSeededRandom(`${request.scenario.id}-titan-sol-${solIndex}`);
+    const d = helpers.createSeededRandom(`${seed}-titan-sol-${solIndex}`);
 
     // Surface temperature in Kelvin. Huygens measured 93.7 K at the surface, and
     // Titan's enormous atmospheric heat capacity damps all variation to a fraction

@@ -21,9 +21,7 @@ export default function CharacterList() {
 
   const sortedGlobalCharacters = useMemo(
     () =>
-      [...globalCharacters].sort(
-        (a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id)
-      ),
+      globalCharacters.toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id)),
     [globalCharacters]
   );
 

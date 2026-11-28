@@ -1,13 +1,26 @@
 import { useState } from 'react';
 import { useCharacterEditorModal } from './CharacterEditorModalContext';
+import { useObjectEditor } from '../object_editor/ObjectEditorContext';
+import { AiEditButton } from '../object_editor/AiEditButton.js';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import { useTurnMachineStore, useCurrentTurnCharacterId } from '../../state/turn_machine_store';
 import { useScenarioStore } from '../../state/scenario_store';
 
 export default function HeaderSection() {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const { canDelete, isBusy, deleteConfirmationMessage, closeEditor, remove, isNew, isGlobalMode, error } =
-    useCharacterEditorModal();
+  const {
+    canDelete,
+    isBusy,
+    deleteConfirmationMessage,
+    closeEditor,
+    remove,
+    isNew,
+    isGlobalMode,
+    error,
+    character,
+    replaceCharacter,
+  } = useCharacterEditorModal();
+  const { openDraftCharacterObjectEditor } = useObjectEditor();
   const hasActiveChat = useTurnMachineStore((state) => state.chatState !== 'inactive');
   const currentTurnCharacterId = useCurrentTurnCharacterId();
   const userCharacterId = useScenarioStore((state) => state.activeScenario?.userCharacterId);
@@ -18,6 +31,15 @@ export default function HeaderSection() {
       <div className="flex items-center">
         <h1 className="w-full text-2xl font-semibold m-0">{isNew ? 'Create Character' : 'Edit Character'}</h1>
         <div className="w-full flex items-center justify-end gap-3">
+          <AiEditButton
+            disabled={isBusy}
+            onClick={() => {
+              openDraftCharacterObjectEditor({
+                getDraft: () => character,
+                setDraft: replaceCharacter,
+              });
+            }}
+          />
           {canDelete && (
             <button
               type="button"

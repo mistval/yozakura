@@ -240,4 +240,66 @@ describe('ParallelJobManager', () => {
     resolve2();
     await job2;
   });
+
+  it('cancels a single queued or running job by id without canceling siblings', async () => {
+    const manager = new ParallelJobManager();
+    manager.setConcurrencyForGroup('test_group', 1);
+
+    let resolve1!: () => void;
+    const p1 = new Promise<string>((r) => {
+      resolve1 = () => r('done1');
+    });
+    let resolve2!: () => void;
+    const p2 = new Promise<string>((r) => {
+      resolve2 = () => r('done2');
+    });
+    let aborted3 = false;
+
+    const job1 = manager.enqueue({
+      name: 'job1',
+      parallelismGroup: 'test_group',
+      job: async () => p1,
+    });
+    const job2 = manager.enqueue({
+      name: 'job2',
+      parallelismGroup: 'test_group',
+      job: async () => p2,
+    });
+    const job3 = manager.enqueue({
+      name: 'job3',
+      parallelismGroup: 'test_group',
+      job: async (signal) => {
+        signal.addEventListener('abort', () => {
+          aborted3 = true;
+        });
+        return new Promise<string>(() => {});
+      },
+    });
+
+    const jobsBeforeCancel = manager.getJobs();
+    expect(jobsBeforeCancel).toHaveLength(3);
+    const queuedJob2 = jobsBeforeCancel.find((j) => j.name === 'job2')!;
+
+    // Cancel queued job2 only
+    const customErr = new Error('Canceled one queued job');
+    manager.cancelJobById(queuedJob2.id, customErr);
+    await expect(job2).rejects.toBe(customErr);
+    expect(manager.getJobs().map((j) => j.name)).toEqual(['job1', 'job3']);
+
+    // Finish job1 so job3 starts running
+    resolve1();
+    await expect(job1).resolves.toBe('done1');
+
+    const runningJob3 = manager.getJobs().find((j) => j.name === 'job3')!;
+    expect(runningJob3.state).toBe('running');
+
+    // Cancel running job3 individually
+    const abortErr = new Error('Canceled running job');
+    manager.cancelJobById(runningJob3.id, abortErr);
+    await expect(job3).rejects.toBe(abortErr);
+    expect(aborted3).toBe(true);
+    expect(manager.getJobs()).toEqual([]);
+
+    resolve2();
+  });
 });

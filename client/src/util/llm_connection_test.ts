@@ -1,82 +1,25 @@
+import { chatCompletion } from '../engine/llm.js';
+import { buildGlobalTemplateContext } from '../engine/prompt_templates/prompt_context_builder.js';
+import type { LLMConfig } from '../engine/settings/cascading_llm_configs.js';
 import { getErrorMessage } from '../errors/error_util.js';
 
-function buildAuthHeader(authToken: string): string | undefined {
-  const trimmed = authToken.trim();
-  if (!trimmed) return undefined;
-  return trimmed.toLowerCase().startsWith('bearer ') ? trimmed : `Bearer ${trimmed}`;
-}
+export type LlmGenerateTextTestResult = { ok: true; responseText: string } | { ok: false; error: string };
 
-const CHAT_COMPLETIONS_PATH = '/chat/completions';
-const MODELS_PATH = '/models';
-
-type UrlRewriteResult =
-  | { ok: true; modelsUrl: string }
-  | {
-      ok: false;
-      error: string;
-    };
-
-type LlmConnectionTestResult = { ok: true; testedUrl: string } | { ok: false; error: string };
-
-function toModelsEndpointUrl(rawUrl: string): UrlRewriteResult {
-  const trimmedUrl = rawUrl.trim();
-  if (!trimmedUrl) {
-    return { ok: false, error: 'Connection URL is required.' };
-  }
-
-  let parsedUrl: URL;
+export async function testLlmGenerateText(
+  configsOverride: readonly LLMConfig[]
+): Promise<LlmGenerateTextTestResult> {
   try {
-    parsedUrl = new URL(trimmedUrl);
-  } catch {
-    return { ok: false, error: 'Connection URL is invalid.' };
-  }
-
-  const currentPathname = parsedUrl.pathname;
-  const matchIndex = currentPathname.lastIndexOf(CHAT_COMPLETIONS_PATH);
-  if (matchIndex < 0) {
-    return {
-      ok: false,
-      error:
-        'URL is in an unexpected shape. Expected to include /chat/completions. You can proceed if you are sure this URL is correct.',
-    };
-  }
-
-  parsedUrl.pathname =
-    currentPathname.slice(0, matchIndex) +
-    MODELS_PATH +
-    currentPathname.slice(matchIndex + CHAT_COMPLETIONS_PATH.length);
-
-  return { ok: true, modelsUrl: parsedUrl.toString() };
-}
-
-export async function testLlmConnection(rawUrl: string, authToken: string): Promise<LlmConnectionTestResult> {
-  const rewriteResult = toModelsEndpointUrl(rawUrl);
-  if (!rewriteResult.ok) {
-    return { ok: false, error: rewriteResult.error };
-  }
-
-  try {
-    const headers: Record<string, string> = { 'X-Target-URL': rewriteResult.modelsUrl };
-    const authHeader = buildAuthHeader(authToken);
-    if (authHeader) {
-      headers['Authorization'] = authHeader;
-    }
-
-    const response = await fetch('/api/proxy/fetch', {
-      method: 'GET',
-      headers,
+    const responseText = await chatCompletion([{ role: 'user', content: 'hi' }], {
+      promptTemplateGroup: 'test_generate_text',
+      promptContext: buildGlobalTemplateContext(),
+      completionRequestId: '',
+      configsOverride,
+      skipInteractiveRetry: true,
+      jobConfig: { name: 'Test Generation' },
     });
 
-    if (!response.ok) {
-      const body = await response.text().catch(() => '');
-      return {
-        ok: false,
-        error: `Connection test failed (${response.status} ${response.statusText}). ${body}`,
-      };
-    }
-
-    return { ok: true, testedUrl: rewriteResult.modelsUrl };
+    return { ok: true, responseText };
   } catch (error) {
-    return { ok: false, error: `Connection test failed: ${getErrorMessage(error)}` };
+    return { ok: false, error: getErrorMessage(error) };
   }
 }

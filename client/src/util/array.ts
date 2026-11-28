@@ -27,7 +27,7 @@ export function weightedRandomChoice<TValue>(weightMap: WeightedElement<TValue>[
     }
   }
 
-  return weightMap[weightMap.length - 1]!.value;
+  return weightMap.at(-1)!.value;
 }
 
 export function weightedSampleWithoutReplacement<TValue>(items: WeightedElement<TValue>[], count: number) {
@@ -44,8 +44,8 @@ export function weightedSampleWithoutReplacement<TValue>(items: WeightedElement<
 }
 
 export function trimNewestByCreatedAt<T extends { createdAt: string }>(items: T[], max: number): T[] {
-  return [...items]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  return items
+    .toSorted((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, max);
 }
 

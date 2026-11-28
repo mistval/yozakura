@@ -10,6 +10,7 @@ import { assert } from '../errors/application_error.js';
 import { concatUniqueById, removeById } from '../util/array.js';
 import { getRequiredActiveScenario, useScenarioStore } from './scenario_store.js';
 import { useScenarioCharacterStore } from './scenario_character_store.js';
+import { IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
 import _ from 'lodash';
 
 const DATABASE_OBJECT_NAME = 'scenario_character_group';
@@ -25,7 +26,7 @@ type CharacterGroupStoreState = {
   createGroup: (name: string) => ScenarioCharacterGroup;
   renameGroup: (groupId: string, name: string) => void;
   deleteGroup: (groupId: string) => void;
-  setCharacterGroups: (characterId: string, groupIds: string[]) => void;
+  setCharacterGroups: (characterId: string, groupIds: string[], syncOptions?: SyncOptions) => void;
   getCharactersInGroup: (groupId: string) => string[];
   saveSchedule: (schedule: ScenarioCharacterGroupSchedule) => void;
   ensureSchedule: (groupId: string) => ScenarioCharacterGroupSchedule;
@@ -102,8 +103,8 @@ export const useCharacterGroupStore = create<CharacterGroupStoreState>((set, get
     }, DATABASE_OBJECT_NAME);
   },
 
-  setCharacterGroups: (characterId, groupIds) => {
-    useScenarioCharacterStore.getState().saveScenarioCharacterFields(characterId, { groupIds });
+  setCharacterGroups: (characterId, groupIds, syncOptions = IMMEDIATE_SYNC) => {
+    useScenarioCharacterStore.getState().saveScenarioCharacterFields(characterId, { groupIds }, syncOptions);
   },
 
   getCharactersInGroup: (groupId) => {

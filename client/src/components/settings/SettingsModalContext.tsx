@@ -1,14 +1,9 @@
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useMemo } from 'react';
 import { useMatch } from 'react-router';
-import { useQueryParams } from '../../util/queryParams.js';
+import { useModalQueryParam } from '../../hooks/useModalQueryParam.js';
 
-const closedSettingsParams = {
-  settings: undefined,
-  settingspath: undefined,
-  llmoptionsid: undefined,
-  llmoptionsadvanced: undefined,
-};
+const SETTINGS_MODAL_OWNED_KEYS = ['settingspath', 'llmoptionsid', 'llmoptionsadvanced'] as const;
 
 type SettingsModalContextType = {
   open: boolean;
@@ -22,35 +17,35 @@ type SettingsModalContextType = {
 const SettingsModalContext = createContext<SettingsModalContextType | undefined>(undefined);
 
 export function SettingsModalProvider({ children }: { children: ReactNode }) {
-  const [params, setParams] = useQueryParams();
+  const { open, pushModal, closeModal, updateModalParams, layerParams } = useModalQueryParam(
+    'settings',
+    SETTINGS_MODAL_OWNED_KEYS
+  );
 
   const scenarioMatch = useMatch('/scenario/*');
   const includeScenarioSettings = Boolean(scenarioMatch);
 
-  const open = params.has('settings') && params.get('settings') !== 'false';
-  const settingsPath = params.get('settingspath') ?? '';
+  const settingsPath = layerParams.get('settingspath') ?? '';
 
   const openSettings = useCallback(
     (path = '') => {
-      setParams({ settings: true, settingspath: path || undefined });
+      pushModal({ settingspath: path || undefined });
     },
-    [setParams]
+    [pushModal]
   );
 
-  const closeSettings = useCallback(() => {
-    setParams(closedSettingsParams);
-  }, [setParams]);
+  const closeSettings = closeModal;
 
   const setSettingsSection = useCallback(
     (path: string) => {
-      setParams({ settingspath: path || undefined });
+      updateModalParams({ settingspath: path || undefined });
     },
-    [setParams]
+    [updateModalParams]
   );
 
   const value = useMemo(
     () => ({ open, settingsPath, includeScenarioSettings, openSettings, closeSettings, setSettingsSection }),
-    [open, settingsPath, includeScenarioSettings, params, openSettings, closeSettings, setSettingsSection]
+    [open, settingsPath, includeScenarioSettings, openSettings, closeSettings, setSettingsSection]
   );
 
   return <SettingsModalContext.Provider value={value}>{children}</SettingsModalContext.Provider>;

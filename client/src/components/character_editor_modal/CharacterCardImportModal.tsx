@@ -1,7 +1,7 @@
 import Modal from '../ui/Modal';
 import { useCharacterEditorModal } from './CharacterEditorModalContext';
 
-export default function CharacterCardImportModal({ zIndex }: { zIndex?: number } = {}) {
+export default function CharacterCardImportModal({ zIndex }: { zIndex?: number | undefined } = {}) {
   const {
     pendingCardImport,
     cardImportBusy,
@@ -21,7 +21,7 @@ export default function CharacterCardImportModal({ zIndex }: { zIndex?: number }
       onClose={closePendingImport}
       closeOnBackdropClick={!cardImportBusy}
       className="flex items-center justify-center p-4"
-      {...(zIndex !== undefined && { zIndex })}
+      zIndex={zIndex}
     >
       <div className="bg-emphasized rounded-sm p-4 w-full max-w-xl space-y-3">
         <h3 className="font-semibold">

@@ -145,7 +145,7 @@ export const DEFAULT_SETTINGS: Settings = {
   generateImagesInParallelWithText: false,
   imageGenerationConcurrency: 1,
   autoImageRate: 0,
-  autoImageNpcOnly: false,
+  autoImageNpcOnly: true,
   autoImageTemplateWeights: {
     [DEFAULT_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,
     [SPEAKER_CLOSE_UP_CHAT_SCENE_IMAGE_CHAIN_ID]: 50,

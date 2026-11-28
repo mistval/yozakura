@@ -1,19 +1,21 @@
 import _ from 'lodash';
-import { Fragment, useEffect, useMemo, useState } from 'react';
-import { useQueryParam } from '../util/queryParams.js';
+import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
 import RoutedModalFrame from './ui/RoutedModalFrame.js';
 import type { Character } from '../engine/types.js';
-import { useScenarioStore } from '../state/scenario_store.js';
+import { useActiveScenarioMap, useScenarioStore } from '../state/scenario_store.js';
 import { useScenarioCharacterStore } from '../state/scenario_character_store.js';
 import { doAsDataRead, mainDatabase } from '../backend_bridge/database.js';
 import type { ScenarioEvent, MovementPolicy } from '../engine/types.js';
 import { useCharacterOverview } from './character_overview/CharacterOverviewContext.js';
 import { useMapModal } from './MapModalContext.js';
+import { useObjectEditor } from './object_editor/ObjectEditorContext.js';
+import { AiEditButton } from './object_editor/AiEditButton.js';
 import MapGraphEditor from './MapGraphEditor.js';
 import MapZoneEditor from './map_zones/MapZoneEditor.js';
-import DeleteButton from './ui/DeleteButton.js';
 import { useMapStore } from '../state/map_store.js';
+import { USER_SYNC } from '../state/ephemeral_state_helper.js';
 import CharacterAvatar from './CharacterAvatar.js';
+import { useDraft } from '../hooks/useDraft.js';
 
 const MOVEMENT_VERB: Record<MovementPolicy, string> = {
   teleport: 'teleported',
@@ -26,18 +28,152 @@ function movementVerb(policy: MovementPolicy | undefined): string {
   return policy ? MOVEMENT_VERB[policy] : 'moved';
 }
 
+function EditFieldButton({ fieldLabel, onClick }: { fieldLabel: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`Edit ${fieldLabel}`}
+      aria-label={`Edit ${fieldLabel}`}
+      className="shrink-0 px-2! py-0.5! text-xs sm:text-sm leading-none"
+    >
+      ✎
+    </button>
+  );
+}
+
+/**
+ * Shared inline editor for map metadata cards so name and description edits use one save/discard flow.
+ */
+function InlineEditableField({
+  value,
+  multiline = false,
+  fieldLabel,
+  placeholder,
+  inputClassName,
+  onSave,
+  children,
+}: {
+  value: string;
+  multiline?: boolean | undefined;
+  fieldLabel: string;
+  placeholder: string;
+  inputClassName: string;
+  onSave: (nextValue: string) => void;
+  children: (startEditing: () => void) => ReactNode;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useDraft(value);
+
+  const startEditing = () => {
+    setDraft(value);
+    setIsEditing(true);
+  };
+
+  const cancel = () => {
+    setDraft(value);
+    setIsEditing(false);
+  };
+
+  const save = () => {
+    onSave(draft);
+    setIsEditing(false);
+  };
+
+  if (!isEditing) {
+    return <>{children(startEditing)}</>;
+  }
+
+  return (
+    <div className={`flex w-full gap-1.5 ${multiline ? 'items-start' : 'items-center'}`}>
+      {multiline ? (
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              cancel();
+            } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+              save();
+            }
+          }}
+          placeholder={placeholder}
+          aria-label={fieldLabel}
+          autoFocus
+          className={inputClassName}
+        />
+      ) : (
+        <input
+          type="text"
+          value={draft}
+          size={Math.max(18, Math.min(draft.length + 2, 60))}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              cancel();
+            } else if (e.key === 'Enter') {
+              save();
+            }
+          }}
+          placeholder={placeholder}
+          aria-label={fieldLabel}
+          autoFocus
+          className={inputClassName}
+        />
+      )}
+      <div className="flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          onClick={save}
+          title={`Save ${fieldLabel}`}
+          aria-label={`Save ${fieldLabel}`}
+          className="button-emphasized px-2! py-0.5! text-xs sm:text-sm leading-none"
+        >
+          ✓
+        </button>
+        <button
+          type="button"
+          onClick={cancel}
+          title={`Discard ${fieldLabel}`}
+          aria-label={`Discard ${fieldLabel}`}
+          className="px-2! py-0.5! text-xs sm:text-sm leading-none"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function MapModalInner() {
-  const { closeMap, open } = useMapModal();
+  const { closeMap, open, mapId: explicitMapId, viewParam, setViewParam } = useMapModal();
+  const { openMapObjectEditor } = useObjectEditor();
   const updateMap = useMapStore((s) => s.updateMap);
-  const numMaps = useMapStore((s) => s.maps.length);
-  const mapId = useScenarioStore((state) => state.activeScenarioMap?.id);
-  const mapName = useScenarioStore((state) => state.activeScenarioMap?.name);
+  const saveModalMap = (
+    id: string,
+    mutator: (prev: NonNullable<typeof targetMap>) => NonNullable<typeof targetMap>
+  ) => updateMap(id, mutator, USER_SYNC);
+  const mapsAreLoaded = useMapStore((s) => s.mapsAreLoaded);
+  const explicitMap = useMapStore((s) => (explicitMapId ? s.mapsById[explicitMapId] : undefined));
+  const activeScenarioMap = useActiveScenarioMap();
+  const isGlobalContext = explicitMapId !== undefined;
+  const targetMap = isGlobalContext ? explicitMap : activeScenarioMap;
+  const mapId = targetMap?.id;
+  const mapName = targetMap?.name;
+  const mapDescription = targetMap?.description;
+  const emptyMapMessage = isGlobalContext
+    ? mapsAreLoaded
+      ? 'Map not found.'
+      : 'Loading map...'
+    : 'No map available.';
   const scenario = useScenarioStore((state) => state.activeScenario);
   const charactersById = useScenarioCharacterStore((state) => state.scenarioCharactersById);
   const { showCharacterOverview } = useCharacterOverview();
 
-  const [viewParam, setViewParam] = useQueryParam('mapview');
-  const view = viewParam === 'zones' ? 'zones' : viewParam === 'log' ? 'log' : 'characters';
+  const view =
+    viewParam === 'zones' ? 'zones' : !isGlobalContext && viewParam === 'log' ? 'log' : 'characters';
   const setView = (next: 'characters' | 'zones' | 'log') =>
     setViewParam(next === 'characters' ? undefined : next);
 
@@ -49,12 +185,6 @@ function MapModalInner() {
   useEffect(() => {
     setLogPage(1);
   }, [scenario?.id, view]);
-
-  useEffect(() => {
-    if (!open) {
-      setViewParam(undefined);
-    }
-  }, [open]);
 
   useEffect(() => {
     if (view !== 'log' || !scenario || !open) {
@@ -122,24 +252,36 @@ function MapModalInner() {
           >
             Zone
           </button>
-          <button
-            type="button"
-            className={view === 'log' ? 'button-emphasized' : ''}
-            onClick={() => setView('log')}
-          >
-            Movement
-          </button>
+          {!isGlobalContext && (
+            <button
+              type="button"
+              className={view === 'log' ? 'button-emphasized' : ''}
+              onClick={() => setView('log')}
+            >
+              Movement
+            </button>
+          )}
+          <AiEditButton
+            disabled={!mapId}
+            onClick={() => {
+              if (mapId) {
+                openMapObjectEditor(mapId);
+              }
+            }}
+          />
         </>
       }
     >
       {view === 'zones' && (
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {mapId && (
+          {mapId ? (
             <MapZoneEditor
               mapId={mapId}
-              isGlobalContext={false}
-              updateMap={(mutator) => updateMap(mapId, mutator)}
+              isGlobalContext={isGlobalContext}
+              updateMap={(mutator) => saveModalMap(mapId, mutator)}
             />
+          ) : (
+            <div className="text-sm text-muted">{emptyMapMessage}</div>
           )}
         </div>
       )}
@@ -210,37 +352,67 @@ function MapModalInner() {
           <MapGraphEditor
             className="min-h-0 flex-1"
             mapId={mapId}
-            updateMap={(mutator) => updateMap(mapId, mutator)}
-            charactersByLocationId={charactersByLocationId}
-            onCharacterClick={showCharacter}
+            updateMap={(mutator) => saveModalMap(mapId, mutator)}
+            charactersByLocationId={isGlobalContext ? undefined : charactersByLocationId}
+            onCharacterClick={isGlobalContext ? undefined : showCharacter}
             leadingElement={({ addLocation }) => (
-              <div className="shrink-0 flex flex-col items-start gap-2 rounded-sm border border-border-default bg-inset p-2.5 max-w-52">
-                <h2 className="text-base sm:text-lg font-semibold leading-tight wrap-break-word">
-                  {mapName || 'Loading...'}
-                </h2>
+              <>
+                <div className="shrink-0 flex flex-col items-start gap-2 rounded-sm border border-border-default bg-inset p-2.5">
+                  <InlineEditableField
+                    key={`name-${mapId}`}
+                    value={mapName ?? ''}
+                    fieldLabel="map name"
+                    placeholder="Map name"
+                    inputClassName="min-w-44 flex-1 border border-border-strong rounded-sm px-2 py-1 text-sm sm:text-base font-semibold bg-surface-soft"
+                    onSave={(name) => saveModalMap(mapId, (prev) => ({ ...prev, name }))}
+                  >
+                    {(startEditing) => (
+                      <div className="flex w-full items-center justify-between gap-2">
+                        <h2 className="text-base sm:text-lg font-semibold leading-tight whitespace-nowrap">
+                          {mapName || 'Untitled Map'}
+                        </h2>
+                        <EditFieldButton fieldLabel="map name" onClick={startEditing} />
+                      </div>
+                    )}
+                  </InlineEditableField>
 
-                <button
-                  type="button"
-                  onClick={addLocation}
-                  className="w-full px-2.5! py-1! text-xs sm:text-sm whitespace-nowrap"
-                >
-                  Add Location
-                </button>
-                <DeleteButton
-                  label="Delete map"
-                  buttonText="Delete Map"
-                  disabled={numMaps <= 1}
-                  confirmTitle="Delete Map"
-                  confirmLabel="Delete Map"
-                  confirmMessage={`Delete map "${mapName}"? This will permanently remove the map, and this scenario will switch to another one.`}
-                  className="w-full px-2.5! py-1! text-xs sm:text-sm whitespace-nowrap bg-danger-solid! border-danger-border-accent!"
-                  onConfirm={() => useMapStore.getState().deleteMap(mapId)}
-                />
-              </div>
+                  <button
+                    type="button"
+                    onClick={addLocation}
+                    className="button-emphasized w-full px-2.5! py-1! text-xs sm:text-sm font-medium whitespace-nowrap"
+                  >
+                    Add Location
+                  </button>
+                </div>
+
+                <div className="shrink-0 w-64 sm:w-72 flex flex-col gap-2 rounded-sm border border-border-default bg-inset p-2.5">
+                  <InlineEditableField
+                    key={`description-${mapId}`}
+                    value={mapDescription ?? ''}
+                    multiline
+                    fieldLabel="map description"
+                    placeholder="Describe the world setting..."
+                    inputClassName="min-w-0 flex-1 min-h-20 border border-border-strong rounded-sm px-2 py-1 text-xs sm:text-sm bg-surface-soft resize-y"
+                    onSave={(description) => saveModalMap(mapId, (prev) => ({ ...prev, description }))}
+                  >
+                    {(startEditing) => (
+                      <>
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="text-sm font-semibold">Description</h3>
+                          <EditFieldButton fieldLabel="map description" onClick={startEditing} />
+                        </div>
+                        <div className="max-h-28 overflow-y-auto whitespace-pre-wrap text-xs sm:text-sm text-secondary">
+                          {mapDescription || <span className="text-muted">No description.</span>}
+                        </div>
+                      </>
+                    )}
+                  </InlineEditableField>
+                </div>
+              </>
             )}
           />
         ) : (
-          <div className="text-sm text-muted">No map available.</div>
+          <div className="text-sm text-muted">{emptyMapMessage}</div>
         ))}
     </RoutedModalFrame>
   );

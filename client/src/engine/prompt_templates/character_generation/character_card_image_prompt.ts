@@ -5,7 +5,7 @@ import type { PromptTemplateChainSpec } from '../template_types.js';
 export const CHARACTER_CARD_IMAGE_PROMPT_CHAIN_ID = 'gen_character_card_image_prompt';
 
 const DEFAULT_PARSER_SOURCE = `async (response, it) => {
-  return [it.imagePromptPrefix, it.focusedCharacterAppearance, response].join(',');
+  return [it.imagePromptPrefix, 'character card, portrait', it.focusedCharacterAppearance, response].join(',');
 }`;
 
 export const characterCardImagePromptChainSpec: PromptTemplateChainSpec<

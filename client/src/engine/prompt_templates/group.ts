@@ -3,6 +3,7 @@ import { characterGenerationTemplatesGroup } from './character_generation/group.
 import { runtimeChatTemplatesGroup } from './chat/group.js';
 import { DEFAULT_TEMPLATE_GROUP_DATA } from './default_template_group_data.js';
 import { memoriesGroup } from './memories/group.js';
+import { objectEditorTemplatesGroup } from './object_editor/group.js';
 import { TemplateGroup } from './template_group.js';
 import { PROMPT_TEMPLATES_ROOT_GROUP_ID } from './template_types.js';
 
@@ -15,5 +16,10 @@ export const promptTemplatesRootGroup = new TemplateGroup({
   title: 'Prompt Templates',
   description: 'Edit prompt templates used for prompting your LLM.',
   settingsBridge: promptTemplatesRootBridge,
-  childGroups: [runtimeChatTemplatesGroup, memoriesGroup, characterGenerationTemplatesGroup],
+  childGroups: [
+    runtimeChatTemplatesGroup,
+    memoriesGroup,
+    characterGenerationTemplatesGroup,
+    objectEditorTemplatesGroup,
+  ],
 });

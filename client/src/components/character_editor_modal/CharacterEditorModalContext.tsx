@@ -26,7 +26,7 @@ import { useScenarioCharacterStore } from '../../state/scenario_character_store.
 import type { CharacterEditorModalProps, PendingCardImport } from './types';
 import { generateCharacterCard } from '../../engine/image_gen';
 import { useGlobalCharactersStore } from '../../state/global_character_store.js';
-import { useIsEntityInDeferredSync } from '../../state/ephemeral_state_helper.js';
+import { USER_SYNC, useIsEntityLockedForEditing } from '../../state/ephemeral_state_helper.js';
 import { addOrReplaceVersionQueryParam } from '../../util/id.js';
 
 type CharacterEditorModalContextValue = {
@@ -52,6 +52,7 @@ type CharacterEditorModalContextValue = {
   toggleExtractField: (field: ExtractCharacterCardField) => void;
   closeEditor: () => void;
   setCharacterField: <K extends keyof Character>(key: K, value: Character[K]) => void;
+  replaceCharacter: (nextCharacter: Character) => void;
   generateInternalDescription: () => Promise<void>;
   generateExternalDescription: () => Promise<void>;
   extractFromDescription: (options?: ExtractCharacterCardOptions) => Promise<void>;
@@ -127,7 +128,7 @@ export function CharacterEditorModalProvider({
     );
   };
 
-  const isCharacterSyncing = useIsEntityInDeferredSync(!isGlobalMode ? character.id : undefined);
+  const isCharacterSyncing = useIsEntityLockedForEditing(!isGlobalMode ? character.id : undefined);
   const isBusy = Boolean(loadingField) || cardImportBusy || isCharacterSyncing;
   const currentImagePath = character.imagePath?.trim();
   const currentImageSrc = previewUrl
@@ -394,20 +395,24 @@ export function CharacterEditorModalProvider({
 
     await runWithField('save', async () => {
       if (isGlobalMode) {
-        void useGlobalCharactersStore.getState().saveGlobalCharacter(sanitizedCharacter, selectedImageFile);
+        void useGlobalCharactersStore
+          .getState()
+          .saveGlobalCharacter(sanitizedCharacter, selectedImageFile, USER_SYNC);
       } else if (opts?.alsoSaveGlobal) {
         const savedGlobal = await useGlobalCharactersStore
           .getState()
-          .saveScenarioCharacterAsGlobal(sanitizedCharacter, selectedImageFile);
+          .saveScenarioCharacterAsGlobal(sanitizedCharacter, selectedImageFile, USER_SYNC);
         saveScenarioCharacter(
           {
             ...sanitizedCharacter,
             globalCharacterId: savedGlobal.id,
           },
-          selectedImageFile
+          selectedImageFile,
+          undefined,
+          USER_SYNC
         );
       } else {
-        saveScenarioCharacter(sanitizedCharacter, selectedImageFile);
+        saveScenarioCharacter(sanitizedCharacter, selectedImageFile, undefined, USER_SYNC);
       }
 
       onClose();
@@ -421,9 +426,9 @@ export function CharacterEditorModalProvider({
   const remove = async () => {
     await runWithField('delete', async () => {
       if (isGlobalMode) {
-        await useGlobalCharactersStore.getState().deleteGlobalCharacter(character);
+        await useGlobalCharactersStore.getState().deleteGlobalCharacter(character, USER_SYNC);
       } else {
-        await removeScenarioCharacter(character.id);
+        await removeScenarioCharacter(character.id, USER_SYNC);
         // We leave the image since chat logs still reference it. Will be deleted when/if the scenario gets deleted.
       }
 
@@ -569,6 +574,7 @@ export function CharacterEditorModalProvider({
     toggleExtractField,
     closeEditor,
     setCharacterField,
+    replaceCharacter: setCharacter,
     generateInternalDescription: generateInternalDescriptionField,
     generateExternalDescription: generateExternalDescriptionField,
     extractFromDescription,

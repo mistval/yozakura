@@ -60,7 +60,7 @@ function concatAfterMessageId(
   return before.concat(newMessage, after);
 }
 
-class ChatMessageWrapper {
+export class ChatMessageWrapper {
   constructor(
     public readonly message: ChatMessage,
     public readonly associatedCharacter: TranscriptParticipant | undefined
@@ -525,7 +525,7 @@ export class ConversationTranscript {
   }
 
   public getMostRecentMessage() {
-    return this.messages[this.messages.length - 1];
+    return this.messages.at(-1);
   }
 
   public getMostRecentChatMessage() {

@@ -32,7 +32,7 @@ export default function MainMenu() {
   }, []);
 
   const sortedScenarioSummaries = useMemo(() => {
-    return scenarioSummaries.concat().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    return scenarioSummaries.toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [scenarioSummaries]);
 
   const removeScenario = async (summary: ScenarioSummary) => {

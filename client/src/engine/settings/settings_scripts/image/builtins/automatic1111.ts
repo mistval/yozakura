@@ -26,7 +26,7 @@ const DEFAULT_META_OPTIONS = JSON.stringify(
 const API_URL_TOOLTIP =
   'Image API endpoint URL. For AUTOMATIC1111, typically the <code>/sdapi/v1/txt2img</code> endpoint.';
 const AUTH_TOKEN_TOOLTIP =
-  'Optional bearer token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Usually not needed for local AUTOMATIC1111.';
+  'Optional auth token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Usually not needed for local AUTOMATIC1111.';
 const MODEL_TOOLTIP = 'Optional <code>model</code> field merged into each request body.';
 const META_OPTIONS_TOOLTIP =
   'Extra JSON fields merged into every request, e.g. <code>steps</code>, <code>sampler_name</code>, <code>cfg_scale</code>.';
@@ -58,7 +58,7 @@ export const automatic1111Script: ImageGenerationSettingsScript = {
     {
       id: 'authToken',
       type: 'password',
-      label: 'Bearer Token (optional)',
+      label: 'Auth Token (optional)',
       width: 'full',
       tooltipHtml: AUTH_TOKEN_TOOLTIP,
     },
@@ -131,7 +131,7 @@ export const automatic1111Script: ImageGenerationSettingsScript = {
 
     const body = {
       ...metaOptions,
-      ...(model ? { model } : {}),
+      model: model || metaOptions.model,
       prompt,
       width: dimension(isCard ? controlValues.cardImageWidth : controlValues.chatImageWidth),
       height: dimension(isCard ? controlValues.cardImageHeight : controlValues.chatImageHeight),

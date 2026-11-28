@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import _ from 'lodash';
 import z from 'zod';
 import { useSettingsModal } from './SettingsModalContext.js';
 import { LLM_DEFAULTS } from '../../engine/settings/llm_defaults.js';
@@ -10,15 +11,67 @@ import { getErrorMessage } from '../../errors/error_util.js';
 import { useLlmConnectionTest } from '../../hooks/useLlmConnectionTest.js';
 import { useTextareaPasteWarningGate } from './pasteWarning/useTextareaPasteWarningGate.js';
 import { newId } from '../../util/id.js';
+import {
+  BASE_DEFAULTS_LLM_CONFIG_ID,
+  findBaseDefaultsLLMConfig,
+  llmConfigSchema,
+  parseLlmMetaOptions,
+  type LlmInheritToggleMode,
+} from '../../engine/settings/cascading_llm_configs.js';
+import CompletionsProviderField from './CompletionsProviderField.js';
 import { readModelFromMetaOptions, writeModelToMetaOptions } from './meta_options_model.js';
 import DeleteButton from '../ui/DeleteButton.js';
 import { SpoilerSection } from '../ui/SpoilerSection.js';
 import { useQueryParam } from '../../util/queryParams.js';
+import { buildObjectReplacementPatch } from '../../util/settings_merge.js';
 
 type ConfigDraft = LLMOptionsGroup;
 const DEFAULT_LLM_META_OPTIONS_SOURCE = JSON.stringify(LLM_DEFAULTS, null, 2);
-const tokenStreamingSelectSchema = z.enum(['inherit', 'enabled', 'disabled']);
-type TokenStreamingSelectValue = z.infer<typeof tokenStreamingSelectSchema>;
+const inheritToggleSelectSchema = z.enum(['inherit', 'enabled', 'disabled']);
+type InheritToggleSelectValue = z.infer<typeof inheritToggleSelectSchema>;
+
+function formatInheritToggleMode(mode: LlmInheritToggleMode | undefined): string {
+  if (mode === 'enabled') return 'Enabled';
+  if (mode === 'disabled') return 'Disabled';
+  return '(inherit)';
+}
+
+function InheritToggleSelectField({
+  id,
+  label,
+  tooltip,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  tooltip: string;
+  value: InheritToggleSelectValue;
+  onChange: (nextValue: InheritToggleSelectValue) => void;
+}) {
+  return (
+    <div>
+      <SettingFieldLabel text={label} htmlFor={id} tooltip={tooltip} />
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => {
+          const parsed = inheritToggleSelectSchema.safeParse(event.target.value);
+          if (!parsed.success) {
+            return;
+          }
+
+          onChange(parsed.data);
+        }}
+        className="rounded-input"
+      >
+        <option value="inherit">Inherit</option>
+        <option value="enabled">Enabled</option>
+        <option value="disabled">Disabled</option>
+      </select>
+    </div>
+  );
+}
 
 function maskToken(token: string) {
   if (token.length <= 8) return '••••••••';
@@ -26,7 +79,7 @@ function maskToken(token: string) {
 }
 
 function formatMetaOptionsPreview(source: string | undefined) {
-  const parsed = JSON.parse(source || '{}') as Record<string, unknown>;
+  const parsed = parseLlmMetaOptions(source || '{}');
   const entries = Object.entries(parsed);
   if (entries.length === 0) {
     return '(none)';
@@ -67,7 +120,9 @@ function ConfigEditor({
   onSave: (config: ConfigDraft) => void;
   onCancel: () => void;
 }) {
-  const initialTokenStreaming: TokenStreamingSelectValue = config.tokenStreamingEnabled ?? 'inherit';
+  const initialTokenStreaming: InheritToggleSelectValue = config.tokenStreamingEnabled ?? 'inherit';
+  const initialAppIdentificationHeaders: InheritToggleSelectValue =
+    config.appIdentificationHeadersEnabled ?? 'inherit';
   const [draft, setDraft] = useState({
     ...config,
     name: config.name || '',
@@ -77,30 +132,37 @@ function ConfigEditor({
     rule: config.rule || '',
     llmMetaOptionsSource: config.llmMetaOptions || DEFAULT_LLM_META_OPTIONS_SOURCE,
     tokenStreamingEnabled: initialTokenStreaming,
+    appIdentificationHeadersEnabled: initialAppIdentificationHeaders,
     concurrencyGroupName: config.concurrencyGroupName || '',
     concurrencyGroupLimit: config.concurrencyGroupLimit?.toString() || '',
   });
 
-  const [showToken, setShowToken] = useState(false);
   const [saveError, setSaveError] = useState('');
   const {
     loading: connectionTestLoading,
     error: connectionTestError,
     success: connectionTestSuccess,
-    testConnection,
+    responsePreview: connectionTestResponsePreview,
+    testGenerateText,
   } = useLlmConnectionTest();
   const { onPasteWithWarning, warningModal } = useTextareaPasteWarningGate({});
 
   const invalid = !draft.name.trim();
 
-  const handleSave = () => {
+  const buildValidatedConfig = (requireName: boolean): ConfigDraft | undefined => {
+    const trimmedName = draft.name.trim();
+    if (requireName && !trimmedName) {
+      setSaveError('Name is required.');
+      return undefined;
+    }
+
     const trimmedRule = draft.rule.trim();
     if (trimmedRule) {
       try {
         new Function('context', `return (${trimmedRule});`);
       } catch (error) {
         setSaveError(`Rule is invalid JavaScript: ${getErrorMessage(error)}`);
-        return;
+        return undefined;
       }
     }
 
@@ -109,12 +171,12 @@ function ConfigEditor({
       llmMetaOptions = JSON.parse(draft.llmMetaOptionsSource);
     } catch (error) {
       setSaveError(`LLM Meta Options must be valid JSON: ${getErrorMessage(error)}`);
-      return;
+      return undefined;
     }
 
     if (!llmMetaOptions || typeof llmMetaOptions !== 'object' || Array.isArray(llmMetaOptions)) {
       setSaveError('LLM Meta Options must be a JSON object.');
-      return;
+      return undefined;
     }
 
     const trimmedUrl = draft.llmUrl.trim();
@@ -130,33 +192,66 @@ function ConfigEditor({
         maybeParser = new Function(`return (${trimmedResponsePreParserSource});`)();
       } catch (error) {
         setSaveError(`Response Pre-parser is invalid JavaScript: ${getErrorMessage(error)}`);
-        return;
+        return undefined;
       }
 
       if (typeof maybeParser !== 'function') {
         setSaveError('Response Pre-parser must evaluate to a function.');
-        return;
+        return undefined;
       }
     }
 
     setSaveError('');
-    onSave({
-      id: draft.id,
-      name: draft.name.trim(),
-      rule: trimmedRule,
-      llmMetaOptions: JSON.stringify(llmMetaOptions, null, 2),
-      ...(trimmedUrl ? { llmUrl: trimmedUrl } : {}),
-      ...(trimmedToken ? { llmAuthToken: trimmedToken } : {}),
-      ...(trimmedResponsePreParserSource ? { responsePreParserSource: trimmedResponsePreParserSource } : {}),
-      ...(draft.tokenStreamingEnabled !== 'inherit'
-        ? { tokenStreamingEnabled: draft.tokenStreamingEnabled }
-        : {}),
-      ...(trimmedConcurrencyGroupName ? { concurrencyGroupName: trimmedConcurrencyGroupName } : {}),
-      ...(validLimit !== undefined ? { concurrencyGroupLimit: validLimit } : {}),
-    });
+    return llmConfigSchema.parse(
+      _.omitBy(
+        {
+          id: draft.id,
+          name: trimmedName || config.name || 'Test Config',
+          rule: trimmedRule,
+          llmMetaOptions: JSON.stringify(llmMetaOptions, null, 2),
+          llmUrl: trimmedUrl || undefined,
+          llmAuthToken: trimmedToken || undefined,
+          responsePreParserSource: trimmedResponsePreParserSource || undefined,
+          tokenStreamingEnabled:
+            draft.tokenStreamingEnabled !== 'inherit' ? draft.tokenStreamingEnabled : undefined,
+          appIdentificationHeadersEnabled:
+            draft.appIdentificationHeadersEnabled !== 'inherit'
+              ? draft.appIdentificationHeadersEnabled
+              : undefined,
+          concurrencyGroupName: trimmedConcurrencyGroupName || undefined,
+          concurrencyGroupLimit: validLimit,
+        },
+        _.isUndefined
+      )
+    );
   };
 
-  const handleTestConnection = () => testConnection(draft.llmUrl.trim(), draft.llmAuthToken.trim());
+  const handleSave = () => {
+    const validatedConfig = buildValidatedConfig(true);
+    if (!validatedConfig) {
+      return;
+    }
+    onSave(validatedConfig);
+  };
+
+  const handleTestGenerateText = async () => {
+    const validatedConfig = buildValidatedConfig(false);
+    if (!validatedConfig) {
+      return;
+    }
+
+    const testedConfig: ConfigDraft = {
+      ...validatedConfig,
+      rule: 'true',
+    };
+    const baseDefaults = findBaseDefaultsLLMConfig(useSettingsStore.getState().llmConfigs);
+    const configsToTest =
+      config.id !== BASE_DEFAULTS_LLM_CONFIG_ID && baseDefaults
+        ? [baseDefaults, testedConfig]
+        : [testedConfig];
+
+    await testGenerateText(configsToTest);
+  };
 
   return (
     <div className="space-y-2">
@@ -177,81 +272,29 @@ function ConfigEditor({
         />
       </div>
 
-      <div>
-        <SettingFieldLabel
-          text="Completions API URL"
-          htmlFor={`llm-config-url-${config.id}`}
-          tooltip={settingsTooltips['llm.url']}
-        />
-        <input
-          id={`llm-config-url-${config.id}`}
-          value={draft.llmUrl}
-          onChange={(event) =>
-            setDraft((prev) => ({ ...prev, llmUrl: event.target.value }) satisfies typeof prev)
-          }
-          placeholder="http://localhost:5001/v1/chat/completions"
-          className="rounded-input"
-        />
-      </div>
-
-      <div>
-        <SettingFieldLabel
-          text="Bearer Token (optional)"
-          htmlFor={`llm-config-auth-${config.id}`}
-          tooltip={settingsTooltips['llm.authToken']}
-        />
-        <div className="flex gap-2">
-          <input
-            id={`llm-config-auth-${config.id}`}
-            type={showToken ? 'text' : 'password'}
-            value={draft.llmAuthToken}
-            onChange={(event) =>
-              setDraft(
-                (prev) =>
-                  ({
-                    ...prev,
-                    llmAuthToken: event.target.value,
-                  }) satisfies typeof prev
-              )
-            }
-            placeholder="Bearer token"
-            className="rounded-input"
-          />
-          <button
-            type="button"
-            onClick={() => setShowToken((prev) => !prev)}
-            className="shrink-0 px-2 py-1 border rounded-sm"
-          >
-            {showToken ? 'Hide' : 'Show'}
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <SettingFieldLabel
-          text="Model (optional)"
-          htmlFor={`llm-config-model-${config.id}`}
-          tooltipDangerousHtml={settingsDangerousHtmlTooltips['llm.model']}
-        />
-        <input
-          id={`llm-config-model-${config.id}`}
-          value={readModelFromMetaOptions(draft.llmMetaOptionsSource)}
-          onChange={(event) =>
-            setDraft(
-              (prev) =>
-                ({
-                  ...prev,
-                  llmMetaOptionsSource: writeModelToMetaOptions(
-                    prev.llmMetaOptionsSource,
-                    event.target.value
-                  ),
-                }) satisfies typeof prev
-            )
-          }
-          placeholder="deepseek/deepseek-v4.1-flash-1017"
-          className="rounded-input"
-        />
-      </div>
+      <CompletionsProviderField
+        idPrefix={`llm-config-${config.id}`}
+        url={draft.llmUrl}
+        onUrlChange={(nextUrl) => setDraft((prev) => ({ ...prev, llmUrl: nextUrl }) satisfies typeof prev)}
+        authToken={draft.llmAuthToken}
+        onAuthTokenChange={(nextToken) =>
+          setDraft((prev) => ({ ...prev, llmAuthToken: nextToken }) satisfies typeof prev)
+        }
+        model={readModelFromMetaOptions(draft.llmMetaOptionsSource)}
+        onModelChange={(nextModel) =>
+          setDraft(
+            (prev) =>
+              ({
+                ...prev,
+                llmMetaOptionsSource: writeModelToMetaOptions(prev.llmMetaOptionsSource, nextModel),
+              }) satisfies typeof prev
+          )
+        }
+        allowInherit={config.id !== BASE_DEFAULTS_LLM_CONFIG_ID}
+        providerTooltip={settingsTooltips['llm.url']}
+        tokenTooltip={settingsTooltips['llm.authToken']}
+        modelTooltipDangerousHtml={settingsDangerousHtmlTooltips['llm.model']}
+      />
 
       <SpoilerSection title="Advanced Settings" revealedQueryParam="llmoptionsadvanced">
         <div>
@@ -299,30 +342,22 @@ function ConfigEditor({
         </div>
 
         <div className="space-y-3 mt-3">
-          <div>
-            <SettingFieldLabel
-              text="Token streaming"
-              htmlFor={`llm-token-streaming-${config.id}`}
-              tooltip={settingsTooltips['llm.tokenStreaming']}
-            />
-            <select
-              id={`llm-token-streaming-${config.id}`}
-              value={draft.tokenStreamingEnabled}
-              onChange={(event) => {
-                const parsed = tokenStreamingSelectSchema.safeParse(event.target.value);
-                if (!parsed.success) {
-                  return;
-                }
-
-                setDraft((prev) => ({ ...prev, tokenStreamingEnabled: parsed.data }));
-              }}
-              className="rounded-input"
-            >
-              <option value="inherit">Inherit</option>
-              <option value="enabled">Enabled</option>
-              <option value="disabled">Disabled</option>
-            </select>
-          </div>
+          <InheritToggleSelectField
+            id={`llm-token-streaming-${config.id}`}
+            label="Token streaming"
+            tooltip={settingsTooltips['llm.tokenStreaming']}
+            value={draft.tokenStreamingEnabled}
+            onChange={(nextValue) => setDraft((prev) => ({ ...prev, tokenStreamingEnabled: nextValue }))}
+          />
+          <InheritToggleSelectField
+            id={`llm-app-identification-headers-${config.id}`}
+            label="App identification headers"
+            tooltip={settingsTooltips['llm.appIdentificationHeaders']}
+            value={draft.appIdentificationHeadersEnabled}
+            onChange={(nextValue) =>
+              setDraft((prev) => ({ ...prev, appIdentificationHeadersEnabled: nextValue }))
+            }
+          />
           <div className="flex gap-3">
             <div className="w-full">
               <SettingFieldLabel
@@ -404,14 +439,16 @@ function ConfigEditor({
         </button>
         <button
           type="button"
-          onClick={() => void handleTestConnection()}
+          onClick={() => void handleTestGenerateText()}
           disabled={connectionTestLoading}
           className="px-3 py-1 border rounded-sm"
         >
-          {connectionTestLoading ? 'Testing...' : 'Test Connection'}
+          {connectionTestLoading ? 'Testing...' : 'Test Generation'}
         </button>
         {connectionTestSuccess && (
-          <p className="text-sm text-secondary self-center">✓ Connection successful.</p>
+          <p className="text-sm text-secondary self-center">
+            ✓ Model responded: &ldquo;{connectionTestResponsePreview}&rdquo;
+          </p>
         )}
       </div>
       {warningModal}
@@ -430,7 +467,11 @@ export default function LlmSettingsSection() {
   const hasMultipleConfigs = configs.length > 1;
 
   const updateConfig = (id: string, nextConfig: ConfigDraft) => {
-    setSettings({ llmConfigs: { [id]: nextConfig } });
+    setSettings((previous) => ({
+      llmConfigs: {
+        [id]: buildObjectReplacementPatch(previous.llmConfigs?.[id], nextConfig),
+      },
+    }));
   };
 
   const addConfig = () => {
@@ -521,7 +562,7 @@ export default function LlmSettingsSection() {
                       Completions API URL: {config.llmUrl || '(inherit)'}
                     </div>
                     <div className="text-sm text-muted wrap-break-word">
-                      Bearer Token: {config.llmAuthToken ? maskToken(config.llmAuthToken) : '(inherit)'}
+                      Auth Token: {config.llmAuthToken ? maskToken(config.llmAuthToken) : '(inherit)'}
                     </div>
                     <div className="text-sm text-muted wrap-break-word">Rule: {config.rule || '(none)'}</div>
                     <div className="text-sm text-muted wrap-break-word">
@@ -537,12 +578,11 @@ export default function LlmSettingsSection() {
                       </div>
                     )}
                     <div className="text-sm text-muted wrap-break-word">
-                      Token Streaming:{' '}
-                      {config.tokenStreamingEnabled === 'enabled'
-                        ? 'Enabled'
-                        : config.tokenStreamingEnabled === 'disabled'
-                          ? 'Disabled'
-                          : '(inherit)'}
+                      Token Streaming: {formatInheritToggleMode(config.tokenStreamingEnabled)}
+                    </div>
+                    <div className="text-sm text-muted wrap-break-word">
+                      App Identification Headers:{' '}
+                      {formatInheritToggleMode(config.appIdentificationHeadersEnabled)}
                     </div>
                   </div>
                 ) : (
@@ -554,7 +594,7 @@ export default function LlmSettingsSection() {
                     }}
                     onCancel={() => {
                       setEditingId(undefined);
-                      const parsedMetaOptions = JSON.parse(config.llmMetaOptions) as Record<string, unknown>;
+                      const parsedMetaOptions = parseLlmMetaOptions(config.llmMetaOptions);
                       const hasMetaOptions = Boolean(Object.keys(parsedMetaOptions).length);
                       if (
                         !config.rule &&
@@ -562,6 +602,7 @@ export default function LlmSettingsSection() {
                         !config.llmAuthToken &&
                         !config.responsePreParserSource &&
                         !config.tokenStreamingEnabled &&
+                        !config.appIdentificationHeadersEnabled &&
                         !hasMetaOptions
                       ) {
                         removeConfig(config.id);

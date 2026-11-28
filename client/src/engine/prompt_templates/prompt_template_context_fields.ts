@@ -208,6 +208,12 @@ Alice and Charlie chatted online about their weekend plans. Charlie mentioned th
     description:
       'An AbortSignal for the current template render or output parser execution. If signaled, any async process happening inside the template or parser is expected to be aborted or abandoned immediately and the execution should throw.',
   }),
+  objectEditorTargetTitle: z.string().meta({
+    description: 'Human-readable title of the object type being edited (e.g., "World Map", "Character").',
+  }),
+  objectEditorJsonSchema: z.string().meta({
+    description: 'Pretty-printed JSON Schema describing the structure and constraints of the edited object.',
+  }),
 });
 
 const globalExecutionContextSchema = contextSchemaFields
@@ -338,6 +344,15 @@ export const conversationEndJudgeExecutionContextSchema = focusedConversationExe
 
 export type ConversationEndJudgeExecutionContext = z.infer<typeof conversationEndJudgeExecutionContextSchema>;
 
+export const objectEditorExecutionContextSchema = globalExecutionContextSchema.and(
+  contextSchemaFields.pick({
+    objectEditorTargetTitle: true,
+    objectEditorJsonSchema: true,
+  })
+);
+
+export type ObjectEditorExecutionContext = z.infer<typeof objectEditorExecutionContextSchema>;
+
 export type PromptExecutionContext =
   | GlobalExecutionContext
   | ScenarioExecutionContext
@@ -348,4 +363,5 @@ export type PromptExecutionContext =
   | OffscreenMemoryUpdateConversationGoalExecutionContext
   | ModerationNextSpeakerExecutionContext
   | ConversationEndJudgeExecutionContext
-  | MemoryRagExecutionContext;
+  | MemoryRagExecutionContext
+  | ObjectEditorExecutionContext;

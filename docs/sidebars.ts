@@ -19,6 +19,7 @@ const sidebars: SidebarsConfig = {
         'temporal-context',
         'template-system',
         'import-export',
+        'object-editor',
       ],
     },
     {

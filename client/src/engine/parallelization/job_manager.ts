@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import { newId } from '../../util/id';
 import { raceWithAbort, wait } from '../../util/promise';
 import {
@@ -66,6 +65,15 @@ export class ParallelJobManager {
     return this.cancelJobs(jobsToCancel, error);
   }
 
+  public cancelJobById(id: string, error?: Error) {
+    const job = this.currentJobs.get(id);
+    if (!job) {
+      return;
+    }
+
+    return this.cancelJobs([job], error);
+  }
+
   public cancelAllJobs(error?: Error) {
     return this.cancelJobs(this.getJobs(), error);
   }
@@ -77,9 +85,11 @@ export class ParallelJobManager {
     const results: PromiseSettledResult<unknown>[] = [];
     while (true) {
       await wait(0);
-      const matchingJobs = Array.from(this.currentJobs.values())
+      const matchingJobs = this.currentJobs
+        .values()
         .filter((j) => j.tags?.includes(tag))
-        .filter((j) => !j.tags?.some((t) => exclusiveTags.includes(t)));
+        .filter((j) => !j.tags?.some((t) => exclusiveTags.includes(t)))
+        .toArray();
       if (matchingJobs.length === 0) {
         break;
       }
@@ -165,21 +175,21 @@ export class ParallelJobManager {
     let currentJobs: IParallelJob<unknown>[] = [];
     let waitingJobs: IParallelJob<unknown>[] = [];
     let runningJobs: IParallelJob<unknown>[] = [];
-    let runningJobsByParallelismGroup: _.Dictionary<IParallelJob<unknown>[]> = {};
+    let runningJobsByParallelismGroup = new Map<string, IParallelJob<unknown>[]>();
     let runningTags = new Set<string>();
 
     const recalculateState = () => {
       currentJobs = Array.from(this.currentJobs.values());
       waitingJobs = currentJobs.filter((j) => j.state === 'queued');
       runningJobs = currentJobs.filter((j) => j.state === 'running');
-      runningJobsByParallelismGroup = _.groupBy(runningJobs, (j) => j.parallelismGroup);
+      runningJobsByParallelismGroup = Map.groupBy(runningJobs, (j) => j.parallelismGroup);
       runningTags = new Set(runningJobs.flatMap((j) => j.tags ?? []));
     };
 
     recalculateState();
 
     for (const job of waitingJobs) {
-      const countRunningForGroup = runningJobsByParallelismGroup[job.parallelismGroup]?.length ?? 0;
+      const countRunningForGroup = runningJobsByParallelismGroup.get(job.parallelismGroup)?.length ?? 0;
       const groupHasCapacity =
         countRunningForGroup < (this.concurrencyForGroup.get(job.parallelismGroup) ?? 0);
       const groupNotExcludedLeft =
