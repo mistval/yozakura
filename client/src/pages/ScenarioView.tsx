@@ -352,6 +352,7 @@ export default function ScenarioView() {
   const resolvedLocation = location || activeMap.locations[0];
   assertNonNullish(resolvedLocation, 'No valid current location available for user location.');
 
+  const currentTurnCharacter = currentTurnCharacterId ? charactersById[currentTurnCharacterId] : undefined;
   const showNpcPhaseControls = npcPhaseBusy && !activeChatIncludesUser;
 
   const renderNavigationButtons = () => (
@@ -401,7 +402,7 @@ export default function ScenarioView() {
       {showNpcPhaseControls && (
         <div>
           <div className="font-semibold mb-1">
-            {!isUserTurn && `${perspectiveCharacter.firstName}'s turn`}
+            {currentTurnCharacter && `${currentTurnCharacter.firstName}'s turn`}
           </div>
           <div className="flex gap-2 flex-wrap">
             <button

@@ -9,13 +9,7 @@ import { getRequiredUserCharacterId, useScenarioStore } from '../../state/scenar
 import { useScenarioCharacterRelationshipStore } from '../../state/scenario_character_relationship_store';
 import { useScenarioCharacterStore } from '../../state/scenario_character_store';
 import { useSettingsStore } from '../../state/settings_store';
-import {
-  DEFERRED_SYNC,
-  DEFERRED_SYNC_OWNERS,
-  getActiveDeferredSyncOwner,
-  waitForDeferredSyncLockAvailability,
-} from '../../state/ephemeral_state_helper';
-import { globalParallelJobManager } from '../parallelization/job_manager';
+import { DEFERRED_SYNC, DEFERRED_SYNC_OWNERS } from '../../state/ephemeral_state_helper';
 import { trimNewestByCreatedAt } from '../../util/array';
 import { newId } from '../../util/id';
 import {
@@ -107,26 +101,9 @@ export async function lockEntitiesForEndOfChatUpdates(npcSpeakers: Character[]) 
     return;
   }
 
-  const characterStore = useScenarioCharacterStore.getState();
-
-  while (true) {
-    const activeOwner = getActiveDeferredSyncOwner();
-    if (activeOwner && activeOwner !== DEFERRED_SYNC_OWNERS.characterMemoryGenerator) {
-      await globalParallelJobManager.enqueue({
-        name: 'Waiting for Object Editor lock',
-        tags: [ChatJobTags.chatJob, ChatJobTags.abortOnPause, ChatJobTags.finalizingChat],
-        job: (abortSignal) =>
-          waitForDeferredSyncLockAvailability(DEFERRED_SYNC_OWNERS.characterMemoryGenerator, abortSignal),
-      });
-      continue;
-    }
-
-    await characterStore.waitToLockEntitiesForDeferredSync(
-      npcSpeakers,
-      DEFERRED_SYNC_OWNERS.characterMemoryGenerator
-    );
-    break;
-  }
+  useScenarioCharacterStore
+    .getState()
+    .lockEntitiesForDeferredSync(npcSpeakers, DEFERRED_SYNC_OWNERS.characterMemoryGenerator);
 
   const transcript = useTurnMachineStore.getState().transcript;
   if (!transcript) {
@@ -148,7 +125,7 @@ export async function lockEntitiesForEndOfChatUpdates(npcSpeakers: Character[]) 
   if (pairs.length > 0) {
     const relationshipStore = useScenarioCharacterRelationshipStore.getState();
     const relationships = await relationshipStore.getCharacterRelationships(pairs);
-    await relationshipStore.waitToLockEntitiesForDeferredSync(
+    relationshipStore.lockEntitiesForDeferredSync(
       Object.values(relationships),
       DEFERRED_SYNC_OWNERS.characterMemoryGenerator
     );

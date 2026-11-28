@@ -7,11 +7,39 @@ import {
   type ObjectEditorTarget,
 } from '../../engine/object_editor/object_editor_delegates.js';
 import { useModalQueryParam } from '../../hooks/useModalQueryParam.js';
+import { useUserCanInputChat } from '../../state/chat_state.js';
+import { useScenarioLoopStateStore } from '../../state/scenario_loop_state_store.js';
+import { useScenarioStore } from '../../state/scenario_store.js';
+import { useCurrentTurnCharacterId, useTurnMachineStore } from '../../state/turn_machine_store.js';
+
+export function useCanOpenObjectEditor(): boolean {
+  const runningForScenario = useScenarioLoopStateStore((s) => s.runningForScenario);
+  const autoMode = useScenarioLoopStateStore((s) => s.autoMode);
+  const userCharacterId = useScenarioStore((s) => s.activeScenario?.userCharacterId);
+  const chatState = useTurnMachineStore((s) => s.chatState);
+  const currentTurnCharacterId = useCurrentTurnCharacterId();
+  const userCanInputChat = useUserCanInputChat();
+
+  if (!runningForScenario) {
+    return true;
+  }
+
+  if (autoMode || !userCharacterId) {
+    return false;
+  }
+
+  if (chatState === 'inactive') {
+    return currentTurnCharacterId === userCharacterId;
+  }
+
+  return userCanInputChat;
+}
 
 type ObjectEditorContextType = {
   open: boolean;
   target: ObjectEditorTarget | undefined;
   hasOverlayAbove: boolean;
+  canOpenObjectEditor: boolean;
   openObjectEditor: (target: ObjectEditorTarget) => void;
   openMapObjectEditor: (mapId: string) => void;
   openScenarioCharacterObjectEditor: (characterId: string) => void;
@@ -29,6 +57,7 @@ export function ObjectEditorProvider({ children }: { children: ReactNode }) {
     OBJECT_EDITOR_OWNED_KEYS
   );
   const [draftAccessor, setDraftAccessor] = useState<CharacterDraftAccessor | undefined>(undefined);
+  const canOpenObjectEditor = useCanOpenObjectEditor();
 
   const target = useMemo(
     () => parseObjectEditorTarget(layerParams, draftAccessor),
@@ -38,10 +67,13 @@ export function ObjectEditorProvider({ children }: { children: ReactNode }) {
 
   const openObjectEditor = useCallback(
     (nextTarget: ObjectEditorTarget) => {
+      if (!canOpenObjectEditor) {
+        return;
+      }
       setDraftAccessor(nextTarget.kind === 'character_draft' ? nextTarget.accessor : undefined);
       pushModal(serializeObjectEditorTarget(nextTarget));
     },
-    [pushModal]
+    [canOpenObjectEditor, pushModal]
   );
 
   const openMapObjectEditor = useCallback(
@@ -79,6 +111,7 @@ export function ObjectEditorProvider({ children }: { children: ReactNode }) {
       open,
       target,
       hasOverlayAbove,
+      canOpenObjectEditor,
       openObjectEditor,
       openMapObjectEditor,
       openScenarioCharacterObjectEditor,
@@ -91,6 +124,7 @@ export function ObjectEditorProvider({ children }: { children: ReactNode }) {
       open,
       target,
       hasOverlayAbove,
+      canOpenObjectEditor,
       openObjectEditor,
       openMapObjectEditor,
       openScenarioCharacterObjectEditor,

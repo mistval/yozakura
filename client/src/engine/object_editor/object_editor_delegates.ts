@@ -249,7 +249,7 @@ export interface ObjectEditorSessionBinding<TObjectType> {
   fileNameBase: string;
   getEntityDisplayName: (obj: TObjectType | undefined) => string;
   delegate: ObjectEditorDelegate<TObjectType>;
-  acquireLock: (abortSignal: AbortSignal) => Promise<void>;
+  lockTarget: () => Promise<void> | void;
   commitChanges: (finalObject: TObjectType, isDirty: boolean) => Promise<void>;
   discardChanges: () => Promise<void>;
   buildExternalAiInstructions: (currentObject: TObjectType) => string;
@@ -271,7 +271,6 @@ export interface ObjectEditorSession {
   revertFromIndex: (index: number) => Promise<string | undefined>;
   revertLatest: () => Promise<string | undefined>;
   buildExternalAiInstructions: () => string;
-  acquireLock: (abortSignal: AbortSignal) => Promise<void>;
   commitChanges: () => Promise<void>;
   discardChanges: () => Promise<void>;
 }
@@ -345,12 +344,10 @@ export function createWorldMapSessionBinding(mapId: string): ObjectEditorSession
     fileNameBase: `world_map_${mapId}_ai_instructions`,
     getEntityDisplayName: (map) => map?.name || 'World Map',
     delegate,
-    acquireLock: async (abortSignal) => {
+    lockTarget: () => {
       const map = useMapStore.getState().mapsById[mapId];
       assertNonNullish(map, `WorldMap not found: ${mapId}`);
-      await useMapStore
-        .getState()
-        .waitToLockEntitiesForDeferredSync([map], DEFERRED_SYNC_OWNERS.objectEditor, abortSignal);
+      useMapStore.getState().lockEntitiesForDeferredSync([map], DEFERRED_SYNC_OWNERS.objectEditor);
     },
     commitChanges: (finalObject, isDirty) => commitPersistedObjectChanges(delegate, finalObject, isDirty),
     discardChanges: () => discardDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor),
@@ -368,11 +365,11 @@ export function createScenarioCharacterSessionBinding(
     fileNameBase: `scenario_character_${characterId}_ai_instructions`,
     getEntityDisplayName: (character) => formatCharacterDisplayName(character, 'Character'),
     delegate,
-    acquireLock: async (abortSignal) => {
+    lockTarget: () => {
       const character = useScenarioCharacterStore.getState().getRequiredCharacterById(characterId);
-      await useScenarioCharacterStore
+      useScenarioCharacterStore
         .getState()
-        .waitToLockEntitiesForDeferredSync([character], DEFERRED_SYNC_OWNERS.objectEditor, abortSignal);
+        .lockEntitiesForDeferredSync([character], DEFERRED_SYNC_OWNERS.objectEditor);
     },
     commitChanges: (finalObject, isDirty) => commitPersistedObjectChanges(delegate, finalObject, isDirty),
     discardChanges: () => discardDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor),
@@ -390,12 +387,12 @@ export function createGlobalCharacterSessionBinding(
     fileNameBase: `global_character_${characterId}_ai_instructions`,
     getEntityDisplayName: (character) => formatCharacterDisplayName(character, 'Character'),
     delegate,
-    acquireLock: async (abortSignal) => {
+    lockTarget: () => {
       const character = useGlobalCharactersStore.getState().globalCharactersById[characterId];
       assertNonNullish(character, `Global character not found: ${characterId}`);
-      await useGlobalCharactersStore
+      useGlobalCharactersStore
         .getState()
-        .waitToLockEntitiesForDeferredSync([character], DEFERRED_SYNC_OWNERS.objectEditor, abortSignal);
+        .lockEntitiesForDeferredSync([character], DEFERRED_SYNC_OWNERS.objectEditor);
     },
     commitChanges: (finalObject, isDirty) => commitPersistedObjectChanges(delegate, finalObject, isDirty),
     discardChanges: () => discardDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor),
@@ -414,7 +411,7 @@ export function createCharacterDraftSessionBinding(
     fileNameBase: `character_${initialId || 'draft'}_ai_instructions`,
     getEntityDisplayName: (character) => formatCharacterDisplayName(character, 'New Character'),
     delegate,
-    acquireLock: async () => {},
+    lockTarget: () => {},
     commitChanges: async (finalObject, isDirty) => {
       if (isDirty) {
         accessor.setDraft(finalObject);
@@ -440,17 +437,13 @@ export function createCharacterRelationshipSessionBinding(
     fileNameBase: `character_relationship_${idA}_${idB}_ai_instructions`,
     getEntityDisplayName: () => `${getCharacterName(idA)} ↔ ${getCharacterName(idB)}`,
     delegate,
-    acquireLock: async (abortSignal) => {
+    lockTarget: async () => {
       const store = useScenarioCharacterRelationshipStore.getState();
       const [aToB, bToA] = await Promise.all([
         store.getCharacterRelationship(idA, idB),
         store.getCharacterRelationship(idB, idA),
       ]);
-      await store.waitToLockEntitiesForDeferredSync(
-        [aToB, bToA],
-        DEFERRED_SYNC_OWNERS.objectEditor,
-        abortSignal
-      );
+      store.lockEntitiesForDeferredSync([aToB, bToA], DEFERRED_SYNC_OWNERS.objectEditor);
     },
     commitChanges: async (finalPair, isDirty) => {
       if (isDirty) {
@@ -480,7 +473,10 @@ function createSessionFromBinding<TObjectType>(
     getState: () => editor.getState(),
     useDisplayName: () => editor.useState((state) => binding.getEntityDisplayName(state.currentObject)),
     getDisplayName: () => binding.getEntityDisplayName(editor.getState().currentObject),
-    initialize: () => editor.initialize(),
+    initialize: async () => {
+      await binding.lockTarget();
+      await editor.initialize();
+    },
     notifyPossibleManualChange: () => editor.notifyPossibleManualChange(),
     applyManualJsonEdit: (rawJson) => editor.applyManualJsonEdit(rawJson),
     runUserMessage: (message) => editor.runUserMessage(message),
@@ -493,7 +489,6 @@ function createSessionFromBinding<TObjectType>(
       assertNonNullish(currentObject, 'ObjectEditor must be initialized before building AI instructions');
       return binding.buildExternalAiInstructions(currentObject);
     },
-    acquireLock: (abortSignal) => binding.acquireLock(abortSignal),
     commitChanges: async () => {
       const { currentObject, isDirty } = editor.getState();
       assertNonNullish(currentObject, 'ObjectEditor must be initialized before committing changes');

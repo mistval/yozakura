@@ -1070,7 +1070,7 @@ describe('bidirectional relationships & draft character delegate', () => {
       },
     });
     const draftEditor = new ObjectEditor(draftBinding.delegate);
-    await draftBinding.acquireLock(new AbortController().signal);
+    await draftBinding.lockTarget();
     await draftEditor.initialize();
     await draftEditor.applyManualJsonEdit(
       JSON.stringify({ ...currentDraft, firstName: 'Seraphina' }, null, 2)

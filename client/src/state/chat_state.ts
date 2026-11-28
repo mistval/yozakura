@@ -2,7 +2,9 @@ import { ChatJobTags } from '../engine/parallelization/yozakura_job_manager_type
 import { globalParallelJobManager } from '../engine/parallelization/job_manager.js';
 import { UserAbortCurrentGenerationSignalException } from '../engine/scenario_loop/flow_control.js';
 import { useJobsWithTags } from './parallel_job_manager_store';
+import { useScenarioStore } from './scenario_store.js';
 import { useSettingsStore } from './settings_store';
+import { useTurnMachineStore } from './turn_machine_store.js';
 
 export { ChatJobTags };
 
@@ -39,6 +41,8 @@ export function useJobWithTagExists(tag: string) {
 
 export function useUserCanInputChat() {
   const generateImagesInParallelWithText = useSettingsStore((s) => s.generateImagesInParallelWithText);
+  const userCharacterId = useScenarioStore((s) => s.activeScenario?.userCharacterId);
+  const inChatTurnForCharacterId = useTurnMachineStore((s) => s.inChatTurnForCharacterId);
   const imageGenerationJobs = useImageGenerationJobs();
 
   const negativeConditions = [
@@ -48,6 +52,7 @@ export function useUserCanInputChat() {
     useJobWithTagExists(ChatJobTags.selectingSpeaker),
     useJobWithTagExists(ChatJobTags.judgingConversationEnd),
     imageGenerationJobs.length > 0 && !generateImagesInParallelWithText,
+    !userCharacterId || inChatTurnForCharacterId !== userCharacterId,
   ];
 
   return !negativeConditions.includes(true);

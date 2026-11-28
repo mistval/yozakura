@@ -9,7 +9,6 @@ import {
 import { getErrorMessage } from '../../errors/error_util.js';
 import {
   DEFERRED_SYNC_OWNERS,
-  useActiveDeferredSyncOwner,
   useHasPendingDeferredSyncMutations,
 } from '../../state/ephemeral_state_helper.js';
 import { useActiveScenarioMap } from '../../state/scenario_store.js';
@@ -22,17 +21,7 @@ import { ObjectEditorChatPane } from './ObjectEditorChatPane.js';
 import { useObjectEditor } from './ObjectEditorContext.js';
 import { ObjectEditorRawJsonSection } from './ObjectEditorRawJsonSection.js';
 
-type LockStatus = 'waiting' | 'ready' | 'error';
-
-function formatLockOwnerName(owner: string | undefined): string {
-  if (owner === DEFERRED_SYNC_OWNERS.characterMemoryGenerator) {
-    return 'Character Memory Generator';
-  }
-  if (owner === DEFERRED_SYNC_OWNERS.objectEditor) {
-    return 'another Object Editor session';
-  }
-  return owner || 'another background task';
-}
+type InitStatus = 'initializing' | 'ready' | 'error';
 
 function ObjectEditorModalContent({
   target,
@@ -46,20 +35,19 @@ function ObjectEditorModalContent({
   const [session] = useState(() => createObjectEditorSession(target));
   const editorState = session.useState((state) => state);
   const displayName = session.useDisplayName();
-  const activeLockOwner = useActiveDeferredSyncOwner();
   const hasPendingDeferredMutations = useHasPendingDeferredSyncMutations(DEFERRED_SYNC_OWNERS.objectEditor);
   const activeScenarioMap = useActiveScenarioMap();
   const { showMap } = useMapModal();
   const { showCharacterOverview } = useCharacterOverview();
   const { showCharacterEditor } = useGlobalCharacterEditor();
 
-  const [lockStatus, setLockStatus] = useState<LockStatus>('waiting');
-  const [lockError, setLockError] = useState<string | undefined>(undefined);
+  const [initStatus, setInitStatus] = useState<InitStatus>('initializing');
+  const [initError, setInitError] = useState<string | undefined>(undefined);
   const [actionError, setActionError] = useState<string | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
 
-  const lockAcquiredRef = useRef(false);
+  const initializedRef = useRef(false);
   const resolvedRef = useRef(false);
   const hadModalAboveRef = useRef(false);
 
@@ -70,41 +58,39 @@ function ObjectEditorModalContent({
     }
     if (hadModalAboveRef.current) {
       hadModalAboveRef.current = false;
-      if (lockStatus === 'ready' && !session.getState().pendingTurn) {
+      if (initStatus === 'ready' && !session.getState().pendingTurn) {
         void session.notifyPossibleManualChange();
       }
     }
-  }, [hasOverlayAbove, lockStatus, session]);
+  }, [hasOverlayAbove, initStatus, session]);
 
   useEffect(() => {
-    const abortController = new AbortController();
+    let cancelled = false;
 
     const startup = async () => {
       try {
-        await session.acquireLock(abortController.signal);
-        if (abortController.signal.aborted) {
-          return;
-        }
-        lockAcquiredRef.current = true;
         await session.initialize();
-        if (!abortController.signal.aborted) {
-          setLockStatus('ready');
-        }
-      } catch (error) {
-        if (abortController.signal.aborted) {
+        if (cancelled) {
+          await session.discardChanges();
           return;
         }
-        setLockError(getErrorMessage(error));
-        setLockStatus('error');
+        initializedRef.current = true;
+        setInitStatus('ready');
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setInitError(getErrorMessage(error));
+        setInitStatus('error');
       }
     };
 
     void startup();
 
     return () => {
-      abortController.abort();
+      cancelled = true;
       session.cancelPendingTurn();
-      if (lockAcquiredRef.current && !resolvedRef.current) {
+      if (initializedRef.current && !resolvedRef.current) {
         void session.discardChanges();
       }
     };
@@ -121,7 +107,7 @@ function ObjectEditorModalContent({
     resolvedRef.current = true;
 
     try {
-      if (lockAcquiredRef.current) {
+      if (initializedRef.current) {
         await session.discardChanges();
       }
       closeObjectEditor();
@@ -136,7 +122,7 @@ function ObjectEditorModalContent({
   const handleAccept = async () => {
     if (
       isSubmitting ||
-      lockStatus !== 'ready' ||
+      initStatus !== 'ready' ||
       Boolean(editorState.pendingTurn) ||
       Boolean(editorState.invalidManualEdit)
     ) {
@@ -170,9 +156,9 @@ function ObjectEditorModalContent({
     void handleDiscard();
   };
 
-  const errorBannerText = lockError ?? actionError;
+  const errorBannerText = initError ?? actionError;
   const acceptDisabled =
-    lockStatus !== 'ready' ||
+    initStatus !== 'ready' ||
     Boolean(editorState.pendingTurn) ||
     Boolean(editorState.invalidManualEdit) ||
     isSubmitting;
@@ -202,7 +188,7 @@ function ObjectEditorModalContent({
             <button
               type="button"
               onClick={handleInspect}
-              disabled={lockStatus !== 'ready' || Boolean(editorState.pendingTurn)}
+              disabled={initStatus !== 'ready' || Boolean(editorState.pendingTurn)}
             >
               🔍 Inspect
             </button>
@@ -211,23 +197,17 @@ function ObjectEditorModalContent({
       }
     >
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pt-2">
-        {lockStatus === 'waiting' && activeLockOwner && (
-          <div className="shrink-0 rounded-sm border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning-text">
-            Locked by {formatLockOwnerName(activeLockOwner)}. Waiting for lock to release...
-          </div>
-        )}
-
         {errorBannerText && <div className="error-card shrink-0">{errorBannerText}</div>}
 
         <ObjectEditorRawJsonSection
           session={session}
-          disabled={lockStatus !== 'ready'}
+          disabled={initStatus !== 'ready'}
           onError={setActionError}
         />
 
         <ObjectEditorChatPane
           session={session}
-          disabled={lockStatus !== 'ready'}
+          disabled={initStatus !== 'ready'}
           className="min-h-0 flex-1"
           onError={setActionError}
         />

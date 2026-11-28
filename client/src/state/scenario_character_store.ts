@@ -16,7 +16,6 @@ import {
   ephemeralStateSlice,
   IMMEDIATE_SYNC,
   USER_SYNC,
-  waitForEntitiesUnlockedByObjectEditor,
   type SyncOptions,
 } from './ephemeral_state_helper.js';
 import { applyDailyWardrobeAutoselect } from '../engine/wardrobes.js';
@@ -36,9 +35,9 @@ type ScenarioCharacterStoreState = {
   getCharactersByIds: (ids: string[]) => Character[];
   setScenarioCharacters: (characters: Character[]) => void;
   removeCharacterLocal: (characterId: string) => void;
-  removeScenarioCharacter: (characterId: string, syncOptions?: SyncOptions) => Promise<void>;
+  removeScenarioCharacter: (characterId: string, syncOptions?: SyncOptions) => void;
   loadScenarioCharacters: () => Promise<void>;
-  saveScenarioCharacters: (character: Character[], syncOptions?: SyncOptions) => Promise<void>;
+  saveScenarioCharacters: (character: Character[], syncOptions?: SyncOptions) => void;
   saveScenarioCharacter: (
     character: Character,
     imageFile?: File,
@@ -46,11 +45,7 @@ type ScenarioCharacterStoreState = {
     syncOptions?: SyncOptions
   ) => void;
   saveInactiveScenarioCharacterImmediate: (character: Character) => Promise<void>;
-  saveScenarioCharacterFields: (
-    id: string,
-    fields: Partial<Character>,
-    syncOptions?: SyncOptions
-  ) => Promise<void>;
+  saveScenarioCharacterFields: (id: string, fields: Partial<Character>, syncOptions?: SyncOptions) => void;
   addGlobalCharacterToActiveScenarioImmediate: (
     character: Character,
     scenarioArgs?: {
@@ -205,13 +200,13 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
     });
   },
 
-  removeScenarioCharacter: async (characterId, syncOptions = IMMEDIATE_SYNC) => {
+  removeScenarioCharacter: (characterId, syncOptions = IMMEDIATE_SYNC) => {
     const characterToDelete = get().scenarioCharactersById[characterId];
     if (!characterToDelete) {
       return;
     }
 
-    await get().ephemeralStateHelper.stageDeletedEntity(characterToDelete, syncOptions);
+    get().ephemeralStateHelper.stageDeletedEntity(characterToDelete, syncOptions);
   },
 
   loadScenarioCharacters: async () => {
@@ -256,24 +251,16 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
   },
 
   saveScenarioCharacterFields: (id, fields, syncOptions = IMMEDIATE_SYNC) => {
-    const stageFields = () => {
-      const char = get().scenarioCharactersById[id];
-      assertNonNullish(char, 'saveScenarioCharacterFields called for non-existent characterId: ' + id);
+    const char = get().scenarioCharactersById[id];
+    assertNonNullish(char, 'saveScenarioCharacterFields called for non-existent characterId: ' + id);
 
-      return get().ephemeralStateHelper.stageUpdatedEntity(
-        {
-          ...char,
-          ...fields,
-        },
-        syncOptions
-      );
-    };
-
-    if (syncOptions.syncMode !== 'immediate' || syncOptions.source === 'user') {
-      return stageFields();
-    }
-
-    return waitForEntitiesUnlockedByObjectEditor([id]).then(stageFields);
+    get().ephemeralStateHelper.stageUpdatedEntity(
+      {
+        ...char,
+        ...fields,
+      },
+      syncOptions
+    );
   },
 
   getCharactersByIds: (ids) => {
@@ -300,10 +287,10 @@ export const useScenarioCharacterStore = create<ScenarioCharacterStoreState>((se
 
   saveScenarioCharacters(characters: Character[], syncOptions = IMMEDIATE_SYNC) {
     if (characters.length === 0) {
-      return Promise.resolve();
+      return;
     }
 
-    return get().ephemeralStateHelper.stageUpdatedEntities(characters, syncOptions);
+    get().ephemeralStateHelper.stageUpdatedEntities(characters, syncOptions);
   },
 
   async copyGlobalCharactersToInactiveScenarioImmediate(

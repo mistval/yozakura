@@ -326,19 +326,17 @@ async function recomputeTemporalContextAndAutoselectWardrobes() {
     }
   }
 
-  let updatedAnyWardrobe = false;
-  for (const c of useScenarioCharacterStore.getState().scenarioCharacters) {
+  const updatedCharacters = useScenarioCharacterStore.getState().scenarioCharacters.flatMap((c) => {
     const updatedWardrobes = applyDailyWardrobeAutoselect(c.wardrobes);
-    if (updatedWardrobes) {
-      updatedAnyWardrobe = true;
-      await useScenarioCharacterStore
-        .getState()
-        .saveScenarioCharacterFields(c.id, { wardrobes: updatedWardrobes });
-    }
+    return updatedWardrobes ? [{ ...c, wardrobes: updatedWardrobes }] : [];
+  });
+
+  if (updatedCharacters.length > 0) {
+    useScenarioCharacterStore.getState().saveScenarioCharacters(updatedCharacters);
   }
 
   turnMachineStore.setWardrobeAutoselectRan(true);
-  if (updatedAnyWardrobe) {
+  if (updatedCharacters.length > 0) {
     persistTurn();
   }
 }

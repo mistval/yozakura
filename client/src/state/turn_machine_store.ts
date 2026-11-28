@@ -27,7 +27,6 @@ import {
 } from './scenario_store.js';
 import { useScenarioCharacterStore } from './scenario_character_store.js';
 import { useScenarioCharacterRelationshipStore } from './scenario_character_relationship_store.js';
-import { waitForEntitiesUnlockedByObjectEditor } from './ephemeral_state_helper.js';
 import { assert, assertNonNullish } from '../errors/application_error.js';
 import {
   applyPostConversationWardrobeAutoRevert,
@@ -387,7 +386,6 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
   },
 
   async beginChat(args) {
-    await waitForEntitiesUnlockedByObjectEditor(args.participantIds);
     const participants = getCharactersByIds(args.participantIds);
 
     set({
@@ -411,7 +409,6 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
 
     const snapshot = activeChatState.preConversationWardrobeSnapshotByCharacterId;
     const idsToAutoRevert = activeChatState.participantIds.concat(activeChatState.removedParticipantIds);
-    await waitForEntitiesUnlockedByObjectEditor(idsToAutoRevert);
     const charactersToAutoRevert = useScenarioCharacterStore.getState().getCharactersByIds(idsToAutoRevert);
 
     const wardrobeAutoRevertedCharacters = applyPostConversationWardrobeAutoRevert(
@@ -419,7 +416,7 @@ export const useTurnMachineStore = create<BaseTurnMachineStoreState>((set, get) 
       snapshot
     );
 
-    await useScenarioCharacterStore.getState().saveScenarioCharacters(wardrobeAutoRevertedCharacters);
+    useScenarioCharacterStore.getState().saveScenarioCharacters(wardrobeAutoRevertedCharacters);
 
     set(inactiveChatTurnMachineState);
   },

@@ -7,12 +7,7 @@ import {
 } from '../engine/types.js';
 import { applyLazyFamiliarityDecay, createRelationship, relationshipKey } from '../engine/relationship.js';
 import { assert } from '../errors/application_error.js';
-import {
-  ephemeralStateSlice,
-  IMMEDIATE_SYNC,
-  waitForEntitiesUnlockedByObjectEditor,
-  type SyncOptions,
-} from './ephemeral_state_helper.js';
+import { ephemeralStateSlice, IMMEDIATE_SYNC, type SyncOptions } from './ephemeral_state_helper.js';
 import { getRequiredActiveScenario } from './scenario_store.js';
 import { ReactiveLRUCache } from '../util/reactive_lru_cache.js';
 
@@ -182,19 +177,13 @@ export const useScenarioCharacterRelationshipStore = create<ScenarioCharacterRel
     },
 
     saveRelationshipFields: async (saveKey, fields, syncOptions = IMMEDIATE_SYNC) => {
-      let existing = await get().getCharacterRelationship(saveKey.fromId, saveKey.toId);
-
-      if (syncOptions.syncMode === 'immediate' && (syncOptions.source ?? 'system') === 'system') {
-        await waitForEntitiesUnlockedByObjectEditor([existing.id]);
-        existing = await get().getCharacterRelationship(saveKey.fromId, saveKey.toId);
-      }
-
+      const existing = await get().getCharacterRelationship(saveKey.fromId, saveKey.toId);
       const updated = {
         ...existing,
         ...fields,
       };
 
-      await get().ephemeralStateHelper.stageUpdatedEntity(updated, syncOptions);
+      get().ephemeralStateHelper.stageUpdatedEntity(updated, syncOptions);
 
       return updated;
     },

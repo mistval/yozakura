@@ -120,92 +120,8 @@ export function useHasPendingDeferredSyncMutations(owner?: DeferredSyncOwner): b
   );
 }
 
-export function useActiveDeferredSyncOwner(): string | undefined {
-  return useDeferredSyncStore((state) => state.activeOwner);
-}
-
 export function getActiveDeferredSyncOwner(): string | undefined {
   return useDeferredSyncStore.getState().activeOwner;
-}
-
-function waitForDeferredSyncCondition(
-  isReady: (state: DeferredSyncStoreState) => boolean,
-  abortSignal?: AbortSignal
-): Promise<void> {
-  abortSignal?.throwIfAborted();
-
-  if (isReady(useDeferredSyncStore.getState())) {
-    return Promise.resolve();
-  }
-
-  return new Promise<void>((resolve, reject) => {
-    let settled = false;
-    let unsubscribe: (() => void) | undefined;
-
-    const cleanup = () => {
-      if (unsubscribe) {
-        unsubscribe();
-        unsubscribe = undefined;
-      }
-      if (abortSignal) {
-        abortSignal.removeEventListener('abort', onAbort);
-      }
-    };
-
-    const onAbort = () => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      cleanup();
-      reject(abortSignal?.reason ?? new Error('Aborted'));
-    };
-
-    if (abortSignal) {
-      abortSignal.addEventListener('abort', onAbort, { once: true });
-    }
-
-    unsubscribe = useDeferredSyncStore.subscribe((state) => {
-      if (settled) {
-        return;
-      }
-      if (isReady(state)) {
-        settled = true;
-        cleanup();
-        resolve();
-      }
-    });
-
-    if (!settled && isReady(useDeferredSyncStore.getState())) {
-      settled = true;
-      cleanup();
-      resolve();
-    }
-  });
-}
-
-export function waitForDeferredSyncLockAvailability(owner: string, abortSignal?: AbortSignal): Promise<void> {
-  assert(owner.trim().length > 0, 'Deferred sync owner must be a non-empty string.');
-  return waitForDeferredSyncCondition(
-    (state) => !state.activeOwner || state.activeOwner === owner,
-    abortSignal
-  );
-}
-
-export function waitForEntitiesUnlockedByObjectEditor(
-  entityIds: ReadonlyArray<string>,
-  abortSignal?: AbortSignal
-): Promise<void> {
-  if (entityIds.length === 0) {
-    return Promise.resolve();
-  }
-
-  return waitForDeferredSyncCondition(
-    (state) =>
-      state.activeOwner !== DEFERRED_SYNC_OWNERS.objectEditor ||
-      !entityIds.some((id) => Boolean(state.syncingEntityIds[id])),
-    abortSignal
-  );
 }
 
 export type DeferredSyncCheckOptions = {
@@ -307,6 +223,7 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
   >();
 
   private databaseQueuePromise = Promise.resolve();
+  private readonly inFlightDatabaseWrites = new Set<Promise<void>>();
   private transactionOwner: string | undefined = undefined;
 
   public get activeTransactionOwner(): string | undefined {
@@ -350,41 +267,20 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     );
   }
 
-  public async waitToLockEntitiesForDeferredSync(
-    entities: TEntityType[],
-    owner: string,
-    abortSignal?: AbortSignal
-  ): Promise<void> {
-    assert(owner.trim().length > 0, 'Deferred sync owner must be a non-empty string.');
-    if (entities.length === 0) {
-      return;
-    }
-
-    while (true) {
-      abortSignal?.throwIfAborted();
-      const currentOwner = getActiveDeferredSyncOwner();
-      if (!currentOwner || currentOwner === owner) {
-        this.lockEntitiesForDeferredSync(entities, owner);
-        return;
-      }
-      await waitForDeferredSyncLockAvailability(owner, abortSignal);
-    }
+  public stageUpdatedEntity(entity: TEntityType, options: SyncOptions): void {
+    this.stageUpdatedEntities([entity], options);
   }
 
-  public stageUpdatedEntity(entity: TEntityType, options: SyncOptions) {
-    return this.stageUpdatedEntities([entity], options);
+  public stageUpdatedEntities(entities: TEntityType[], options: SyncOptions): void {
+    this.stageEntities('upsert', entities, options);
   }
 
-  public stageUpdatedEntities(entities: TEntityType[], options: SyncOptions): Promise<void> {
-    return this.stageEntities('upsert', entities, options);
+  public stageDeletedEntity(entity: TEntityType, options: SyncOptions): void {
+    this.stageDeletedEntities([entity], options);
   }
 
-  public stageDeletedEntity(entity: TEntityType, options: SyncOptions) {
-    return this.stageDeletedEntities([entity], options);
-  }
-
-  public stageDeletedEntities(entities: TEntityType[], options: SyncOptions): Promise<void> {
-    return this.stageEntities('delete', entities, options);
+  public stageDeletedEntities(entities: TEntityType[], options: SyncOptions): void {
+    this.stageEntities('delete', entities, options);
   }
 
   private applyStoreMutation(operationType: 'upsert' | 'delete', entities: TEntityType[]): void {
@@ -399,25 +295,23 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     operationType: 'upsert' | 'delete',
     entities: TEntityType[],
     options: SyncOptions
-  ): Promise<void> {
-    if (!this.shouldWaitForObjectEditor(entities, options)) {
-      this.assertCanSyncImmediately(entities, options);
-      this.applyStoreMutation(operationType, entities);
-      return this.handleDatabaseSync(operationType, entities, options);
-    }
-
-    return this.stageEntitiesAfterObjectEditorUnlock(operationType, entities, options);
-  }
-
-  private async stageEntitiesAfterObjectEditorUnlock(
-    operationType: 'upsert' | 'delete',
-    entities: TEntityType[],
-    options: SyncOptions
-  ): Promise<void> {
-    await waitForEntitiesUnlockedByObjectEditor(entities.map((e) => e.id));
+  ): void {
     this.assertCanSyncImmediately(entities, options);
     this.applyStoreMutation(operationType, entities);
-    await this.handleDatabaseSync(operationType, entities, options);
+    this.handleDatabaseSync(operationType, entities, options);
+  }
+
+  private async waitForInFlightDatabaseWrites(): Promise<void> {
+    while (this.inFlightDatabaseWrites.size > 0) {
+      await Promise.all([...this.inFlightDatabaseWrites]);
+    }
+  }
+
+  private trackDatabaseWrite(writePromise: Promise<void>): void {
+    const tracked = writePromise.finally(() => {
+      this.inFlightDatabaseWrites.delete(tracked);
+    });
+    this.inFlightDatabaseWrites.add(tracked);
   }
 
   public async discardPendingChanges() {
@@ -434,6 +328,7 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
         .catch(() => {})
         .then(async () => {
           try {
+            await this.waitForInFlightDatabaseWrites();
             await this.refreshStoreStateFromDatabase(entitiesToRefresh);
           } finally {
             const idsToRemove = flushedIds.filter((id) => !this.pendingOperations.has(id));
@@ -462,6 +357,7 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
       .catch(() => {})
       .then(async () => {
         try {
+          await this.waitForInFlightDatabaseWrites();
           await Promise.all([this.doUpdates(updates), this.doDeletes(deletes)]);
         } finally {
           const idsToRemove = flushedIds.filter((id) => !this.pendingOperations.has(id));
@@ -492,18 +388,6 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     return undefined;
   }
 
-  private shouldWaitForObjectEditor(entities: TEntityType[], options: SyncOptions): boolean {
-    if (
-      options.syncMode !== 'immediate' ||
-      (options.source ?? 'system') !== 'system' ||
-      getActiveDeferredSyncOwner() !== DEFERRED_SYNC_OWNERS.objectEditor
-    ) {
-      return false;
-    }
-
-    return entities.some((e) => this.pendingOperations.has(e.id) || isEntityInDeferredSync(e.id));
-  }
-
   private assertCanSyncImmediately(entities: TEntityType[], options: SyncOptions) {
     if (options.syncMode !== 'immediate' || this.resolveAutoDeferOwner(options) !== undefined) {
       return;
@@ -516,11 +400,11 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     }
   }
 
-  private async handleDatabaseSync(
+  private handleDatabaseSync(
     operationType: OperationType,
     entities: TEntityType[],
     options: SyncOptions
-  ) {
+  ): void {
     const autoDeferOwner = this.resolveAutoDeferOwner(options);
     if (options.syncMode === 'defer' || autoDeferOwner !== undefined) {
       const ids = entities.map((e) => e.id);
@@ -537,9 +421,9 @@ export class EphemeralStateHelper<TEntityType extends { id: string }> {
     }
 
     if (operationType === 'delete') {
-      await this.doDeletes(entities);
+      this.trackDatabaseWrite(this.doDeletes(entities));
     } else if (operationType === 'upsert') {
-      await this.doUpdates(entities);
+      this.trackDatabaseWrite(this.doUpdates(entities));
     } else {
       assert(false, 'Unknown sync operation type');
     }
@@ -612,7 +496,5 @@ export const ephemeralStateSlice = <TEntityType extends { id: string }>(
     discardPendingChanges: () => helper.discardPendingChanges(),
     lockEntitiesForDeferredSync: (entities: TEntityType[], owner?: string) =>
       helper.lockEntitiesForDeferredSync(entities, owner),
-    waitToLockEntitiesForDeferredSync: (entities: TEntityType[], owner: string, abortSignal?: AbortSignal) =>
-      helper.waitToLockEntitiesForDeferredSync(entities, owner, abortSignal),
   };
 };

@@ -318,54 +318,8 @@ describe('EphemeralStateHelper', () => {
     expect(isEntityInDeferredSync(entity2.id)).toBe(false);
 
     // Ensure entity2 was not added to helper2 pendingOperations
-    await helper2.stageUpdatedEntity(entity2, IMMEDIATE_SYNC);
+    helper2.stageUpdatedEntity(entity2, IMMEDIATE_SYNC);
     expect(delegate2.setDatabaseState).toHaveBeenCalledWith([entity2]);
-  });
-
-  it('waits to acquire lock via waitToLockEntitiesForDeferredSync and supports abortSignal', async () => {
-    const { helper: helper1 } = createHelper();
-    const { helper: helper2, delegate: delegate2 } = createHelper();
-    const entity1 = { id: 'wait-1', value: 'v1' };
-    const entity2 = { id: 'wait-2', value: 'v2' };
-
-    helper1.lockEntitiesForDeferredSync([entity1], 'owner_a');
-
-    // Aborting while waiting rejects cleanly without mutating state
-    const abortController = new AbortController();
-    const abortedWait = helper2.waitToLockEntitiesForDeferredSync(
-      [entity2],
-      'owner_b',
-      abortController.signal
-    );
-    abortController.abort(new Error('User aborted'));
-    await expect(abortedWait).rejects.toThrow('User aborted');
-    expect(getActiveDeferredSyncOwner()).toBe('owner_a');
-    expect(isEntityInDeferredSync(entity2.id)).toBe(false);
-
-    // Ensure entity2 was not locked on helper2
-    await helper2.stageUpdatedEntity(entity2, IMMEDIATE_SYNC);
-    expect(delegate2.setDatabaseState).toHaveBeenCalledWith([entity2]);
-
-    // Waiting resolves and acquires lock once owner_a releases
-    let acquired = false;
-    const waitPromise = helper2.waitToLockEntitiesForDeferredSync([entity2], 'owner_b').then(() => {
-      acquired = true;
-    });
-
-    await Promise.resolve();
-    expect(acquired).toBe(false);
-    expect(getActiveDeferredSyncOwner()).toBe('owner_a');
-
-    await helper1.discardPendingChanges();
-    await waitPromise;
-
-    expect(acquired).toBe(true);
-    expect(getActiveDeferredSyncOwner()).toBe('owner_b');
-    expect(isEntityInDeferredSync(entity2.id)).toBe(true);
-
-    await helper2.commitChanges();
-    expect(getActiveDeferredSyncOwner()).toBeUndefined();
-    expect(isEntityInDeferredSync(entity2.id)).toBe(false);
   });
 
   it('auto-defers sync into an active owner transaction and supports cross-store commit and discard', async () => {
@@ -487,71 +441,6 @@ describe('EphemeralStateHelper', () => {
     generatorHelper.abandonPendingChanges();
   });
 
-  it('queues system immediate writes on an entity locked by object_editor until commit and then persists', async () => {
-    const { db, delegate, helper, store } = createHelper();
-    const initial = { id: 'sys-commit-1', value: 'orig' };
-    await helper.stageUpdatedEntity(initial, IMMEDIATE_SYNC);
-    vi.clearAllMocks();
-
-    helper.lockEntitiesForDeferredSync([initial], DEFERRED_SYNC_OWNERS.objectEditor);
-    await helper.stageUpdatedEntity({ id: initial.id, value: 'user-draft' }, USER_SYNC);
-
-    let systemWriteCompleted = false;
-    const systemWritePromise = helper
-      .stageUpdatedEntity({ id: initial.id, value: 'system-final' }, IMMEDIATE_SYNC)
-      .then(() => {
-        systemWriteCompleted = true;
-      });
-
-    await Promise.resolve();
-    expect(systemWriteCompleted).toBe(false);
-    expect(store.get(initial.id)?.value).toBe('user-draft');
-    expect(delegate.setDatabaseState).not.toHaveBeenCalled();
-
-    await commitDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor);
-    await systemWritePromise;
-
-    expect(systemWriteCompleted).toBe(true);
-    expect(store.get(initial.id)?.value).toBe('system-final');
-    expect(db.get(initial.id)?.value).toBe('system-final');
-    expect(delegate.setDatabaseState).toHaveBeenCalledTimes(2);
-    expect(delegate.setDatabaseState).toHaveBeenNthCalledWith(1, [{ id: initial.id, value: 'user-draft' }]);
-    expect(delegate.setDatabaseState).toHaveBeenNthCalledWith(2, [{ id: initial.id, value: 'system-final' }]);
-  });
-
-  it('queues system immediate writes on an entity locked by object_editor until discard and does not roll them back', async () => {
-    const { db, delegate, helper, store } = createHelper();
-    const initial = { id: 'sys-discard-1', value: 'orig' };
-    await helper.stageUpdatedEntity(initial, IMMEDIATE_SYNC);
-    vi.clearAllMocks();
-
-    helper.lockEntitiesForDeferredSync([initial], DEFERRED_SYNC_OWNERS.objectEditor);
-    await helper.stageUpdatedEntity({ id: initial.id, value: 'user-draft' }, USER_SYNC);
-
-    let systemWriteCompleted = false;
-    const systemWritePromise = helper
-      .stageUpdatedEntity({ id: initial.id, value: 'system-after-discard' }, IMMEDIATE_SYNC)
-      .then(() => {
-        systemWriteCompleted = true;
-      });
-
-    await Promise.resolve();
-    expect(systemWriteCompleted).toBe(false);
-    expect(store.get(initial.id)?.value).toBe('user-draft');
-    expect(delegate.setDatabaseState).not.toHaveBeenCalled();
-
-    await discardDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor);
-    await systemWritePromise;
-
-    expect(systemWriteCompleted).toBe(true);
-    expect(store.get(initial.id)?.value).toBe('system-after-discard');
-    expect(db.get(initial.id)?.value).toBe('system-after-discard');
-    expect(delegate.setDatabaseState).toHaveBeenCalledOnce();
-    expect(delegate.setDatabaseState).toHaveBeenCalledWith([
-      { id: initial.id, value: 'system-after-discard' },
-    ]);
-  });
-
   it('proceeds immediately for system writes on an unlocked entity while object_editor locks another entity', async () => {
     const { db, delegate, helper, store } = createHelper();
     const lockedEntity = { id: 'locked-other', value: 'locked' };
@@ -559,21 +448,28 @@ describe('EphemeralStateHelper', () => {
 
     helper.lockEntitiesForDeferredSync([lockedEntity], DEFERRED_SYNC_OWNERS.objectEditor);
 
-    const writePromise = helper.stageUpdatedEntity(unlockedEntity, IMMEDIATE_SYNC);
+    helper.stageUpdatedEntity(unlockedEntity, IMMEDIATE_SYNC);
     expect(store.get(unlockedEntity.id)).toEqual(unlockedEntity);
     expect(delegate.setDatabaseState).toHaveBeenCalledOnce();
     expect(delegate.setDatabaseState).toHaveBeenCalledWith([unlockedEntity]);
 
-    await writePromise;
     expect(db.get(unlockedEntity.id)).toEqual(unlockedEntity);
     await discardDeferredSyncForOwner(DEFERRED_SYNC_OWNERS.objectEditor);
   });
 
-  it('throws synchronously for system immediate writes on entities locked by character_memory_generator or without an owner', async () => {
+  it('throws synchronously for system immediate writes on any locked entity', async () => {
+    const { helper: editorHelper } = createHelper();
     const { helper: generatorHelper } = createHelper();
     const { helper: ownerlessHelper } = createHelper();
+    const entity0 = { id: 'editor-lock-1', value: 'v0' };
     const entity1 = { id: 'memgen-lock-1', value: 'v1' };
     const entity2 = { id: 'ownerless-lock-1', value: 'v2' };
+
+    editorHelper.lockEntitiesForDeferredSync([entity0], DEFERRED_SYNC_OWNERS.objectEditor);
+    expect(() =>
+      editorHelper.stageUpdatedEntity({ id: entity0.id, value: 'system-fail' }, IMMEDIATE_SYNC)
+    ).toThrow('Cannot immediately sync entity. Deferred sync is pending.');
+    await editorHelper.discardPendingChanges();
 
     generatorHelper.lockEntitiesForDeferredSync([entity1], DEFERRED_SYNC_OWNERS.characterMemoryGenerator);
     expect(() =>
@@ -586,5 +482,62 @@ describe('EphemeralStateHelper', () => {
       ownerlessHelper.stageUpdatedEntity({ id: entity2.id, value: 'system-fail' }, IMMEDIATE_SYNC)
     ).toThrow('Cannot immediately sync entity. Deferred sync is pending.');
     await ownerlessHelper.discardPendingChanges();
+  });
+
+  it('resolves immediate writes without waiting for slow database persistence while still draining before discard refresh', async () => {
+    const db = new Map<string, TestEntity>();
+    const store = new Map<string, TestEntity>();
+    const firstWriteGate = Promise.withResolvers<void>();
+
+    const delegate: IEphemeralStateDelegate<TestEntity> = {
+      setStoreState: vi.fn((entities) => {
+        for (const entity of entities) {
+          store.set(entity.id, entity);
+        }
+      }),
+      deleteStoreState: vi.fn((entities) => {
+        for (const entity of entities) {
+          store.delete(entity.id);
+        }
+      }),
+      setDatabaseState: vi.fn(async (entities) => {
+        await firstWriteGate.promise;
+        for (const entity of entities) {
+          db.set(entity.id, entity);
+        }
+      }),
+      deleteDatabaseState: vi.fn(async () => {}),
+      getEntitiesFromDatabase: vi.fn(async (entities: TestEntity[]) =>
+        entities.map((e) => db.get(e.id)).filter((e): e is TestEntity => Boolean(e))
+      ),
+    };
+
+    const helper = new EphemeralStateHelper(delegate);
+    const moved = { id: 'char-1', value: 'moved' };
+
+    // Immediate write resolves immediately even though setDatabaseState is still pending
+    await helper.stageUpdatedEntity(moved, IMMEDIATE_SYNC);
+    expect(store.get(moved.id)).toEqual(moved);
+    expect(db.get(moved.id)).toBeUndefined();
+
+    // User opens Object Editor, edits, then discards before the background DB write finishes
+    helper.lockEntitiesForDeferredSync([moved], DEFERRED_SYNC_OWNERS.objectEditor);
+    await helper.stageUpdatedEntity({ id: moved.id, value: 'draft-to-discard' }, USER_SYNC);
+
+    let discardDone = false;
+    const discardPromise = helper.discardPendingChanges().then(() => {
+      discardDone = true;
+    });
+
+    await Promise.resolve();
+    expect(discardDone).toBe(false);
+    expect(delegate.getEntitiesFromDatabase).not.toHaveBeenCalled();
+
+    // Once the in-flight background write settles, discard refreshes the persisted 'moved' state
+    firstWriteGate.resolve();
+    await discardPromise;
+
+    expect(discardDone).toBe(true);
+    expect(store.get(moved.id)).toEqual(moved);
   });
 });
