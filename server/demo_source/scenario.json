@@ -14,6 +14,7 @@
       "controlValues": {
         "shizuoka-weather": {
           "startDate": "2026-09-07",
+          "seed": "a",
           "jumpByDays": "0"
         }
       }

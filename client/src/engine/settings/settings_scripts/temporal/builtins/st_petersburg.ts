@@ -1,6 +1,11 @@
 import { createSeededRandom } from '../../seeded_random.js';
 import type { SettingsScriptControlsDefinition, SettingsScriptHelpers } from '../../settings_script.js';
-import { resolveTemporalDate, SCENARIO_CREATE_DATE_SENTINEL, temporalControls } from '../builtin_utility.js';
+import {
+  resolveTemporalDate,
+  resolveTemporalSeed,
+  SCENARIO_CREATE_DATE_SENTINEL,
+  temporalControls,
+} from '../builtin_utility.js';
 import type { TemporalContext, TemporalContextBuiltInSettingsScript } from '../temporal_script_types.js';
 
 export const stPetersburgTemporalScript: TemporalContextBuiltInSettingsScript = {
@@ -28,7 +33,7 @@ export const stPetersburgTemporalScript: TemporalContextBuiltInSettingsScript = 
         { name: '°F (Fahrenheit)', value: 'F' },
       ],
     },
-    ...temporalControls({}).filter((c) => c.id === 'jumpByDays'),
+    ...temporalControls({}).filter((c) => c.id === 'seed' || c.id === 'jumpByDays'),
   ]) as SettingsScriptControlsDefinition,
 
   async getTemporalContext(controlValues, request, helpers): Promise<TemporalContext> {
@@ -86,15 +91,14 @@ export const stPetersburgTemporalScript: TemporalContextBuiltInSettingsScript = 
     const { hi: monthlyHi, lo: monthlyLo, precip: precipChance } = MONTHLY[dateInfo.month]!;
 
     // --- Deterministic per-month extreme-event scheduler ---
+    const seed = resolveTemporalSeed(controlValues, request.scenario.id);
     const daysInMonth = new Date(Date.UTC(dateInfo.year, dateInfo.month + 1, 0)).getUTCDate();
     const monthlyEvent = (
       type: string,
       cfg: { months: number[]; chance: number; minDur: number; maxDur: number }
     ) => {
       if (!cfg.months.includes(dateInfo.month)) return null;
-      const r = helpers.createSeededRandom(
-        `${request.scenario.id}-${dateInfo.year}-${dateInfo.month}-${type}`
-      );
+      const r = helpers.createSeededRandom(`${seed}-${dateInfo.year}-${dateInfo.month}-${type}`);
       if (r() >= cfg.chance) return null;
       const duration = cfg.minDur + Math.floor(r() * (cfg.maxDur - cfg.minDur + 1));
       const latestStart = Math.max(1, daysInMonth - duration);
@@ -117,7 +121,7 @@ export const stPetersburgTemporalScript: TemporalContextBuiltInSettingsScript = 
     const summerStorm = monthlyEvent('storm', { months: [5, 6, 7], chance: 0.25, minDur: 1, maxDur: 2 });
 
     // --- Per-day randomness, stable for a given calendar date ---
-    const d = helpers.createSeededRandom(`${request.scenario.id}-${dateInfo.isoDate}`);
+    const d = helpers.createSeededRandom(`${seed}-${dateInfo.isoDate}`);
 
     let hi,
       lo,
