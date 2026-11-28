@@ -1,4 +1,5 @@
-import { applyOperation, compare, unescapePathComponent, type Operation } from 'fast-json-patch';
+import fastJsonPatch, { type Operation } from 'fast-json-patch';
+const { applyOperation, compare, unescapePathComponent } = fastJsonPatch;
 import _ from 'lodash';
 import z from 'zod';
 import { newId } from '../../util/id.js';

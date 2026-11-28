@@ -1,4 +1,5 @@
-import { applyPatch } from 'fast-json-patch';
+import fastJsonPatch from 'fast-json-patch';
+const { applyPatch } = fastJsonPatch;
 import _ from 'lodash';
 import z from 'zod';
 import { createStore, useStore } from 'zustand';
