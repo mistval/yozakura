@@ -261,7 +261,7 @@ export default function CompletionsProviderField({
             value={authToken}
             onChange={(event) => onAuthTokenChange(event.target.value)}
             onBlur={onFieldBlur}
-            placeholder="Bearer token"
+            placeholder="Auth token"
             className={inputClassName}
           />
           <button

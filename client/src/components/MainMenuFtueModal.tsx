@@ -27,7 +27,7 @@ const FTUE_API_URL_TOOLTIP_HTML =
   'Use an OpenAI-compatible completions API endpoint (usually an endpoint that ends in <code>/v1/chat/completions</code>).';
 
 const FTUE_AUTH_TOKEN_TOOLTIP_HTML =
-  'A bearer token is usually required for cloud providers. Local/self-hosted software typically does not require one and this can be left empty.';
+  'An auth token is usually required for cloud providers. Local/self-hosted software typically does not require one and this can be left empty.';
 
 const FTUE_MODEL_TOOLTIP_HTML =
   'Configure which <code>model</code> to use. This can be left empty and is usually not required for local/self-hosted software. Some cloud providers may require it. If you do not specify this for a cloud provider, they may use a default model which works but is not very good.';

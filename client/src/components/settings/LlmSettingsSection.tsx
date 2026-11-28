@@ -562,7 +562,7 @@ export default function LlmSettingsSection() {
                       Completions API URL: {config.llmUrl || '(inherit)'}
                     </div>
                     <div className="text-sm text-muted wrap-break-word">
-                      Bearer Token: {config.llmAuthToken ? maskToken(config.llmAuthToken) : '(inherit)'}
+                      Auth Token: {config.llmAuthToken ? maskToken(config.llmAuthToken) : '(inherit)'}
                     </div>
                     <div className="text-sm text-muted wrap-break-word">Rule: {config.rule || '(none)'}</div>
                     <div className="text-sm text-muted wrap-break-word">

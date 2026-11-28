@@ -71,8 +71,7 @@ export const settingsTooltips = {
     'Maximum number of concurrent requests allowed for this concurrency group. If multiple option groups specify limits for the same group name, the lowest limit is used.',
   'llm.name': 'Friendly label for this LLM option group.',
   'llm.url': 'Optional endpoint override. Leave blank to inherit URL from earlier matching groups.',
-  'llm.authToken':
-    'Optional bearer token override. Leave blank to inherit token from earlier matching groups.',
+  'llm.authToken': 'Optional auth token override. Leave blank to inherit token from earlier matching groups.',
   'llm.tokenStreaming':
     'When enabled (or when all matching groups are set to Inherit), responses stream token-by-token. Requires your OpenAI-compatible API provider to support streaming (SSE).',
   'llm.appIdentificationHeaders':
@@ -87,7 +86,7 @@ export const settingsDangerousHtmlTooltips = {
   'image.apiUrl':
     'Image API endpoint URL. For AUTOMATIC1111, typically you should use the <code>/sdapi/v1/txt2img</code> endpoint. For OpenRouter (or similar), use the <code>/v1/chat/completions</code> endpoint.',
   'image.authToken':
-    'Optional bearer token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Required for most cloud  providers.',
+    'Optional auth token sent as <code>Authorization: Bearer &lt;token&gt;</code>. Required for most cloud  providers.',
   'image.metaOptions':
     'Extra JSON fields merged into every image generation request. For OpenRouter, this is where you set <code>model</code>, <code>size</code>, <code>n</code>, etc. For AUTOMATIC1111, this controls diffusion parameters such as <code>steps</code>, <code>sampler_name</code>, <code>cfg_scale</code>.',
   'image.model':

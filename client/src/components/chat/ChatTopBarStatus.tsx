@@ -80,14 +80,14 @@ export default function ChatTopBarStatus() {
                   </div>
                 ))}
               </div>
-              <div className="pt-1.5 border-t border-border-default">
+              <div className="pt-1.5 border-t border-border-default hidden">
                 <button
                   type="button"
                   onClick={() => {
                     setShowWorkingPopover(false);
                     openActiveJobsModal();
                   }}
-                  className="w-full text-xs hidden"
+                  className="w-full text-xs"
                 >
                   Manage Jobs
                 </button>
