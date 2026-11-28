@@ -20,6 +20,21 @@ function formatJsonValue(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
 
+function buildChangeValuePart(label: string, value: unknown): ChatViewMessagePart {
+  if (typeof value === 'string' && value.length > 0) {
+    return {
+      type: 'markdown',
+      label,
+      text: value,
+    };
+  }
+  return {
+    type: 'code',
+    label,
+    code: formatJsonValue(value),
+  };
+}
+
 /**
  * Converts an object editor history entry's validation error or JSON patch changes
  * into composable ChatView message parts.
@@ -58,25 +73,14 @@ export function buildObjectEditorPatchParts(entry: ObjectEditorHistoryEntry<unkn
     const showBefore = change.op !== 'add' || change.beforeValue !== undefined;
     const showAfter = change.op !== 'remove' || change.afterValue !== undefined;
 
-    const innerParts: ChatViewMessagePart[] = [
-      { type: 'text', text: change.name, tone: 'muted', size: 'xs' },
-      { type: 'text', text: change.path || '/', tone: 'muted', mono: true, size: 'xs' },
-    ];
+    const innerParts: ChatViewMessagePart[] = [];
 
     if (showBefore) {
-      innerParts.push({
-        type: 'code',
-        label: 'Before',
-        code: formatJsonValue(change.beforeValue),
-      });
+      innerParts.push(buildChangeValuePart('Before', change.beforeValue));
     }
 
     if (showAfter) {
-      innerParts.push({
-        type: 'code',
-        label: 'After',
-        code: formatJsonValue(change.afterValue),
-      });
+      innerParts.push(buildChangeValuePart('After', change.afterValue));
     }
 
     return {

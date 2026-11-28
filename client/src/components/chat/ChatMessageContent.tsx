@@ -14,6 +14,7 @@ export type ChatViewMessagePart =
   | {
       type: 'markdown';
       text: string;
+      label?: string | undefined;
     }
   | {
       type: 'image';
@@ -85,6 +86,18 @@ function renderPart(
         </div>
       );
     case 'markdown':
+      if (part.label) {
+        return (
+          <div key={key} className="space-y-1">
+            <div className="text-xs font-medium text-secondary">{part.label}</div>
+            <div
+              className={`bg-inset rounded-sm p-2 ${bodySizeClass} leading-relaxed wrap-break-word text-primary [&>p+p]:mt-2`}
+            >
+              <Markdown>{part.text}</Markdown>
+            </div>
+          </div>
+        );
+      }
       return (
         <div
           key={key}

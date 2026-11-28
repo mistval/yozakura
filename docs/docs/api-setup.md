@@ -57,7 +57,7 @@ Setup:
 3. Create an API key on the [Keys page](https://openrouter.ai/keys).
 4. In Yozakura's initial setup popup, under `Completions API Setup` (if you already closed the popup, the same fields are under Base Defaults in [LLM Settings](yozakura://?settings=true&settingspath=llm&llmoptionsid=base)):
    - **Completions API URL**: `https://openrouter.ai/api/v1/chat/completions`
-   - **Bearer/Auth Token**: your OpenRouter API key
+   - **Auth Token**: your OpenRouter API key
    - **Model**: a model ID from the [models page](https://openrouter.ai/models), see below
 5. Click `Test Connection` to confirm you can connect.
 
@@ -75,7 +75,7 @@ To use OpenRouter for images in Yozakura: in the initial setup popup under `Imag
 
 1. Change **Image Generation Provider** to `OpenAI Completions Style (Including OpenRouter and Similar)`.
 2. **Image API URL**: `https://openrouter.ai/api/v1/chat/completions` (the same URL as the text API)
-3. **Bearer/Auth Token**: the same OpenRouter API key
+3. **Auth Token**: the same OpenRouter API key
 4. **Model**: an image-capable model, for example `x-ai/grok-imagine-image-quality`. On the OpenRouter models page you can filter by image output to see what's available.
 5. Click `Test Connection`.
 

@@ -247,10 +247,10 @@ export default function CompletionsProviderField({
 
       <div className={fieldWrapperClassName}>
         <SettingFieldLabel
-          text={tokenRecommended ? 'Bearer/Auth Token' : 'Bearer/Auth Token (optional)'}
+          text={tokenRecommended ? 'Auth Token' : 'Auth Token (optional)'}
           htmlFor={tokenId}
           tooltip={tokenTooltip}
-          tooltipLabel="About Bearer/Auth Token"
+          tooltipLabel="About Auth Token"
           className={labelClassName}
           wrapperClassName={labelWrapperClassName}
         />
