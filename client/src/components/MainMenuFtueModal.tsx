@@ -18,6 +18,7 @@ import {
 import { getBuiltinImageScript } from '../engine/settings/settings_scripts/image/image_scripts.js';
 import CustomScriptSettings from './settings/settingsScripts/CustomScriptSettings.js';
 import CompletionsProviderField from './settings/CompletionsProviderField.js';
+import CheckboxSettingRow from './settings/ui/CheckboxSettingRow.js';
 import {
   IMAGE_SCRIPT_DESCRIPTOR,
   useImageScriptSelection,
@@ -34,6 +35,7 @@ const FTUE_MODEL_TOOLTIP_HTML =
 
 const MOBILE_DEFAULT_COMPLETIONS_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MOBILE_DEFAULT_MODEL = 'deepseek/deepseek-v4.1-flash-1017';
+const FTUE_AUTO_IMAGE_RATE = 0.15;
 
 const FTUE_SECTION_CLASS = 'space-y-3 rounded-lg border border-[#31234a]! bg-[#0f0a1c]/90 p-4';
 const FTUE_INPUT_CLASS =
@@ -44,6 +46,7 @@ export default function MainMenuFtueModal() {
   const navigate = useNavigate();
   const location = useLocation();
   const llmConfigs = useSettingsStore((s) => s.llmConfigs);
+  const autoImageRate = useSettingsStore((s) => s.autoImageRate);
   const mainMenuFtueSeen = useSettingsStore((s) => s.mainMenuFtueSeen);
   const setSettings = useSettingsStore((s) => s.setSettings);
   const { outerClassName, panelClassName } = useModalPanelClasses({
@@ -222,6 +225,18 @@ export default function MainMenuFtueModal() {
                 selection={imageSelection}
                 visibleControlIds={ftueImageControlIds}
               />
+
+              <div className="mt-2 flex justify-end">
+                <CheckboxSettingRow
+                  id="ftue-enable-auto-image"
+                  label="Enable auto image"
+                  tooltip="Automatically generate an image on 15% of new chat messages when NPCs are chatting autonomously (adjustable later in Settings)."
+                  checked={autoImageRate > 0}
+                  onChange={(nextChecked) =>
+                    setSettings({ autoImageRate: nextChecked ? FTUE_AUTO_IMAGE_RATE : 0 })
+                  }
+                />
+              </div>
             </div>
           </section>
 
